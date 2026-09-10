@@ -328,6 +328,24 @@ async def _do_platform(marker, event, slave_mod=None):
     try:
         if act == "like":
             times = max(1, min(dur or 1, 10))  # OneBot send_like 单次上限 10
+            # 非好友短路：陌生人赞风控率极高，连调都不调；查不到好友表时才放行尝试
+            try:
+                _fl = await _call("get_friend_list")
+                _fd = (_fl.get("data") if isinstance(_fl, dict) else _fl) or []
+                if isinstance(_fd, list) and len(_fd) > 0:
+                    _ids = set()
+                    for _f in _fd:
+                        try:
+                            if isinstance(_f, dict) and _f.get("user_id") is not None:
+                                _ids.add(str(_f.get("user_id")))
+                        except Exception:
+                            continue
+                    if str(target) not in _ids:
+                        if extra_text:
+                            return extra_text + "（非好友点赞失败，请先加为好友）"
+                        return "非好友点赞失败，请先加为好友"
+            except Exception:
+                pass
             try:
                 res = await _call("send_like", user_id=int(target), times=times)
                 # 适配器常以 resolved 失败体代替抛错（如非好友/风控）：必须验 status/retcode，
