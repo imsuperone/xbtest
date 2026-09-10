@@ -151,8 +151,7 @@ def _cfg_sys_off(engine, store):
 
 
 def _guard(gid, engine, is_admin, raw, store):
-    if is_admin:
-        return None
+    # 开关对超管同样生效（关＝全员静默不运行，WebUI 为唯一控制面）
     sysname = _SYS_ENG.get(engine, engine)
     # 群开关 gacha/守卫缓存需在配置变更时失效，由 store._bump_config_ver 清空 _GUARD_CACHE
     if _cfg_sys_off(engine, store):
@@ -175,8 +174,6 @@ def clear_guard_cache():
 
 def _batch_guard_map(gid, is_admin, store):
     # 批量预计算9引擎守卫结果，0.3s内同gid复用，避免每引擎2次kv读
-    if is_admin:
-        return {}
     try:
         now = _t_guard.time()
         hit = _GUARD_BATCH_CACHE.get(str(gid))
@@ -241,6 +238,7 @@ def _engine_cache_ver(store=None):
 
 
 def _get_engine_cmds(engine, store=None):
+    global _ENGINE_CMDS_VER  # 合并单文件后裸重绑必须声明 global，否则读到 UnboundLocalError 被吞错
     try:
         cur_ver = _engine_cache_ver(store)
     except Exception:
@@ -610,12 +608,23 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
                 return None
         except Exception:
             pass
-    # 维护开关
+    # 维护开关（全局＋本群）：开则非超管一律不再执行业务；仅被@时回一条维护通知，其余完全静默
     try:
-        if store and store.cfg("维护配置", "维护开关", "假") == "真" and not is_admin:
-            return store.cfg("维护配置", "维护信息", "🚧 维护中")
+        _maint_g = bool(store) and store.cfg("维护配置", "维护开关", "假") == "真"
     except Exception:
-        pass
+        _maint_g = False
+    try:
+        _maint_l = (not is_private and gid and str(gid).isdigit() and bool(store)
+                    and store.recall_get("group_maint_%s" % gid, "0") == "1")
+    except Exception:
+        _maint_l = False
+    if (_maint_g or _maint_l) and not is_admin:
+        if "[CQ:at" in str(raw or ""):
+            try:
+                return store.cfg("维护配置", "维护信息", "🚧 维护中")
+            except Exception:
+                return "🚧 维护中"
+        return None
     if is_private:
         try:
             if chat_mod:
@@ -644,7 +653,7 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
             pass
     dis = _cmd_disabled(raw, store) if store else None
     if dis:
-        return "【指令】「%s」已被禁用，无法使用该功能！如需开启，请在指令页勾选启用。" % dis
+        return None  # 被禁用指令完全静默（BY DESIGN：不提示 AT 用户）
     # 超管权限：命中 指令权限配置=超管 的指令，非超管一律静默（与超管系统同规则）
     if not is_admin and store:
         try:
@@ -663,7 +672,7 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
             g = _batch_map.get(_eng) if _batch_map else (_guard(gid, _eng, is_admin, raw, store) if store else None)
             if g:
                 if matched:
-                    return g
+                    return None  # 系统已关：命中也不运行、不回复
                 continue
             try:
                 r = fn.handle(gid, qq, raw) if hasattr(fn, "handle") else fn(gid, qq, raw)
@@ -695,7 +704,7 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
         g = _batch_map.get("superadmin") if _batch_map else (_guard(gid, "superadmin", is_admin, raw, store) if store else None)
         if g:
             if matched_admin:
-                return g
+                return None  # 系统已关：命中也不运行、不回复
         else:
             try:
                 r = superadmin_mod.handle(gid, qq, raw, is_admin)
@@ -721,7 +730,7 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
         g = _batch_map.get("superadmin") if _batch_map else (_guard(gid, "superadmin", is_admin, raw, store) if store else None)
         if g:
             if matched_admin:
-                return g
+                return None  # 系统已关：命中也不运行、不回复
         else:
             try:
                 r = fn.handle(gid, qq, raw, is_admin) if hasattr(fn, "handle") else fn(gid, qq, raw, is_admin)

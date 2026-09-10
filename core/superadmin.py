@@ -23,7 +23,8 @@ MENU = (
     "🧹 清空财富/体力/魅力/账户/精灵/用户 @QQ\r\n"
     "🔨 禁言 @QQ 分钟　🚪 踢人 @QQ\r\n"
     "💾 备份（立即备份全量数据）\r\n"
-    "🛠️ 开启维护　关闭维护　维护信息 内容　查看维护\r\n"
+    "🛠️ 开启维护　关闭维护　维护信息 内容　查看维护（群内只管本群）\r\n"
+    "📊 当前数值（查看当前生效数值与档位）\r\n"
     "🔖 检查更新（仅超管可查）\r\n"
     "━━━━━━━━━━━━━━\r\n"
     "⚠️ 全部指令仅限 AstrBot 机器人管理员\r\n"
@@ -394,17 +395,30 @@ def cmd_backup_xb():
         return f"备份异常：{e}"
 
 
-def _maint_on():
+def _maint_on(gid=None):
+    # 群内发送只维修本群（recall 标记），私聊/无群号则维修全局
+    if gid and str(gid).isdigit() and str(gid) != "dm":
+        try:
+            ST.recall_set("group_maint_%s" % gid, "1")
+        except Exception:
+            pass
+        return "本群已进入维护模式（仅本群），仅@消息回复维护通知。"
     cur = dict(ST._CONFIG)
     cur.setdefault("维护配置", {})["维护开关"] = "真"
     ST.set_config(cur); ST.save_config(); ST.sync_astrbot_config(cur)
-    return "已开启维护模式，仅超管可用。"
+    return "已开启全局维护模式，仅超管可用。"
 
-def _maint_off():
+def _maint_off(gid=None):
+    if gid and str(gid).isdigit() and str(gid) != "dm":
+        try:
+            ST.recall_set("group_maint_%s" % gid, "0")
+        except Exception:
+            pass
+        return "本群已退出维护模式，恢复正常。"
     cur = dict(ST._CONFIG)
     cur.setdefault("维护配置", {})["维护开关"] = "假"
     ST.set_config(cur); ST.save_config(); ST.sync_astrbot_config(cur)
-    return "已关闭维护模式，恢复正常。"
+    return "已关闭全局维护模式，恢复正常。"
 
 def _maint_msg(msg):
     msg = (msg or "").strip()
@@ -447,7 +461,48 @@ def _version():
 # ---- 统一入口（测试指令仅超管，WebUI可配但不显示于MENU，已删 个人信息） ----
 # 注意：凡 handle() 响应的别名必须同步进本表；非超管命中一律静默 None（BY DESIGN，见 AIINFO）
 # 超管指令一律精确单触发词，禁冗余别名/模糊词
-_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份", "维护信息", "查看维护", "版本", "检查更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表", "测试图片", "webdav测试", "开启维护", "关闭维护")
+_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份", "维护信息", "查看维护", "版本", "检查更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表", "测试图片", "webdav测试", "开启维护", "关闭维护", "当前数值")
+
+
+def _cmd_current_values():
+    """超管精确指令「当前数值」：输出当前生效的 12 项核心数值＋档位判定。
+    命中预设报模式名，否则报自定义（判定口径与 config/balance_state 同源）。"""
+    try:
+        try:
+            from .api.settings import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG
+        except ImportError:
+            from core.api.settings import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG  # type: ignore
+    except Exception:
+        return "数值引擎未就绪，请稍后重试"
+    try:
+        results = {}
+        for _mode, _preset in _PRE.items():
+            _mm = 0
+            for _sec, _key in _SIG:
+                try:
+                    _cur = ST.cfg(_sec, _key, "")
+                    if _cur == "":
+                        continue
+                    if str(_cur) != str(_preset.get(_sec, {}).get(_key, "")):
+                        _mm += 1
+                except Exception:
+                    continue
+            results[_mode] = _mm
+        _best = sorted(_PRE.keys(), key=lambda m: (results[m], 0 if m == "standard" else 1))[0]
+        _names = {"standard": "标准平衡模式", "casual": "休闲高福利模式", "hardcore": "硬核博弈模式"}
+        if results[_best] == 0:
+            _head = "📊 当前数值【%s】" % _names.get(_best, _best)
+        else:
+            _head = "📊 当前数值【自定义】（最接近%s，差%s项）" % (_names.get(_best, _best), results[_best])
+        _lines = [_head]
+        for _sec, _key in _SIG:
+            try:
+                _lines.append("%s：%s" % (_key, ST.cfg(_sec, _key, "")))
+            except Exception:
+                pass
+        return "\r\n".join(_lines)
+    except Exception as e:
+        return f"读取当前数值异常: {e}"
 
 
 def _cmd_imgtest():
@@ -598,15 +653,22 @@ def handle(gid, qq, raw, is_admin=False):
             except Exception as e:
                 return f"【WebDAV测试】❌ 模块调用异常: {e}"
     if text == "开启维护":
-        return _maint_on()
+        return _maint_on(gid)
     if text == "关闭维护":
-        return _maint_off()
+        return _maint_off(gid)
     if text.startswith("维护信息"):
         return _maint_msg(text[4:].strip())
     if text == "查看维护":
         sw = ST.cfg("维护配置", "维护开关", "假")
         msg = ST.cfg("维护配置", "维护信息", "🚧 维护中")
-        return f"维护开关：{sw}\r\n维护信息：{msg}"
+        try:
+            _gm = ST.recall_get("group_maint_%s" % gid, "0") == "1" if gid and str(gid).isdigit() else False
+        except Exception:
+            _gm = False
+        return f"全局维护：{sw}\r\n本群维护：{'开' if _gm else '关'}\r\n维护信息：{msg}"
+    # 当前数值：超管精确指令，无模糊唤醒（BY DESIGN 同超管静默规则）
+    if text == "当前数值":
+        return _cmd_current_values()
     # 测试指令（WebUI 指令-超管系统可见，聊天不显示，仅 main._dispatch 处理）
     if text.startswith("测试testxb"):
         return None

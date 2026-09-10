@@ -196,6 +196,94 @@ def _load_api_handler(mod_short, func_name):
 _PLUGIN_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+def _merge_persistent_config(data_dir):
+    """持久配置兜底（原 XbBot.__init__ 内联逻辑，提为函数以便自测复用，零语义差）：
+    WebUI 保存落盘 data_dir/config.json；若 AstrBot 重启时过滤掉未知节
+    （如备份配置/WebDAV），用本地持久值补齐缺失键，防“保存后丢失”"""
+    try:
+        import json as _pjs
+        _pcfg = os.path.join(data_dir, "config.json")
+        if os.path.isfile(_pcfg):
+            with open(_pcfg, encoding="utf-8") as _pf:
+                _praw = _pjs.load(_pf)
+            _pnom = _normalize_cfg(_praw) if isinstance(_praw, dict) else {}
+            for _sec, _kv in _pnom.items():
+                if isinstance(_kv, dict) and set(_kv.keys()) == {""}:
+                    # 顶层标量键（如 _active_balance_mode）落盘扁平后归一成 {"": v}，
+                    # 此处还原回标量，否则前端会读到字典误判档位
+                    if _sec not in ST._CONFIG:
+                        ST._CONFIG[_sec] = _kv[""]
+                    continue
+                if isinstance(_kv, dict) and _kv:
+                    _dst = ST._CONFIG.setdefault(_sec, {})
+                    if _sec == "备份配置":
+                        # 备份管理专属卡片配置，本地持久值绝对优先于未定制的默认 schema
+                        _dst.update(_kv)
+                    else:
+                        for _k, _v in _kv.items():
+                            if _k not in _dst:
+                                _dst[_k] = _v
+                            elif str(_dst.get(_k, "")) == "" and str(_v) != "":
+                                # AstrBot 原生页按 schema 物化空键会覆盖掉用户值，
+                                # 本地有非空持久值时必须回填，否则 WebDAV 等配置重启即丢
+                                _dst[_k] = _v
+    except Exception:
+        pass
+
+
+def _apply_fresh_casual(data_dir):
+    """新装默认休闲（仅真新装：无持久配置＋空库；老用户升级绝不覆盖）。
+    无 AstrBot 下发可用时给出一套完整休闲数值，而非各引擎兜底拼凑的混合态。"""
+    try:
+        if os.path.isfile(os.path.join(data_dir, "config.json")):
+            return False
+        _empty = True
+        try:
+            if ST._DB is not None:
+                _c = ST._DB.execute("SELECT COUNT(*) FROM wallet").fetchone()
+                _c2 = ST._DB.execute("SELECT COUNT(*) FROM accounts").fetchone()
+                _empty = (int((_c or [0])[0] or 0) == 0 and int((_c2 or [0])[0] or 0) == 0)
+        except Exception:
+            return False
+        if not _empty:
+            return False
+        try:
+            from .api.settings import PRESETS as _PRE
+        except ImportError:
+            try:
+                from core.api.settings import PRESETS as _PRE  # type: ignore
+            except Exception:
+                return False
+        _cas = (_PRE or {}).get("casual") or {}
+        for _sec, _kv in _cas.items():
+            if _sec in getattr(ST, "_COLL_FILES", {}):
+                try:
+                    ST.coll_merge(_sec, _kv)
+                except Exception:
+                    pass
+                continue
+            if isinstance(_kv, dict):
+                ST._CONFIG.setdefault(_sec, {}).update(_kv)
+        ST._CONFIG["_active_balance_mode"] = "casual"
+        try:
+            ST._CONFIG.setdefault("设置", {})["平衡模式"] = "casual"
+        except Exception:
+            pass
+        try:
+            if hasattr(ST, "_bump_config_ver"):
+                ST._bump_config_ver()
+        except Exception:
+            pass
+        try:
+            ST.save_config()
+            ST.sync_astrbot_config(ST._CONFIG)
+        except Exception:
+            pass
+        return True
+    except Exception:
+        return False
+
+
 # Web API 注册表：(路径后缀, 方法, 处理器属性名, 说明)
 # 与下方 page_* 薄包装一一对应；改路由只改此表
 _XB_API_ROUTES = [
@@ -287,31 +375,8 @@ class XbBot(Star):
         ST.set_config_path(os.path.join(data_dir, "config.json"))
         ST.set_backup_dir(os.path.join(data_dir, "backups"))
         ST.set_astrbot_config(config)
-        # 持久配置兜底：WebUI 保存落盘 data_dir/config.json；若 AstrBot 重启时过滤掉
-        # 未知节（如备份配置/WebDAV），用本地持久值补齐缺失键，防“保存后丢失”
-        try:
-            import json as _pjs
-            _pcfg = os.path.join(data_dir, "config.json")
-            if os.path.isfile(_pcfg):
-                with open(_pcfg, encoding="utf-8") as _pf:
-                    _praw = _pjs.load(_pf)
-                _pnom = _normalize_cfg(_praw) if isinstance(_praw, dict) else {}
-                for _sec, _kv in _pnom.items():
-                    if isinstance(_kv, dict) and _kv:
-                        _dst = ST._CONFIG.setdefault(_sec, {})
-                        if _sec == "备份配置":
-                            # 备份管理专属卡片配置，本地持久值绝对优先于未定制的默认 schema
-                            _dst.update(_kv)
-                        else:
-                            for _k, _v in _kv.items():
-                                if _k not in _dst:
-                                    _dst[_k] = _v
-                                elif str(_dst.get(_k, "")) == "" and str(_v) != "":
-                                    # AstrBot 原生页按 schema 物化空键会覆盖掉用户值，
-                                    # 本地有非空持久值时必须回填，否则 WebDAV 等配置重启即丢
-                                    _dst[_k] = _v
-        except Exception:
-            pass
+        _merge_persistent_config(data_dir)
+        _apply_fresh_casual(data_dir)
         # DB 镜像最后一道兜底：文件也被污染时仍可从库恢复
         try:
             if hasattr(ST, "wd_cfg_restore"):

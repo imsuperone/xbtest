@@ -643,7 +643,7 @@ async function loadGroups() {
   bindGroupsAdd();
   const box = document.getElementById("groupsBody");
   if (!box) return;
-  box.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--muted)">加载中...</td></tr>`;
+  box.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--muted)">加载中...</td></tr>`;
   try {
     const data = await getBridge().apiGet("groups/list");
     RAW_GROUPS = data.groups || data || [];
@@ -662,7 +662,7 @@ function renderGroupsTable() {
     groups = groups.filter(g => String(g.gid).toLowerCase().includes(kw) || (g.enabled ? "开启" : "关闭").includes(kw));
   }
   if (!groups.length) {
-    box.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">暂无匹配的群聊数据<br><small>可上方手动输入群号添加</small></td></tr>`;
+    box.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">暂无匹配的群聊数据<br><small>可上方手动输入群号添加</small></td></tr>`;
     return;
   }
   box.innerHTML = groups.map(g => {
@@ -670,7 +670,9 @@ function renderGroupsTable() {
     const on = g.enabled !== false;
     const badge = on ? `<span class="badge badge-success">开启</span>` : `<span class="badge badge-bad">关闭</span>`;
     const testMark = g.is_test ? ` <small style="color:var(--muted)">(测试)</small>` : "";
-    return `<tr><td><code>${esc(gid)}</code>${testMark}</td><td>${g.member_count || 0}</td><td>${badge}</td><td><label class="switch"><input type="checkbox" data-gid="${esc(gid)}" ${on ? "checked" : ""}><span class="slider-toggle"></span></label></td><td><button class="ghost sm del" data-del="${esc(gid)}" title="删除该群配置">🗑️ 删除</button></td></tr>`;
+    const maint = g.maintenance === true;
+    const maintBadge = maint ? `<span class="badge badge-bad">维修中</span>` : `<span style="color:var(--muted)">—</span>`;
+    return `<tr><td><code>${esc(gid)}</code>${testMark}</td><td>${g.member_count || 0}</td><td>${badge}</td><td>${maintBadge}</td><td><label class="switch"><input type="checkbox" data-gid="${esc(gid)}" ${on ? "checked" : ""}><span class="slider-toggle"></span></label></td><td><label class="switch" title="本群维修开关"><input type="checkbox" data-maint-gid="${esc(gid)}" ${maint ? "checked" : ""}><span class="slider-toggle"></span></label> <button class="ghost sm del" data-del="${esc(gid)}" title="删除该群配置">🗑️ 删除</button></td></tr>`;
   }).join("");
   box.querySelectorAll("input[data-gid]").forEach(inp => {
     inp.addEventListener("change", async () => {
@@ -686,6 +688,25 @@ function renderGroupsTable() {
         toast(`群 ${gid} 已${serverOn ? "开启" : "关闭"}`, serverOn ? "ok" : "bad");
         if (badgeCell) badgeCell.innerHTML = serverOn ? `<span class="badge badge-success">开启</span>` : `<span class="badge badge-bad">关闭</span>`;
         inp.checked = serverOn;
+      } catch(e) {
+        toast("切换失败: " + e.message, "bad");
+        inp.checked = !on;
+      } finally {
+        inp.disabled = false;
+      }
+    });
+  });
+  box.querySelectorAll("input[data-maint-gid]").forEach(inp => {
+    inp.addEventListener("change", async () => {
+      const gid = inp.dataset.maintGid;
+      const on = inp.checked;
+      inp.disabled = true;
+      try {
+        const r = await getBridge().apiPost("groups/toggle", { gid, maintenance: on });
+        if (r && r.ok === false) throw new Error(r.msg || "切换失败");
+        const serverOn = (r && typeof r.maintenance === "boolean") ? r.maintenance : on;
+        toast(`群 ${gid} ${serverOn ? "进入维修（仅@回复）" : "退出维修"}`, serverOn ? "bad" : "ok");
+        await loadGroups();
       } catch(e) {
         toast("切换失败: " + e.message, "bad");
         inp.checked = !on;
@@ -994,9 +1015,15 @@ const OV_REQ = [
 async function loadOverviewReq() {
   try {
     const cur = await getBridge().apiGet("config/get");
+    // schema 默认回退：内存缺键时显示出厂默认值而非空白（如货币名称）
+    let _defs = {};
+    try {
+      const _sch = await getBridge().apiGet("config/schema").catch(() => null);
+      ((_sch && _sch.groups && _sch.groups["设置"]) || []).forEach((it) => { _defs[it.key] = it.default; });
+    } catch (e) {}
     const box = document.getElementById("ovReq");
     box.innerHTML = OV_REQ.map(([sec, key, label, type, tip]) => {
-      const v = ((cur || {})[sec] || {})[key] ?? "";
+      const v = ((cur || {})[sec] || {})[key] ?? _defs[key] ?? "";
       return `<div class="ov-field"><label>${esc(label)}</label>` +
         `<input data-ov-sec="${esc(sec)}" data-ov-key="${esc(key)}" type="${type === "int" ? "number" : "text"}" value="${esc(v)}">` +
         `<small>${esc(tip)}</small></div>`;
@@ -1948,7 +1975,6 @@ async function loadCommands() {
         `${cOn ? '<span style="color:var(--ok);font-size:10px">●</span>' : '<span style="color:var(--muted);font-size:10px">○</span>'} ${esc(t)}</a>`;
     }).join("");
     el.innerHTML =
-      `<div class="hint" style="margin:0 0 8px">●启用 ○禁用 🔒仅超管｜启用开关：真=响应，假=不再响应；权限：超管=仅超管可用，非超管静默</div>` +
       blockHtml +
       `<details class="cmd-block" data-sys="自定义"><summary>` +
         `<span class="cmd-sys">自定义指令</span>` +

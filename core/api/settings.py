@@ -468,7 +468,7 @@ async def handle_config_auto_balance(request):
 
         target_preset = PRESETS[mode]
 
-        # 1. 平衡前真备份：配置快照（可一键恢复）+ 全库冷备（双保险）
+        # 1. 平衡前快照记账（kv 快操作：覆盖前抓拍旧值；慢速全库冷备挪后见 §4）
         pre_snapshot = ""
         try:
             from .backup import auto_snapshot_if_changed as _auto_snap
@@ -507,12 +507,7 @@ async def handle_config_auto_balance(request):
                     pre_snapshot = _new_name
         except Exception:
             pass
-        try:
-            await asyncio.to_thread(ST.backup_user_data, True)
-        except Exception:
-            pass
-
-        # 2. 合并覆盖各系统配置（含当前模式标记，便于 WebUI 回显）
+        # 2. 合并覆盖各系统配置（含当前模式标记，便于 WebUI 回显；内存毫秒级生效）
         try:
             ST._CONFIG.setdefault("设置", {})["平衡模式"] = mode
         except Exception:
@@ -543,7 +538,13 @@ async def handle_config_auto_balance(request):
         except Exception:
             pass
 
-        # 4. 联动校准所有奴隶身价（走 ST.group/save_group：持锁规范、缓存一致、中英键自动翻译）
+        # 4. 全库冷备双保险（慢 I/O：放写盘之后，再慢也不影响本次生效；失败仅丢本次冷备）
+        try:
+            await asyncio.to_thread(ST.backup_user_data, True)
+        except Exception:
+            pass
+
+        # 5. 联动校准所有奴隶身价（走 ST.group/save_group：持锁规范、缓存一致、中英键自动翻译）
         #    仅补齐零/空身价（正身价保留，避免新老玩家双轨套利；需重置请用清空指令）
         calibrated_slaves = 0
         target_init_price = int(target_preset.get("费用配置", {}).get("初始身价", 500))

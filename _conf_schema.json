@@ -1,7 +1,7 @@
 {
   "_comment": {
-    "description": "小白配置请前往管理台 WebUI（配置/指令 Tab）修改，此处无需填写",
+    "description": "小白配置请前往插件WebUI设置",
     "type": "string",
-    "default": ""
+    "default": "不用配置"
   }
 }

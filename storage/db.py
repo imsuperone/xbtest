@@ -238,10 +238,15 @@ def get_persistent_data_dir(plugin_base=""):
 
 
 def init(db_path, config=None):
+    try:
+        from .app_config import set_config as _apply_cfg  # 延迟导入：破 app_config↔db 循环
+    except ImportError:
+        _apply_cfg = None
     with _S._LOCK:
         if _S._DB is not None and _S._DB_PATH == db_path:
             if isinstance(config, dict):
-                set_config(config)
+                if _apply_cfg is not None:
+                    _apply_cfg(config)
             return
         try:
             d = os.path.dirname(db_path)
@@ -261,7 +266,8 @@ def init(db_path, config=None):
             from .kv import _init_kv_cache
             _init_kv_cache()
             if isinstance(config, dict):
-                set_config(config)
+                if _apply_cfg is not None:
+                    _apply_cfg(config)
         except Exception:
             try:
                 _safe_rollback()
