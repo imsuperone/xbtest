@@ -1644,10 +1644,6 @@
         "type": "string",
         "default": "真"
       },
-      "每日点赞": {
-        "type": "string",
-        "default": "真"
-      },
       "测试testxb": {
         "type": "string",
         "default": "真"
@@ -1689,10 +1685,6 @@
         "default": "真"
       },
       "清空": {
-        "type": "string",
-        "default": "真"
-      },
-      "点赞": {
         "type": "string",
         "default": "真"
       },
@@ -1965,6 +1957,10 @@
         "default": "真"
       },
       "测试图片": {
+        "type": "string",
+        "default": "真"
+      },
+      "赞我": {
         "type": "string",
         "default": "真"
       }
@@ -2505,10 +2501,6 @@
         "type": "text",
         "default": ""
       },
-      "每日点赞": {
-        "type": "text",
-        "default": ""
-      },
       "测试testxb": {
         "type": "text",
         "default": ""
@@ -2550,10 +2542,6 @@
         "default": ""
       },
       "清空": {
-        "type": "text",
-        "default": ""
-      },
-      "点赞": {
         "type": "text",
         "default": ""
       },
@@ -2790,6 +2778,10 @@
         "default": ""
       },
       "测试图片": {
+        "type": "text",
+        "default": ""
+      },
+      "赞我": {
         "type": "text",
         "default": ""
       }
@@ -3294,10 +3286,6 @@
         "type": "string",
         "default": "所有人"
       },
-      "每日点赞": {
-        "type": "string",
-        "default": "所有人"
-      },
       "测试testxb": {
         "type": "string",
         "default": "超管"
@@ -3341,10 +3329,6 @@
       "清空": {
         "type": "string",
         "default": "超管"
-      },
-      "点赞": {
-        "type": "string",
-        "default": "所有人"
       },
       "版本": {
         "type": "string",
@@ -3617,6 +3601,10 @@
       "测试图片": {
         "type": "string",
         "default": "超管"
+      },
+      "赞我": {
+        "type": "string",
+        "default": "所有人"
       }
     }
   },

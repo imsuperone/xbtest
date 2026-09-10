@@ -493,7 +493,7 @@ def _get_local_version(plugin_base=""):
         return _gv(plugin_base)
     except Exception:
         pass
-    return "0.7.44"
+    return "0.7.45-beta"
 
 
 def _parse_version_tuple(v_str):

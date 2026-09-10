@@ -25,11 +25,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "0.7.44"
+            return "0.7.45-beta"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "0.7.44"
+    PLUGIN_VERSION = "0.7.45-beta"
 
 
 def _extract_param(request, key, default=""):

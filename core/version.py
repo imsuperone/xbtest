@@ -8,7 +8,7 @@
 """
 import os as _os
 
-_FALLBACK = "0.7.44"
+_FALLBACK = "0.7.45-beta"
 _CACHE = ""
 
 

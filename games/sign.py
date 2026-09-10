@@ -512,7 +512,7 @@ _MENU = (
     "📅 签到　　　　　🎁 抽奖 数量\r\n"
     "💪 购买体力 数量　购买魅力 数量\r\n"
     "🎁 领取新手礼包　👤 我的信息\r\n"
-    "👍 点赞/每日点赞　　📋 打卡\r\n"
+    "👍 赞我　　📋 打卡\r\n"
     "🏆 个人排行　财富榜　签到榜　体力榜　魅力榜\r\n"
     "━━━━━━━━━━━━━━━━\r\n"
     "💡 发送对应指令即可游玩"
@@ -623,7 +623,7 @@ def handle(gid, qq, raw):
         return cmd_draw(gid, qq, int(m.group(1)) if m else 1)
     if text.startswith("领取新手礼包") or text.startswith("领取新人礼包"):
         return cmd_newbie(gid, qq)
-    if text.startswith("每日点赞") or text.startswith("点赞"):
+    if text == "赞我" or text.startswith("赞我 "):
         return cmd_like(gid, qq)
     if text.startswith("购买体力"):
         m = _r.search(r"(\d+)", text)

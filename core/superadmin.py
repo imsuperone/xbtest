@@ -454,7 +454,7 @@ def _version():
                 pass
     except Exception:
         pass
-    return "小白测试版版本：0.7.44"
+    return "小白测试版版本：0.7.45-beta"
 
 
 
