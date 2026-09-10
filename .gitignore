@@ -60,17 +60,13 @@ temp/
 tmp/
 data/temp/
 
-# 内部交接文档（本地保留，不进 GitHub）
-AIINFO.md
-AIREADME.md
-aiall.md
+# dev 文件已搬出插件目录（backup/xbbot_dev/），此处无残留需忽略
+
+# AI 交接文档（随代码但永不上 GitHub，见 aidocs/）
+aidocs/
 
 # 发行包（本地三端同步，不进 GitHub）
 *.zip
-
-# 本地自检/内部文件（本地跑，永不进 GitHub；发行包同样排除）
-scripts/
-verify_plugin.py
 
 # 隐私与运行时文件（绝不进仓库）
 webdav_secret.json

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """备份 API"""
 import asyncio
-import base64
 import json as _json
 import os
 import time
@@ -11,12 +10,12 @@ except ImportError:
     def json_response(data, status=200):
         return data
 
-from .helpers import _err, get_req_query, get_req_json, no_cache_response
+from .web_utils import _err, get_req_query, get_req_json, no_cache_response
 
 try:
-    from ... import store as ST
+    from ... import storage as ST
 except ImportError:
-    import store as ST
+    import storage as ST
 
 
 def _backup_base(plugin_base=""):
@@ -243,11 +242,6 @@ async def handle_clear_all(request, plugin_base=""):
                                 ST._KV_CACHE.clear()
                         else:
                             ST._KV_CACHE.clear()
-                    except Exception:
-                        pass
-                    try:
-                        ST._DB.execute("DELETE FROM kv WHERE k='last_backup_ts'")
-                        ST._DB.commit()
                     except Exception:
                         pass
                     ST._last_backup = 0

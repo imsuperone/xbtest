@@ -56,10 +56,10 @@ def format_shanghai_time(dt_str, filename=""):
     return s or "-"
 
 try:
-    from .. import store as ST
+    from .. import storage as ST
     from . import logger as _logger
 except ImportError:
-    import store as ST
+    import storage as ST
     try:
         from core import logger as _logger
     except ImportError:

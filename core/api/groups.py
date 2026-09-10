@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 """群组开关 API — 总开关 + 按群开关"""
 import asyncio
-import json
 from astrbot.api.web import json_response
-from .helpers import _err, get_req_query, get_req_json
+from .web_utils import get_req_json
 
 try:
-    from ... import store as ST
+    from ... import storage as ST
 except ImportError:
-    import store as ST
+    import storage as ST
 
 async def handle_groups_list(request=None):
     def _work():

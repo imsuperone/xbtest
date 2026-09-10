@@ -6,19 +6,30 @@ import json
 import time
 from astrbot.api.web import json_response
 
-from .helpers import _err, get_req_query, get_req_json
+from .web_utils import _err, get_req_query, get_req_json
 
 try:
-    from ... import store as ST
-    from ...engines import slave
+    from ... import storage as ST
+    from ...games import slave
 except ImportError:
-    import store as ST
+    import storage as ST
     try:
-        from engines import slave
+        from games import slave
     except ImportError:
         import slave  # type: ignore
 
-PLUGIN_VERSION = "0.7.44"
+try:
+    from ..version import get_version as _get_version
+except ImportError:
+    try:
+        from core.version import get_version as _get_version  # type: ignore
+    except Exception:
+        def _get_version(*a, **k):  # type: ignore
+            return "0.7.44"
+try:
+    PLUGIN_VERSION = _get_version()
+except Exception:
+    PLUGIN_VERSION = "0.7.44"
 
 
 def _extract_param(request, key, default=""):
@@ -157,7 +168,7 @@ async def handle_user_edit(request):
             return _err("money must be int", 400)
         cur = ST.coins_get(gid, qq)
         out["money"] = ST.coins_add(gid, qq, tgt - cur)
-    _map_old = {"tili": "stamina", "meili": "charm", "jiangquan": "lottery_tickets", "cunkuan": "deposit", "lottery_tickets": "lottery_tickets", "stamina": "stamina", "charm": "charm", "deposit": "deposit"}
+    _map_old = {"tili": "stamina", "meili": "charm", "jiangquan": "lottery_tickets", "cunkuan": "deposit"}
     norm_p = {}
     for k, v in p.items():
         nk = _map_old.get(k, k)
@@ -481,7 +492,7 @@ async def handle_users_clean_left(request, context=None):
 
     fetch_qqs = None
     try:
-        from .. import platform as _plat
+        from .. import messaging as _plat
         fetch_qqs = _plat.fetch_group_member_qqs
     except Exception:
         pass

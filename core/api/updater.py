@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """小白机器人 - 在线版本检测引擎 (标准 GitHub Release / 国内加速镜像适配)"""
-import os
 import re
 import json
 import time
@@ -11,15 +10,9 @@ try:
 except ImportError:
     def json_response(data, status=200):
         return data
-from .helpers import _err, no_cache_response
-
-try:
-    from ... import store as ST
-except ImportError:
-    import store as ST
+from .web_utils import _err, no_cache_response
 
 GITHUB_REPO = "imsuperone/xb"
-REPO_URL = f"https://github.com/{GITHUB_REPO}"
 API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 _LAST_CHECK_RES = None
@@ -31,36 +24,38 @@ _CHECK_RUNNING_TTL = 30.0  # 在途超时：拥有者超过此时长未回即视
 
 
 def _get_local_version(plugin_base=""):
+    """本地版本：委托 version.py 单源（读 metadata.yaml），失败回 _FALLBACK。"""
     try:
-        base = plugin_base or os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        meta_path = os.path.join(base, "metadata.yaml")
-        if os.path.isfile(meta_path):
-            for line in open(meta_path, "r", encoding="utf-8").readlines():
-                if line.strip().startswith("version:"):
-                    return line.split(":", 1)[1].strip().strip('"').strip("'")
+        try:
+            from ..version import get_version as _gv
+        except ImportError:
+            from core.version import get_version as _gv  # type: ignore
+        return _gv(plugin_base)
     except Exception:
         pass
     return "0.7.44"
 
 
 def _parse_version_tuple(v_str):
-    """
-    解析版本号并赋予纪元权重 (epoch, major, minor, patch)。
-    - 历史遗留版本: 0.10.x ~ 0.68.x 归属旧版纪元 (epoch=0)
-    - 新版规范序列: 0.7.0 起全面进入新纪元 (epoch=1)，后续依次为 0.7.xx -> 0.8.xx -> 1.0.xx
-    保证 0.7.0+ 永远严格大于历史版本 0.68.xx。
-    """
+    """纪元比较：委托 version.parse_version_tuple（单源），失败走本地同逻辑兜底。"""
+    try:
+        try:
+            from ..version import parse_version_tuple as _pvt
+        except ImportError:
+            from core.version import parse_version_tuple as _pvt  # type: ignore
+        return _pvt(v_str)
+    except Exception:
+        pass
     m = re.findall(r"\d+", str(v_str or ""))
     nums = [int(x) for x in m] if m else [0, 0, 0]
     while len(nums) < 3:
         nums.append(0)
     major, minor, patch = nums[0], nums[1], nums[2]
-    # 历史遗留版本 0.10.x ~ 0.68.x 归属旧纪元
-    if major == 0 and 10 <= minor <= 68:
-        epoch = 0
-    else:
-        epoch = 1
+    epoch = 0 if (major == 0 and 10 <= minor <= 68) else 1
     return (epoch, major, minor, patch)
+
+
+
 
 
 def check_latest_version(plugin_base=""):

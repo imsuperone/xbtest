@@ -8,7 +8,6 @@
 4. 线程安全：多线程写锁互斥。
 """
 import os
-import time
 import datetime
 import threading
 
@@ -27,10 +26,10 @@ def get_log_dir():
     if _LOG_DIR and os.path.isdir(_LOG_DIR):
         return _LOG_DIR
     try:
-        from .. import store as ST
+        from .. import storage as ST
     except ImportError:
         try:
-            import store as ST
+            import storage as ST
         except ImportError:
             ST = None
 

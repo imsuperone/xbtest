@@ -108,18 +108,40 @@ def _collect_commands(base_dir="", store=None):
     try:
         if not base_dir:
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        eng_dir = os.path.join(base_dir, "engines")
+        eng_dir = os.path.join(base_dir, "games")
         if not os.path.isdir(eng_dir):
-            eng_dir = os.path.join(os.path.dirname(base_dir), "engines")
+            eng_dir = os.path.join(os.path.dirname(base_dir), "games")
         # also try plugin root
         if not os.path.isdir(eng_dir):
-            eng_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "engines")
+            eng_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "games")
             eng_dir = os.path.abspath(eng_dir)
-        for name in ("slave", "sign", "bank", "ent", "chat", "spirit", "ride", "superadmin", "guild", "adventure"):
-            p = os.path.join(eng_dir, name + ".py")
-            try:
-                src = open(p, encoding="utf-8").read()
-            except Exception:
+        core_dir = os.path.join(base_dir, "core")
+        if not os.path.isdir(core_dir):
+            core_dir = os.path.join(os.path.dirname(base_dir), "core")
+        _targets = []
+        for name in ("slave", "sign", "bank", "ent", "chat", "spirit", "ride", "guild", "adventure"):
+            _one = os.path.join(eng_dir, name + ".py")
+            if not os.path.isfile(_one) and os.path.isdir(os.path.join(eng_dir, name)):
+                # 已拆包的系统：串联包内全部模块源码再采集（与单文件语义一致）
+                _targets.append((name, sorted(
+                    os.path.join(eng_dir, name, f) for f in os.listdir(os.path.join(eng_dir, name))
+                    if f.endswith(".py"))))
+            else:
+                _targets.append((name, [_one]))
+        _sup = os.path.join(core_dir, "superadmin.py")
+        if not os.path.isfile(_sup):
+            _sup = os.path.join(eng_dir, "superadmin.py")  # 旧位兼容
+        _targets.append(("superadmin", [_sup]))
+        for name, _files in _targets:
+            src = ""
+            for p in _files:
+                if not p or not os.path.isfile(p):
+                    continue
+                try:
+                    src += "\n" + open(p, encoding="utf-8").read()
+                except Exception:
+                    continue
+            if not src:
                 continue
             # 去掉 # 注释（整行+行尾，字符串内 # 保留），避免注释中文被收录
             _lines = []

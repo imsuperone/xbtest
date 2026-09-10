@@ -6,12 +6,12 @@ import os
 import time
 from astrbot.api.web import json_response
 
-from .helpers import _err, get_req_query, get_req_json
+from .web_utils import _err, get_req_query, get_req_json
 
 try:
-    from ... import store as ST
+    from ... import storage as ST
 except ImportError:
-    import store as ST
+    import storage as ST
 
 def _img_base(plugin_base=""):
     if plugin_base:

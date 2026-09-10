@@ -1,0 +1,425 @@
+"""游戏画像 API — 奴隶 / 精灵 用户画像 + 精灵图鉴 + 身价校准 + 抽奖武器池文件管理"""
+import asyncio
+import json
+import re
+from astrbot.api.web import json_response
+from .web_utils import _err, get_req_query, get_req_json
+try:
+    from ... import storage as ST
+    from ...games import slave
+except ImportError:
+    import storage as ST
+    try:
+        from games import slave
+    except ImportError:
+        import slave  # type: ignore
+async def handle_slave_users(request):
+    # 请求参数在事件循环上提取（request 对象禁跨线程），重活进线程池，不堵消息循环
+    try:
+        gid = get_req_query(request, "gid", "").strip()
+        if not gid:
+            j = await get_req_json(request, default={})
+            if isinstance(j, dict) and j.get("gid"):
+                gid = str(j.get("gid")).strip()
+    except Exception as e:
+        return _err(f"slave users failed: {e}", 500)
+
+    def _work():
+        try:
+            default_init_price = ST.cfgi("费用配置", "初始身价", 500) if hasattr(ST, "cfgi") else 500
+            if default_init_price <= 0: default_init_price = 500
+
+            # 从 groups, wallet, accounts 聚合所有玩家
+            out = []
+            seen = set()
+
+            if gid and gid.isdigit():
+                st = slave.state(gid)
+                _all_secs = [s for s in st.sections() if s.isdigit()]
+                _owner_cnt = {}
+                for _s in _all_secs:
+                    try:
+                        _o = st[_s].get("owner", "") or ""
+                    except Exception:
+                        _o = ""
+                    if _o:
+                        _owner_cnt[_o] = _owner_cnt.get(_o, 0) + 1
+                _fixed = False
+                for qq in _all_secs:
+                    if not qq.isdigit(): continue
+                    u = slave.U(st, qq)
+                    p = int(u.get("price", "0") or 0)
+                    if p <= 0:
+                        p = default_init_price
+                        u["price"] = str(p)
+                        st.mark_dirty(qq)
+                        _fixed = True
+                    seen.add((gid, str(qq)))
+                    out.append({
+                        "gid": gid,
+                        "qq": str(qq),
+                        "name": slave.NOTE_NAMES.get(str(qq), u.get("name", "") or str(qq)),
+                        "price": p,
+                        "owner": u.get("owner", "") or "",
+                        "owner_name": slave.NOTE_NAMES.get(u.get("owner", ""), u.get("owner", "")) if u.get("owner") else "",
+                        "protect": u.get("protect_until", ""),
+                        "slaves": _owner_cnt.get(str(qq), 0),
+                        "weapons": u.get("weapon", ""),
+                        "treasures": u.get("treasure", ""),
+                    })
+                # 补该群 wallet 中有资产但尚未初始化的用户
+                if ST._DB:
+                    w_rows = ST._DB.execute("SELECT qq FROM wallet WHERE gid=?", (int(gid),)).fetchall()
+                    for (w_qq,) in w_rows:
+                        w_qq = str(w_qq)
+                        if (gid, w_qq) in seen: continue
+                        u = slave.U(st, w_qq)
+                        p = int(u.get("price", "0") or 0) or default_init_price
+                        seen.add((gid, w_qq))
+                        out.append({
+                            "gid": gid, "qq": w_qq,
+                            "name": slave.NOTE_NAMES.get(w_qq, w_qq),
+                            "price": p, "owner": "", "owner_name": "",
+                            "protect": "", "slaves": 0, "weapons": "", "treasures": ""
+                        })
+                if _fixed:
+                    try:
+                        slave.save(gid)
+                    except Exception:
+                        pass
+            else:
+                gids = set()
+                if ST._DB:
+                    for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM groups").fetchall():
+                        if str(g_id).isdigit(): gids.add(str(g_id))
+                    for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM wallet").fetchall():
+                        if str(g_id).isdigit(): gids.add(str(g_id))
+                    for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM accounts").fetchall():
+                        if str(g_id).isdigit(): gids.add(str(g_id))
+
+                for g in gids:
+                    try:
+                        st = slave.state(g)
+                        _g_fixed = False
+                        _all_secs = [s for s in st.sections() if s.isdigit()]
+                        _owner_cnt = {}
+                        for _s in _all_secs:
+                            try:
+                                _o = st[_s].get("owner", "") or ""
+                            except Exception:
+                                _o = ""
+                            if _o:
+                                _owner_cnt[_o] = _owner_cnt.get(_o, 0) + 1
+                        for qq in _all_secs:
+                            if not qq.isdigit(): continue
+                            u = slave.U(st, qq)
+                            p = int(u.get("price", "0") or 0)
+                            if p <= 0:
+                                p = default_init_price
+                                u["price"] = str(p)
+                                st.mark_dirty(qq)
+                                _g_fixed = True
+                            seen.add((g, str(qq)))
+                            out.append({
+                                "gid": g,
+                                "qq": str(qq),
+                                "name": slave.NOTE_NAMES.get(str(qq), u.get("name", "") or str(qq)),
+                                "price": p,
+                                "owner": u.get("owner", "") or "",
+                                "owner_name": slave.NOTE_NAMES.get(u.get("owner", ""), u.get("owner", "")) if u.get("owner") else "",
+                                "protect": u.get("protect_until", ""),
+                                "slaves": _owner_cnt.get(str(qq), 0),
+                                "weapons": u.get("weapon", ""),
+                                "treasures": u.get("treasure", ""),
+                            })
+                        if _g_fixed:
+                            try:
+                                slave.save(g)
+                            except Exception:
+                                pass
+                    except Exception:
+                        continue
+
+            out.sort(key=lambda x: -x["price"])
+            return json_response(out[:500])
+        except Exception as e:
+            return _err(f"slave users failed: {e}", 500)
+
+    return await asyncio.to_thread(_work)
+async def handle_slave_calibrate(request):
+    """一键校准全员奴隶身价：将全库所有 <=0 的身价批量修复为最新初始身价"""
+    try:
+        data = await get_req_json(request, default={})
+    except Exception as e:
+        return _err(f"slave calibrate failed: {e}", 500)
+
+    def _work():
+        try:
+            init_price = int(data.get("price", 0) or 0)
+            if init_price <= 0:
+                init_price = ST.cfgi("费用配置", "初始身价", 500) if hasattr(ST, "cfgi") else 500
+            if init_price <= 0:
+                init_price = 500
+
+            fixed_count = 0
+            gids = set()
+            if ST._DB:
+                for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM groups").fetchall():
+                    if str(g_id).isdigit(): gids.add(str(g_id))
+                for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM wallet").fetchall():
+                    if str(g_id).isdigit(): gids.add(str(g_id))
+                for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM accounts").fetchall():
+                    if str(g_id).isdigit(): gids.add(str(g_id))
+
+            for g in gids:
+                try:
+                    st = slave.state(g)
+                    # 检查已开户用户
+                    for qq in list(st.sections()):
+                        if not qq.isdigit(): continue
+                        u = st[qq]
+                        p = int(u.get("price", "0") or 0)
+                        if p <= 0:
+                            u["price"] = str(init_price)
+                            st.mark_dirty(qq)
+                            fixed_count += 1
+                    # 检查该群 wallet 玩家
+                    if ST._DB:
+                        w_rows = ST._DB.execute("SELECT qq FROM wallet WHERE gid=?", (int(g),)).fetchall()
+                        for (w_qq,) in w_rows:
+                            w_qq = str(w_qq)
+                            if not st.has_section(w_qq):
+                                u = slave.U(st, w_qq)
+                                u["price"] = str(init_price)
+                                st.mark_dirty(w_qq)
+                                fixed_count += 1
+                    slave.save(g)
+                except Exception:
+                    continue
+
+            ST.flush_all()
+            return json_response({
+                "ok": True,
+                "fixed_count": fixed_count,
+                "initial_price": init_price,
+                "msg": f"已成功校准 {fixed_count} 名用户的奴隶身价为 {init_price} {ST.coin_name() if hasattr(ST, 'coin_name') else '金币'}！"
+            })
+        except Exception as e:
+            return _err(f"slave calibrate failed: {e}", 500)
+
+    return await asyncio.to_thread(_work)
+async def handle_spirit_users(request):
+    try:
+        gid = get_req_query(request, "gid", "").strip()
+        if not gid:
+            j = await get_req_json(request, default={})
+            if isinstance(j, dict) and j.get("gid"):
+                gid = str(j.get("gid")).strip()
+    except Exception as e:
+        return _err(f"spirit users failed: {e}", 500)
+
+    def _work():
+        try:
+            out = []
+            q = "SELECT gid, qq, data FROM accounts"
+            args = ()
+            if gid and gid.isdigit():
+                q += " WHERE gid=?"
+                args = (int(gid),)
+            elif gid and not gid.isdigit():
+                rows = []
+                return json_response([])
+            rows = ST._DB.execute(q, args).fetchall() if ST._DB else []
+            for g, qq, data in rows:
+                g = str(g); qq = str(qq)
+                try:
+                    kv = json.loads(data or "{}")
+                except Exception:
+                    kv = {}
+                sp_raw = kv.get("spirits", "")
+                sp = {}
+                if isinstance(sp_raw, dict):
+                    sp = sp_raw
+                elif isinstance(sp_raw, str) and sp_raw.strip():
+                    try:
+                        sp = json.loads(sp_raw)
+                    except Exception:
+                        sp = {}
+                if not isinstance(sp, dict) or not sp.get("list"):
+                    continue
+                lst = sp.get("list") if isinstance(sp.get("list"), list) else []
+                if not lst:
+                    continue
+
+                def _power(it):
+                    try:
+                        return int(it.get("level", 1)) * (int(it.get("hp", 0)) + int(it.get("atk", 0)) + int(it.get("def", 0)) + int(it.get("spa", 0)) + int(it.get("spd", 0))) // 5
+                    except Exception:
+                        return 0
+
+                active = str(sp.get("active", "") or "")
+                bag = sp.get("bag", {}) if isinstance(sp.get("bag"), dict) else {}
+                total_power = sum(_power(it) for it in lst)
+                best = max(lst, key=_power) if lst else {}
+                best_name = best.get("name", "") if isinstance(best, dict) else ""
+                max_lv = max((int(it.get("level", 1)) for it in lst), default=1)
+                out.append({
+                    "gid": g,
+                    "qq": qq,
+                    "name": getattr(slave, "NOTE_NAMES", {}).get(qq, kv.get("name", "") or qq),
+                    "count": len(lst),
+                    "active": active,
+                    "best": best_name,
+                    "max_level": max_lv,
+                    "total_power": total_power,
+                    "bag_count": len(bag),
+                })
+            out.sort(key=lambda x: -x["total_power"])
+            return json_response(out[:300])
+        except Exception as e:
+            return _err(f"spirit users failed: {e}", 500)
+
+    return await asyncio.to_thread(_work)
+def _raw_spirit_cfg(key):
+    """读精灵图鉴原始配置（未配置/非法返回 {}，不回退内置；回退由引擎 _SPIRITS/_MAPS/_SHOP 负责）"""
+    try:
+        try:
+            from ...games import spirit  # noqa
+        except ImportError:
+            pass
+        v = ST.cfg("精灵图鉴", key, "")
+    except Exception:
+        return {}
+    if isinstance(v, dict):
+        return v
+    if v:
+        try:
+            d = json.loads(v)
+            if isinstance(d, dict):
+                return d
+        except Exception:
+            pass
+    return {}
+def _load_spirit_data():
+    try:
+        try:
+            from ...games import spirit
+        except ImportError:
+            import spirit  # type: ignore
+        sp = dict(spirit._SPIRITS() or {})  # type: ignore
+        mp = dict(spirit._MAPS() or {})
+        sh = dict(spirit._SHOP() or {})
+        return {"spirits": sp, "maps": mp, "shop": sh}
+    except Exception:
+        try:
+            try:
+                from ...games import data_spirit as SD  # type: ignore
+            except ImportError:
+                import data_spirit as SD  # type: ignore
+            return {"spirits": dict(getattr(SD, "SPIRITS", {})), "maps": dict(getattr(SD, "MAPS", {})), "shop": dict(getattr(SD, "SHOP", {}))}
+        except Exception:
+            return {"spirits": {}, "maps": {}, "shop": {}}
+async def handle_spirits_get(request):
+    def _work():
+        data = _load_spirit_data()
+        # 下发原始配置 + 内置基线：前端如实展示“未自定义/已自定义”，空即内置回退
+        try:
+            raw = {k: _raw_spirit_cfg(k) for k in ("spirits", "maps", "shop")}
+            data = dict(data)
+            data["_raw"] = raw
+            try:
+                try:
+                    from ...games import data_spirit as _SDB  # type: ignore
+                except ImportError:
+                    import data_spirit as _SDB  # type: ignore
+                data["_builtin"] = {
+                    "spirits": dict(getattr(_SDB, "SPIRITS", {}) or {}),
+                    "maps": dict(getattr(_SDB, "MAPS", {}) or {}),
+                    "shop": dict(getattr(_SDB, "SHOP", {}) or {}),
+                }
+            except Exception:
+                data["_builtin"] = {"spirits": {}, "maps": {}, "shop": {}}
+            data["_meta"] = {
+                "configured": {k: bool(raw.get(k)) for k in ("spirits", "maps", "shop")},
+                "builtin": {k: len((data.get("_builtin") or {}).get(k) or {}) for k in ("spirits", "maps", "shop")},
+            }
+        except Exception:
+            pass
+        return json_response(data)
+    return await asyncio.to_thread(_work)
+async def handle_spirits_save(request):
+    payload = await get_req_json(request, default={})
+    if not isinstance(payload, dict):
+        return _err("payload must be dict", 400)
+    saved = []
+    for key in ("spirits", "maps", "shop"):
+        if key not in payload:
+            continue
+        val = payload[key]
+        if not isinstance(val, dict):
+            return _err(f"{key} must be dict", 400)
+        # 入库整形：只保留结构合法的条目，脏数据就地清洗，保证自助添加不炸运行时
+        try:
+            if key == "spirits":
+                _num_fields = ("hp", "atk", "def", "spa", "spd", "spe", "lv")
+                _clean = {}
+                for _n, _it in val.items():
+                    if not isinstance(_it, dict):
+                        continue
+                    _o = {"type": str(_it.get("type", "") or "")}
+                    for _f in _num_fields:
+                        try:
+                            _o[_f] = int(float(_it.get(_f, 0) or 0))
+                        except Exception:
+                            _o[_f] = 0
+                    _o["evolve"] = str(_it.get("evolve", "") or "")
+                    _o["img"] = str(_it.get("img", "") or "")
+                    _clean[str(_n)] = _o
+                val = _clean
+            elif key == "maps":
+                _clean = {}
+                for _n, _m in val.items():
+                    if not isinstance(_m, dict):
+                        continue
+                    try:
+                        _lv = int(float(_m.get("lv", 1) or 1))
+                    except Exception:
+                        _lv = 1
+                    _drops = _m.get("drops", [])
+                    if isinstance(_drops, str):
+                        _drops = [s.strip() for s in re.split(r"[,，]", _drops) if s.strip()]
+                    if not isinstance(_drops, list):
+                        _drops = []
+                    _clean[str(_n)] = {"lv": _lv if _lv >= 1 else 1,
+                                       "drops": [str(x) for x in _drops if str(x).strip()]}
+                val = _clean
+            elif key == "shop":
+                _clean = {}
+                for _n, _it in val.items():
+                    if not isinstance(_it, dict):
+                        continue
+                    try:
+                        _price = int(float(_it.get("price", 0) or 0))
+                    except Exception:
+                        _price = 0
+                    try:
+                        _effect = int(float(_it.get("effect", 0) or 0))
+                    except Exception:
+                        _effect = 0
+                    _clean[str(_n)] = {"price": _price if _price >= 0 else 0,
+                                       "attr": str(_it.get("attr", "") or ""),
+                                       "effect": _effect if _effect >= 0 else 0}
+                val = _clean
+        except Exception:
+            pass
+        ST.set_ini("精灵图鉴", key, json.dumps(val, ensure_ascii=False))
+        saved.append(key)
+    if not saved:
+        return _err("no data (want spirits/maps/shop)", 400)
+    try:
+        ST.save_config()
+        st_cfg = dict(ST._CONFIG or {})
+        ST.sync_astrbot_config(st_cfg)
+    except Exception:
+        pass
+    return json_response({"saved": True, "keys": saved})

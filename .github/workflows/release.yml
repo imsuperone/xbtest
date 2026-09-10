@@ -30,8 +30,8 @@ jobs:
           find . -type f -name "*.db*" -delete || true
           rm -rf data/backups || true
           
-          # Package all plugin files into zip
-          zip -r "$ZIP_NAME" . -x "*.git*" "*.github*" "*__pycache__*" "*.pyc" "*.db*" "data/backups/*"
+          # Package all plugin files into zip (dev 文件已搬出，无需排除；仅去构建产物；aidocs 永不进包)
+          zip -r "$ZIP_NAME" . -x "*.git*" "*.github*" "*__pycache__*" "*.pyc" "*.db*" "data/backups/*" "aidocs/*"
           
           echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
           ls -lh "$ZIP_NAME"
