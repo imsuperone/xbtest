@@ -24,10 +24,10 @@ def bind(image_cls=None, slave_mod=None):
 
 import urllib.parse
 try:
-    from .adapters.astrbot_io import Plain
+    from .adapters import Plain
 except ImportError:
     try:
-        from core.adapters.astrbot_io import Plain  # type: ignore
+        from core.adapters import Plain  # type: ignore
     except ImportError:
         try:
             from astrbot.api.message_components import Plain

@@ -533,11 +533,11 @@ def handle(gid, qq, raw, is_admin=False):
                     raise ValueError("cache-miss")
             except ValueError:
                 try:
-                    from .api import updater
+                    from .api import stats as updater
                     info = updater.check_latest_version()
                 except Exception:
                     try:
-                        from core.api import updater
+                        from core.api import stats as updater
                         info = updater.check_latest_version()
                     except Exception:
                         pass

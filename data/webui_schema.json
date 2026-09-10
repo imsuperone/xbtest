@@ -1,0 +1,3765 @@
+{
+  "设置": {
+    "type": "object",
+    "items": {
+      "货币名称": {
+        "type": "string",
+        "default": "金币"
+      },
+      "奴隶个数": {
+        "type": "int",
+        "default": 5
+      },
+      "奴隶个数上限": {
+        "type": "int",
+        "default": 15
+      },
+      "奴隶位价格": {
+        "type": "int",
+        "default": 5000
+      },
+      "奇遇触发概率": {
+        "type": "int",
+        "default": 20
+      },
+      "宝物": {
+        "type": "string",
+        "default": "酒神葫芦|四象护符"
+      },
+      "武器": {
+        "type": "string",
+        "default": "鬼泪村正|雷鸣剑|神使沧溟|炎宿朱雀|祝融|老八脑!|钻石剑"
+      },
+      "保护时长小时": {
+        "type": "string",
+        "default": "12"
+      },
+      "保护费用": {
+        "type": "string",
+        "default": "1000"
+      },
+      "十连抽花费": {
+        "type": "int",
+        "default": 1500
+      },
+      "三十连抽花费": {
+        "type": "int",
+        "default": 4000
+      },
+      "五十连抽花费": {
+        "type": "int",
+        "default": 6000
+      },
+      "抽武器R概率": {
+        "type": "int",
+        "default": 45
+      },
+      "抽武器SR概率": {
+        "type": "int",
+        "default": 40
+      },
+      "抽武器SSR概率": {
+        "type": "int",
+        "default": 15
+      },
+      "R经验": {
+        "type": "int",
+        "default": 20
+      },
+      "SR经验": {
+        "type": "int",
+        "default": 200
+      },
+      "SSR经验": {
+        "type": "int",
+        "default": 1000
+      },
+      "一星武器消耗同武器数量": {
+        "type": "int",
+        "default": 1
+      },
+      "二星武器消耗同武器数量": {
+        "type": "int",
+        "default": 1
+      },
+      "三星武器消耗同武器数量": {
+        "type": "int",
+        "default": 1
+      },
+      "四星武器消耗同武器数量": {
+        "type": "int",
+        "default": 1
+      },
+      "五星武器消耗同武器数量": {
+        "type": "int",
+        "default": 1
+      },
+      "一星武器花费": {
+        "type": "int",
+        "default": 1000
+      },
+      "二星武器花费": {
+        "type": "int",
+        "default": 2500
+      },
+      "三星武器花费": {
+        "type": "int",
+        "default": 8000
+      },
+      "四星武器花费": {
+        "type": "int",
+        "default": 15000
+      },
+      "五星武器花费": {
+        "type": "int",
+        "default": 30000
+      },
+      "一星武器概率": {
+        "type": "int",
+        "default": 90
+      },
+      "二星武器概率": {
+        "type": "int",
+        "default": 75
+      },
+      "三星武器概率": {
+        "type": "int",
+        "default": 60
+      },
+      "四星武器概率": {
+        "type": "int",
+        "default": 45
+      },
+      "五星武器概率": {
+        "type": "int",
+        "default": 30
+      },
+      "一星武器经验": {
+        "type": "int",
+        "default": 999
+      },
+      "二星武器经验": {
+        "type": "int",
+        "default": 1999
+      },
+      "三星武器经验": {
+        "type": "int",
+        "default": 2999
+      },
+      "四星武器经验": {
+        "type": "int",
+        "default": 3999
+      },
+      "五星武器经验": {
+        "type": "int",
+        "default": 4999
+      },
+      "一阶宝物消耗宝物数量": {
+        "type": "int",
+        "default": 1
+      },
+      "二阶宝物消耗宝物数量": {
+        "type": "int",
+        "default": 2
+      },
+      "三阶宝物消耗宝物数量": {
+        "type": "int",
+        "default": 3
+      },
+      "一阶宝物花费": {
+        "type": "int",
+        "default": 5000
+      },
+      "二阶宝物花费": {
+        "type": "int",
+        "default": 12000
+      },
+      "三阶宝物花费": {
+        "type": "int",
+        "default": 25000
+      },
+      "一阶宝物概率": {
+        "type": "int",
+        "default": 75
+      },
+      "二阶宝物概率": {
+        "type": "int",
+        "default": 45
+      },
+      "三阶宝物概率": {
+        "type": "int",
+        "default": 20
+      },
+      "抽武器花费": {
+        "type": "int",
+        "default": 1988
+      },
+      "平衡模式": {
+        "type": "string",
+        "default": "standard"
+      }
+    }
+  },
+  "费用配置": {
+    "type": "object",
+    "items": {
+      "初始身价": {
+        "type": "int",
+        "default": 1000
+      },
+      "打赏上限": {
+        "type": "int",
+        "default": 100000
+      },
+      "工资比例": {
+        "type": "int",
+        "default": 50
+      },
+      "变化上限": {
+        "type": "int",
+        "default": 1000
+      },
+      "变化下限": {
+        "type": "int",
+        "default": -200
+      },
+      "买入身价上涨": {
+        "type": "float",
+        "default": 1.35
+      },
+      "赎身花费倍率": {
+        "type": "float",
+        "default": 1.1
+      }
+    }
+  },
+  "间隔配置": {
+    "type": "object",
+    "items": {
+      "购买间隔": {
+        "type": "int",
+        "default": 1
+      },
+      "折磨间隔": {
+        "type": "int",
+        "default": 1
+      },
+      "打赏间隔": {
+        "type": "int",
+        "default": 1
+      },
+      "讨好间隔": {
+        "type": "int",
+        "default": 1
+      },
+      "造反间隔": {
+        "type": "int",
+        "default": 1
+      },
+      "打工间隔": {
+        "type": "int",
+        "default": 1
+      },
+      "保护间隔": {
+        "type": "int",
+        "default": 5
+      },
+      "打架间隔": {
+        "type": "int",
+        "default": 1
+      },
+      "学习间隔": {
+        "type": "int",
+        "default": 1
+      },
+      "货币间隔": {
+        "type": "int",
+        "default": 1
+      },
+      "赎身间隔": {
+        "type": "int",
+        "default": 30
+      },
+      "自由间隔": {
+        "type": "int",
+        "default": 30
+      },
+      "祈福间隔": {
+        "type": "int",
+        "default": 3
+      },
+      "释放间隔": {
+        "type": "int",
+        "default": 1
+      }
+    }
+  },
+  "概率配置": {
+    "type": "object",
+    "items": {
+      "讨好概率": {
+        "type": "int",
+        "default": 80
+      },
+      "造反概率": {
+        "type": "int",
+        "default": 20
+      },
+      "折磨成功率": {
+        "type": "int",
+        "default": 88
+      }
+    }
+  },
+  "祈福配置": {
+    "type": "object",
+    "items": {
+      "祈福奖励下限": {
+        "type": "int",
+        "default": 1000
+      },
+      "祈福奖励上限": {
+        "type": "int",
+        "default": 6000
+      },
+      "人品爆发概率": {
+        "type": "int",
+        "default": 15
+      },
+      "人品爆发奖励": {
+        "type": "int",
+        "default": 30000
+      }
+    }
+  },
+  "签到配置": {
+    "type": "object",
+    "items": {
+      "重复签到文案": {
+        "type": "text",
+        "default": "亲，您今天已经签到过了，请明天继续吧！"
+      },
+      "基础奖励": {
+        "type": "int",
+        "default": 1000
+      },
+      "连签加成": {
+        "type": "int",
+        "default": 100
+      },
+      "金钱下限": {
+        "type": "int",
+        "default": 800
+      },
+      "金钱上限": {
+        "type": "int",
+        "default": 2000
+      },
+      "体力下限": {
+        "type": "int",
+        "default": 50
+      },
+      "体力上限": {
+        "type": "int",
+        "default": 100
+      },
+      "魅力下限": {
+        "type": "int",
+        "default": 15
+      },
+      "魅力上限": {
+        "type": "int",
+        "default": 30
+      },
+      "奖券下限": {
+        "type": "int",
+        "default": 3
+      },
+      "奖券上限": {
+        "type": "int",
+        "default": 8
+      },
+      "体力价格": {
+        "type": "int",
+        "default": 30
+      },
+      "魅力价格": {
+        "type": "int",
+        "default": 3
+      }
+    }
+  },
+  "抽奖配置": {
+    "type": "object",
+    "items": {
+      "中奖率": {
+        "type": "int",
+        "default": 70
+      },
+      "现金奖": {
+        "type": "int",
+        "default": 2000
+      },
+      "体力奖": {
+        "type": "int",
+        "default": 60
+      },
+      "魅力奖": {
+        "type": "int",
+        "default": 40
+      }
+    }
+  },
+  "新手配置": {
+    "type": "object",
+    "items": {
+      "现金": {
+        "type": "int",
+        "default": 10000
+      },
+      "体力": {
+        "type": "int",
+        "default": 300
+      },
+      "魅力": {
+        "type": "int",
+        "default": 100
+      },
+      "奖券": {
+        "type": "int",
+        "default": 15
+      }
+    }
+  },
+  "点赞配置": {
+    "type": "object",
+    "items": {
+      "点赞数": {
+        "type": "int",
+        "default": 10
+      }
+    }
+  },
+  "银行配置": {
+    "type": "object",
+    "items": {
+      "打劫失败罚金": {
+        "type": "int",
+        "default": 200
+      },
+      "打劫成功概率": {
+        "type": "int",
+        "default": 65
+      },
+      "打劫消耗体力": {
+        "type": "int",
+        "default": 5
+      },
+      "打劫魅力减少": {
+        "type": "int",
+        "default": 1
+      },
+      "打劫金钱下限": {
+        "type": "int",
+        "default": 1000
+      },
+      "打劫金钱上限": {
+        "type": "int",
+        "default": 6000
+      },
+      "打劫关押时间": {
+        "type": "int",
+        "default": 5,
+        "desc": "打劫失败关押时间(分钟，建议5~10分钟)"
+      },
+      "打劫银行消耗体力": {
+        "type": "int",
+        "default": 10
+      },
+      "打劫银行魅力减少": {
+        "type": "int",
+        "default": 2
+      },
+      "打劫银行金钱下限": {
+        "type": "int",
+        "default": 5000
+      },
+      "打劫银行金钱上限": {
+        "type": "int",
+        "default": 15000
+      },
+      "打劫银行成功概率": {
+        "type": "int",
+        "default": 60
+      },
+      "打劫银行关押时间": {
+        "type": "int",
+        "default": 5,
+        "desc": "打劫银行失败关押时间(分钟，建议5~10分钟给越狱留出操作空间)"
+      },
+      "打劫银行间隔": {
+        "type": "int",
+        "default": 10
+      },
+      "赌博成功概率": {
+        "type": "int",
+        "default": 60
+      },
+      "赌博消耗体力": {
+        "type": "int",
+        "default": 5
+      },
+      "赌博魅力减少": {
+        "type": "int",
+        "default": 2
+      },
+      "赌博限定次数": {
+        "type": "int",
+        "default": 20
+      },
+      "赌博关押时间": {
+        "type": "int",
+        "default": 5,
+        "desc": "赌博被抓关押时间(分钟，建议5~10分钟)"
+      },
+      "赌博最大金额": {
+        "type": "int",
+        "default": 100000
+      },
+      "存取款消耗体力": {
+        "type": "int",
+        "default": 1
+      },
+      "存款利率": {
+        "type": "int",
+        "default": 3
+      },
+      "利息上限": {
+        "type": "int",
+        "default": 100000
+      },
+      "转账消耗体力": {
+        "type": "int",
+        "default": 1
+      },
+      "转账最小金额": {
+        "type": "int",
+        "default": 50
+      },
+      "转账接收额度": {
+        "type": "int",
+        "default": 999999999
+      },
+      "越狱消耗体力": {
+        "type": "int",
+        "default": 3
+      },
+      "进监狱增加体力": {
+        "type": "int",
+        "default": 10
+      },
+      "越狱魅力减少": {
+        "type": "int",
+        "default": 1
+      },
+      "越狱成功概率": {
+        "type": "int",
+        "default": 80
+      },
+      "保释消耗体力": {
+        "type": "int",
+        "default": 3
+      },
+      "保释魅力减少": {
+        "type": "int",
+        "default": 2
+      },
+      "保释金钱下限": {
+        "type": "int",
+        "default": 500
+      },
+      "保释金钱上限": {
+        "type": "int",
+        "default": 2000
+      },
+      "红包_最小金额": {
+        "type": "int",
+        "default": 100
+      },
+      "红包_发体力": {
+        "type": "int",
+        "default": 1
+      },
+      "红包_抢体力": {
+        "type": "int",
+        "default": 1
+      },
+      "红包_抢魅力": {
+        "type": "int",
+        "default": 1
+      },
+      "存款期限": {
+        "type": "int",
+        "default": 1
+      },
+      "红包_间隔时间": {
+        "type": "int",
+        "default": 10
+      },
+      "红包_基本魅力": {
+        "type": "int",
+        "default": 1
+      },
+      "越狱关押时间": {
+        "type": "int",
+        "default": 5,
+        "desc": "越狱失败加刑时间(分钟，建议5分钟)"
+      },
+      "红包_最大金额": {
+        "type": "int",
+        "default": 100000
+      },
+      "劫狱消耗体力": {
+        "type": "int",
+        "default": 3
+      },
+      "劫狱间隔": {
+        "type": "int",
+        "default": 1
+      },
+      "劫狱魅力减少": {
+        "type": "int",
+        "default": 0
+      },
+      "进监狱次数": {
+        "type": "int",
+        "default": 8
+      }
+    }
+  },
+  "娱乐配置": {
+    "type": "object",
+    "items": {
+      "抽签造价": {
+        "type": "int",
+        "default": 20
+      },
+      "扔炸弹_需要金钱": {
+        "type": "int",
+        "default": 2000
+      },
+      "扔炸弹_消耗体力": {
+        "type": "int",
+        "default": 5
+      },
+      "扔炸弹_魅力减少": {
+        "type": "int",
+        "default": 1
+      },
+      "扔炸弹_个数下限": {
+        "type": "int",
+        "default": 1
+      },
+      "扔炸弹_个数上限": {
+        "type": "int",
+        "default": 2
+      },
+      "扔炸弹_成功概率": {
+        "type": "int",
+        "default": 85
+      },
+      "扔炸弹_禁言下限": {
+        "type": "int",
+        "default": 1
+      },
+      "扔炸弹_禁言上限": {
+        "type": "int",
+        "default": 3
+      },
+      "抽签大吉奖励": {
+        "type": "int",
+        "default": 1888
+      },
+      "抽签上签奖励": {
+        "type": "int",
+        "default": 888
+      },
+      "抽签中签奖励": {
+        "type": "int",
+        "default": 288
+      },
+      "猜拳奖励金币": {
+        "type": "int",
+        "default": 600
+      },
+      "猜拳奖励魅力": {
+        "type": "int",
+        "default": 5
+      },
+      "猜拳成功概率": {
+        "type": "int",
+        "default": 60
+      },
+      "猜拳消耗体力": {
+        "type": "int",
+        "default": 2
+      },
+      "猜拳需要金钱": {
+        "type": "int",
+        "default": 0
+      },
+      "猜数奖励金币": {
+        "type": "int",
+        "default": 1000
+      },
+      "猜数奖励魅力": {
+        "type": "int",
+        "default": 6
+      },
+      "猜数消耗体力": {
+        "type": "int",
+        "default": 2
+      },
+      "猜数需要金钱": {
+        "type": "int",
+        "default": 0
+      },
+      "急转弯奖励金币": {
+        "type": "int",
+        "default": 600
+      },
+      "急转弯奖励魅力": {
+        "type": "int",
+        "default": 4
+      },
+      "急转弯消耗体力": {
+        "type": "int",
+        "default": 0
+      },
+      "猜字谜奖励金币": {
+        "type": "int",
+        "default": 600
+      },
+      "猜字谜奖励魅力": {
+        "type": "int",
+        "default": 4
+      },
+      "猜字谜消耗体力": {
+        "type": "int",
+        "default": 0
+      },
+      "接龙奖励金币": {
+        "type": "int",
+        "default": 20
+      },
+      "接龙奖励魅力": {
+        "type": "int",
+        "default": 0
+      },
+      "接龙消耗体力": {
+        "type": "int",
+        "default": 0
+      },
+      "接龙需要金钱": {
+        "type": "int",
+        "default": 0
+      },
+      "答题奖励金币": {
+        "type": "int",
+        "default": 600
+      },
+      "答题奖励魅力": {
+        "type": "int",
+        "default": 4
+      },
+      "答题消耗体力": {
+        "type": "int",
+        "default": 0
+      },
+      "二四点奖励金币": {
+        "type": "int",
+        "default": 1000
+      },
+      "二四点奖励魅力": {
+        "type": "int",
+        "default": 6
+      },
+      "二四点消耗体力": {
+        "type": "int",
+        "default": 0
+      },
+      "二四点需要金钱": {
+        "type": "int",
+        "default": 0
+      },
+      "急转弯需要金钱": {
+        "type": "int",
+        "default": 0
+      },
+      "猜字谜需要金钱": {
+        "type": "int",
+        "default": 0
+      },
+      "答题需要金钱": {
+        "type": "int",
+        "default": 0
+      },
+      "接龙词库": {
+        "type": "text",
+        "default": ""
+      },
+      "急转弯题库": {
+        "type": "text",
+        "default": ""
+      },
+      "猜字谜题库": {
+        "type": "text",
+        "default": ""
+      },
+      "答题题库": {
+        "type": "text",
+        "default": ""
+      }
+    }
+  },
+  "私聊配置": {
+    "type": "object",
+    "items": {
+      "私聊开关": {
+        "type": "string",
+        "default": "真"
+      },
+      "前缀开关": {
+        "type": "string",
+        "default": "假"
+      },
+      "回复概率": {
+        "type": "float",
+        "default": 0.3
+      },
+      "黑名单关键字": {
+        "type": "string",
+        "default": ""
+      }
+    }
+  },
+  "精灵配置": {
+    "type": "object",
+    "items": {
+      "开关": {
+        "type": "string",
+        "default": "真"
+      },
+      "升级经验": {
+        "type": "int",
+        "default": 300
+      },
+      "最大等级": {
+        "type": "int",
+        "default": 100
+      },
+      "冒险间隔": {
+        "type": "int",
+        "default": 2
+      },
+      "等级加成下限": {
+        "type": "int",
+        "default": 3
+      },
+      "等级加成上限": {
+        "type": "int",
+        "default": 8
+      },
+      "精灵数量": {
+        "type": "int",
+        "default": 8
+      },
+      "魅力减少": {
+        "type": "int",
+        "default": 10
+      },
+      "大师球": {
+        "type": "int",
+        "default": 5
+      },
+      "奇异甜食": {
+        "type": "int",
+        "default": 10
+      },
+      "挑战奖励_金钱上限": {
+        "type": "int",
+        "default": 2000
+      },
+      "挑战奖励_经验下限": {
+        "type": "int",
+        "default": 500
+      },
+      "挑战奖励_经验上限": {
+        "type": "int",
+        "default": 1000
+      },
+      "挑战扣除_金钱下限": {
+        "type": "int",
+        "default": 50
+      },
+      "挑战扣除_金钱上限": {
+        "type": "int",
+        "default": 150
+      },
+      "初始精灵_1": {
+        "type": "string",
+        "default": "叶子"
+      },
+      "初始精灵_2": {
+        "type": "string",
+        "default": "火苗"
+      },
+      "初始精灵_3": {
+        "type": "string",
+        "default": "水滴"
+      },
+      "挑战奖励_金钱下限": {
+        "type": "int",
+        "default": 800
+      },
+      "挑战扣除_消耗体力": {
+        "type": "int",
+        "default": 3
+      },
+      "精灵球": {
+        "type": "int",
+        "default": 20
+      }
+    }
+  },
+  "坐骑配置": {
+    "type": "object",
+    "items": {
+      "开关": {
+        "type": "string",
+        "default": "真"
+      },
+      "价格_企鹅": {
+        "type": "int",
+        "default": 10000
+      },
+      "价格_伞兵": {
+        "type": "int",
+        "default": 25000
+      },
+      "价格_宝驴": {
+        "type": "int",
+        "default": 50000
+      },
+      "价格_保时捷": {
+        "type": "int",
+        "default": 120000
+      },
+      "价格_法拉利": {
+        "type": "int",
+        "default": 250000
+      },
+      "价格_玛莎拉蒂": {
+        "type": "int",
+        "default": 400000
+      },
+      "价格_劳斯莱斯": {
+        "type": "int",
+        "default": 800000
+      },
+      "价格_布加迪威龙": {
+        "type": "int",
+        "default": 1500000
+      },
+      "价格_私人航空": {
+        "type": "int",
+        "default": 4000000
+      }
+    }
+  },
+  "超管配置": {
+    "type": "object",
+    "items": {
+      "开关": {
+        "type": "string",
+        "default": "真"
+      }
+    }
+  },
+  "帮派配置": {
+    "type": "object",
+    "items": {
+      "开关": {
+        "type": "string",
+        "default": "真"
+      },
+      "创建消耗金钱": {
+        "type": "int",
+        "default": 20000
+      },
+      "创建消耗体力": {
+        "type": "int",
+        "default": 100
+      },
+      "创建需要魅力": {
+        "type": "int",
+        "default": 200
+      },
+      "人数上限": {
+        "type": "int",
+        "default": 50
+      },
+      "帮战次数上限": {
+        "type": "int",
+        "default": 8
+      },
+      "升级需要帮贡": {
+        "type": "int",
+        "default": 20000
+      },
+      "福利基数": {
+        "type": "int",
+        "default": 4000
+      },
+      "修筑价格": {
+        "type": "int",
+        "default": 2000
+      },
+      "修筑上限": {
+        "type": "int",
+        "default": 100
+      },
+      "加入消耗体力": {
+        "type": "int",
+        "default": 2
+      },
+      "加入需要魅力": {
+        "type": "int",
+        "default": 50
+      },
+      "退出消耗体力": {
+        "type": "int",
+        "default": 2
+      },
+      "退出扣除魅力": {
+        "type": "int",
+        "default": 20
+      },
+      "解散消耗体力": {
+        "type": "int",
+        "default": 50
+      },
+      "解散扣除魅力": {
+        "type": "int",
+        "default": 200
+      },
+      "帮战获贡下限": {
+        "type": "int",
+        "default": 20
+      },
+      "帮战获贡上限": {
+        "type": "int",
+        "default": 50
+      },
+      "贡献下限": {
+        "type": "int",
+        "default": 20
+      }
+    }
+  },
+  "冒险配置": {
+    "type": "object",
+    "items": {
+      "冒险消耗体力": {
+        "type": "int",
+        "default": 5
+      },
+      "冒险需要金钱": {
+        "type": "int",
+        "default": 100
+      },
+      "冒险间隔": {
+        "type": "int",
+        "default": 3
+      },
+      "事件金钱下限": {
+        "type": "int",
+        "default": 500
+      },
+      "事件金钱上限": {
+        "type": "int",
+        "default": 1500
+      },
+      "结局金钱下限": {
+        "type": "int",
+        "default": 2000
+      },
+      "结局金钱上限": {
+        "type": "int",
+        "default": 5000
+      },
+      "最大轮数": {
+        "type": "int",
+        "default": 6
+      }
+    }
+  },
+  "唤醒词配置": {
+    "type": "object",
+    "items": {
+      "银行系统": {
+        "type": "string",
+        "default": "银行系统"
+      },
+      "娱乐系统": {
+        "type": "string",
+        "default": "娱乐系统"
+      },
+      "精灵系统": {
+        "type": "string",
+        "default": "精灵系统"
+      },
+      "签到系统": {
+        "type": "string",
+        "default": "签到系统"
+      },
+      "坐骑系统": {
+        "type": "string",
+        "default": "坐骑系统"
+      },
+      "帮派系统": {
+        "type": "string",
+        "default": "帮派系统"
+      },
+      "冒险系统": {
+        "type": "string",
+        "default": "冒险系统"
+      },
+      "奴隶系统": {
+        "type": "string",
+        "default": "奴隶系统"
+      },
+      "超管系统": {
+        "type": "string",
+        "default": "超管系统"
+      }
+    }
+  },
+  "指令启用配置": {
+    "type": "object",
+    "items": {
+      "30连抽": {
+        "type": "string",
+        "default": "真"
+      },
+      "50连抽": {
+        "type": "string",
+        "default": "真"
+      },
+      "webdav测试": {
+        "type": "string",
+        "default": "真"
+      },
+      "三十连抽": {
+        "type": "string",
+        "default": "真"
+      },
+      "丢弃坐骑": {
+        "type": "string",
+        "default": "真"
+      },
+      "丢弃精灵": {
+        "type": "string",
+        "default": "真"
+      },
+      "个人排行": {
+        "type": "string",
+        "default": "真"
+      },
+      "个人财富榜": {
+        "type": "string",
+        "default": "真"
+      },
+      "买下": {
+        "type": "string",
+        "default": "真"
+      },
+      "买奴隶位": {
+        "type": "string",
+        "default": "真"
+      },
+      "二四点": {
+        "type": "string",
+        "default": "真"
+      },
+      "五十连抽": {
+        "type": "string",
+        "default": "真"
+      },
+      "体力排行榜": {
+        "type": "string",
+        "default": "真"
+      },
+      "体力榜": {
+        "type": "string",
+        "default": "真"
+      },
+      "使用精灵球": {
+        "type": "string",
+        "default": "真"
+      },
+      "保护": {
+        "type": "string",
+        "default": "真"
+      },
+      "保释": {
+        "type": "string",
+        "default": "真"
+      },
+      "修改宣言": {
+        "type": "string",
+        "default": "真"
+      },
+      "修筑城墙": {
+        "type": "string",
+        "default": "真"
+      },
+      "充钱": {
+        "type": "string",
+        "default": "真"
+      },
+      "关闭维护": {
+        "type": "string",
+        "default": "真"
+      },
+      "冒险": {
+        "type": "string",
+        "default": "真"
+      },
+      "冒险系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "出战状态": {
+        "type": "string",
+        "default": "真"
+      },
+      "出战精灵": {
+        "type": "string",
+        "default": "真"
+      },
+      "出狱": {
+        "type": "string",
+        "default": "真"
+      },
+      "出让帮派": {
+        "type": "string",
+        "default": "真"
+      },
+      "切换坐骑": {
+        "type": "string",
+        "default": "真"
+      },
+      "创建帮派": {
+        "type": "string",
+        "default": "真"
+      },
+      "加入二四点": {
+        "type": "string",
+        "default": "真"
+      },
+      "加入字谜": {
+        "type": "string",
+        "default": "真"
+      },
+      "加入帮派": {
+        "type": "string",
+        "default": "真"
+      },
+      "加入急转弯": {
+        "type": "string",
+        "default": "真"
+      },
+      "加入接龙": {
+        "type": "string",
+        "default": "真"
+      },
+      "加入猜数": {
+        "type": "string",
+        "default": "真"
+      },
+      "加入答题": {
+        "type": "string",
+        "default": "真"
+      },
+      "劫狱": {
+        "type": "string",
+        "default": "真"
+      },
+      "十连抽": {
+        "type": "string",
+        "default": "真"
+      },
+      "升星": {
+        "type": "string",
+        "default": "真"
+      },
+      "升阶": {
+        "type": "string",
+        "default": "真"
+      },
+      "发红包": {
+        "type": "string",
+        "default": "真"
+      },
+      "发起帮战": {
+        "type": "string",
+        "default": "真"
+      },
+      "取款": {
+        "type": "string",
+        "default": "真"
+      },
+      "取消护法": {
+        "type": "string",
+        "default": "真"
+      },
+      "同意加入帮派": {
+        "type": "string",
+        "default": "真"
+      },
+      "同意邀请": {
+        "type": "string",
+        "default": "真"
+      },
+      "回收出战精灵": {
+        "type": "string",
+        "default": "真"
+      },
+      "回收欢迎坐骑": {
+        "type": "string",
+        "default": "真"
+      },
+      "坐骑商城": {
+        "type": "string",
+        "default": "真"
+      },
+      "坐骑系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "备份": {
+        "type": "string",
+        "default": "真"
+      },
+      "复活币排行": {
+        "type": "string",
+        "default": "真"
+      },
+      "奴隶打工": {
+        "type": "string",
+        "default": "真"
+      },
+      "奴隶收工": {
+        "type": "string",
+        "default": "真"
+      },
+      "奴隶系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "娱乐系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "存款": {
+        "type": "string",
+        "default": "真"
+      },
+      "学习": {
+        "type": "string",
+        "default": "真"
+      },
+      "宝物升阶": {
+        "type": "string",
+        "default": "真"
+      },
+      "宝物菜单": {
+        "type": "string",
+        "default": "真"
+      },
+      "帮派列表": {
+        "type": "string",
+        "default": "真"
+      },
+      "帮派升级": {
+        "type": "string",
+        "default": "真"
+      },
+      "帮派排行": {
+        "type": "string",
+        "default": "真"
+      },
+      "帮派管理": {
+        "type": "string",
+        "default": "真"
+      },
+      "帮派系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "帮派贡献": {
+        "type": "string",
+        "default": "真"
+      },
+      "帮派邀请": {
+        "type": "string",
+        "default": "真"
+      },
+      "应用统计": {
+        "type": "string",
+        "default": "真"
+      },
+      "开启维护": {
+        "type": "string",
+        "default": "真"
+      },
+      "开始二四点": {
+        "type": "string",
+        "default": "真"
+      },
+      "开始急转弯": {
+        "type": "string",
+        "default": "真"
+      },
+      "开始接龙": {
+        "type": "string",
+        "default": "真"
+      },
+      "开始猜字谜": {
+        "type": "string",
+        "default": "真"
+      },
+      "开始猜数": {
+        "type": "string",
+        "default": "真"
+      },
+      "开始答题": {
+        "type": "string",
+        "default": "真"
+      },
+      "强制取款": {
+        "type": "string",
+        "default": "真"
+      },
+      "当前冒险": {
+        "type": "string",
+        "default": "真"
+      },
+      "当前接龙": {
+        "type": "string",
+        "default": "真"
+      },
+      "成员列表": {
+        "type": "string",
+        "default": "真"
+      },
+      "我加入接龙": {
+        "type": "string",
+        "default": "真"
+      },
+      "我的信息": {
+        "type": "string",
+        "default": "真"
+      },
+      "我的修筑": {
+        "type": "string",
+        "default": "真"
+      },
+      "我的坐骑": {
+        "type": "string",
+        "default": "真"
+      },
+      "我的帮派": {
+        "type": "string",
+        "default": "真"
+      },
+      "我的排行": {
+        "type": "string",
+        "default": "真"
+      },
+      "我的精灵": {
+        "type": "string",
+        "default": "真"
+      },
+      "我的背包": {
+        "type": "string",
+        "default": "真"
+      },
+      "我的贡献": {
+        "type": "string",
+        "default": "真"
+      },
+      "我要出狱": {
+        "type": "string",
+        "default": "真"
+      },
+      "我要学习": {
+        "type": "string",
+        "default": "真"
+      },
+      "我要打工": {
+        "type": "string",
+        "default": "真"
+      },
+      "我要祈福": {
+        "type": "string",
+        "default": "真"
+      },
+      "我要自由": {
+        "type": "string",
+        "default": "真"
+      },
+      "我要越狱": {
+        "type": "string",
+        "default": "真"
+      },
+      "我要进监狱": {
+        "type": "string",
+        "default": "真"
+      },
+      "我要造反": {
+        "type": "string",
+        "default": "真"
+      },
+      "打劫": {
+        "type": "string",
+        "default": "真"
+      },
+      "打劫银行": {
+        "type": "string",
+        "default": "真"
+      },
+      "打卡": {
+        "type": "string",
+        "default": "真"
+      },
+      "打架": {
+        "type": "string",
+        "default": "真"
+      },
+      "扔炸弹": {
+        "type": "string",
+        "default": "真"
+      },
+      "扣钱": {
+        "type": "string",
+        "default": "真"
+      },
+      "折磨": {
+        "type": "string",
+        "default": "真"
+      },
+      "抢红包": {
+        "type": "string",
+        "default": "真"
+      },
+      "抽奖": {
+        "type": "string",
+        "default": "真"
+      },
+      "抽武器": {
+        "type": "string",
+        "default": "真"
+      },
+      "抽签": {
+        "type": "string",
+        "default": "真"
+      },
+      "挑战": {
+        "type": "string",
+        "default": "真"
+      },
+      "排行榜": {
+        "type": "string",
+        "default": "真"
+      },
+      "接受邀请": {
+        "type": "string",
+        "default": "真"
+      },
+      "接龙词": {
+        "type": "string",
+        "default": "真"
+      },
+      "接龙进度": {
+        "type": "string",
+        "default": "真"
+      },
+      "携带精灵": {
+        "type": "string",
+        "default": "真"
+      },
+      "查接龙": {
+        "type": "string",
+        "default": "真"
+      },
+      "查看出战精灵": {
+        "type": "string",
+        "default": "真"
+      },
+      "查看地图": {
+        "type": "string",
+        "default": "真"
+      },
+      "查看坐骑": {
+        "type": "string",
+        "default": "真"
+      },
+      "查看欢迎坐骑": {
+        "type": "string",
+        "default": "真"
+      },
+      "查看精灵": {
+        "type": "string",
+        "default": "真"
+      },
+      "查看维护": {
+        "type": "string",
+        "default": "真"
+      },
+      "查询": {
+        "type": "string",
+        "default": "真"
+      },
+      "检查更新": {
+        "type": "string",
+        "default": "真"
+      },
+      "武器升星": {
+        "type": "string",
+        "default": "真"
+      },
+      "武器菜单": {
+        "type": "string",
+        "default": "真"
+      },
+      "每日点赞": {
+        "type": "string",
+        "default": "真"
+      },
+      "测试testxb": {
+        "type": "string",
+        "default": "真"
+      },
+      "测试testxb1": {
+        "type": "string",
+        "default": "真"
+      },
+      "测试testxb2": {
+        "type": "string",
+        "default": "真"
+      },
+      "测试testxb3": {
+        "type": "string",
+        "default": "真"
+      },
+      "测试testxb4": {
+        "type": "string",
+        "default": "真"
+      },
+      "测试testxb5": {
+        "type": "string",
+        "default": "真"
+      },
+      "测试testxb6": {
+        "type": "string",
+        "default": "真"
+      },
+      "测试testxb7": {
+        "type": "string",
+        "default": "真"
+      },
+      "测试testxb8": {
+        "type": "string",
+        "default": "真"
+      },
+      "添加护法": {
+        "type": "string",
+        "default": "真"
+      },
+      "清空": {
+        "type": "string",
+        "default": "真"
+      },
+      "点赞": {
+        "type": "string",
+        "default": "真"
+      },
+      "版本": {
+        "type": "string",
+        "default": "真"
+      },
+      "猜拳": {
+        "type": "string",
+        "default": "真"
+      },
+      "祈福": {
+        "type": "string",
+        "default": "真"
+      },
+      "禁言": {
+        "type": "string",
+        "default": "真"
+      },
+      "移出帮派": {
+        "type": "string",
+        "default": "真"
+      },
+      "签到": {
+        "type": "string",
+        "default": "真"
+      },
+      "签到排行": {
+        "type": "string",
+        "default": "真"
+      },
+      "签到排行榜": {
+        "type": "string",
+        "default": "真"
+      },
+      "签到榜": {
+        "type": "string",
+        "default": "真"
+      },
+      "签到系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "管理帮派": {
+        "type": "string",
+        "default": "真"
+      },
+      "精灵冒险": {
+        "type": "string",
+        "default": "真"
+      },
+      "精灵列表": {
+        "type": "string",
+        "default": "真"
+      },
+      "精灵商城": {
+        "type": "string",
+        "default": "真"
+      },
+      "精灵地图": {
+        "type": "string",
+        "default": "真"
+      },
+      "精灵对战": {
+        "type": "string",
+        "default": "真"
+      },
+      "精灵排行": {
+        "type": "string",
+        "default": "真"
+      },
+      "精灵系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "结束冒险": {
+        "type": "string",
+        "default": "真"
+      },
+      "结束接龙": {
+        "type": "string",
+        "default": "真"
+      },
+      "维护信息": {
+        "type": "string",
+        "default": "真"
+      },
+      "羁绊": {
+        "type": "string",
+        "default": "真"
+      },
+      "群列表": {
+        "type": "string",
+        "default": "真"
+      },
+      "自我保释": {
+        "type": "string",
+        "default": "真"
+      },
+      "解散帮派": {
+        "type": "string",
+        "default": "真"
+      },
+      "讨好": {
+        "type": "string",
+        "default": "真"
+      },
+      "讨好主人": {
+        "type": "string",
+        "default": "真"
+      },
+      "设置欢迎坐骑": {
+        "type": "string",
+        "default": "真"
+      },
+      "财富榜": {
+        "type": "string",
+        "default": "真"
+      },
+      "购买": {
+        "type": "string",
+        "default": "真"
+      },
+      "购买体力": {
+        "type": "string",
+        "default": "真"
+      },
+      "购买坐骑": {
+        "type": "string",
+        "default": "真"
+      },
+      "购买奴隶位": {
+        "type": "string",
+        "default": "真"
+      },
+      "购买魅力": {
+        "type": "string",
+        "default": "真"
+      },
+      "赌博": {
+        "type": "string",
+        "default": "真"
+      },
+      "赎身": {
+        "type": "string",
+        "default": "真"
+      },
+      "超管列表": {
+        "type": "string",
+        "default": "真"
+      },
+      "超管系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "越狱": {
+        "type": "string",
+        "default": "真"
+      },
+      "踢人": {
+        "type": "string",
+        "default": "真"
+      },
+      "身价排行": {
+        "type": "string",
+        "default": "真"
+      },
+      "身价排行榜": {
+        "type": "string",
+        "default": "真"
+      },
+      "转账": {
+        "type": "string",
+        "default": "真"
+      },
+      "进化": {
+        "type": "string",
+        "default": "真"
+      },
+      "进监狱": {
+        "type": "string",
+        "default": "真"
+      },
+      "退出二四点": {
+        "type": "string",
+        "default": "真"
+      },
+      "退出字谜": {
+        "type": "string",
+        "default": "真"
+      },
+      "退出帮派": {
+        "type": "string",
+        "default": "真"
+      },
+      "退出急转弯": {
+        "type": "string",
+        "default": "真"
+      },
+      "退出接龙": {
+        "type": "string",
+        "default": "真"
+      },
+      "退出猜数": {
+        "type": "string",
+        "default": "真"
+      },
+      "退出答题": {
+        "type": "string",
+        "default": "真"
+      },
+      "选择": {
+        "type": "string",
+        "default": "真"
+      },
+      "造反": {
+        "type": "string",
+        "default": "真"
+      },
+      "释放": {
+        "type": "string",
+        "default": "真"
+      },
+      "重置": {
+        "type": "string",
+        "default": "真"
+      },
+      "重置接龙": {
+        "type": "string",
+        "default": "真"
+      },
+      "银行系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "领养精灵": {
+        "type": "string",
+        "default": "真"
+      },
+      "领取帮派福利": {
+        "type": "string",
+        "default": "真"
+      },
+      "领取新人礼包": {
+        "type": "string",
+        "default": "真"
+      },
+      "领取新手礼包": {
+        "type": "string",
+        "default": "真"
+      },
+      "领取精灵礼包": {
+        "type": "string",
+        "default": "真"
+      },
+      "魅力排行榜": {
+        "type": "string",
+        "default": "真"
+      },
+      "魅力榜": {
+        "type": "string",
+        "default": "真"
+      },
+      "加入猜字谜": {
+        "type": "string",
+        "default": "真"
+      },
+      "退出猜字谜": {
+        "type": "string",
+        "default": "真"
+      },
+      "测试图片": {
+        "type": "string",
+        "default": "真"
+      }
+    }
+  },
+  "指令回复配置": {
+    "type": "object",
+    "items": {
+      "签到": {
+        "type": "text",
+        "default": ""
+      },
+      "领取新手礼包": {
+        "type": "text",
+        "default": ""
+      },
+      "购买体力": {
+        "type": "text",
+        "default": ""
+      },
+      "购买魅力": {
+        "type": "text",
+        "default": ""
+      },
+      "存款": {
+        "type": "text",
+        "default": ""
+      },
+      "取款": {
+        "type": "text",
+        "default": ""
+      },
+      "强制取款": {
+        "type": "text",
+        "default": ""
+      },
+      "转账": {
+        "type": "text",
+        "default": ""
+      },
+      "发红包": {
+        "type": "text",
+        "default": ""
+      },
+      "抢红包": {
+        "type": "text",
+        "default": ""
+      },
+      "赌博": {
+        "type": "text",
+        "default": ""
+      },
+      "打劫": {
+        "type": "text",
+        "default": ""
+      },
+      "打劫银行": {
+        "type": "text",
+        "default": ""
+      },
+      "保释": {
+        "type": "text",
+        "default": ""
+      },
+      "我要越狱": {
+        "type": "text",
+        "default": ""
+      },
+      "抽奖": {
+        "type": "text",
+        "default": ""
+      },
+      "精灵冒险": {
+        "type": "text",
+        "default": ""
+      },
+      "丢弃精灵": {
+        "type": "text",
+        "default": ""
+      },
+      "保护": {
+        "type": "text",
+        "default": ""
+      },
+      "我要学习": {
+        "type": "text",
+        "default": ""
+      },
+      "讨好": {
+        "type": "text",
+        "default": ""
+      },
+      "造反": {
+        "type": "text",
+        "default": ""
+      },
+      "30连抽": {
+        "type": "text",
+        "default": ""
+      },
+      "50连抽": {
+        "type": "text",
+        "default": ""
+      },
+      "webdav测试": {
+        "type": "text",
+        "default": ""
+      },
+      "三十连抽": {
+        "type": "text",
+        "default": ""
+      },
+      "丢弃坐骑": {
+        "type": "text",
+        "default": ""
+      },
+      "个人排行": {
+        "type": "text",
+        "default": ""
+      },
+      "个人财富榜": {
+        "type": "text",
+        "default": ""
+      },
+      "买下": {
+        "type": "text",
+        "default": ""
+      },
+      "买奴隶位": {
+        "type": "text",
+        "default": ""
+      },
+      "二四点": {
+        "type": "text",
+        "default": ""
+      },
+      "五十连抽": {
+        "type": "text",
+        "default": ""
+      },
+      "体力排行榜": {
+        "type": "text",
+        "default": ""
+      },
+      "体力榜": {
+        "type": "text",
+        "default": ""
+      },
+      "使用精灵球": {
+        "type": "text",
+        "default": ""
+      },
+      "修改宣言": {
+        "type": "text",
+        "default": ""
+      },
+      "修筑城墙": {
+        "type": "text",
+        "default": ""
+      },
+      "充钱": {
+        "type": "text",
+        "default": ""
+      },
+      "关闭维护": {
+        "type": "text",
+        "default": ""
+      },
+      "冒险": {
+        "type": "text",
+        "default": ""
+      },
+      "冒险系统": {
+        "type": "text",
+        "default": ""
+      },
+      "出战状态": {
+        "type": "text",
+        "default": ""
+      },
+      "出战精灵": {
+        "type": "text",
+        "default": ""
+      },
+      "出狱": {
+        "type": "text",
+        "default": ""
+      },
+      "出让帮派": {
+        "type": "text",
+        "default": ""
+      },
+      "切换坐骑": {
+        "type": "text",
+        "default": ""
+      },
+      "创建帮派": {
+        "type": "text",
+        "default": ""
+      },
+      "加入二四点": {
+        "type": "text",
+        "default": ""
+      },
+      "加入字谜": {
+        "type": "text",
+        "default": ""
+      },
+      "加入帮派": {
+        "type": "text",
+        "default": ""
+      },
+      "加入急转弯": {
+        "type": "text",
+        "default": ""
+      },
+      "加入接龙": {
+        "type": "text",
+        "default": ""
+      },
+      "加入猜数": {
+        "type": "text",
+        "default": ""
+      },
+      "加入答题": {
+        "type": "text",
+        "default": ""
+      },
+      "劫狱": {
+        "type": "text",
+        "default": ""
+      },
+      "十连抽": {
+        "type": "text",
+        "default": ""
+      },
+      "升星": {
+        "type": "text",
+        "default": ""
+      },
+      "升阶": {
+        "type": "text",
+        "default": ""
+      },
+      "发起帮战": {
+        "type": "text",
+        "default": ""
+      },
+      "取消护法": {
+        "type": "text",
+        "default": ""
+      },
+      "同意加入帮派": {
+        "type": "text",
+        "default": ""
+      },
+      "同意邀请": {
+        "type": "text",
+        "default": ""
+      },
+      "回收出战精灵": {
+        "type": "text",
+        "default": ""
+      },
+      "回收欢迎坐骑": {
+        "type": "text",
+        "default": ""
+      },
+      "坐骑商城": {
+        "type": "text",
+        "default": ""
+      },
+      "坐骑系统": {
+        "type": "text",
+        "default": ""
+      },
+      "备份": {
+        "type": "text",
+        "default": ""
+      },
+      "复活币排行": {
+        "type": "text",
+        "default": ""
+      },
+      "奴隶打工": {
+        "type": "text",
+        "default": ""
+      },
+      "奴隶收工": {
+        "type": "text",
+        "default": ""
+      },
+      "奴隶系统": {
+        "type": "text",
+        "default": ""
+      },
+      "娱乐系统": {
+        "type": "text",
+        "default": ""
+      },
+      "学习": {
+        "type": "text",
+        "default": ""
+      },
+      "宝物升阶": {
+        "type": "text",
+        "default": ""
+      },
+      "宝物菜单": {
+        "type": "text",
+        "default": ""
+      },
+      "帮派列表": {
+        "type": "text",
+        "default": ""
+      },
+      "帮派升级": {
+        "type": "text",
+        "default": ""
+      },
+      "帮派排行": {
+        "type": "text",
+        "default": ""
+      },
+      "帮派管理": {
+        "type": "text",
+        "default": ""
+      },
+      "帮派系统": {
+        "type": "text",
+        "default": ""
+      },
+      "帮派贡献": {
+        "type": "text",
+        "default": ""
+      },
+      "帮派邀请": {
+        "type": "text",
+        "default": ""
+      },
+      "应用统计": {
+        "type": "text",
+        "default": ""
+      },
+      "开启维护": {
+        "type": "text",
+        "default": ""
+      },
+      "开始二四点": {
+        "type": "text",
+        "default": ""
+      },
+      "开始急转弯": {
+        "type": "text",
+        "default": ""
+      },
+      "开始接龙": {
+        "type": "text",
+        "default": ""
+      },
+      "开始猜字谜": {
+        "type": "text",
+        "default": ""
+      },
+      "开始猜数": {
+        "type": "text",
+        "default": ""
+      },
+      "开始答题": {
+        "type": "text",
+        "default": ""
+      },
+      "当前冒险": {
+        "type": "text",
+        "default": ""
+      },
+      "当前接龙": {
+        "type": "text",
+        "default": ""
+      },
+      "成员列表": {
+        "type": "text",
+        "default": ""
+      },
+      "我加入接龙": {
+        "type": "text",
+        "default": ""
+      },
+      "我的信息": {
+        "type": "text",
+        "default": ""
+      },
+      "我的修筑": {
+        "type": "text",
+        "default": ""
+      },
+      "我的坐骑": {
+        "type": "text",
+        "default": ""
+      },
+      "我的帮派": {
+        "type": "text",
+        "default": ""
+      },
+      "我的排行": {
+        "type": "text",
+        "default": ""
+      },
+      "我的精灵": {
+        "type": "text",
+        "default": ""
+      },
+      "我的背包": {
+        "type": "text",
+        "default": ""
+      },
+      "我的贡献": {
+        "type": "text",
+        "default": ""
+      },
+      "我要出狱": {
+        "type": "text",
+        "default": ""
+      },
+      "我要打工": {
+        "type": "text",
+        "default": ""
+      },
+      "我要祈福": {
+        "type": "text",
+        "default": ""
+      },
+      "我要自由": {
+        "type": "text",
+        "default": ""
+      },
+      "我要进监狱": {
+        "type": "text",
+        "default": ""
+      },
+      "我要造反": {
+        "type": "text",
+        "default": ""
+      },
+      "打卡": {
+        "type": "text",
+        "default": ""
+      },
+      "打架": {
+        "type": "text",
+        "default": ""
+      },
+      "扔炸弹": {
+        "type": "text",
+        "default": ""
+      },
+      "扣钱": {
+        "type": "text",
+        "default": ""
+      },
+      "折磨": {
+        "type": "text",
+        "default": ""
+      },
+      "抽武器": {
+        "type": "text",
+        "default": ""
+      },
+      "抽签": {
+        "type": "text",
+        "default": ""
+      },
+      "挑战": {
+        "type": "text",
+        "default": ""
+      },
+      "排行榜": {
+        "type": "text",
+        "default": ""
+      },
+      "接受邀请": {
+        "type": "text",
+        "default": ""
+      },
+      "接龙词": {
+        "type": "text",
+        "default": ""
+      },
+      "接龙进度": {
+        "type": "text",
+        "default": ""
+      },
+      "携带精灵": {
+        "type": "text",
+        "default": ""
+      },
+      "查接龙": {
+        "type": "text",
+        "default": ""
+      },
+      "查看出战精灵": {
+        "type": "text",
+        "default": ""
+      },
+      "查看地图": {
+        "type": "text",
+        "default": ""
+      },
+      "查看坐骑": {
+        "type": "text",
+        "default": ""
+      },
+      "查看欢迎坐骑": {
+        "type": "text",
+        "default": ""
+      },
+      "查看精灵": {
+        "type": "text",
+        "default": ""
+      },
+      "查看维护": {
+        "type": "text",
+        "default": ""
+      },
+      "查询": {
+        "type": "text",
+        "default": ""
+      },
+      "检查更新": {
+        "type": "text",
+        "default": ""
+      },
+      "武器升星": {
+        "type": "text",
+        "default": ""
+      },
+      "武器菜单": {
+        "type": "text",
+        "default": ""
+      },
+      "每日点赞": {
+        "type": "text",
+        "default": ""
+      },
+      "测试testxb": {
+        "type": "text",
+        "default": ""
+      },
+      "测试testxb1": {
+        "type": "text",
+        "default": ""
+      },
+      "测试testxb2": {
+        "type": "text",
+        "default": ""
+      },
+      "测试testxb3": {
+        "type": "text",
+        "default": ""
+      },
+      "测试testxb4": {
+        "type": "text",
+        "default": ""
+      },
+      "测试testxb5": {
+        "type": "text",
+        "default": ""
+      },
+      "测试testxb6": {
+        "type": "text",
+        "default": ""
+      },
+      "测试testxb7": {
+        "type": "text",
+        "default": ""
+      },
+      "测试testxb8": {
+        "type": "text",
+        "default": ""
+      },
+      "添加护法": {
+        "type": "text",
+        "default": ""
+      },
+      "清空": {
+        "type": "text",
+        "default": ""
+      },
+      "点赞": {
+        "type": "text",
+        "default": ""
+      },
+      "版本": {
+        "type": "text",
+        "default": ""
+      },
+      "猜拳": {
+        "type": "text",
+        "default": ""
+      },
+      "祈福": {
+        "type": "text",
+        "default": ""
+      },
+      "禁言": {
+        "type": "text",
+        "default": ""
+      },
+      "移出帮派": {
+        "type": "text",
+        "default": ""
+      },
+      "签到排行": {
+        "type": "text",
+        "default": ""
+      },
+      "签到排行榜": {
+        "type": "text",
+        "default": ""
+      },
+      "签到榜": {
+        "type": "text",
+        "default": ""
+      },
+      "签到系统": {
+        "type": "text",
+        "default": ""
+      },
+      "管理帮派": {
+        "type": "text",
+        "default": ""
+      },
+      "精灵列表": {
+        "type": "text",
+        "default": ""
+      },
+      "精灵商城": {
+        "type": "text",
+        "default": ""
+      },
+      "精灵地图": {
+        "type": "text",
+        "default": ""
+      },
+      "精灵对战": {
+        "type": "text",
+        "default": ""
+      },
+      "精灵排行": {
+        "type": "text",
+        "default": ""
+      },
+      "精灵系统": {
+        "type": "text",
+        "default": ""
+      },
+      "结束冒险": {
+        "type": "text",
+        "default": ""
+      },
+      "结束接龙": {
+        "type": "text",
+        "default": ""
+      },
+      "维护信息": {
+        "type": "text",
+        "default": ""
+      },
+      "羁绊": {
+        "type": "text",
+        "default": ""
+      },
+      "群列表": {
+        "type": "text",
+        "default": ""
+      },
+      "自我保释": {
+        "type": "text",
+        "default": ""
+      },
+      "解散帮派": {
+        "type": "text",
+        "default": ""
+      },
+      "讨好主人": {
+        "type": "text",
+        "default": ""
+      },
+      "设置欢迎坐骑": {
+        "type": "text",
+        "default": ""
+      },
+      "财富榜": {
+        "type": "text",
+        "default": ""
+      },
+      "购买": {
+        "type": "text",
+        "default": ""
+      },
+      "购买坐骑": {
+        "type": "text",
+        "default": ""
+      },
+      "购买奴隶位": {
+        "type": "text",
+        "default": ""
+      },
+      "赎身": {
+        "type": "text",
+        "default": ""
+      },
+      "超管列表": {
+        "type": "text",
+        "default": ""
+      },
+      "超管系统": {
+        "type": "text",
+        "default": ""
+      },
+      "越狱": {
+        "type": "text",
+        "default": ""
+      },
+      "踢人": {
+        "type": "text",
+        "default": ""
+      },
+      "身价排行": {
+        "type": "text",
+        "default": ""
+      },
+      "身价排行榜": {
+        "type": "text",
+        "default": ""
+      },
+      "进化": {
+        "type": "text",
+        "default": ""
+      },
+      "进监狱": {
+        "type": "text",
+        "default": ""
+      },
+      "退出二四点": {
+        "type": "text",
+        "default": ""
+      },
+      "退出字谜": {
+        "type": "text",
+        "default": ""
+      },
+      "退出帮派": {
+        "type": "text",
+        "default": ""
+      },
+      "退出急转弯": {
+        "type": "text",
+        "default": ""
+      },
+      "退出接龙": {
+        "type": "text",
+        "default": ""
+      },
+      "退出猜数": {
+        "type": "text",
+        "default": ""
+      },
+      "退出答题": {
+        "type": "text",
+        "default": ""
+      },
+      "选择": {
+        "type": "text",
+        "default": ""
+      },
+      "释放": {
+        "type": "text",
+        "default": ""
+      },
+      "重置": {
+        "type": "text",
+        "default": ""
+      },
+      "重置接龙": {
+        "type": "text",
+        "default": ""
+      },
+      "银行系统": {
+        "type": "text",
+        "default": ""
+      },
+      "领养精灵": {
+        "type": "text",
+        "default": ""
+      },
+      "领取帮派福利": {
+        "type": "text",
+        "default": ""
+      },
+      "领取新人礼包": {
+        "type": "text",
+        "default": ""
+      },
+      "领取精灵礼包": {
+        "type": "text",
+        "default": ""
+      },
+      "魅力排行榜": {
+        "type": "text",
+        "default": ""
+      },
+      "魅力榜": {
+        "type": "text",
+        "default": ""
+      },
+      "加入猜字谜": {
+        "type": "text",
+        "default": ""
+      },
+      "退出猜字谜": {
+        "type": "text",
+        "default": ""
+      },
+      "测试图片": {
+        "type": "text",
+        "default": ""
+      }
+    }
+  },
+  "指令权限配置": {
+    "type": "object",
+    "items": {
+      "30连抽": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "50连抽": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "webdav测试": {
+        "type": "string",
+        "default": "超管"
+      },
+      "三十连抽": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "丢弃坐骑": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "丢弃精灵": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "个人排行": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "个人财富榜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "买下": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "买奴隶位": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "二四点": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "五十连抽": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "体力排行榜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "体力榜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "使用精灵球": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "保护": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "保释": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "修改宣言": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "修筑城墙": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "充钱": {
+        "type": "string",
+        "default": "超管"
+      },
+      "关闭维护": {
+        "type": "string",
+        "default": "超管"
+      },
+      "冒险": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "冒险系统": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "出战状态": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "出战精灵": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "出狱": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "出让帮派": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "切换坐骑": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "创建帮派": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "加入二四点": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "加入字谜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "加入帮派": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "加入急转弯": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "加入接龙": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "加入猜数": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "加入答题": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "劫狱": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "十连抽": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "升星": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "升阶": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "发红包": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "发起帮战": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "取款": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "取消护法": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "同意加入帮派": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "同意邀请": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "回收出战精灵": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "回收欢迎坐骑": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "坐骑商城": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "坐骑系统": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "备份": {
+        "type": "string",
+        "default": "超管"
+      },
+      "复活币排行": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "奴隶打工": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "奴隶收工": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "奴隶系统": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "娱乐系统": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "存款": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "学习": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "宝物升阶": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "宝物菜单": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "帮派列表": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "帮派升级": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "帮派排行": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "帮派管理": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "帮派系统": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "帮派贡献": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "帮派邀请": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "应用统计": {
+        "type": "string",
+        "default": "超管"
+      },
+      "开启维护": {
+        "type": "string",
+        "default": "超管"
+      },
+      "开始二四点": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "开始急转弯": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "开始接龙": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "开始猜字谜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "开始猜数": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "开始答题": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "强制取款": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "当前冒险": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "当前接龙": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "成员列表": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我加入接龙": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我的信息": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我的修筑": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我的坐骑": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我的帮派": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我的排行": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我的精灵": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我的背包": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我的贡献": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我要出狱": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我要学习": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我要打工": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我要祈福": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我要自由": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我要越狱": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我要进监狱": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "我要造反": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "打劫": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "打劫银行": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "打卡": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "打架": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "扔炸弹": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "扣钱": {
+        "type": "string",
+        "default": "超管"
+      },
+      "折磨": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "抢红包": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "抽奖": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "抽武器": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "抽签": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "挑战": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "排行榜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "接受邀请": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "接龙词": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "接龙进度": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "携带精灵": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "查接龙": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "查看出战精灵": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "查看地图": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "查看坐骑": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "查看欢迎坐骑": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "查看精灵": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "查看维护": {
+        "type": "string",
+        "default": "超管"
+      },
+      "查询": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "检查更新": {
+        "type": "string",
+        "default": "超管"
+      },
+      "武器升星": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "武器菜单": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "每日点赞": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "测试testxb": {
+        "type": "string",
+        "default": "超管"
+      },
+      "测试testxb1": {
+        "type": "string",
+        "default": "超管"
+      },
+      "测试testxb2": {
+        "type": "string",
+        "default": "超管"
+      },
+      "测试testxb3": {
+        "type": "string",
+        "default": "超管"
+      },
+      "测试testxb4": {
+        "type": "string",
+        "default": "超管"
+      },
+      "测试testxb5": {
+        "type": "string",
+        "default": "超管"
+      },
+      "测试testxb6": {
+        "type": "string",
+        "default": "超管"
+      },
+      "测试testxb7": {
+        "type": "string",
+        "default": "超管"
+      },
+      "测试testxb8": {
+        "type": "string",
+        "default": "超管"
+      },
+      "添加护法": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "清空": {
+        "type": "string",
+        "default": "超管"
+      },
+      "点赞": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "版本": {
+        "type": "string",
+        "default": "超管"
+      },
+      "猜拳": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "祈福": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "禁言": {
+        "type": "string",
+        "default": "超管"
+      },
+      "移出帮派": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "签到": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "签到排行": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "签到排行榜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "签到榜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "签到系统": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "管理帮派": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "精灵冒险": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "精灵列表": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "精灵商城": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "精灵地图": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "精灵对战": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "精灵排行": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "精灵系统": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "结束冒险": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "结束接龙": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "维护信息": {
+        "type": "string",
+        "default": "超管"
+      },
+      "羁绊": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "群列表": {
+        "type": "string",
+        "default": "超管"
+      },
+      "自我保释": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "解散帮派": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "讨好": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "讨好主人": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "设置欢迎坐骑": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "财富榜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "购买": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "购买体力": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "购买坐骑": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "购买奴隶位": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "购买魅力": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "赌博": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "赎身": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "超管列表": {
+        "type": "string",
+        "default": "超管"
+      },
+      "超管系统": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "越狱": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "踢人": {
+        "type": "string",
+        "default": "超管"
+      },
+      "身价排行": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "身价排行榜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "转账": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "进化": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "进监狱": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "退出二四点": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "退出字谜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "退出帮派": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "退出急转弯": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "退出接龙": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "退出猜数": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "退出答题": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "选择": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "造反": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "释放": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "重置": {
+        "type": "string",
+        "default": "超管"
+      },
+      "重置接龙": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "银行系统": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "领养精灵": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "领取帮派福利": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "领取新人礼包": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "领取新手礼包": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "领取精灵礼包": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "魅力排行榜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "魅力榜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "加入猜字谜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "退出猜字谜": {
+        "type": "string",
+        "default": "所有人"
+      },
+      "测试图片": {
+        "type": "string",
+        "default": "超管"
+      }
+    }
+  },
+  "自定义指令配置": {
+    "type": "object",
+    "items": {}
+  },
+  "商城图鉴": {
+    "type": "object",
+    "items": {
+      "ride_shop": {
+        "type": "text",
+        "default": "{\"企鹅\": 10000, \"伞兵\": 25000, \"宝驴\": 50000, \"保时捷\": 120000, \"法拉利\": 250000, \"玛莎拉蒂\": 400000, \"劳斯莱斯\": 800000, \"布加迪威龙\": 1500000, \"私人航空\": 4000000}"
+      },
+      "weapon_shop": {
+        "type": "text",
+        "default": "{\"木剑\": 500, \"铁剑\": 1500, \"苍雪剑\": 4000, \"烈焰刀\": 10000, \"青龙偃月刀\": 30000, \"雷鸣剑\": 80000, \"鬼泪村正\": 150000, \"神使沧溟\": 400000, \"炎宿朱雀\": 800000}"
+      }
+    }
+  },
+  "精灵图鉴": {
+    "type": "object",
+    "items": {
+      "spirits": {
+        "type": "text",
+        "default": ""
+      },
+      "maps": {
+        "type": "text",
+        "default": ""
+      },
+      "shop": {
+        "type": "text",
+        "default": ""
+      }
+    }
+  },
+  "备份配置": {
+    "type": "object",
+    "items": {
+      "自动备份开关": {
+        "type": "string",
+        "default": "真"
+      },
+      "备份间隔小时": {
+        "type": "int",
+        "default": 3
+      },
+      "保留备份数量": {
+        "type": "int",
+        "default": 30
+      },
+      "WebDAV备份开关": {
+        "type": "string",
+        "default": "假"
+      },
+      "WebDAV服务器地址": {
+        "type": "string",
+        "default": ""
+      },
+      "WebDAV用户名": {
+        "type": "string",
+        "default": ""
+      },
+      "WebDAV应用密码": {
+        "type": "string",
+        "default": ""
+      },
+      "WebDAV远端目录": {
+        "type": "string",
+        "default": "/xbbot_backup/"
+      }
+    }
+  },
+  "总开关配置": {
+    "type": "object",
+    "items": {
+      "总开关": {
+        "type": "string",
+        "default": "真"
+      }
+    }
+  },
+  "群组开关配置": {
+    "type": "object",
+    "items": {}
+  },
+  "维护配置": {
+    "type": "object",
+    "items": {
+      "维护开关": {
+        "type": "string",
+        "default": "假"
+      },
+      "维护信息": {
+        "type": "string",
+        "default": "🚧 维护中"
+      }
+    }
+  },
+  "系统开关配置": {
+    "type": "object",
+    "items": {
+      "奴隶系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "签到系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "银行系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "娱乐系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "精灵系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "坐骑系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "帮派系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "超管系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "聊天系统": {
+        "type": "string",
+        "default": "真"
+      },
+      "冒险系统": {
+        "type": "string",
+        "default": "真"
+      }
+    }
+  }
+}

@@ -3,10 +3,10 @@
 import inspect
 import json
 try:
-    from ..adapters.astrbot_io import json_response, _orig_error_response
+    from ..adapters import json_response, _orig_error_response
 except ImportError:
     try:
-        from core.adapters.astrbot_io import json_response, _orig_error_response  # type: ignore
+        from core.adapters import json_response, _orig_error_response  # type: ignore
     except ImportError:
         try:
             from astrbot.api.web import json_response, error_response as _orig_error_response

@@ -7,6 +7,26 @@ import json
 import os
 import re
 
+# 全量 schema 文件名（WebUI/播种共用；根 _conf_schema.json 仅留 AstrBot 原生页引导占位）
+_SCHEMA_CANDS = ("data/webui_schema.json", "_conf_schema.json")
+
+
+def _schema_path(base_dir=""):
+    """全量 schema 路径：data/webui_schema.json 优先，根 _conf_schema.json 兼容回退。"""
+    try:
+        if not base_dir:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        for _fn in _SCHEMA_CANDS:
+            _q = os.path.join(base_dir, _fn)
+            if os.path.isfile(_q):
+                return _q
+            _q2 = os.path.join(os.path.dirname(base_dir), _fn)
+            if os.path.isfile(_q2):
+                return _q2
+    except Exception:
+        pass
+    return ""
+
 
 def _maybe_dict(v):
     if isinstance(v, str) and v[:1] == "{" and v[-1:] == "}":
@@ -32,6 +52,8 @@ def _normalize_cfg(cfg):
         return out
     for k, v in cfg.items():
         k = str(k)
+        if k == "_comment":
+            continue  # schema 占位键（AstrBot 原生页引导），不进运行配置
         if "__" in k:
             sec, key = k.split("__", 1)
             out.setdefault(sec, {})[key] = _maybe_dict(v)
@@ -63,15 +85,7 @@ def _fallback_cfg(base_dir=""):
 
 
 def _load_schema(base_dir=""):
-    p = ""
-    try:
-        if not base_dir:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        p = os.path.join(base_dir, "_conf_schema.json")
-        if not os.path.isfile(p):
-            p = os.path.join(os.path.dirname(base_dir), "_conf_schema.json")
-    except Exception:
-        p = ""
+    p = _schema_path(base_dir)
     groups = {}
     defaults = {}
     try:
@@ -218,11 +232,7 @@ def _collect_commands(base_dir="", store=None):
             out[name] = cmds
         # 唤醒词显式展示
         try:
-            if not base_dir:
-                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            sch_path = os.path.join(base_dir, "_conf_schema.json")
-            if not os.path.isfile(sch_path):
-                sch_path = os.path.join(os.path.dirname(base_dir), "_conf_schema.json")
+            sch_path = _schema_path(base_dir)
             with open(sch_path, encoding="utf-8") as f:
                 sch = json.load(f)
             wc = sch.get("唤醒词配置", {}).get("items", {}) if isinstance(sch.get("唤醒词配置"), dict) else {}

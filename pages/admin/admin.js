@@ -1948,6 +1948,7 @@ async function loadCommands() {
         `${cOn ? '<span style="color:var(--ok);font-size:10px">●</span>' : '<span style="color:var(--muted);font-size:10px">○</span>'} ${esc(t)}</a>`;
     }).join("");
     el.innerHTML =
+      `<div class="hint" style="margin:0 0 8px">●启用 ○禁用 🔒仅超管｜启用开关：真=响应，假=不再响应；权限：超管=仅超管可用，非超管静默</div>` +
       blockHtml +
       `<details class="cmd-block" data-sys="自定义"><summary>` +
         `<span class="cmd-sys">自定义指令</span>` +

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""adapters/astrbot_io.py — AstrBot SDK 唯一收口（门面）。
-
+"""core/adapters.py — AstrBot SDK 唯一收口（原 adapters/astrbot_io.py 并入，零语义差）。
 收敛范围（与重构前 main.py:9-14 / platform.py:27 / helpers.py:6 等价行为）：
   事件/消息：AstrMessageEvent, MessageChain, event_message_type, EventMessageType
   组件：Image（可能为 None）, Plain（含降级实现）
@@ -10,9 +9,9 @@
 
 用法（包内相对优先，顶层绝对回退，与全仓既有范式一致）：
   try:
-      from .core.adapters.astrbot_io import Image, Plain, json_response
+      from .adapters import Image, Plain, json_response          # core/ 内模块用
   except ImportError:
-      from core.adapters.astrbot_io import Image, Plain, json_response
+      from core.adapters import Image, Plain, json_response     # 顶层直跑用
 
 行为保证：astrbot 缺失时不抛异常，返回降级替身（Plain 回显文本，
 json_response 回显 dict），与重构前各文件内联 try/except 完全一致。

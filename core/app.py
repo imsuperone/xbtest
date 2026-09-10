@@ -5,7 +5,7 @@ from importlib import import_module
 from typing import Optional
 
 try:
-    from core.adapters.astrbot_io import (  # type: ignore
+    from core.adapters import (  # type: ignore
         AstrMessageEvent, MessageChain,
         Image, Context, Star, json_response, _orig_error_response,
     )
@@ -65,19 +65,13 @@ _append_at_segments = getattr(_plat_layer, "_append_at_segments", None) if _HAS_
 _name_prefix = getattr(_plat_layer, "_name_prefix", None) if _HAS_CORE else None
 _do_platform = getattr(_plat_layer, "_do_platform", None) if _HAS_CORE else None
 assert _maybe_dict and _normalize_cfg and _build_chain, "core 层未加载，请检查 pages→main→core 单向依赖"
-# core.dispatch 导入（分发流水线，纯逻辑无 astrbot 依赖）
+# core.dispatch 导入（分发流水线单文件，纯逻辑无 astrbot 依赖）
 try:
-    from .dispatch import card_sync as _dispatch_name_sync
-    from .dispatch import test_menu as _dispatch_test_menu
-    from .dispatch import test_menu as _dispatch_probes
-    from .dispatch import admin_list as _dispatch_admins
-    from .dispatch import respond as _dispatch_reply
+    from . import dispatch as _dispatch_all
+    _dispatch_name_sync = _dispatch_test_menu = _dispatch_probes = _dispatch_admins = _dispatch_reply = _dispatch_all
 except ImportError:
-    from core.dispatch import card_sync as _dispatch_name_sync  # type: ignore
-    from core.dispatch import test_menu as _dispatch_test_menu  # type: ignore
-    from core.dispatch import test_menu as _dispatch_probes  # type: ignore
-    from core.dispatch import admin_list as _dispatch_admins  # type: ignore
-    from core.dispatch import respond as _dispatch_reply  # type: ignore
+    from core import dispatch as _dispatch_all  # type: ignore
+    _dispatch_name_sync = _dispatch_test_menu = _dispatch_probes = _dispatch_admins = _dispatch_reply = _dispatch_all
 
 
 try:
@@ -731,7 +725,7 @@ class XbBot(Star):
         return await self._call_api("core.api.backup", "handle_webdav_delete", "webdav delete", request, args, mode="req", with_base=True)
 
     async def page_version_check(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.updater", "handle_version_check", "version check", request, args, mode="req", with_base=True)
+        return await self._call_api("core.api.stats", "handle_version_check", "version check", request, args, mode="req", with_base=True)
 
 
     async def page_clear_all(self, request=None, *args, **kwargs):
@@ -766,13 +760,13 @@ class XbBot(Star):
         return await self._call_api("core.api.migration", "handle_import_legacy", "legacy import", request, args, with_base=True)
 
     async def page_groups_list(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.groups", "handle_groups_list", "groups list", request, args)
+        return await self._call_api("core.api.stats", "handle_groups_list", "groups list", request, args)
 
     async def page_groups_toggle(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.groups", "handle_groups_toggle", "groups toggle", request, args)
+        return await self._call_api("core.api.stats", "handle_groups_toggle", "groups toggle", request, args)
 
     async def page_groups_delete(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.groups", "handle_groups_delete", "groups delete", request, args)
+        return await self._call_api("core.api.stats", "handle_groups_delete", "groups delete", request, args)
 
     async def page_logs_get(self, request=None, *args, **kwargs):
         return await self._call_api("core.api.stats", "handle_logs_get", "logs get", request, args, mode="req")
