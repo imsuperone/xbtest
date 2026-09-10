@@ -1,7 +1,7 @@
 """storage/groups.py — 群档案增量落盘（原 store §5）。"""
 import json
 from . import state as _S
-from .state import Group, _DirtyDict, _safe_commit, _safe_rollback, _maybe_commit
+from .state import Group, _DirtyDict, _safe_commit, _safe_rollback, _maybe_commit, _force_commit
 from .db import _ensure_db
 
 def group(gid):

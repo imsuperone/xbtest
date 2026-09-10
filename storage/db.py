@@ -1,4 +1,5 @@
 """storage/db.py — DB 内核：连接/自愈/目录/迁移/落盘/合并（原 store §1/§7）。"""
+import json
 import os
 import sqlite3
 from . import state as _S
