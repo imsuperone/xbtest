@@ -114,13 +114,35 @@ def set_astrbot_config(cfg):
 
 
 def sync_astrbot_config(merged):
+    # AstrBot 实体瘦身同步：只回写 slim schema 已知键（_comment 占位），
+    # 防 904 键旧残留经“不会删除多余项”机制污染原生页。原生页改后只剩引导行。
+    # 全量配置以自有持久文件＋DB 镜像为准，不再经 AstrBot 实体（无任何代码读它）。
     if _S._ASTRBOT_CFG is None:
         return
     try:
-        for sec, sub in merged.items():
-            _S._ASTRBOT_CFG.setdefault(sec, {})
-            if isinstance(_S._ASTRBOT_CFG[sec], dict):
-                _S._ASTRBOT_CFG[sec].update(sub)
+        _keep = {}
+        try:
+            _cur_comment = merged.get("_comment", None) if isinstance(merged, dict) else None
+        except Exception:
+            _cur_comment = None
+        if isinstance(_cur_comment, dict):
+            _keep["_comment"] = _cur_comment.get("default", "None")
+        elif isinstance(_cur_comment, str) and _cur_comment:
+            _keep["_comment"] = _cur_comment
+        else:
+            _keep["_comment"] = "None"
+        try:
+            _S._ASTRBOT_CFG.clear()
+        except Exception:
+            for _k in list(_S._ASTRBOT_CFG.keys()):
+                try:
+                    del _S._ASTRBOT_CFG[_k]
+                except Exception:
+                    pass
+        try:
+            _S._ASTRBOT_CFG["_comment"] = _keep["_comment"]
+        except Exception:
+            pass
         if hasattr(_S._ASTRBOT_CFG, "save_config"):
             _S._ASTRBOT_CFG.save_config()
     except Exception:

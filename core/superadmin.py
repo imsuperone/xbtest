@@ -402,11 +402,11 @@ def _maint_on(gid=None):
             ST.recall_set("group_maint_%s" % gid, "1")
         except Exception:
             pass
-        return "本群已进入维护模式（仅本群），仅@消息回复维护通知。"
+        return "本群已进入维修模式。"
     cur = dict(ST._CONFIG)
     cur.setdefault("维护配置", {})["维护开关"] = "真"
     ST.set_config(cur); ST.save_config(); ST.sync_astrbot_config(cur)
-    return "已开启全局维护模式，仅超管可用。"
+    return "已开启全局维修模式。"
 
 def _maint_off(gid=None):
     if gid and str(gid).isdigit() and str(gid) != "dm":
@@ -414,11 +414,11 @@ def _maint_off(gid=None):
             ST.recall_set("group_maint_%s" % gid, "0")
         except Exception:
             pass
-        return "本群已退出维护模式，恢复正常。"
+        return "本群已退出维修模式。"
     cur = dict(ST._CONFIG)
     cur.setdefault("维护配置", {})["维护开关"] = "假"
     ST.set_config(cur); ST.save_config(); ST.sync_astrbot_config(cur)
-    return "已关闭全局维护模式，恢复正常。"
+    return "已关闭全局维修模式。"
 
 def _maint_msg(msg):
     msg = (msg or "").strip()

@@ -2,6 +2,7 @@
   "_comment": {
     "description": "小白配置请前往插件WebUI设置",
     "type": "string",
-    "default": "不用配置"
+    "default": "None",
+    "options": ["None"]
   }
 }

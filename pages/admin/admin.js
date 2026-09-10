@@ -1899,6 +1899,12 @@ function _bindCmdListOnce() {
       d.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   }, true);
+  // 系统启用开关：列表上直接拨动即时保存生效（此前只在编辑器保存时顺带提交）
+  el.addEventListener("change", (e) => {
+    const inp = e.target && e.target.closest ? e.target.closest("input[data-syson]") : null;
+    if (!inp || !el.contains(inp)) return;
+    sysonImmediateSave(inp);
+  });
   const exp = document.getElementById("btnCmdExpandAll");
   if (exp) exp.addEventListener("click", () => {
     document.querySelectorAll("#cmdList details.cmd-block").forEach((d) => { d.open = true; });
@@ -2097,6 +2103,27 @@ function renderCmdNums(numCmd, isNew) {
 function closeCmdEditor() {
   const m = document.getElementById("cmdModal");
   if (m) m.classList.remove("show");
+}
+
+// 系统启用开关即时保存：收齐所有块头部状态一次 POST，失败回拨
+async function sysonImmediateSave(inp) {
+  inp.disabled = true;
+  try {
+    const onSec = {};
+    document.querySelectorAll("#cmdList [data-syson]").forEach((x) => {
+      onSec[x.dataset.syson] = x.checked ? "真" : "假";
+    });
+    const r = await getBridge().apiPost("config/save", { "系统开关配置": onSec });
+    if (r && r.ok === false) throw new Error(r.msg || r.error || "保存失败");
+    const sys = inp.dataset.syson;
+    toast(`系统${sys}已${inp.checked ? "启用" : "关闭"}（即时生效）`, inp.checked ? "ok" : "bad");
+    await loadCommands();
+  } catch (err) {
+    toast("系统开关保存失败: " + err.message, "bad");
+    inp.checked = !inp.checked;
+  } finally {
+    inp.disabled = false;
+  }
 }
 
 async function saveCmdEditor() {
