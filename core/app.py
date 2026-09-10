@@ -174,7 +174,7 @@ def handle(gid, qq, raw, is_admin=False):
 
 def _load_api_handler(mod_short, func_name):
     """双通道导入 API handler：插件根包绝对优先，顶层绝对回退。
-    注意 mod_short（如 core.api.updater）是相对插件根的路径：
+    注意 mod_short（如 core.api.stats）是相对插件根的路径：
     本函数驻留 core/app.py，插件根包 = __package__ 去掉末级 .core；
     若将来搬回插件根 main.py，__package__ 即插件根（两种布局都对）。
     真机只有 data.plugins.X 一条路，顶层回退仅本机直跑有效。"""
@@ -558,7 +558,7 @@ class XbBot(Star):
                         pass
                     yield event.plain_result(f"测试testxb 异常: {e}")
                     return
-            # 测试探针独立 selftest/ 目录，懒加载调用，不污染正常导入链
+            # 探针已外迁本地（空路由零产出，不污染正常导入链）
             if raw.strip().startswith("测试testxb"):
                 _probed = False
                 async for r in _dispatch_probes.run_probes(
