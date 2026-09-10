@@ -329,12 +329,19 @@ async def _do_platform(marker, event, slave_mod=None):
         if act == "like":
             times = max(1, min(dur or 1, 10))  # OneBot send_like 单次上限 10
             try:
-                await _call("send_like", user_id=int(target), times=times)
+                res = await _call("send_like", user_id=int(target), times=times)
+                # 适配器常以 resolved 失败体代替抛错（如非好友/风控）：必须验 status/retcode，
+                # 否则显示成功实则没点上
+                if isinstance(res, dict):
+                    _st = str(res.get("status") or "").lower()
+                    _rc = res.get("retcode", res.get("ret_code", None))
+                    if _st == "failed" or (_rc is not None and str(_rc) != "0"):
+                        raise RuntimeError(f"send_like failed retcode={_rc}")
             except Exception as e1:
                 if extra_text:
-                    return extra_text + "（名片实赞未成功：今日已赞或对方设置限制）"
+                    return extra_text + "（名片实赞未成功：需互为好友或对方设置限制）"
                 return f"名片点赞失败：{e1}"
-            base = f"已为 <{target}> 的名片点赞 {times} 次。"
+            base = f"名片实赞{times}次"
             return (extra_text + "\r\n" + base) if extra_text else base
         if act == "mute":
             try:
