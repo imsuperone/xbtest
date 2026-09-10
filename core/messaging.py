@@ -287,41 +287,55 @@ async def _do_platform(marker, event, slave_mod=None):
     gid = event.get_group_id()
     bot = getattr(event, "bot", None)
     if bot is None:
+        if act == "like" and extra_text:
+            return extra_text  # 无适配器时降级为虚拟计数，不吞回复
         return "平台动作需要适配器 Bot 实例支持（当前未连接）。"
     # 所有 OneBot 动作 8 秒超时熔断，防事件循环被挂起的适配器拖死
     import asyncio as _aio
 
     async def _call(action, **kw):
         return await _aio.wait_for(bot.call_action(action, **kw), timeout=8)
-    try:
-        bot_uin = getattr(sm, "BOT_UIN", "") if sm else ""
-        if not bot_uin:
+    # 点赞无需任何权限预检（mute/kick 才需要）；预检仅对 mute/kick 跑
+    if act in ("mute", "kick"):
+        try:
+            bot_uin = getattr(sm, "BOT_UIN", "") if sm else ""
+            if not bot_uin:
+                try:
+                    info0 = await _call("get_login_info")
+                    d0 = (info0.get("data") if isinstance(info0, dict) else None) or info0 or {}
+                    bot_uin = str(d0.get("user_id") or d0.get("uin") or d0.get("self_id") or "")
+                except Exception:
+                    bot_uin = ""
+            if bot_uin:
+                try:
+                    info_bot = await _call("get_group_member_info", group_id=int(gid), user_id=int(bot_uin))
+                    d_bot = (info_bot.get("data") if isinstance(info_bot, dict) else None) or info_bot or {}
+                    role_bot = str(d_bot.get("role", "")).lower()
+                    if role_bot not in ("owner", "admin", "administrator"):
+                        return "机器人不是管理员，无法执行禁言/踢人！"
+                except Exception:
+                    pass
             try:
-                info0 = await _call("get_login_info")
-                d0 = (info0.get("data") if isinstance(info0, dict) else None) or info0 or {}
-                bot_uin = str(d0.get("user_id") or d0.get("uin") or d0.get("self_id") or "")
-            except Exception:
-                bot_uin = ""
-        if bot_uin:
-            try:
-                info_bot = await _call("get_group_member_info", group_id=int(gid), user_id=int(bot_uin))
-                d_bot = (info_bot.get("data") if isinstance(info_bot, dict) else None) or info_bot or {}
-                role_bot = str(d_bot.get("role", "")).lower()
-                if role_bot not in ("owner", "admin", "administrator"):
-                    return "机器人不是管理员，无法执行禁言/踢人！"
+                info_t = await _call("get_group_member_info", group_id=int(gid), user_id=int(target))
+                d_t = (info_t.get("data") if isinstance(info_t, dict) else None) or info_t or {}
+                role_t = str(d_t.get("role", "")).lower()
+                if role_t in ("owner", "admin", "administrator"):
+                    return "对方是管理员，无法禁言/踢人！"
             except Exception:
                 pass
-        try:
-            info_t = await _call("get_group_member_info", group_id=int(gid), user_id=int(target))
-            d_t = (info_t.get("data") if isinstance(info_t, dict) else None) or info_t or {}
-            role_t = str(d_t.get("role", "")).lower()
-            if role_t in ("owner", "admin", "administrator"):
-                return "对方是管理员，无法禁言/踢人！"
         except Exception:
             pass
-    except Exception:
-        pass
     try:
+        if act == "like":
+            times = max(1, min(dur or 1, 10))  # OneBot send_like 单次上限 10
+            try:
+                await _call("send_like", user_id=int(target), times=times)
+            except Exception as e1:
+                if extra_text:
+                    return extra_text + "（名片实赞未成功：今日已赞或对方设置限制）"
+                return f"名片点赞失败：{e1}"
+            base = f"已为 <{target}> 的名片点赞 {times} 次。"
+            return (extra_text + "\r\n" + base) if extra_text else base
         if act == "mute":
             try:
                 await _call("set_group_ban", group_id=int(gid), user_id=int(target), duration=dur)

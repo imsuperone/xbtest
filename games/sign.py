@@ -331,11 +331,19 @@ def cmd_like(gid, qq):
         return "您今日已经点过赞，明天再来~"
     a.set("like_date", today)
     n = ST.cfgi("点赞配置", "点赞数", 5)
+    try:
+        n = max(1, min(int(n), 10))  # OneBot send_like 单次上限 10
+    except Exception:
+        n = 5
     cur_like = a.int("like_count")
     a.set("like_count", str(cur_like + n))
     ST.acct_save(gid, qq)
-    return f"获取成功！您的名片已赞{n}个，" \
-           f"累计被赞{a.int('like_count')}个"
+    text = f"获取成功！您的名片已赞{n}个，累计被赞{a.int('like_count')}个"
+    # 真实名片赞走平台动作（mute/kick 同机制）；失败/无适配器时降级只保留虚拟计数
+    try:
+        return "__XB_PLATFORM__|like|%s|%d__TEXT__%s" % (qq, n, text)
+    except Exception:
+        return text
 
 
 def cmd_rank(gid, kind, st):
