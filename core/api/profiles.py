@@ -2,7 +2,11 @@
 import asyncio
 import json
 import re
-from astrbot.api.web import json_response
+try:
+    from astrbot.api.web import json_response
+except ImportError:
+    def json_response(data, status=200):
+        return data
 from .web_utils import _err, get_req_query, get_req_json
 try:
     from ... import storage as ST
@@ -13,8 +17,33 @@ except ImportError:
         from games import slave
     except ImportError:
         import slave  # type: ignore
-async def handle_slave_users(request):
-    # 请求参数在事件循环上提取（request 对象禁跨线程），重活进线程池，不堵消息循环
+def _slave_all_gids():
+    """三表 DISTINCT gid 并集（slave 列表/校准共用，零语义差）"""
+    gids = set()
+    if ST._DB:
+        for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM groups").fetchall():
+            if str(g_id).isdigit(): gids.add(str(g_id))
+        for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM wallet").fetchall():
+            if str(g_id).isdigit(): gids.add(str(g_id))
+        for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM accounts").fetchall():
+            if str(g_id).isdigit(): gids.add(str(g_id))
+    return gids
+
+
+def _slave_owner_count(st):
+    """群主-奴隶计数 {owner: n}（slave 列表单群/全量共用，零语义差）"""
+    _owner_cnt = {}
+    for _s in [s for s in st.sections() if s.isdigit()]:
+        try:
+            _o = st[_s].get("owner", "") or ""
+        except Exception:
+            _o = ""
+        if _o:
+            _owner_cnt[_o] = _owner_cnt.get(_o, 0) + 1
+    return _owner_cnt
+
+
+async def handle_slave_users(request):    # 请求参数在事件循环上提取（request 对象禁跨线程），重活进线程池，不堵消息循环
     try:
         gid = get_req_query(request, "gid", "").strip()
         if not gid:
@@ -36,14 +65,7 @@ async def handle_slave_users(request):
             if gid and gid.isdigit():
                 st = slave.state(gid)
                 _all_secs = [s for s in st.sections() if s.isdigit()]
-                _owner_cnt = {}
-                for _s in _all_secs:
-                    try:
-                        _o = st[_s].get("owner", "") or ""
-                    except Exception:
-                        _o = ""
-                    if _o:
-                        _owner_cnt[_o] = _owner_cnt.get(_o, 0) + 1
+                _owner_cnt = _slave_owner_count(st)
                 _fixed = False
                 for qq in _all_secs:
                     if not qq.isdigit(): continue
@@ -88,28 +110,12 @@ async def handle_slave_users(request):
                     except Exception:
                         pass
             else:
-                gids = set()
-                if ST._DB:
-                    for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM groups").fetchall():
-                        if str(g_id).isdigit(): gids.add(str(g_id))
-                    for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM wallet").fetchall():
-                        if str(g_id).isdigit(): gids.add(str(g_id))
-                    for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM accounts").fetchall():
-                        if str(g_id).isdigit(): gids.add(str(g_id))
-
-                for g in gids:
+                for g in _slave_all_gids():
                     try:
                         st = slave.state(g)
                         _g_fixed = False
                         _all_secs = [s for s in st.sections() if s.isdigit()]
-                        _owner_cnt = {}
-                        for _s in _all_secs:
-                            try:
-                                _o = st[_s].get("owner", "") or ""
-                            except Exception:
-                                _o = ""
-                            if _o:
-                                _owner_cnt[_o] = _owner_cnt.get(_o, 0) + 1
+                        _owner_cnt = _slave_owner_count(st)
                         for qq in _all_secs:
                             if not qq.isdigit(): continue
                             u = slave.U(st, qq)
@@ -162,16 +168,7 @@ async def handle_slave_calibrate(request):
                 init_price = 500
 
             fixed_count = 0
-            gids = set()
-            if ST._DB:
-                for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM groups").fetchall():
-                    if str(g_id).isdigit(): gids.add(str(g_id))
-                for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM wallet").fetchall():
-                    if str(g_id).isdigit(): gids.add(str(g_id))
-                for (g_id,) in ST._DB.execute("SELECT DISTINCT gid FROM accounts").fetchall():
-                    if str(g_id).isdigit(): gids.add(str(g_id))
-
-            for g in gids:
+            for g in _slave_all_gids():
                 try:
                     st = slave.state(g)
                     # 检查已开户用户

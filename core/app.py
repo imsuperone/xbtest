@@ -179,14 +179,24 @@ def handle(gid, qq, raw, is_private=False, is_admin=False):
 
 
 def _load_api_handler(mod_short, func_name):
-    """双通道导入 API handler：根包绝对优先，顶层绝对回退（与文件头导入范式一致）"""
-    try:
-        root = (__package__ or "").split(".")[0]
-        if root:
-            return getattr(import_module(root + "." + mod_short), func_name)
-        raise ImportError("top-level module")
-    except Exception:
-        return getattr(import_module(mod_short), func_name)
+    """双通道导入 API handler：插件根包绝对优先，顶层绝对回退。
+    注意 mod_short（如 core.api.updater）是相对插件根的路径：
+    本函数驻留 core/app.py，插件根包 = __package__ 去掉末级 .core；
+    若将来搬回插件根 main.py，__package__ 即插件根（两种布局都对）。
+    真机只有 data.plugins.X 一条路，顶层回退仅本机直跑有效。"""
+    cands = []
+    pkg = __package__ or ""
+    if pkg.endswith(".core"):
+        cands.append(pkg[:-len(".core")] + "." + mod_short)
+    elif pkg:
+        cands.append(pkg + "." + mod_short)
+    cands.append(mod_short)
+    for cand in cands:
+        try:
+            return getattr(import_module(cand), func_name)
+        except Exception:
+            continue
+    raise ImportError(f"cannot load API handler {mod_short}.{func_name}")
 
 
 _PLUGIN_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

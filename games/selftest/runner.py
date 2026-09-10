@@ -487,6 +487,12 @@ def _execute_system(mod_name, probes, v_gid, A_RICH, B_POOR):
     v_qqs = []
     prev_qq = None
     _seed_schema_defaults()
+    # 开轮先清档：上一轮清档若静默失败（如 _DB 瞬断），残留会污染本轮首探针
+    # （签到-有钱偶发“已签到”即此因）；本清与轮末清对称，轮内探针递进不受影响。
+    try:
+        _cleanup_test_users(v_gid, [])
+    except Exception:
+        pass
     for item in probes:
         label, cmd = item[0], item[1]
         check = item[2] if len(item) > 2 else None

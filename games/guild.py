@@ -4,6 +4,7 @@
 指令: 创建/加入/邀请/退出/我的帮派/成员列表/贡献/我的贡献/我的修筑/领取福利/帮派管理(宣言/护法/移出/出让/升级/解散/删除)/发起帮战/帮派排行
 """
 import json
+import re
 import time
 
 try:
@@ -243,8 +244,7 @@ def cmd_join(gid, qq, name):
 def cmd_invite(gid, qq, target):
     raw = (target or "").strip()
     # 兼容 @QQ 与纯 QQ 号，文案仅 @QQ
-    import re as _re2
-    m = _re2.search(r"(\d{5,12})", raw)
+    m = re.search(r"(\d{5,12})", raw)
     if m:
         target = m.group(1)
     else:
@@ -473,27 +473,26 @@ def cmd_manage(gid, qq, arg):
         _save_member(gid, qq, my)
         return "帮派宣言已更新！"
     m = None
-    import re as _re
     if arg.startswith("添加护法"):
-        m = _re.search(r"(\d{5,12})", arg)
+        m = re.search(r"(\d{5,12})", arg)
         if m and _is_member(gid, name, m.group(1)):
             tg = _my(gid, m.group(1)); tg["pos"] = "护法"; _save_member(gid, m.group(1), tg)
             return f"已将 <{_gname(gid, m.group(1))}> 设为护法！"
         return "无法添加该护法（需是同帮成员）！"
     if arg.startswith("取消护法"):
-        m = _re.search(r"(\d{5,12})", arg)
+        m = re.search(r"(\d{5,12})", arg)
         if m and _is_member(gid, name, m.group(1)):
             tg = _my(gid, m.group(1)); tg["pos"] = "成员"; _save_member(gid, m.group(1), tg)
             return f"已取消 <{_gname(gid, m.group(1))}> 护法！"
         return "无法取消（需是同帮护法）！"
     if arg.startswith("移出帮派"):
-        m = _re.search(r"(\d{5,12})", arg)
+        m = re.search(r"(\d{5,12})", arg)
         if m and _is_member(gid, name, m.group(1)):
             _save_member(gid, m.group(1), {})
             return f"已将 <{_gname(gid, m.group(1))}> 移出帮派！"
         return "无法移出（需是同帮成员）！"
     if arg.startswith("出让帮派"):
-        m = _re.search(r"(\d{5,12})", arg)
+        m = re.search(r"(\d{5,12})", arg)
         if m and my.get("pos") == "帮主" and _is_member(gid, name, m.group(1)):
             tg = _my(gid, m.group(1)); tg["pos"] = "帮主"; _save_member(gid, m.group(1), tg)
             my["pos"] = "护法"; _save_member(gid, qq, my)
@@ -615,22 +614,18 @@ def handle(gid, qq, raw):
         return cmd_accept_invite(gid, qq)
     if text.startswith("帮派邀请"):
         return cmd_invite(gid, qq, text[4:].strip())
-    if text.startswith("guild_invite"):
-        return cmd_invite(gid, qq, text[12:].strip())
     if text.startswith("帮派贡献"):
-        import re as _re2
-        m = _re2.search(r"(\d+)", text)
+        m = re.search(r"(\d+)", text)
         return cmd_contribute(gid, qq, int(m.group(1)) if m else 0)
     if text.startswith("修筑城墙"):
-        import re as _re4
-        m = _re4.search(r"(\d+)", text)
+        m = re.search(r"(\d+)", text)
         return cmd_build(gid, qq, int(m.group(1)) if m else 1)
     if text.startswith("发起帮战"):
         return cmd_battle(gid, qq, text[4:].strip())
     if text.startswith("管理帮派") or text.startswith("帮派管理"):
         if text in ("管理帮派", "帮派管理"):
             return MEMU_MANAGE
-        return cmd_manage(gid, qq, text[2:] if text.startswith("管理帮派") else text[4:])
+        return cmd_manage(gid, qq, text[4:].strip())
     if text.startswith("帮派升级") or text.startswith("解散帮派") \
             or text.startswith("修改宣言") or text.startswith("添加护法") or text.startswith("取消护法") \
             or text.startswith("移出帮派") or text.startswith("出让帮派"):
