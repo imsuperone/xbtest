@@ -22,7 +22,7 @@ def _bg_update_user_name(g, q, c, o, slave, ST):
             ST._register_single(q, c)
         except Exception:
             pass
-    if o and g and g != "dm":
+    if o and g:
         try:
             st = slave.state(g)
             if st.has_section(q):
@@ -90,11 +90,11 @@ def _build_test_menus(gid, qq, mods):
     return _menus
 
 
-async def handle_test_menu(event, gid, qq, is_private, mods, slave):
+async def handle_test_menu(event, gid, qq, mods, slave):
     """命中测试testxb/1 即处理（必 yield 一条，调用方排空后直接 return）。"""
     menus = await _asyncio.to_thread(_build_test_menus, gid, qq, mods)
     bot = getattr(event, "bot", None)
-    if bot and not is_private:
+    if bot:
         try:
             nodes = []
             for idx, m in enumerate(menus):
@@ -125,7 +125,7 @@ async def handle_test_menu(event, gid, qq, is_private, mods, slave):
     yield event.plain_result(merged)
 
 
-async def run_probes(event, raw, gid, qq, is_admin, is_private):
+async def run_probes(event, raw, gid, qq, is_admin):
     """探针执行已外迁 backup/xbbot_dev/selftest（本地直跑），插件包内不再内置。
     此处保留空路由（零产出，调用方判定未处理后继续走正常流水线；superadmin 侧同静默）。
     如需恢复聊天内探针，把 selftest 包放回 games/ 并恢复下述懒加载。"""
@@ -219,12 +219,12 @@ async def handle_admin_list(event, gid, qq, slave, ST):
 
 
 # ==================== respond（原 dispatch/respond.py 并入） ====================
-def _run_handle_and_welcome(gid, qq, raw, is_private, is_admin, handle_fn, ride):
+def _run_handle_and_welcome(gid, qq, raw, is_admin, handle_fn, ride):
     try:
-        r = handle_fn(gid, qq, raw, is_private, is_admin)
+        r = handle_fn(gid, qq, raw, is_admin)
     except Exception:
         r = None
-    if not r and not is_private:
+    if not r:
         try:
             r = ride.check_welcome(gid, qq) or None
         except Exception:
@@ -232,13 +232,13 @@ def _run_handle_and_welcome(gid, qq, raw, is_private, is_admin, handle_fn, ride)
     return r
 
 
-async def run_business(gid, qq, raw, is_private, is_admin, executor, handle_fn, ride):
+async def run_business(gid, qq, raw, is_admin, executor, handle_fn, ride):
     loop = _asyncio.get_running_loop()
     if executor is not None:
         return await loop.run_in_executor(
-            executor, _run_handle_and_welcome, gid, qq, raw, is_private, is_admin,
+            executor, _run_handle_and_welcome, gid, qq, raw, is_admin,
             handle_fn, ride)
-    return _run_handle_and_welcome(gid, qq, raw, is_private, is_admin, handle_fn, ride)
+    return _run_handle_and_welcome(gid, qq, raw, is_admin, handle_fn, ride)
 
 
 def _is_pure_custom(raw, ST):
@@ -257,13 +257,13 @@ def _is_pure_custom(raw, ST):
     return False
 
 
-async def send_reply(event, reply, qq, raw, gid, is_private, ST, logger, do_platform,
+async def send_reply(event, reply, qq, raw, gid, ST, logger, do_platform,
                      name_prefix, build_chain, message_chain_cls, has_core, cq_img_re):
     """平台动作/前缀/链发送四兼容 + 去图兜底。原逻辑逐行平移。"""
     if logger:
         try:
             summary = str(reply)[:60].replace("\r", " ").replace("\n", " ")
-            logger.info(f"[{'私聊' if is_private else f'群 {gid}'}] [{qq}] 指令: {raw.strip()[:40]} -> 响应: {summary}")
+            logger.info(f"[群 {gid}] [{qq}] 指令: {raw.strip()[:40]} -> 响应: {summary}")
         except Exception:
             pass
     if isinstance(reply, str) and reply.startswith("__XB_PLATFORM__"):

@@ -822,27 +822,6 @@
       }
     }
   },
-  "私聊配置": {
-    "type": "object",
-    "items": {
-      "私聊开关": {
-        "type": "string",
-        "default": "真"
-      },
-      "前缀开关": {
-        "type": "string",
-        "default": "假"
-      },
-      "回复概率": {
-        "type": "float",
-        "default": 0.3
-      },
-      "黑名单关键字": {
-        "type": "string",
-        "default": ""
-      }
-    }
-  },
   "精灵配置": {
     "type": "object",
     "items": {
@@ -3737,10 +3716,6 @@
         "default": "真"
       },
       "超管系统": {
-        "type": "string",
-        "default": "真"
-      },
-      "聊天系统": {
         "type": "string",
         "default": "真"
       },

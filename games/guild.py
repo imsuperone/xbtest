@@ -326,7 +326,7 @@ def _gname(gid, qq):
                 return nm
         except Exception:
             pass
-        return SL.NOTE_NAMES.get(str(qq), str(qq)) if (not gid or gid == "dm") and hasattr(SL, "NOTE_NAMES") else str(qq)
+        return str(qq)
     except Exception:
         return str(qq)
 

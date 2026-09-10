@@ -691,7 +691,7 @@ def lstr(q, gid=None):
                     return nm
             except Exception:
                 pass
-        return S.NOTE_NAMES.get(q, q) if (not gid or gid == "dm") and hasattr(S, "NOTE_NAMES") else q
+        return q
     except Exception:
         return q
 

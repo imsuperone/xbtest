@@ -35,10 +35,5 @@ class Main(XbBot):
         async for r in super().on_message(event):
             yield r
 
-    @event_message_type(EventMessageType.PRIVATE_MESSAGE)
-    async def on_private(self, event: AstrMessageEvent):
-        async for r in super().on_private(event):
-            yield r
-
 
 __all__ = ["Main", "XbBot", "handle", "PLUGIN_ID", "PLUGIN_VERSION", "PLUGIN_DESC"]

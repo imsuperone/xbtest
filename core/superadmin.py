@@ -55,7 +55,7 @@ def _target_name(gid, t):
                     return n
             except Exception:
                 pass
-        if hasattr(S, "NOTE_NAMES") and (not gid or gid == "dm"):
+        if hasattr(S, "NOTE_NAMES") and not gid:
             n = S.NOTE_NAMES.get(t_str)
             if n:
                 return n
@@ -396,8 +396,8 @@ def cmd_backup_xb():
 
 
 def _maint_on(gid=None):
-    # 群内发送只维修本群（recall 标记），私聊/无群号则维修全局
-    if gid and str(gid).isdigit() and str(gid) != "dm":
+    # 群内发送只维修本群（recall 标记）；无群号（理论不可达）则维修全局
+    if gid and str(gid).isdigit():
         try:
             ST.recall_set("group_maint_%s" % gid, "1")
         except Exception:
@@ -409,7 +409,7 @@ def _maint_on(gid=None):
     return "已开启全局维修模式。"
 
 def _maint_off(gid=None):
-    if gid and str(gid).isdigit() and str(gid) != "dm":
+    if gid and str(gid).isdigit():
         try:
             ST.recall_set("group_maint_%s" % gid, "0")
         except Exception:

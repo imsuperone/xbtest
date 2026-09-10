@@ -10,8 +10,7 @@
   spirit     spirit.py           精灵领养 / 冒险 / 收服 / 进化 / PVP
   ride       ride.py             坐骑商城 + 欢迎撒币
   guild      guild.py            帮派 / 贡献 / 福利 / 帮战
-  adventure  adventure.py        14 秘境文字冒险
-  chat       chat.py             私聊陪聊
+   adventure  adventure.py        14 秘境文字冒险
 纯数据：data_spirit.py / text_slave.py / text_adventure.py。
 偏底层运维（超管）已移入 core/superadmin.py，不在此注册。
 """
@@ -23,7 +22,6 @@ from . import spirit as spirit
 from . import ride as ride
 from . import guild as guild
 from . import adventure as adventure
-from . import chat as chat
 
 __all__ = ["slave", "sign", "bank", "ent", "spirit",
-           "ride", "guild", "adventure", "chat"]
+           "ride", "guild", "adventure"]

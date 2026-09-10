@@ -10,7 +10,7 @@ _CUSTOM_SEC = "自定义指令配置"
 _DISABLE_SEC = "指令启用配置"
 _PERM_SEC = "指令权限配置"
 _ADMIN_ONLY = "超管"
-_SYS_ENG = {'slave': '奴隶', 'sign': '签到', 'bank': '银行', 'ent': '娱乐', 'spirit': '精灵', 'ride': '坐骑', 'guild': '帮派', 'superadmin': '超管', 'chat': '聊天', 'adventure': '冒险'}
+_SYS_ENG = {'slave': '奴隶', 'sign': '签到', 'bank': '银行', 'ent': '娱乐', 'spirit': '精灵', 'ride': '坐骑', 'guild': '帮派', 'superadmin': '超管', 'adventure': '冒险'}
 _MAIN_MENU = (
     "★ 小白测试版主菜单 ★\r\n"
     "----------------\r\n"
@@ -217,7 +217,7 @@ def _engine_cache_ver(store=None):
                 pass
         max_mt = 0.0
         _watch = [os.path.join(eng_dir, _n + ".py")
-                  for _n in ("sign", "spirit", "ride", "guild", "adventure", "chat")]
+                  for _n in ("sign", "spirit", "ride", "guild", "adventure")]
         for _pkg in ("slave", "bank", "ent"):
             _pd = os.path.join(eng_dir, _pkg)
             if os.path.isdir(_pd):
@@ -587,9 +587,9 @@ __all__ = ["_cmd_disabled", "_cmd_need_admin", "_custom_cmd", "_custom_fp", "_cu
 
 
 # ==================== pipeline（原 router/pipeline.py 并入） ====================
-def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=None, chat_mod=None, superadmin_mod=None):
+def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mod=None):
     # 自定义索引版本兜底：handle_cfg_save 直改 _CONFIG 不走 set_config 时 ver 未 bump，
-    # 每次使用 _CUSTOM_IDX 前以 ver+内容指纹重建，避免 stale（群聊仍不走 chat，只补映射不断路）
+    # 每次使用 _CUSTOM_IDX 前以 ver+内容指纹重建，避免 stale
     try:
         if store is not None:
             _custom_idx(store)
@@ -601,8 +601,8 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
             return None
     except Exception:
         pass
-    # 群组开关：按 gid 静默，包括超管，仅群聊
-    if not is_private and gid and store:
+    # 群组开关：按 gid 静默，包括超管
+    if gid and store:
         try:
             if store.cfg("群组开关配置", str(gid), "真") != "真":
                 return None
@@ -614,7 +614,7 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
     except Exception:
         _maint_g = False
     try:
-        _maint_l = (not is_private and gid and str(gid).isdigit() and bool(store)
+        _maint_l = (gid and str(gid).isdigit() and bool(store)
                     and store.recall_get("group_maint_%s" % gid, "0") == "1")
     except Exception:
         _maint_l = False
@@ -625,21 +625,9 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
             except Exception:
                 return "🚧 维护中"
         return None
-    if is_private:
-        try:
-            if chat_mod:
-                return chat_mod.handle(qq, raw)
-        except Exception:
-            pass
-        if engines and "chat" in engines:
-            try:
-                return engines["chat"].handle(qq, raw)
-            except Exception:
-                pass
-        return None
     if raw.strip() in ("主菜单", "菜单", "系统菜单"):
         return _MAIN_MENU
-    if not is_private and store:
+    if store:
         try:
             creply, raw = _custom_cmd(raw, store)
             if creply:
@@ -662,7 +650,7 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
         except Exception:
             pass
     # 依次分发 9 引擎（批量守卫预计算，单消息18次读→0次）
-    _batch_map = _batch_guard_map(gid, is_admin, store) if store and not is_private else {}
+    _batch_map = _batch_guard_map(gid, is_admin, store) if store else {}
     if engines:
         for _eng in ("slave", "sign", "bank", "ent", "spirit", "ride", "guild", "adventure"):
             fn = engines.get(_eng)

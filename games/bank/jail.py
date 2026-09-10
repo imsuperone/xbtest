@@ -86,7 +86,7 @@ def _bail_name(tid, gid=None):
                     return nm
             except Exception:
                 pass
-        return SL.NOTE_NAMES.get(str(tid), str(tid)) if not gid or gid == "dm" else str(tid)
+        return str(tid)
     except Exception:
         return str(tid)
 

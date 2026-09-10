@@ -28,7 +28,7 @@ def _disp_name(qq, gid=None):
                     return nm2
             except Exception:
                 pass
-        nm = SL.NOTE_NAMES.get(qq, "") if not gid or gid == "dm" else ""
+        nm = ""
         if nm and nm.strip():
             return nm
         if gid:
@@ -50,10 +50,6 @@ def _disp_name(qq, gid=None):
             nm = ""
         if nm and nm.strip():
             return nm
-        if not gid or gid == "dm":
-            nm = SL2.NOTE_NAMES.get(qq, "")
-            if nm and nm.strip():
-                return nm
         if gid:
             try:
                 st = SL2.state(str(gid))

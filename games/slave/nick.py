@@ -59,11 +59,11 @@ def set_note_name(gid, qq, name):
 
 
 def get_note_name(gid, qq, fallback_global=False):
-    """读取分群昵称。默认不跨群串扰；gid 为空/dm 或显式要求时才回退全局。"""
+    """读取分群昵称。默认不跨群串扰；gid 为空或显式要求时才回退全局。"""
     try:
         g = str(gid or "").strip()
         q = str(qq or "").strip()
-        if g and g != "dm":
+        if g:
             n = _S.NOTE_NAMES_BY_GROUP.get((g, q), "")
             if n:
                 return n
@@ -157,8 +157,6 @@ def exists_user(gid, qq):
     # 分群昵称优先：同 QQ 在别群发言不得算作本群存在（防跨群串扰）
     if (gid, qq) in _S.NOTE_NAMES_BY_GROUP:
         return True
-    if gid == "dm" and qq in _S.NOTE_NAMES:
-        return True
     try:
         st = state(gid)
         if st is not None and st.has_section(qq):
@@ -200,9 +198,9 @@ def fetch_card(gid, qq):
     qq = str(qq)
     gid = str(gid or "")
     # 1. 分群昵称（本群最新卡片，绝不串到别群）
-    if gid and gid != "dm":
+    if gid:
         return _S.NOTE_NAMES_BY_GROUP.get((gid, qq), "") or ""
-    # dm/空：全局最新兜底；无记录返回空，由 uname 回退本群档案
+    # 空 gid：全局最新兜底；无记录返回空，由 uname 回退本群档案
     return _S.NOTE_NAMES.get(qq) or ""
 
 
@@ -213,7 +211,7 @@ def uname(st, qq):
     # 优先本群分群昵称(由 _dispatch 实时同步)，并回写到本群档案以持久化（绝不写别群）
     try:
         gid0 = str(getattr(st, "_gid", "") or "")
-        nm = get_note_name(gid0, str(qq)) if gid0 and gid0 != "dm" else _S.NOTE_NAMES.get(str(qq), "")
+        nm = get_note_name(gid0, str(qq)) if gid0 else _S.NOTE_NAMES.get(str(qq), "")
         if nm and _re.sub(r"[\u3000\u3164\u200b\ufeff\u2800-\u28ff\s]", "", nm):
             if u.get("name", "") != nm:
                 uset(u, "name", nm)

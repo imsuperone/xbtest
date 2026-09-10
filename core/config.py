@@ -133,7 +133,7 @@ def _collect_commands(base_dir="", store=None):
         if not os.path.isdir(core_dir):
             core_dir = os.path.join(os.path.dirname(base_dir), "core")
         _targets = []
-        for name in ("slave", "sign", "bank", "ent", "chat", "spirit", "ride", "guild", "adventure"):
+        for name in ("slave", "sign", "bank", "ent", "spirit", "ride", "guild", "adventure"):
             _one = os.path.join(eng_dir, name + ".py")
             if not os.path.isfile(_one) and os.path.isdir(os.path.join(eng_dir, name)):
                 # 已拆包的系统：串联包内全部模块源码再采集（与单文件语义一致）
@@ -238,7 +238,7 @@ def _collect_commands(base_dir="", store=None):
             wc = sch.get("唤醒词配置", {}).get("items", {}) if isinstance(sch.get("唤醒词配置"), dict) else {}
             for sysname, it in wc.items():
                 eng_name = None
-                for _e, _s in (("sign", "签到系统"), ("spirit", "精灵系统"), ("ent", "娱乐系统"), ("bank", "银行系统"), ("slave", "奴隶系统"), ("ride", "坐骑系统"), ("guild", "帮派系统"), ("adventure", "冒险系统"), ("superadmin", "超管系统"), ("chat", "聊天系统")):
+                for _e, _s in (("sign", "签到系统"), ("spirit", "精灵系统"), ("ent", "娱乐系统"), ("bank", "银行系统"), ("slave", "奴隶系统"), ("ride", "坐骑系统"), ("guild", "帮派系统"), ("adventure", "冒险系统"), ("superadmin", "超管系统")):
                     if _s == sysname:
                         eng_name = _e
                         break

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""astrbot_plugin_xbbot_beta: 小白测试版统一模块 v2(奴隶/签到/银行/娱乐/群管/私聊 + WebUI 管理台 Pages) — v0.53 优化版"""
+"""astrbot_plugin_xbbot_beta: 小白测试版统一模块 v2(奴隶/签到/银行/娱乐/群管 + WebUI 管理台 Pages) — v0.53 优化版"""
 import os
 from importlib import import_module
 from typing import Optional
@@ -21,12 +21,12 @@ except ImportError:
 
 try:
     from .. import storage as ST
-    from ..games import (sign, bank, slave, ent, chat,
+    from ..games import (sign, bank, slave, ent,
                           spirit, ride, guild, adventure)
     from . import superadmin
 except ImportError:
     import storage as ST
-    from games import (sign, bank, slave, ent, chat,
+    from games import (sign, bank, slave, ent,
                          spirit, ride, guild, adventure)
     from core import superadmin  # type: ignore
 
@@ -151,16 +151,16 @@ except Exception:
 
 _ENGINES = None  # 模块级单例：每消息重建10项字典+线程切换约0.2-0.5ms，启动即冻结
 try:
-    _ENGINES = {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "chat": chat, "superadmin": superadmin}
+    _ENGINES = {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "superadmin": superadmin}
 except Exception:
     _ENGINES = None
 
-def handle(gid, qq, raw, is_private=False, is_admin=False):
+def handle(gid, qq, raw, is_admin=False):
     """薄包装：直接委托 core.router.handle，保持与旧 handle 签名兼容"""
     try:
         if _router_layer and hasattr(_router_layer, "handle"):
-            engines = _ENGINES or {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "chat": chat, "superadmin": superadmin}
-            return _router_layer.handle(gid, qq, raw, is_private=is_private, is_admin=is_admin, store=ST, engines=engines, chat_mod=chat, superadmin_mod=superadmin)
+            engines = _ENGINES or {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "superadmin": superadmin}
+            return _router_layer.handle(gid, qq, raw, is_admin=is_admin, store=ST, engines=engines, superadmin_mod=superadmin)
     except Exception as e:
         import traceback
         if _logger_layer:
@@ -502,9 +502,9 @@ class XbBot(Star):
                 return True
         return False
 
-    async def _dispatch(self, event, is_private=False):
+    async def _dispatch(self, event):
         """消息分发编排：解析身份 -> 名片同步 -> 测试菜单/探针/超管列表 -> 业务执行与发送。
-        重活均在 core/dispatch/*，本函数只做分支编排（含法则 7 全静默守卫）。"""
+        重活均在 core/dispatch/*，本函数只做分支编排（含法则 7 全静默守卫）。只处理群聊。"""
         try:
             try:
                 if _HAS_CORE and hasattr(_plat_layer, 'set_latest_bot'):
@@ -515,9 +515,9 @@ class XbBot(Star):
                 self._extract_bot_uin_sync(event)
             except Exception:
                 pass
-            gid = str(event.get_group_id() or "") if not is_private else "dm"
-            if not gid and is_private:
-                gid = "dm"
+            gid = str(event.get_group_id() or "")
+            if not gid:
+                return
             qq = str(event.get_sender_id() or "")
             if not qq:
                 return
@@ -548,7 +548,7 @@ class XbBot(Star):
                     mods = {"sign": sign, "spirit": spirit, "ent": ent, "bank": bank,
                             "slave": slave, "ride": ride, "guild": guild, "adventure": adventure}
                     async for r in _dispatch_test_menu.handle_test_menu(
-                            event, gid, qq, is_private, mods, slave):
+                            event, gid, qq, mods, slave):
                         yield r
                     return
                 except Exception as e:
@@ -562,7 +562,7 @@ class XbBot(Star):
             if raw.strip().startswith("测试testxb"):
                 _probed = False
                 async for r in _dispatch_probes.run_probes(
-                        event, raw, gid, qq, is_admin, is_private):
+                        event, raw, gid, qq, is_admin):
                     _probed = True
                     yield r
                 if _probed:
@@ -579,10 +579,10 @@ class XbBot(Star):
                 return
             # 单次 executor 内串行 handle + 迎新检查，闲聊消息不再付双倍线程切换
             reply = await _dispatch_reply.run_business(
-                gid, qq, raw, is_private, is_admin, _XB_EXEC, handle, ride)
+                gid, qq, raw, is_admin, _XB_EXEC, handle, ride)
             if reply:
                 async for r in _dispatch_reply.send_reply(
-                        event, reply, qq, raw, gid, is_private, ST, _logger_layer,
+                        event, reply, qq, raw, gid, ST, _logger_layer,
                         _do_platform, _name_prefix, _build_chain, MessageChain,
                         _HAS_CORE,
                         _plat_layer._CQ_IMG if _HAS_CORE else None):
@@ -601,10 +601,6 @@ class XbBot(Star):
 
     async def on_message(self, event: AstrMessageEvent):
         async for r in self._dispatch(event):
-            yield r
-
-    async def on_private(self, event: AstrMessageEvent):
-        async for r in self._dispatch(event, True):
             yield r
 
     # ---------- Pages APIs (薄委托 → core/api) ----------
