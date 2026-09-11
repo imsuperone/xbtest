@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0911g";
+const FRONTEND_VER = "2026w0911h";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1687,7 +1687,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0911g"
+        version: res.version || "2026w0911h"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -3157,6 +3157,127 @@ async function importSpirits() {
   inp.click();
 }
 
+// ---------- 预设包 v2（图鉴＋宝物＋商城一次打包/恢复；武器图片二进制不在内，缺图跳过） ----------
+function _presetAtlasPart(sp) {
+  // 导出用原始自定义（_raw），不用渲染态：未自定义的节不把内置 baked 进包
+  const out = {};
+  try {
+    if (!sp || typeof sp !== "object") return out;
+    const _hasMeta = sp._raw && sp._meta;
+    ["spirits", "maps", "shop"].forEach((k) => {
+      const v = _hasMeta ? sp._raw[k] : sp[k];
+      if (v && typeof v === "object" && !Array.isArray(v)) out[k] = v;
+    });
+  } catch (e) {}
+  return out;
+}
+async function exportPreset() {
+  // 打包：图鉴原始自定义＋宝物（内存优先，未保存的编辑也带上）＋商城 JSON 节；走统一导出通道
+  try {
+    toast("正在打包预设…", "");
+    let sp = null;
+    try { sp = (typeof SPIRIT !== "undefined" && SPIRIT) ? SPIRIT : null; } catch (e) { sp = null; }
+    if (!sp || (!sp.maps && !sp.spirits && !sp.shop && !sp._raw)) {
+      try { sp = await apiTimeout(getBridge().apiGet("spirits"), 20000, "spirits"); } catch (e) { sp = null; }
+    }
+    const cur = await apiTimeout(getBridge().apiGet("config/get"), 20000, "config/get");
+    const shopSec = (cur && cur["商城图鉴"]) || {};
+    const setSec = (cur && cur["设置"]) || {};
+    let tlist = "";
+    let teff = {};
+    try {
+      if (window._TREAS_DIRTY && Array.isArray(window._TREAS_LIST)) tlist = window._TREAS_LIST.filter(Boolean).join("|");
+      else tlist = String(setSec["宝物"] || "");
+      const _te = shopSec["treasure_effects"];
+      if (_te && typeof _te === "object" && !Array.isArray(_te)) teff = _te;
+      else if (typeof _te === "string" && _te.trim()) { try { teff = JSON.parse(_te); } catch (e) { teff = {}; } }
+      if (window._TREAS_EFF && typeof window._TREAS_EFF === "object") teff = Object.assign({}, teff, window._TREAS_EFF);
+    } catch (e) {}
+    const shops = {};
+    ["ride_shop", "weapon_attrs", "weapon_order"].forEach((k) => { if (shopSec[k] !== undefined) shops[k] = shopSec[k]; });
+    const payload = {
+      app: "astrbot_plugin_xbbot_beta", kind: "preset", version: 2,
+      exported_at: new Date().toISOString(),
+      from_version: (typeof FRONTEND_VER !== "undefined" ? FRONTEND_VER : ""),
+      parts: { atlas: _presetAtlasPart(sp), treasure: { list: tlist, eff: teff }, shops }
+    };
+    triggerExportResult({ filename: "xbbot_preset_" + Date.now() + ".json", mime: "application/json;charset=utf-8", rawText: JSON.stringify(payload, null, 2) });
+    toast("预设已打包", "ok");
+  } catch (e) { toast("打包失败: " + (e.message || e), "bad"); }
+}
+async function importPreset() {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = ".json,application/json";
+  inp.onchange = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const txt = (await file.text()).replace(/^\uFEFF/, "");
+      const data = JSON.parse(txt);
+      if (!data || typeof data !== "object" || data.kind !== "preset" || !data.parts || typeof data.parts !== "object")
+        throw new Error("不是预设包（请用本页“预设打包”导出的文件）");
+      const parts = data.parts;
+      const _n = (o) => (o && typeof o === "object" ? Object.keys(o).length : 0);
+      const cnt = [];
+      if (parts.atlas && typeof parts.atlas === "object") {
+        const bits = ["spirits", "maps", "shop"].filter((k) => parts.atlas[k] && typeof parts.atlas[k] === "object").map((k) => k + _n(parts.atlas[k]));
+        if (bits.length) cnt.push("图鉴(" + bits.join("/") + ")");
+      }
+      if (parts.treasure && typeof parts.treasure === "object"
+        && (parts.treasure.list || _n(parts.treasure.eff)))
+        cnt.push("宝物" + String(parts.treasure.list || "").split("|").filter(Boolean).length + "件");
+      if (parts.shops && typeof parts.shops === "object") {
+        const bits = ["ride_shop", "weapon_attrs", "weapon_order"].filter((k) => parts.shops[k] !== undefined);
+        if (bits.length) cnt.push("商城(" + bits.join("/") + ")");
+      }
+      if (!cnt.length) throw new Error("包内无有效数据");
+      if (!(await uiConfirm("导入预设将覆盖：" + cnt.join("、") + "。\n先自动存一份配置快照，可回滚，继续？", "恢复预设"))) return;
+      try { await getBridge().apiPost("backups/config/snapshot/save", {}); }
+      catch (err) {
+        if (!(await uiConfirm("快照失败（" + ((err && err.message) || err) + "），无回滚点仍继续？", "恢复预设"))) return;
+      }
+      const done = [], failed = [];
+      try {
+        const a = parts.atlas || {};
+        const payload = {};
+        ["spirits", "maps", "shop"].forEach((k) => { if (a[k] && typeof a[k] === "object") payload[k] = a[k]; });
+        if (Object.keys(payload).length) {
+          const r = await getBridge().apiPost("spirits/save", payload);
+          if (r && r.error) throw new Error(r.error);
+          done.push("图鉴");
+        }
+      } catch (err) { failed.push("图鉴:" + ((err && err.message) || err)); }
+      try {
+        const cfgPayload = {};
+        if (parts.treasure && typeof parts.treasure === "object"
+          && (parts.treasure.list !== undefined || parts.treasure.eff !== undefined)) {
+          cfgPayload["设置"] = {};
+          if (parts.treasure.list !== undefined) cfgPayload["设置"]["宝物"] = String(parts.treasure.list || "");
+          cfgPayload["商城图鉴"] = {};
+          const _eff = parts.treasure.eff;
+          cfgPayload["商城图鉴"]["treasure_effects"] = (typeof _eff === "string") ? _eff : JSON.stringify(_eff || {});
+        }
+        if (parts.shops && typeof parts.shops === "object") {
+          cfgPayload["商城图鉴"] = cfgPayload["商城图鉴"] || {};
+          ["ride_shop", "weapon_attrs", "weapon_order"].forEach((k) => {
+            if (parts.shops[k] !== undefined) cfgPayload["商城图鉴"][k] = parts.shops[k];
+          });
+        }
+        if (Object.keys(cfgPayload).length) {
+          const r = await getBridge().apiPost("config/save", cfgPayload);
+          if (r && r.error) throw new Error(r.error);
+          if (cfgPayload["设置"]) done.push("宝物");
+          if (cfgPayload["商城图鉴"] && Object.keys(cfgPayload["商城图鉴"]).length) done.push("商城");
+        }
+      } catch (err) { failed.push("宝物/商城:" + ((err && err.message) || err)); }
+      try { await loadSpirits(true); } catch (err) {}
+      try { if (typeof loadShops === "function") await loadShops(); } catch (err) {}
+      if (failed.length) toast("部分恢复失败：" + failed.join("；"), "bad");
+      else toast("预设已恢复：" + done.join("、"), "ok");
+    } catch (err) { toast("导入失败: " + ((err && err.message) || err), "bad"); }
+  };
+  inp.click();
+}
+
 // ---------- 事件绑定 ----------
 document.getElementById("btnSave")?.addEventListener("click", saveConfig);
 document.getElementById("btnAutoBalance")?.addEventListener("click", openAutoBalanceModal);
@@ -3333,6 +3454,8 @@ document.querySelectorAll("#varsHelp .var-tag").forEach(el => {
 
 // 精灵图鉴（地图/属性在总览 ✨ 精灵页签分系统保存恢复，道具在商城页；加载按钮已删，Tab 打开自动拉取）
 document.getElementById("btnSpiritExport")?.addEventListener("click", exportSpirits);
+document.getElementById("btnPresetExport")?.addEventListener("click", exportPreset);
+document.getElementById("btnPresetImport")?.addEventListener("click", importPreset);
 document.getElementById("btnSpiritImport")?.addEventListener("click", importSpirits);
 
 // 商城图鉴 (每商城独立栏 自由增删重命名+图片绑定)
@@ -4975,7 +5098,7 @@ document.addEventListener("click", (e) => {
 window.loadUsers = loadUsers; window.loadSlaveUsers = typeof loadSlaveUsers!=='undefined'?loadSlaveUsers:undefined;
 window.loadSpiritUsers = typeof loadSpiritUsers!=='undefined'?loadSpiritUsers:undefined;
 window.loadConfig = loadConfig; window.loadRank = loadRank; window.loadCommands = loadCommands;
-window.loadSpirits = loadSpirits; window.loadShops = loadShops; window.loadBackups = typeof loadBackups!=='undefined'?loadBackups:undefined;
+window.loadSpirits = loadSpirits; window.loadShops = loadShops; window.exportPreset = exportPreset; window.importPreset = importPreset; window.loadBackups = typeof loadBackups!=='undefined'?loadBackups:undefined;
 window.loadImages = loadImages; window.loadStats = loadStats; window.loadOverviewReq = loadOverviewReq;
 document.getElementById("btnLegacyPick")?.addEventListener("click", () => {
   const inp = document.createElement("input");
