@@ -495,7 +495,7 @@ def _get_local_version(plugin_base=""):
         return _gv(plugin_base)
     except Exception:
         pass
-    return "2026w0911b"
+    return "2026w0911c"
 
 
 def _parse_version_tuple(v_str):

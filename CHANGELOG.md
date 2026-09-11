@@ -1,5 +1,9 @@
 # 更新日志
 
+## v2026w0911c
+- 🧹 **退群清理假成功**：前端调错 `users/export`（恒 `ok` 报“清理0人”），改调 `users/clean_left`。
+- 🔒 **降级双收费**：赌博/转账主路径异常后未回滚即降级重试，加 `rollback`（redpack 同模式已修）。
+
 ## v2026w0911b
 - 🧩 **前后端版本互验**：构建注入 `FRONTEND_VER`，关于页前后端对照＋失配红字（pull＋完全重启指引）；
   index.html script 缓存击穿标记（构建自动同步，verify 门覆盖）。

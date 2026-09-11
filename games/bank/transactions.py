@@ -182,6 +182,11 @@ def cmd_transfer(gid, qq, target, amount):
                 ST.acct_add(gid, qq, "stamina", cs)
                 return "亲，您的账户余额不足，转账失败！"
     except Exception:
+        # 主路径半截写入必须先回滚，否则降级双 coins_add 即销/印钱
+        try:
+            ST._safe_rollback()
+        except Exception:
+            pass
         try:
             ST.coins_add(gid, qq, -amount)
             ST.coins_add(gid, target, amount)
@@ -262,7 +267,11 @@ def cmd_gamble(gid, qq, amount):
                             f"赌博时被抓了！被关监狱{jail_mins}分钟！")
                 return f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli}……愿赌服输~"
     except Exception:
-        pass
+        # 主路径半截写入必须先回滚，否则降级重试即双重收费（redpack 同模式已修）
+        try:
+            ST._safe_rollback()
+        except Exception:
+            pass
     # 降级
     ST.acct_add(gid, qq, "stamina", -cs)
     if random.random() * 100 < prob:

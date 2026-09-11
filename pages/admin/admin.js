@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0911b";
+const FRONTEND_VER = "2026w0911c";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1647,8 +1647,8 @@ async function cleanLeftUsers() {
   if (!ok) return;
   toast("正在对比群成员并清理退群人员...", "ok");
   try {
-    // 单次 callApi（GET空结果不再回退POST，失败兜底在callApi内）
-    const res = await callApi("users/export", {}, "GET");
+    // 清理退群：调 users/clean_left（曾误调 users/export，res.ok 恒真致“清理0人”假成功）
+    const res = await callApi("users/clean_left", {}, "GET");
     if (res && res.ok) {
       toast(`清理完成！已清理 ${res.cleaned_count || 0} 名退群人员数据`, "ok");
       await loadUsers();
@@ -1687,7 +1687,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0911b"
+        version: res.version || "2026w0911c"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
