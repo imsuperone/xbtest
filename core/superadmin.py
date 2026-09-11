@@ -8,12 +8,12 @@ import os
 import re
 
 try:
-    from .. import storage as ST
+    from . import storage as ST
 except ImportError:
     try:
         from . import storage as ST
     except ImportError:
-        import storage as ST
+        from core import storage as ST
 
 MENU = (
     "🔧 超管系统\r\n"

@@ -3,10 +3,10 @@
 import time as _time
 import datetime as _dt
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
     store = ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
     store = ST
 from . import slave_state as _S
 from .base import U, _safe_int, cfg, cfgi, coins_get, protected_until, slaves_of, star_of, treasures_of, uget, uset, weapons_of

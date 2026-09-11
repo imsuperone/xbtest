@@ -9,10 +9,10 @@ except ImportError:
         return data
 from .web_utils import _err, get_req_query, get_req_json
 try:
-    from ... import storage as ST
+    from .. import storage as ST
     from ...games import slave
 except ImportError:
-    import storage as ST
+    from core import storage as ST
     try:
         from games import slave
     except ImportError:

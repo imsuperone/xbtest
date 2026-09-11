@@ -26,10 +26,10 @@ def get_log_dir():
     if _LOG_DIR and os.path.isdir(_LOG_DIR):
         return _LOG_DIR
     try:
-        from .. import storage as ST
+        from . import storage as ST
     except ImportError:
         try:
-            import storage as ST
+            from core import storage as ST
         except ImportError:
             ST = None
 

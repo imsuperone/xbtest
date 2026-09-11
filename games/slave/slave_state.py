@@ -16,14 +16,14 @@ MAX_PRICE = 1000000
 _CMD_LOCKS = {}
 _CMD_LOCKS_GUARD = _threading.Lock()
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
     store = ST
 except ImportError:
     try:
         from .. import storage as ST
         store = ST
     except ImportError:
-        import storage as ST
+        from core import storage as ST
         store = ST
 def _resolve_persistent_data_dir():
     if hasattr(store, "get_persistent_data_dir"):

@@ -4,9 +4,9 @@ import random
 import string
 import time
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
 from .common import *  # noqa
 from .jail import *  # noqa
 

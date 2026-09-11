@@ -8,12 +8,12 @@ import re
 import time
 
 try:
-    from .. import storage as ST
+    from ..core import storage as ST
 except ImportError:
     try:
         from . import storage as ST
     except ImportError:
-        import storage as ST
+        from core import storage as ST
 
 # 缓存：gid -> {gname -> [ (qq,g) ] }  15秒 TTL，避免每次全表扫
 # （成员变更经 _save_member 主动失效；精灵战力本就按 TTL 快照，15 秒 stale 可接受）

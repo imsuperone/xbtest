@@ -3,9 +3,9 @@
 import random
 import time
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
 from .content import *  # noqa
 def _active_game(gid):
     try:

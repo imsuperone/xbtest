@@ -8,12 +8,12 @@ import random
 import time
 
 try:
-    from .. import storage as ST
+    from ..core import storage as ST
 except ImportError:
     try:
         from . import storage as ST
     except ImportError:
-        import storage as ST
+        from core import storage as ST
 
 try:
     from . import data_spirit as SD

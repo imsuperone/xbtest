@@ -4,9 +4,9 @@ import os as _os
 import time as _time
 import random as _random
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
 from . import slave_state as _S
 from .base import U, _safe_int, cfgi, coins_add, coins_get, star_of, treasures_of, uget, uset, weapons_of
 from .combat import _treasure_effect, _treasure_names, _weapon_atk_bonus, _weapon_shop, _weapon_shop_raw

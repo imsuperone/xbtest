@@ -4,9 +4,9 @@ import time as _time
 import random as _random
 import datetime as _dt
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
 from . import slave_state as _S
 from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgf, cfgi, cn_fmt, cn_parse, coins_add, coins_get, protected_until, slaves_of, uget, uset
 from .nick import exists_user, uname

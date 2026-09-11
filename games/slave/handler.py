@@ -3,10 +3,10 @@
 import os as _os
 import re as _re
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
     store = ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
     store = ST
 from . import slave_state as _S
 from .base import U, _cmd_lock, cfg, load_events, log, save, star_of, state, uget, weapons_of

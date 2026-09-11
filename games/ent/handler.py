@@ -4,9 +4,9 @@ import random
 import re
 import time
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
 from .content import *  # noqa
 from .session import *  # noqa
 
@@ -309,9 +309,9 @@ def handle(gid, qq, raw):
 
 def _play(gid, qq, text):
     try:
-        from ... import storage as S
+        from ...core import storage as S
     except Exception:
-        import storage as S
+        from core import storage as S
     # 奖励 helper
     def _reward(gid, qq, coin=0, meili=0):
         if coin:

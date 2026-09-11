@@ -4,9 +4,9 @@ import datetime as dt
 import re
 import time
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
 
 
 def _disp_name(qq, gid=None):

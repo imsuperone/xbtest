@@ -226,7 +226,7 @@ def save_config():
         try:
             p = os.path.join(get_persistent_data_dir(), "config.json")
         except Exception:
-            p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "config.json")
+            p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "config.json")
     try:
         # 防截断：内存配置为空时拒绝落盘，避免把有效持久文件清成 {}
         if not isinstance(_S._CONFIG, dict) or not _S._CONFIG:

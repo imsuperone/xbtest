@@ -20,12 +20,12 @@ except ImportError:
     from astrbot.api.web import json_response, error_response as _orig_error_response
 
 try:
-    from .. import storage as ST
+    from . import storage as ST
     from ..games import (sign, bank, slave, ent,
                           spirit, ride, guild, adventure)
     from . import superadmin
 except ImportError:
-    import storage as ST
+    from core import storage as ST
     from games import (sign, bank, slave, ent,
                          spirit, ride, guild, adventure)
     from core import superadmin  # type: ignore

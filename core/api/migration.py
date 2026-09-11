@@ -13,10 +13,10 @@ from astrbot.api.web import json_response
 from .web_utils import _err, get_req_query, get_req_json
 
 try:
-    from ... import storage as ST
+    from .. import storage as ST
     from ...core.keymap import cn_to_en as _cn2en
 except ImportError:
-    import storage as ST
+    from core import storage as ST
     try:
         from core.keymap import cn_to_en as _cn2en
     except Exception:

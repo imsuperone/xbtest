@@ -10,9 +10,9 @@ except Exception:
         def d(f): return f
         return d
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
 
 _MENU = (
     "🎮 娱乐系统\r\n"

@@ -7,9 +7,9 @@ from astrbot.api.web import json_response
 from .web_utils import _err, get_req_json, no_cache_response
 
 try:
-    from ... import storage as ST
+    from .. import storage as ST
 except ImportError:
-    import storage as ST  # type: ignore
+    from core import storage as ST  # type: ignore
 
 try:
     from .. import config as _cfg_layer

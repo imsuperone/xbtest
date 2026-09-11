@@ -4,7 +4,7 @@
 import re
 import threading
 try:
-    from ..core.keymap import cn_to_en, translate_dict
+    from ..keymap import cn_to_en, translate_dict
 except ImportError:
     try:
         from core.keymap import cn_to_en, translate_dict
@@ -67,7 +67,7 @@ def _bump_config_ver():
     except Exception:
         pass
     try:
-        from ..core.router import clear_guard_cache as _cgc
+        from ..router import clear_guard_cache as _cgc
         _cgc()
     except Exception:
         try:

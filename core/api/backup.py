@@ -13,9 +13,9 @@ except ImportError:
 from .web_utils import _err, get_req_query, get_req_json, no_cache_response
 
 try:
-    from ... import storage as ST
+    from .. import storage as ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
 
 
 def _backup_base(plugin_base=""):

@@ -7,10 +7,10 @@ import datetime as _dt
 import threading as _threading
 import json as _json
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
     store = ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
     store = ST
 try:
     from ...core.keymap import cn_to_en as _cn2en

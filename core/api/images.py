@@ -9,9 +9,9 @@ from astrbot.api.web import json_response
 from .web_utils import _err, get_req_query, get_req_json
 
 try:
-    from ... import storage as ST
+    from .. import storage as ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
 
 def _img_base(plugin_base=""):
     if plugin_base:

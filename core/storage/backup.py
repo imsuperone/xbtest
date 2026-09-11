@@ -394,7 +394,7 @@ def backup_user_data(force=False, auto_upload=True):
             pass
         if auto_upload and dst and os.path.isfile(dst):
             try:
-                from ..core import webdav as _wd
+                from .. import webdav as _wd
                 _wd.async_upload_backup(dst)
             except Exception:
                 try:

@@ -2,10 +2,10 @@
 """games/slave/nick.py — 奴隶包·nick（原 base.py 切分，语义不变）。"""
 import re as _re
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
     store = ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
     store = ST
 from . import slave_state as _S
 from .base import U, save, state, uget, uset

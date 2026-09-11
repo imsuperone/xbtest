@@ -4,10 +4,10 @@ import time as _time
 import random as _random
 import json as _json
 try:
-    from ... import storage as ST
+    from ...core import storage as ST
     store = ST
 except ImportError:
-    import storage as ST
+    from core import storage as ST
     store = ST
 from . import slave_state as _S
 from .base import U, _fmt, _safe_int, cd_check, cd_commit, cfg, cfgf, cfgi, cn_fmt, cn_parse, coins_add, coins_get, slaves_of, star_of, treasures_of, uget, uset, weapons_of

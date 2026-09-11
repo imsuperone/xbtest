@@ -4,12 +4,12 @@ import datetime as dt
 import random
 
 try:
-    from .. import storage as ST
+    from ..core import storage as ST
 except ImportError:
     try:
         from . import storage as ST
     except ImportError:
-        import storage as ST
+        from core import storage as ST
 
 DAYS_CN = ("", "一", "二", "三", "四", "五", "六", "日")
 

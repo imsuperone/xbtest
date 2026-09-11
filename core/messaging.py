@@ -177,7 +177,7 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
                             except Exception:
                                 pass
                             try:
-                                import storage as _st_reg
+                                from core import storage as _st_reg
                                 _st_reg.register_name(_tq, _tn)
                             except Exception:
                                 pass

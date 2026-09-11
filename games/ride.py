@@ -8,12 +8,12 @@ import os
 import time
 
 try:
-    from .. import storage as ST
+    from ..core import storage as ST
 except ImportError:
     try:
         from . import storage as ST
     except ImportError:
-        import storage as ST
+        from core import storage as ST
 
 RIDES = {
     "企鹅": 213250, "伞兵": 500000, "宝驴": 1000000, "保时捷": 1500000,

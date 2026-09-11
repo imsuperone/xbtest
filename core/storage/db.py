@@ -71,7 +71,7 @@ def _ensure_db():
         if _S._DB is not None:
             return _S._DB
         try:
-            base = os.path.dirname(os.path.abspath(__file__))
+            base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             cand = _S._PERSISTENT_DATA_DIR or get_persistent_data_dir(base)
             p = os.path.join(cand, "xb.db")
             init(p)
@@ -95,7 +95,7 @@ def set_persistent_data_dir(path):
         _S._COLL_CACHE.clear()
     except Exception:
         pass
-    base = os.path.dirname(os.path.abspath(__file__))
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     _auto_migrate_and_heal(path, base)
     target_db = os.path.join(path, "xb.db")
     with _S._LOCK:
@@ -182,7 +182,7 @@ def get_persistent_data_dir(plugin_base=""):
     if _S._PERSISTENT_DATA_DIR and os.path.isdir(_S._PERSISTENT_DATA_DIR):
         return _S._PERSISTENT_DATA_DIR
 
-    base = plugin_base or os.path.dirname(os.path.abspath(__file__))
+    base = plugin_base or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if not os.path.isdir(os.path.join(base, "data")) and os.path.isdir(os.path.join(os.path.dirname(base), "data")):
         base = os.path.dirname(base)
 
@@ -231,7 +231,7 @@ def get_persistent_data_dir(plugin_base=""):
     except Exception:
         pass
 
-    fallback = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+    fallback = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
     os.makedirs(fallback, exist_ok=True)
     _S._PERSISTENT_DATA_DIR = fallback
     _auto_migrate_and_heal(fallback, base)
