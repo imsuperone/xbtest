@@ -2,10 +2,10 @@
 """games/slave/slave_state.py — 奴隶包共享态唯一家（原 slave.py 顶层数据）。
 可重绑态（BOT_UIN/EVENTS）经 _S. 访问；门面 __getattr__ 实时委托。"""
 try:
-    from ..text_slave import *  # noqa: F401,F403
+    from ..text.text_slave import *  # noqa: F401,F403
 except ImportError:
     try:
-        from text_slave import *  # type: ignore  # noqa: F401,F403
+        from games.text.text_slave import *  # type: ignore  # noqa: F401,F403
     except Exception:
         pass
 BOT_UIN = ""   # engine overwrites at runtime

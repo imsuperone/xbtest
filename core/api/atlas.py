@@ -98,7 +98,7 @@ def _load_spirit_data():
         try:
             from ...games import spirit
         except ImportError:
-            import spirit  # type: ignore
+            from games import spirit  # type: ignore
         sp = dict(spirit._SPIRITS() or {})  # type: ignore
         mp = dict(spirit._MAPS() or {})
         sh = dict(spirit._SHOP() or {})
@@ -108,9 +108,9 @@ def _load_spirit_data():
     except Exception:
         try:
             try:
-                from ...games import data_spirit as SD  # type: ignore
+                from ...games.spirit import data_spirit as SD  # type: ignore
             except ImportError:
-                import data_spirit as SD  # type: ignore
+                from games.spirit import data_spirit as SD  # type: ignore
             return {"spirits": dict(getattr(SD, "SPIRITS", {})), "maps": dict(getattr(SD, "MAPS", {})), "shop": dict(getattr(SD, "SHOP", {}))}
         except Exception:
             return {"spirits": {}, "maps": {}, "shop": {}}
@@ -124,9 +124,9 @@ async def handle_spirits_get(request):
             data["_raw"] = raw
             try:
                 try:
-                    from ...games import data_spirit as _SDB  # type: ignore
+                    from ...games.spirit import data_spirit as _SDB  # type: ignore
                 except ImportError:
-                    import data_spirit as _SDB  # type: ignore
+                    from games.spirit import data_spirit as _SDB  # type: ignore
                 data["_builtin"] = {
                     "spirits": dict(getattr(_SDB, "SPIRITS", {}) or {}),
                     "maps": dict(getattr(_SDB, "MAPS", {}) or {}),

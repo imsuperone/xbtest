@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0911h";
+const FRONTEND_VER = "2026w0911i";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1687,7 +1687,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0911h"
+        version: res.version || "2026w0911i"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -4407,7 +4407,6 @@ async function importShops() {
       await getBridge().apiPost("config/save", { "商城图鉴": payload });
       toast("商城已导入", "ok"); await loadShops();
     } catch (err) { toast("导入失败: " + err.message, "bad"); }
-    // 注：本函数尾（}; inp.click(); }＋商城四按钮绑定）在 f13 头逐行续接，跨文件断句是 load-bearing，禁动。
   }; inp.click();
 }
 document.getElementById("btnShopLoad")?.addEventListener("click", loadShops);

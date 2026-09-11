@@ -15,7 +15,7 @@ except ImportError:
     except ImportError:
         from core import storage as ST
 
-from .text_adventure import MAPS, CHOICE_LABELS, RANDOM_EVENTS, MAP_SPECIFIC_EVENTS
+from .text.text_adventure import MAPS, CHOICE_LABELS, RANDOM_EVENTS, MAP_SPECIFIC_EVENTS
 
 _cfg, _cfgi = ST.cfg_scope("冒险配置")
 

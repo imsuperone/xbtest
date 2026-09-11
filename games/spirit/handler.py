@@ -8,17 +8,14 @@ import random
 import time
 
 try:
-    from ..core import storage as ST
+    from ...core import storage as ST
 except ImportError:
-    try:
-        from . import storage as ST
-    except ImportError:
-        from core import storage as ST
+    from core import storage as ST
 
 try:
     from . import data_spirit as SD
 except ImportError:
-    import data_spirit as SD
+    from games.spirit import data_spirit as SD
 
 MENU = (
     "✨ 精灵系统\r\n"
@@ -259,7 +256,7 @@ def _img_path(path):
             if _base:
                 _cands.append(_os2.path.join(_base, p))
             try:
-                _cands.append(_os2.path.join(_os2.path.dirname(_os2.path.dirname(_os2.path.abspath(__file__))), p))
+                _cands.append(_os2.path.join(_os2.path.dirname(_os2.path.dirname(_os2.path.dirname(_os2.path.abspath(__file__)))), p))
             except Exception:
                 pass
             _hit = ""
@@ -665,7 +662,10 @@ def cmd_rank(gid, kind):
 
 def lstr(q, gid=None):
     try:
-        from . import slave as S
+        try:
+            from .. import slave as S
+        except ImportError:
+            from games import slave as S
         if gid:
             try:
                 nm = S.get_note_name(gid, q) or S.fetch_card(gid, q)
