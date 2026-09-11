@@ -135,11 +135,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "2026w0911d"
+            return "2026w0911e"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "2026w0911d"
+    PLUGIN_VERSION = "2026w0911e"
 
 # 消息处理定长线程池：突发千群不再打爆默认无限池，与 ST._LOCK 串行叠加可控
 # import 期不建池（工具链 import 零线程）：首个 XbBot 实例化/首消息时懒建，全局单例，永不 shutdown
@@ -749,10 +749,10 @@ class XbBot(Star):
         return await self._call_api("core.api.users", "handle_users_airdrop", "airdrop", request, args)
 
     async def page_spirits_get(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.profiles", "handle_spirits_get", "spirits get", request, args)
+        return await self._call_api("core.api.atlas", "handle_spirits_get", "spirits get", request, args)
 
     async def page_spirits_save(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.profiles", "handle_spirits_save", "spirits save", request, args)
+        return await self._call_api("core.api.atlas", "handle_spirits_save", "spirits save", request, args)
 
     async def page_gacha_weapons(self, request=None, *args, **kwargs):
         return await self._call_api("core.api.weapon_pool", "handle_gacha_weapons", "gacha weapons", request, args)

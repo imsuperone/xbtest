@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0911d";
+const FRONTEND_VER = "2026w0911e";
 
 let _WORKING_API_PREFIX = null;
 
@@ -765,7 +765,7 @@ const TAB_LOADERS = {
   },
   imgs: async () => { return loadImages(""); },
   groups: async () => { return loadGroups(); },
-  about: async () => { try { await loadUpdateChannel(); } catch(e){} },
+  about: async () => { try { await checkVersionUpdate(true); } catch (e) {} },
   logs: async () => { return loadLogs(); },
 };
 const TAB_DONE = {};
@@ -1687,7 +1687,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0911d"
+        version: res.version || "2026w0911e"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -2282,6 +2282,8 @@ async function loadSpirits(force) {
     const _sb = document.getElementById("shopSpiritBox");
     if (_sb) _sb.innerHTML = `<div style="text-align:center;padding:16px;color:var(--muted)">商城加载中…</div>`;
   } catch (e) {}
+  // instant 骨架：先同步画出宝物默认总览（零等待），精灵数据后台拉取后重绘；占位永不裸奔
+  try { if (typeof renderAtlas === "function") renderAtlas(); } catch (e) {}
   try {
     // 5s 内复用（loadShops 刚拉过时免重复 GET）；导入后强制刷新，防读到旧内存
     let res = null;
@@ -2331,7 +2333,9 @@ async function loadSpirits(force) {
     try { if (typeof SPIRIT !== "undefined" && SPIRIT && Object.keys(SPIRIT).length) refreshSpiritViews(); } catch (_e) {}
     try {
       const _ab = document.getElementById("atlasBox");
-      if (_ab && (/加载中/.test(_ab.innerHTML || "") || !_ab.innerHTML.trim())) _ab.innerHTML = `<div style="text-align:center;padding:24px;color:var(--bad)">图鉴加载失败: ${esc(e.message || e)}<br><button class="ghost sm" onclick="loadSpirits()">重试</button></div>`;
+      // 无数据强制报错（instant 骨架只是默认值，不能掩盖拉取失败），有缓存则保留旧数据只 toast
+      const _noData = (typeof SPIRIT === "undefined" || !SPIRIT || !Object.keys(SPIRIT).length);
+      if (_ab && (_noData || /加载中/.test(_ab.innerHTML || "") || !_ab.innerHTML.trim())) _ab.innerHTML = `<div style="text-align:center;padding:24px;color:var(--bad)">图鉴加载失败: ${esc(e.message || e)}<br><button class="ghost sm" onclick="loadSpirits()">重试</button></div>`;
       const _sb = document.getElementById("shopSpiritBox");
       if (_sb && /加载中/.test(_sb.innerHTML || "")) _sb.innerHTML = `<div style="text-align:center;padding:16px;color:var(--bad)">商城加载失败，可<button class="ghost sm" onclick="loadSpirits()">重试</button></div>`;
     } catch (_e) {}
@@ -2387,6 +2391,172 @@ function spiritAttrCards(spirits, dropNames, assignMaps) {
         ${_assignOpts ? `<div style="display:flex;gap:4px;margin-top:4px;align-items:center"><select data-assign-map="${esc(sn)}" style="flex:1;padding:4px 6px;border-radius:6px">${_assignOpts}</select><button class="ghost sm" data-assign-spirit="${esc(sn)}">分配进图</button></div>` : ""}
       </div>`;
   }).join("") + _dl;
+}
+
+// ---------- 图鉴总览（atlasBox：宝物/精灵地图；f11 专属，商城只调不用，独立方便导出导入与自定义） ----------
+let ATLAS_CUR = "treasure";  // 总览分类：treasure | spirit（武器坐骑只在商城管理）
+async function renderAtlas(curCfg){
+  const box = document.getElementById("atlasBox");
+  if (!box) return;
+  if (ATLAS_CUR !== "treasure" && ATLAS_CUR !== "spirit") ATLAS_CUR = "treasure";
+  try {
+    let Treas = [];
+    try {
+      // 待保存优先：宝物增删先落本地，点保存商城图鉴时一并持久化
+      if (window._TREAS_DIRTY && Array.isArray(window._TREAS_LIST)) {
+        Treas = window._TREAS_LIST.filter(Boolean);
+      } else {
+        const curSec = (curCfg && curCfg["设置"]) || (CFG && CFG.cur && CFG.cur["设置"]) || {};
+        Treas = (curSec["宝物"] || "酒神葫芦|四象护符").toString().split("|").filter(Boolean);
+        window._TREAS_LIST = [...Treas];
+        window._TREAS_DIRTY = false;
+      }
+    } catch(e) { Treas = ["酒神葫芦", "四象护符"]; }
+    const _spiritMaps = (() => { try { return Object.keys((SPIRIT && SPIRIT.maps) || {}); } catch (e) { return []; } })();
+    const _tabs = [["treasure", "🎁 宝物", Treas.length], ["spirit", "✨ 精灵", _spiritMaps.length]];
+    let html = `<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">` + _tabs.map(([k, label, n]) =>
+      `<button class="ghost sm" data-atlas-tab="${k}" ${ATLAS_CUR === k ? 'disabled style="opacity:.45"' : ""}>${label} (${n})</button>`
+    ).join("") + `</div><div style="display:flex;flex-direction:column;gap:8px">`;
+    const _effOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); return String(e || ""); } catch (e) { return ""; } };
+    if (ATLAS_CUR === "treasure") {
+      let h = `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)"><div style="font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">奴隶系统-宝物 (${Treas.length}) <span style="margin-left:auto;display:inline-flex;gap:4px;flex-wrap:wrap"><button class="ghost sm" id="btnAtlasSaveTreasure">💾 保存宝物</button><button class="ghost sm" id="btnAtlasResetTreasure">↩️ 恢复默认</button><button class="ghost sm" id="btnAtlasAddTreasure">＋ 添加</button></span></div><div style="display:flex;flex-wrap:wrap;gap:5px">`;
+      if (!Treas.length) h += `<span style="color:var(--muted)">暂无</span>`;
+      else h += Treas.map(n => { const e = _effOf(n); return `<span class="badge badge-primary" style="font-size:11.5px;display:inline-flex;align-items:center;gap:5px;padding:3px 8px" title="${esc(e || "无自定义效果")}">🎁 ${esc(n)}${e ? "·" + esc(e.slice(0, 12)) : ""}<span style="cursor:pointer" data-atlas-edit-treasure="${esc(n)}" title="修改效果">✎</span><span style="cursor:pointer;font-weight:bold" data-atlas-del="奴隶系统-宝物|${esc(n)}" title="删除">×</span></span>`; }).join("");
+      h += `</div><div class="hint" style="margin-top:6px">✎ 可改宝物效果（不止名字），× 删除；改动即时保存</div></div>`;
+      html += h;
+    }
+    else if (ATLAS_CUR === "spirit") {
+      const _maps = (() => { try { return (SPIRIT && SPIRIT.maps) || {}; } catch (e) { return {}; } })();
+      const _spirits = (() => { try { return (SPIRIT && SPIRIT.spirits) || {}; } catch (e) { return {}; } })();
+      const _names = Object.keys(_maps);
+      try { window._spDlDone = false; } catch (e) {}
+      let _orphans = [];
+      try {
+        const _used = new Set();
+        Object.values(_maps || {}).forEach((m) => ((m && m.drops) || []).map(String).forEach((s) => _used.add(s)));
+        _orphans = Object.keys(_spirits || {}).filter((n) => !_used.has(String(n)));
+      } catch (e) {}
+      let h = `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)">`
+        + `<div style="font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">精灵系统-精灵地图 (${_names.length})`
+        + `<span style="margin-left:auto;display:inline-flex;gap:4px;flex-wrap:wrap">`
+        + `<button class="ghost sm" id="btnAtlasSaveMaps">💾 保存精灵</button>`
+        + `<button class="ghost sm" id="btnAtlasResetMaps">↩️ 恢复默认</button>`
+        + `<button class="ghost sm" id="btnAtlasClearMaps">🧹 清空地图</button>`
+        + `</span></div>`;
+      if (!_names.length) {
+        const _bc = (() => { try { return Object.keys((SPIRIT && SPIRIT._builtin && SPIRIT._builtin.maps) || {}).length; } catch (e) { return 0; } })();
+        h += `<span style="color:var(--muted)">当前无自定义地图，运行中使用内置 ${_bc} 张</span>`;
+      } else {
+        h += `<div id="atlasSpiritCards" style="display:flex;flex-direction:column;gap:8px">` + spiritMapCardsHTML(_names, _maps, _spirits, "") + `</div>`;
+      }
+      if (_orphans.length) {
+        h += `<div class="s-mapcard ${SPIRIT_OPEN["__orphans__"] ? "open" : ""}" data-map="__orphans__" style="margin-top:10px"><div class="s-maphead" data-map-toggle="__orphans__"><span class="s-mapname">🧩 未上架精灵 (${_orphans.length})</span><span class="s-maplv">不在任何地图掉落中</span><span class="s-arr">${SPIRIT_OPEN["__orphans__"] ? "▾" : "▸"}</span></div>${SPIRIT_OPEN["__orphans__"] ? `<div class="s-mapbody"><div class="hint" style="margin-bottom:6px">这些精灵不会在野外遭遇，可编辑后分配进图，或直接移除</div><div class="sp-spirits">${spiritAttrCards(_spirits, _orphans, _names)}</div></div>` : ``}</div>`;
+      }
+      h += `<div style="margin-top:8px"><button class="ghost sm" id="btnAtlasAddMap">＋ 添加地图</button></div>`;
+      h += `<div class="hint" style="margin-top:6px">地图+属性一键保存/恢复，只动精灵范围</div></div>`;
+      html += h;
+    }
+    else html += `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)"><div style="color:var(--muted)">未知分类</div></div>`;
+    html += `</div><div class="hint" style="margin-top:6px">宝物改动即时保存，只动各自范围；精灵卡改动点保存精灵；武器坐骑请到🛒商城管理</div>`;
+    box.innerHTML = html;
+    box.querySelectorAll("[data-atlas-tab]").forEach((b) => b.addEventListener("click", () => {
+      ATLAS_CUR = b.dataset.atlasTab;
+      renderAtlas();
+    }));
+    const persistTreasure = async () => {
+      // 宝物名+效果即时持久化（图鉴页内闭环，不碰商城）
+      const cleanEff = {};
+      Object.entries(window._TREAS_EFF || {}).forEach(([k, v]) => {
+        const s = (v && typeof v === "object") ? String(v.effect || "") : String(v || "");
+        if (s.trim()) cleanEff[k] = s.trim();
+      });
+      const r = await getBridge().apiPost("config/save", {
+        "设置": { "宝物": (window._TREAS_LIST || Treas).filter(Boolean).join("|") },
+        "商城图鉴": { "treasure_effects": JSON.stringify(cleanEff) }
+      });
+      if (r && r.error) throw new Error(r.error);
+      window._TREAS_DIRTY = false;
+      try { if (CFG && CFG.cur && CFG.cur["设置"]) CFG.cur["设置"]["宝物"] = (window._TREAS_LIST || Treas).filter(Boolean).join("|"); } catch (e) {}
+    };
+    box.querySelectorAll("[data-atlas-del]").forEach(el => el.addEventListener("click", async () => {
+      const [sys, name] = el.dataset.atlasDel.split("|");
+      if (!(await uiConfirm(`确认删除 ${sys} "${name}"？`, "删除图鉴"))) return;
+      try {
+        if (sys.includes("宝物")) {
+          window._TREAS_LIST = (window._TREAS_LIST || Treas).filter(x => x !== name);
+          try { if (window._TREAS_EFF) delete window._TREAS_EFF[name]; } catch (e) {}
+          await persistTreasure();
+          toast("已删除并保存", "ok");
+          renderAtlas();
+        }
+      } catch (e) { toast("删除失败: " + e.message, "bad"); }
+    }));
+    try {
+      // 委托绑在 atlasBox 上（一次，多次渲染不重复），覆盖地图卡与未上架区
+      bindSpiritMapCards(box);
+    } catch (e) {}
+    box.querySelectorAll("[data-atlas-edit-treasure]").forEach(el => el.addEventListener("click", async () => {
+      const n = el.dataset.atlasEditTreasure;
+      const cur = (() => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); return String(e || ""); } catch (e) { return ""; } })();
+      const v = await uiPrompt(`宝物「${n}」效果（留空用内置/通用）：`, cur, "修改宝物效果");
+      if (v === null || v === undefined) return;
+      window._TREAS_EFF = window._TREAS_EFF || {};
+      if (String(v).trim()) window._TREAS_EFF[n] = String(v).trim();
+      else delete window._TREAS_EFF[n];
+      try { await persistTreasure(); toast("已保存", "ok"); }
+      catch (e) { toast("保存失败: " + e.message, "bad"); }
+      renderAtlas();
+    }));
+    document.getElementById("btnAtlasSaveMaps")?.addEventListener("click", () => saveSpiritKind("all"));
+    document.getElementById("btnAtlasResetMaps")?.addEventListener("click", () => resetSpiritKind("all"));
+    document.getElementById("btnAtlasClearMaps")?.addEventListener("click", async () => {
+      if (!SPIRIT) { toast("请先加载图鉴", "bad"); return; }
+      if (!(await uiConfirm("直接清空全部精灵地图？精灵保留（进未上架区），旧地图不保留（快照可回滚）。", "清空地图"))) return;
+      try {
+        SPIRIT.maps = {};
+        await saveSpiritKind("all");
+        refreshSpiritViews();
+      } catch (e) { toast("清空失败: " + e.message, "bad"); }
+    });
+    document.getElementById("btnAtlasAddMap")?.addEventListener("click", async () => {
+      if (!SPIRIT) { toast("请先加载图鉴", "bad"); return; }
+      const n = await uiPrompt("输入新地图名称：", "", "添加地图");
+      if (!n || !n.trim()) return;
+      const maps = SPIRIT.maps || (SPIRIT.maps = {});
+      if (!maps[n.trim()]) maps[n.trim()] = { lv: 1, drops: [] };
+      SPIRIT_OPEN[n.trim()] = true;
+      SPIRIT_DIRTY = true;
+      refreshSpiritViews();
+      toast("已添加地图，点保存精灵持久化", "ok");
+    });
+    document.getElementById("btnAtlasSaveTreasure")?.addEventListener("click", async () => {
+      try { await persistTreasure(); toast("宝物已保存", "ok"); }
+      catch (e) { toast("保存失败: " + e.message, "bad"); }
+      renderAtlas();
+    });
+    document.getElementById("btnAtlasResetTreasure")?.addEventListener("click", async () => {
+      if (!(await uiConfirm("直接恢复宝物为内置（酒神葫芦|四象护符）并清空自定义效果？旧数据不保留。", "恢复默认"))) return;
+      try {
+        window._TREAS_LIST = ["酒神葫芦", "四象护符"];
+        window._TREAS_EFF = {};
+        await persistTreasure();
+        toast("已恢复默认", "ok");
+      } catch (e) { toast("恢复失败: " + e.message, "bad"); }
+      renderAtlas();
+    });
+    document.getElementById("btnAtlasAddTreasure")?.addEventListener("click", async () => {
+      let n = await uiPrompt("输入宝物名（奴隶系统-宝物）：", "", "添加宝物");
+      if (!n) return; n = n.trim(); if (!n) return;
+      const _tl = window._TREAS_DIRTY ? (window._TREAS_LIST || []) : Treas;
+      if (_tl.includes(n)) { toast("已存在", "bad"); return; }
+      window._TREAS_LIST = [..._tl, n];
+      const eff = await uiPrompt(`宝物「${n}」效果（可选，留空用通用）：`, "", "宝物效果");
+      if (eff && String(eff).trim()) { window._TREAS_EFF = window._TREAS_EFF || {}; window._TREAS_EFF[n] = String(eff).trim(); }
+      try { await persistTreasure(); toast("已添加并保存", "ok"); }
+      catch (e) { window._TREAS_DIRTY = true; toast("保存失败: " + e.message, "bad"); }
+      renderAtlas();
+    });
+  } catch (e) { box.innerHTML = `<span style="color:var(--muted)">图鉴加载失败: ${esc(e.message)}</span>`; }
 }
 
 function refreshSpiritViews() {
@@ -3161,8 +3331,7 @@ document.querySelectorAll("#varsHelp .var-tag").forEach(el => {
   });
 });
 
-// 精灵图鉴（地图/属性在总览 ✨ 精灵页签分系统保存恢复，道具在商城页）
-document.getElementById("btnSpiritLoad")?.addEventListener("click", loadSpirits);
+// 精灵图鉴（地图/属性在总览 ✨ 精灵页签分系统保存恢复，道具在商城页；加载按钮已删，Tab 打开自动拉取）
 document.getElementById("btnSpiritExport")?.addEventListener("click", exportSpirits);
 document.getElementById("btnSpiritImport")?.addEventListener("click", importSpirits);
 
@@ -3888,170 +4057,7 @@ function openRideAddModal() {
   modal.className = "show";
   setTimeout(() => { try { document.getElementById("rideAddName")?.focus(); } catch (e) {} }, 50);
 }
-let ATLAS_CUR = "treasure";  // 总览分类：treasure | spirit（武器坐骑只在商城管理）
-async function renderAtlas(curCfg){
-  const box = document.getElementById("atlasBox");
-  if (!box) return;
-  if (ATLAS_CUR !== "treasure" && ATLAS_CUR !== "spirit") ATLAS_CUR = "treasure";
-  try {
-    let Treas = [];
-    try {
-      // 待保存优先：宝物增删先落本地，点保存商城图鉴时一并持久化
-      if (window._TREAS_DIRTY && Array.isArray(window._TREAS_LIST)) {
-        Treas = window._TREAS_LIST.filter(Boolean);
-      } else {
-        const curSec = (curCfg && curCfg["设置"]) || (CFG && CFG.cur && CFG.cur["设置"]) || {};
-        Treas = (curSec["宝物"] || "酒神葫芦|四象护符").toString().split("|").filter(Boolean);
-        window._TREAS_LIST = [...Treas];
-        window._TREAS_DIRTY = false;
-      }
-    } catch(e) { Treas = ["酒神葫芦", "四象护符"]; }
-    const _spiritMaps = (() => { try { return Object.keys((SPIRIT && SPIRIT.maps) || {}); } catch (e) { return []; } })();
-    const _tabs = [["treasure", "🎁 宝物", Treas.length], ["spirit", "✨ 精灵", _spiritMaps.length]];
-    let html = `<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">` + _tabs.map(([k, label, n]) =>
-      `<button class="ghost sm" data-atlas-tab="${k}" ${ATLAS_CUR === k ? 'disabled style="opacity:.45"' : ""}>${label} (${n})</button>`
-    ).join("") + `</div><div style="display:flex;flex-direction:column;gap:8px">`;
-    const _effOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); return String(e || ""); } catch (e) { return ""; } };
-    if (ATLAS_CUR === "treasure") {
-      let h = `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)"><div style="font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">奴隶系统-宝物 (${Treas.length}) <span style="margin-left:auto;display:inline-flex;gap:4px;flex-wrap:wrap"><button class="ghost sm" id="btnAtlasSaveTreasure">💾 保存宝物</button><button class="ghost sm" id="btnAtlasResetTreasure">↩️ 恢复默认</button><button class="ghost sm" id="btnAtlasAddTreasure">＋ 添加</button></span></div><div style="display:flex;flex-wrap:wrap;gap:5px">`;
-      if (!Treas.length) h += `<span style="color:var(--muted)">暂无</span>`;
-      else h += Treas.map(n => { const e = _effOf(n); return `<span class="badge badge-primary" style="font-size:11.5px;display:inline-flex;align-items:center;gap:5px;padding:3px 8px" title="${esc(e || "无自定义效果")}">🎁 ${esc(n)}${e ? "·" + esc(e.slice(0, 12)) : ""}<span style="cursor:pointer" data-atlas-edit-treasure="${esc(n)}" title="修改效果">✎</span><span style="cursor:pointer;font-weight:bold" data-atlas-del="奴隶系统-宝物|${esc(n)}" title="删除">×</span></span>`; }).join("");
-      h += `</div><div class="hint" style="margin-top:6px">✎ 可改宝物效果（不止名字），× 删除；改动即时保存</div></div>`;
-      html += h;
-    }
-    else if (ATLAS_CUR === "spirit") {
-      const _maps = (() => { try { return (SPIRIT && SPIRIT.maps) || {}; } catch (e) { return {}; } })();
-      const _spirits = (() => { try { return (SPIRIT && SPIRIT.spirits) || {}; } catch (e) { return {}; } })();
-      const _names = Object.keys(_maps);
-      try { window._spDlDone = false; } catch (e) {}
-      let _orphans = [];
-      try {
-        const _used = new Set();
-        Object.values(_maps || {}).forEach((m) => ((m && m.drops) || []).map(String).forEach((s) => _used.add(s)));
-        _orphans = Object.keys(_spirits || {}).filter((n) => !_used.has(String(n)));
-      } catch (e) {}
-      let h = `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)">`
-        + `<div style="font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">精灵系统-精灵地图 (${_names.length})`
-        + `<span style="margin-left:auto;display:inline-flex;gap:4px;flex-wrap:wrap">`
-        + `<button class="ghost sm" id="btnAtlasSaveMaps">💾 保存精灵</button>`
-        + `<button class="ghost sm" id="btnAtlasResetMaps">↩️ 恢复默认</button>`
-        + `<button class="ghost sm" id="btnAtlasClearMaps">🧹 清空地图</button>`
-        + `</span></div>`;
-      if (!_names.length) {
-        const _bc = (() => { try { return Object.keys((SPIRIT && SPIRIT._builtin && SPIRIT._builtin.maps) || {}).length; } catch (e) { return 0; } })();
-        h += `<span style="color:var(--muted)">当前无自定义地图，运行中使用内置 ${_bc} 张</span>`;
-      } else {
-        h += `<div id="atlasSpiritCards" style="display:flex;flex-direction:column;gap:8px">` + spiritMapCardsHTML(_names, _maps, _spirits, "") + `</div>`;
-      }
-      if (_orphans.length) {
-        h += `<div class="s-mapcard ${SPIRIT_OPEN["__orphans__"] ? "open" : ""}" data-map="__orphans__" style="margin-top:10px"><div class="s-maphead" data-map-toggle="__orphans__"><span class="s-mapname">🧩 未上架精灵 (${_orphans.length})</span><span class="s-maplv">不在任何地图掉落中</span><span class="s-arr">${SPIRIT_OPEN["__orphans__"] ? "▾" : "▸"}</span></div>${SPIRIT_OPEN["__orphans__"] ? `<div class="s-mapbody"><div class="hint" style="margin-bottom:6px">这些精灵不会在野外遭遇，可编辑后分配进图，或直接移除</div><div class="sp-spirits">${spiritAttrCards(_spirits, _orphans, _names)}</div></div>` : ``}</div>`;
-      }
-      h += `<div style="margin-top:8px"><button class="ghost sm" id="btnAtlasAddMap">＋ 添加地图</button></div>`;
-      h += `<div class="hint" style="margin-top:6px">地图+属性一键保存/恢复，只动精灵范围</div></div>`;
-      html += h;
-    }
-    else html += `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)"><div style="color:var(--muted)">未知分类</div></div>`;
-    html += `</div><div class="hint" style="margin-top:6px">宝物改动即时保存，只动各自范围；精灵卡改动点保存精灵；武器坐骑请到🛒商城管理</div>`;
-    box.innerHTML = html;
-    box.querySelectorAll("[data-atlas-tab]").forEach((b) => b.addEventListener("click", () => {
-      ATLAS_CUR = b.dataset.atlasTab;
-      renderAtlas();
-    }));
-    const persistTreasure = async () => {
-      // 宝物名+效果即时持久化（图鉴页内闭环，不碰商城）
-      const cleanEff = {};
-      Object.entries(window._TREAS_EFF || {}).forEach(([k, v]) => {
-        const s = (v && typeof v === "object") ? String(v.effect || "") : String(v || "");
-        if (s.trim()) cleanEff[k] = s.trim();
-      });
-      const r = await getBridge().apiPost("config/save", {
-        "设置": { "宝物": (window._TREAS_LIST || Treas).filter(Boolean).join("|") },
-        "商城图鉴": { "treasure_effects": JSON.stringify(cleanEff) }
-      });
-      if (r && r.error) throw new Error(r.error);
-      window._TREAS_DIRTY = false;
-      try { if (CFG && CFG.cur && CFG.cur["设置"]) CFG.cur["设置"]["宝物"] = (window._TREAS_LIST || Treas).filter(Boolean).join("|"); } catch (e) {}
-    };
-    box.querySelectorAll("[data-atlas-del]").forEach(el => el.addEventListener("click", async () => {
-      const [sys, name] = el.dataset.atlasDel.split("|");
-      if (!(await uiConfirm(`确认删除 ${sys} "${name}"？`, "删除图鉴"))) return;
-      try {
-        if (sys.includes("宝物")) {
-          window._TREAS_LIST = (window._TREAS_LIST || Treas).filter(x => x !== name);
-          try { if (window._TREAS_EFF) delete window._TREAS_EFF[name]; } catch (e) {}
-          await persistTreasure();
-          toast("已删除并保存", "ok");
-          renderAtlas();
-        }
-      } catch (e) { toast("删除失败: " + e.message, "bad"); }
-    }));
-    try {
-      // 委托绑在 atlasBox 上（一次，多次渲染不重复），覆盖地图卡与未上架区
-      bindSpiritMapCards(box);
-    } catch (e) {}
-    box.querySelectorAll("[data-atlas-edit-treasure]").forEach(el => el.addEventListener("click", async () => {
-      const n = el.dataset.atlasEditTreasure;
-      const cur = (() => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); return String(e || ""); } catch (e) { return ""; } })();
-      const v = await uiPrompt(`宝物「${n}」效果（留空用内置/通用）：`, cur, "修改宝物效果");
-      if (v === null || v === undefined) return;
-      window._TREAS_EFF = window._TREAS_EFF || {};
-      if (String(v).trim()) window._TREAS_EFF[n] = String(v).trim();
-      else delete window._TREAS_EFF[n];
-      try { await persistTreasure(); toast("已保存", "ok"); }
-      catch (e) { toast("保存失败: " + e.message, "bad"); }
-      renderAtlas();
-    }));
-    document.getElementById("btnAtlasSaveMaps")?.addEventListener("click", () => saveSpiritKind("all"));
-    document.getElementById("btnAtlasResetMaps")?.addEventListener("click", () => resetSpiritKind("all"));
-    document.getElementById("btnAtlasClearMaps")?.addEventListener("click", async () => {
-      if (!SPIRIT) { toast("请先加载图鉴", "bad"); return; }
-      if (!(await uiConfirm("直接清空全部精灵地图？精灵保留（进未上架区），旧地图不保留（快照可回滚）。", "清空地图"))) return;
-      try {
-        SPIRIT.maps = {};
-        await saveSpiritKind("all");
-        refreshSpiritViews();
-      } catch (e) { toast("清空失败: " + e.message, "bad"); }
-    });
-    document.getElementById("btnAtlasAddMap")?.addEventListener("click", async () => {
-      if (!SPIRIT) { toast("请先加载图鉴", "bad"); return; }
-      const n = await uiPrompt("输入新地图名称：", "", "添加地图");
-      if (!n || !n.trim()) return;
-      const maps = SPIRIT.maps || (SPIRIT.maps = {});
-      if (!maps[n.trim()]) maps[n.trim()] = { lv: 1, drops: [] };
-      SPIRIT_OPEN[n.trim()] = true;
-      SPIRIT_DIRTY = true;
-      refreshSpiritViews();
-      toast("已添加地图，点保存精灵持久化", "ok");
-    });
-    document.getElementById("btnAtlasSaveTreasure")?.addEventListener("click", async () => {
-      try { await persistTreasure(); toast("宝物已保存", "ok"); }
-      catch (e) { toast("保存失败: " + e.message, "bad"); }
-      renderAtlas();
-    });
-    document.getElementById("btnAtlasResetTreasure")?.addEventListener("click", async () => {
-      if (!(await uiConfirm("直接恢复宝物为内置（酒神葫芦|四象护符）并清空自定义效果？旧数据不保留。", "恢复默认"))) return;
-      try {
-        window._TREAS_LIST = ["酒神葫芦", "四象护符"];
-        window._TREAS_EFF = {};
-        await persistTreasure();
-        toast("已恢复默认", "ok");
-      } catch (e) { toast("恢复失败: " + e.message, "bad"); }
-      renderAtlas();
-    });
-    document.getElementById("btnAtlasAddTreasure")?.addEventListener("click", async () => {
-      let n = await uiPrompt("输入宝物名（奴隶系统-宝物）：", "", "添加宝物");
-      if (!n) return; n = n.trim(); if (!n) return;
-      const _tl = window._TREAS_DIRTY ? (window._TREAS_LIST || []) : Treas;
-      if (_tl.includes(n)) { toast("已存在", "bad"); return; }
-      window._TREAS_LIST = [..._tl, n];
-      const eff = await uiPrompt(`宝物「${n}」效果（可选，留空用通用）：`, "", "宝物效果");
-      if (eff && String(eff).trim()) { window._TREAS_EFF = window._TREAS_EFF || {}; window._TREAS_EFF[n] = String(eff).trim(); }
-      try { await persistTreasure(); toast("已添加并保存", "ok"); }
-      catch (e) { window._TREAS_DIRTY = true; toast("保存失败: " + e.message, "bad"); }
-      renderAtlas();
-    });
-  } catch (e) { box.innerHTML = `<span style="color:var(--muted)">图鉴加载失败: ${esc(e.message)}</span>`; }
-}
+// 图鉴总览（ATLAS_CUR/renderAtlas）已归 f11_atlas.js 专属；商城只调不用，独立方便各自导出导入与自定义。
 
 async function loadShops(skipAtlas = false) {
   const msg = document.getElementById("shopMsg");
@@ -4278,6 +4284,7 @@ async function importShops() {
       await getBridge().apiPost("config/save", { "商城图鉴": payload });
       toast("商城已导入", "ok"); await loadShops();
     } catch (err) { toast("导入失败: " + err.message, "bad"); }
+    // 注：本函数尾（}; inp.click(); }＋商城四按钮绑定）在 f13 头逐行续接，跨文件断句是 load-bearing，禁动。
   }; inp.click();
 }
 document.getElementById("btnShopLoad")?.addEventListener("click", loadShops);
@@ -5191,7 +5198,7 @@ document.getElementById("btnDbDoctor")?.addEventListener("click", runDbDoctor);
 // ---------- 在线版本检测系统 ----------
 let LATEST_RELEASE_DATA = null;
 
-let UPDATE_CHANNEL = "";
+let LATEST_DUAL = null; // 双通道检测结果 {beta, stable}：只查最新，不切换
 function paintVerMatch() {
   // 前后端对账：两边版本不同即红字（更新只拉了一半的经典症状），免得对着旧包调新问题
   try {
@@ -5207,60 +5214,36 @@ function paintVerMatch() {
     }
   } catch (e) {}
 }
-async function loadUpdateChannel() {
-  // 更新通道：后端记忆，不存在即 BETA（beta 插件默认）
+async function _checkOneChannel(c) {
+  // 单通道检测：成功即后端原样；失败转可显示错误对象（另一通道不受影响）
   try {
-    const r = await getBridge().apiGet("version/channel").catch(() => null);
-    const c = r && (r.channel || (r.data && r.data.channel));
-    UPDATE_CHANNEL = (c === "正式" || c === "BETA") ? c : "BETA";
-  } catch (e) { UPDATE_CHANNEL = UPDATE_CHANNEL || "BETA"; }
-  try { paintVerMatch(); } catch (e) {}
-  try {
-    const el = document.getElementById("aboutChannel");
-    if (el) el.textContent = UPDATE_CHANNEL === "正式" ? "正式版" : "BETA版";
-    const bb = document.getElementById("btnChannelBeta");
-    const bs = document.getElementById("btnChannelStable");
-    if (bb) bb.style.borderColor = UPDATE_CHANNEL === "BETA" ? "var(--acc)" : "";
-    if (bs) bs.style.borderColor = UPDATE_CHANNEL === "正式" ? "var(--acc)" : "";
-  } catch (e) {}
-  return UPDATE_CHANNEL;
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("请求超时(20s)，请检查网络后重试")), 20000));
+    const r = await Promise.race([getBridge().apiGet("version/check", { channel: c }), timeout]);
+    if (r && (r.ok || r.has_update !== undefined || r.current_version)) return r;
+    let raw = "";
+    try { raw = JSON.stringify(r).slice(0, 120); } catch (e) {}
+    return { ok: true, current_version: "", latest_version: "", has_update: false, channel: c, detect_error: "无有效响应" + (raw ? "：" + raw : "") };
+  } catch (e) {
+    return { ok: true, current_version: "", latest_version: "", has_update: false, channel: c, detect_error: (e && e.message) || String(e) };
+  }
 }
-async function setUpdateChannel(c) {
-  if (c !== "正式" && c !== "BETA") return;
-  let r = null;
+function _paintChannelRow(elId, res) {
+  // 双通道行绘制：最新版 / 已是最新 / 检测失败 三态
   try {
-    r = await getBridge().apiPost("version/channel", { channel: c }).catch(() => null);
-  } catch (e) { r = null; }
-  const nc = r && (r.channel || (r.data && r.data.channel));
-  if (nc !== "正式" && nc !== "BETA") {
-    // 后端无回执（旧后端无此路由或网络不通）：不玩乐观切换，直接报错
-    toast("切换失败：后端无响应（请确认已更新到含通道功能的新版并完全重启）", "bad", 5000);
-    await loadUpdateChannel();
-    return;
-  }
-  if (nc !== c) {
-    // 后端回执与请求不一致（未持久化）：不谎报成功，直接报错并重读
-    toast("切换失败：后端返回" + (nc === "正式" ? "正式版" : "BETA版") + "，与请求不一致，已重读", "bad", 5000);
-    await loadUpdateChannel();
-    return;
-  }
-  UPDATE_CHANNEL = nc;
-  try {
-    const el = document.getElementById("aboutChannel");
-    if (el) el.textContent = UPDATE_CHANNEL === "正式" ? "正式版" : "BETA版";
-    const bb = document.getElementById("btnChannelBeta");
-    const bs = document.getElementById("btnChannelStable");
-    if (bb) bb.style.borderColor = UPDATE_CHANNEL === "BETA" ? "var(--acc)" : "";
-    if (bs) bs.style.borderColor = UPDATE_CHANNEL === "正式" ? "var(--acc)" : "";
+    const el = document.getElementById(elId);
+    if (!el) return;
+    if (res && !res.detect_error && res.latest_version) {
+      el.textContent = res.has_update ? ("v" + res.latest_version + "（有更新）") : ("v" + res.latest_version + "（已是最新）");
+    } else {
+      el.textContent = "检测失败" + (res && res.detect_error ? "：" + res.detect_error : "");
+    }
   } catch (e) {}
-  toast("更新通道已切换为" + (UPDATE_CHANNEL === "正式" ? "正式版" : "BETA版") + "，正在重新检测", "ok");
-  checkVersionUpdate(false);
 }
 async function checkVersionUpdate(silent = false) {
   const btn = document.getElementById("btnCheckUpdate");
   const statusEl = document.getElementById("checkUpdateStatus");
   try {
-    if (!silent) toast("正在检测最新版本...", "ok");
+    if (!silent) toast("正在检测双通道最新版本...", "ok");
     if (btn) {
       btn.disabled = true;
       btn.textContent = "⏳ 检测中…";
@@ -5270,112 +5253,108 @@ async function checkVersionUpdate(silent = false) {
       statusEl.style.color = "var(--muted)";
       statusEl.style.background = "var(--panel2)";
       statusEl.style.border = "1px solid var(--line)";
-      statusEl.textContent = "⏳ 正在检测云端版本…";
+      statusEl.textContent = "⏳ 正在检测 BETA/正式版…";
     }
-    // 20秒超时熔断：任何挂起都转为可见报错，杜绝点击无反应；带当前通道，后端按通道查仓
-    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("请求超时(20s)，请检查网络后重试")), 20000));
-    try { if (!UPDATE_CHANNEL) await loadUpdateChannel(); } catch (e) {}
-    const res = await Promise.race([getBridge().apiGet("version/check", UPDATE_CHANNEL ? { channel: UPDATE_CHANNEL } : {}), timeout]);
-    if (res && (res.ok || res.has_update !== undefined || res.current_version)) {
-      LATEST_RELEASE_DATA = res;
-      try { paintVerMatch(); } catch (e) {}
-      try {
-        const av = document.getElementById("aboutVersion");
-        if (av && res.current_version) av.textContent = "v" + res.current_version;
-        const al = document.getElementById("aboutLatest");
-        if (al) al.textContent = res.latest_version ? (res.has_update ? `(云端最新 v${res.latest_version}，建议升级)` : `(云端最新 v${res.latest_version})`) : "";
-      } catch (e) {}
-      const badge = document.getElementById("verBadge");
-      if (res.has_update) {
-        if (btn) {
-          btn.textContent = `🚀 发现新版 v${res.latest_version}`;
-          btn.style.color = "var(--acc)";
-          btn.style.borderColor = "var(--acc)";
-          btn.style.background = "rgba(59,130,246,0.1)";
-        }
-        if (statusEl) {
-          statusEl.style.display = "inline-flex";
-          statusEl.style.color = "var(--acc)";
-          statusEl.style.background = "rgba(59,130,246,0.12)";
-          statusEl.style.border = "1px solid rgba(59,130,246,0.3)";
-          statusEl.textContent = `🚀 发现新版本 v${res.latest_version}（建议升级）`;
-        }
-        if (badge) {
-          badge.style.display = "inline-flex";
-          badge.style.background = "linear-gradient(135deg, #3B82F6, #1D4ED8)";
-          badge.textContent = `🚀 发现新版本 v${res.latest_version}`;
-          badge.title = "点击查看更新详情并一键升级";
-        }
-        if (!silent) {
-          toast(`发现新版本: v${res.latest_version}`, "ok");
-          showUpdateModal(res);
-        }
-      } else if (res.detect_error) {
-        if (btn) {
-          btn.textContent = "⚠️ 重试检测";
-          btn.style.color = "var(--warn)";
-          btn.style.borderColor = "var(--warn)";
-          btn.style.background = "rgba(255,149,0,0.08)";
-        }
-        if (statusEl) {
-          if (!silent) {
-            statusEl.style.display = "inline-flex";
-            statusEl.style.color = "var(--warn)";
-            statusEl.style.background = "rgba(255,149,0,0.12)";
-            statusEl.style.border = "1px solid rgba(255,149,0,0.3)";
-            statusEl.textContent = `⚠️ 检测失败：${res.detect_error}`;
-          } else {
-            statusEl.style.display = "none";
-          }
-        }
-        if (badge) {
-          badge.style.display = "inline-flex";
-          badge.style.background = "linear-gradient(135deg,#F59E0B,#D97706)";
-          badge.textContent = "⚠️ 更新检测失败";
-          badge.title = res.detect_error + "（点击重试）";
-        }
-        if (!silent) {
-          toast("更新检测失败：" + res.detect_error, "bad", 8000);
-          showUpdateModal(res);
-        }
-      } else {
-        if (btn) {
-          btn.textContent = `🟢 已是最新 (v${res.current_version})`;
-          btn.style.color = "var(--ok)";
-          btn.style.borderColor = "var(--ok)";
-          btn.style.background = "rgba(52,199,89,0.08)";
-        }
-        if (statusEl) {
-          statusEl.style.display = "none";
-          statusEl.textContent = "";
-        }
-        if (badge) {
-          badge.style.display = "inline-flex";
-          badge.style.background = "linear-gradient(135deg, #10B981, #059669)";
-          badge.textContent = `🟢 最新版 v${res.current_version}`;
-          badge.title = "本地与云端均为最新版本（点击查看详情）";
-        }
-        if (!silent) {
-          showUpdateModal(res);
-        }
+    // 双通道并查：BETA 查 xbtest 快照仓，正式查官方仓；单路失败不影响另一路
+    const [resB, resS] = await Promise.all([_checkOneChannel("BETA"), _checkOneChannel("正式")]);
+    LATEST_DUAL = { beta: resB, stable: resS };
+    const cur = (resB && resB.current_version) || (resS && resS.current_version) || "";
+    LATEST_RELEASE_DATA = { current_version: cur, beta: resB, stable: resS };
+    try { paintVerMatch(); } catch (e) {}
+    try {
+      const av = document.getElementById("aboutVersion");
+      if (av && cur) av.textContent = "v" + cur;
+      const al = document.getElementById("aboutLatest");
+      if (al) {
+        const pb = (resB && resB.latest_version) ? ("BETA v" + resB.latest_version) : "BETA 未知";
+        const ps = (resS && resS.latest_version) ? ("正式 v" + resS.latest_version) : "正式未知";
+        al.textContent = "(" + pb + " / " + ps + ")";
       }
-    } else {
-      // 兜底：任何非预期响应形状也必须给提示
+    } catch (e) {}
+    _paintChannelRow("aboutLatestBeta", resB);
+    _paintChannelRow("aboutLatestStable", resS);
+    const updB = Boolean(resB && resB.has_update && resB.latest_version);
+    const updS = Boolean(resS && resS.has_update && resS.latest_version);
+    const failB = Boolean(!resB || resB.detect_error);
+    const failS = Boolean(!resS || resS.detect_error);
+    const updVer = updB ? resB.latest_version : (updS ? resS.latest_version : "");
+    const badge = document.getElementById("verBadge");
+    if (updVer) {
       if (btn) {
-        btn.textContent = "⚠️ 检测无响应";
+        btn.textContent = "🚀 发现新版 v" + updVer;
+        btn.style.color = "var(--acc)";
+        btn.style.borderColor = "var(--acc)";
+        btn.style.background = "rgba(59,130,246,0.1)";
       }
       if (statusEl) {
         statusEl.style.display = "inline-flex";
-        statusEl.style.color = "var(--warn)";
-        statusEl.textContent = "⚠️ 未获取到有效版本响应";
+        statusEl.style.color = "var(--acc)";
+        statusEl.style.background = "rgba(59,130,246,0.12)";
+        statusEl.style.border = "1px solid rgba(59,130,246,0.3)";
+        const _which = updB && updS ? "BETA/正式均" : (updB ? "BETA " : "正式 ");
+        statusEl.textContent = "🚀 " + _which + "发现新版本 v" + updVer + "（建议升级）";
+      }
+      if (badge) {
+        badge.style.display = "inline-flex";
+        badge.style.background = "linear-gradient(135deg, #3B82F6, #1D4ED8)";
+        badge.textContent = "🚀 发现新版本 v" + updVer;
+        badge.title = "点击查看双通道更新详情";
       }
       if (!silent) {
-        let raw = "";
-        try { raw = JSON.stringify(res).slice(0, 120); } catch (e) {}
-        toast("检测更新无有效响应" + (raw ? ("：" + raw) : "，请重试或查看AstrBot后台日志"), "bad");
+        toast("发现新版本: v" + updVer, "ok");
+        showUpdateModal();
+      }
+    } else if (failB || failS) {
+      if (btn) {
+        btn.textContent = "⚠️ 重试检测";
+        btn.style.color = "var(--warn)";
+        btn.style.borderColor = "var(--warn)";
+        btn.style.background = "rgba(255,149,0,0.08)";
+      }
+      if (statusEl) {
+        if (!silent) {
+          statusEl.style.display = "inline-flex";
+          statusEl.style.color = "var(--warn)";
+          statusEl.style.background = "rgba(255,149,0,0.12)";
+          statusEl.style.border = "1px solid rgba(255,149,0,0.3)";
+          const _fe = (failB && resB && resB.detect_error ? "BETA:" + resB.detect_error : "") + (failB && failS ? "；" : "") + (failS && resS && resS.detect_error ? "正式:" + resS.detect_error : "");
+          statusEl.textContent = "⚠️ 检测失败：" + _fe;
+        } else {
+          statusEl.style.display = "none";
+        }
+      }
+      if (badge) {
+        badge.style.display = "inline-flex";
+        badge.style.background = "linear-gradient(135deg,#F59E0B,#D97706)";
+        badge.textContent = "⚠️ 更新检测失败";
+        badge.title = "部分通道检测失败（点击重试）";
+      }
+      if (!silent) {
+        toast("更新检测失败", "bad", 8000);
+        showUpdateModal();
+      }
+    } else {
+      if (btn) {
+        btn.textContent = "🟢 已是最新 (v" + cur + ")";
+        btn.style.color = "var(--ok)";
+        btn.style.borderColor = "var(--ok)";
+        btn.style.background = "rgba(52,199,89,0.08)";
+      }
+      if (statusEl) {
+        statusEl.style.display = "none";
+        statusEl.textContent = "";
+      }
+      if (badge) {
+        badge.style.display = "inline-flex";
+        badge.style.background = "linear-gradient(135deg, #10B981, #059669)";
+        badge.textContent = "🟢 最新版 v" + cur;
+        badge.title = "双通道均为最新版本（点击查看详情）";
+      }
+      if (!silent) {
+        showUpdateModal();
       }
     }
-  } catch(err) {
+  } catch (err) {
     if (btn) {
       btn.textContent = "⚠️ 检测超时/失败";
       btn.style.color = "var(--warn)";
@@ -5385,7 +5364,7 @@ async function checkVersionUpdate(silent = false) {
       statusEl.style.color = "var(--warn)";
       statusEl.style.background = "rgba(255,149,0,0.12)";
       statusEl.style.border = "1px solid rgba(255,149,0,0.3)";
-      statusEl.textContent = `⚠️ 请求失败: ${err.message}`;
+      statusEl.textContent = "⚠️ 请求失败: " + err.message;
     }
     if (!silent) toast("检测更新失败: " + err.message, "bad");
   } finally {
@@ -5393,31 +5372,59 @@ async function checkVersionUpdate(silent = false) {
   }
 }
 
-function showUpdateModal(data) {
-  const isNew = Boolean(data.has_update);
-  const curVer = data.current_version || "未知";
-  const latestVer = data.latest_version || curVer;
-  const dateStr = data.release_date ? ` · 发布于 ${data.release_date}` : "";
-  const changelog = data.changelog || "暂无详细更新日志。";
-  const errStr = data.detect_error || "";
+function _channelCardHTML(title, icon, data) {
+  // 单通道卡片：最新版/有更新/检测失败 三态（二卡并列，结构对称）
+  const d = (data && typeof data === "object") ? data : {};
+  const cur = d.current_version || "";
+  const lat = d.latest_version || "";
+  const isNew = Boolean(d.has_update && lat);
+  const errStr = d.detect_error || "";
+  let body = "";
+  if (errStr) {
+    body = `<div style="font-size:15px;font-weight:700;color:var(--warn)">检测失败</div>`
+      + `<div style="font-size:11px;color:var(--muted);margin-top:4px">${esc(errStr)}</div>`;
+  } else if (lat) {
+    body = `<div style="font-size:15px;font-weight:700;color:${isNew ? "var(--acc)" : "var(--ok)"}">v${esc(lat)}${isNew ? "（有更新）" : "（已是最新）"}</div>`
+      + (d.release_date ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">发布于 ${esc(d.release_date)}</div>` : "")
+      + (d.repo ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(d.repo)}</div>` : "");
+  } else {
+    body = `<div style="font-size:15px;font-weight:700;color:var(--muted)">未知</div>`;
+  }
+  void cur;
+  return `<div style="padding:10px 12px;background:var(--panel);border-radius:10px;border:1px solid var(--line)">`
+    + `<div style="font-size:11px;color:var(--muted);margin-bottom:2px">${icon} ${esc(title)}</div>` + body + `</div>`;
+}
+
+function showUpdateModal() {
+  // 双通道详情弹窗：当前本地＋BETA 最新＋正式最新（只查不切）
+  const dual = (typeof LATEST_DUAL !== "undefined" && LATEST_DUAL) || {};
+  const resB = dual.beta || {};
+  const resS = dual.stable || {};
+  const curVer = resB.current_version || resS.current_version || "未知";
+  const updB = Boolean(resB.has_update && resB.latest_version);
+  const updS = Boolean(resS.has_update && resS.latest_version);
+  const failB = Boolean(!resB.latest_version);
+  const failS = Boolean(!resS.latest_version);
 
   let statusCard = "";
-  if (isNew) {
+  if (updB || updS) {
+    const _which = updB && updS ? "BETA/正式均" : (updB ? "BETA " : "正式 ");
+    const _ver = updB ? resB.latest_version : resS.latest_version;
     statusCard = `
 <div style="padding:10px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:10px;font-size:12px;color:var(--acc);margin-top:10px;display:flex;align-items:center;gap:8px">
   <span style="font-size:18px">🚀</span>
   <div>
-    <div style="font-weight:700">发现云端更新！建议升级至 v${esc(latestVer)}</div>
+    <div style="font-weight:700">${_which}发现云端更新！建议升级至 v${esc(_ver)}</div>
     <div style="font-size:11px;color:var(--muted);margin-top:2px">前往 AstrBot 官方面板的「插件管理」页面，点击「更新」即可一键无损升级。</div>
   </div>
 </div>`;
-  } else if (errStr) {
+  } else if (failB || failS) {
     statusCard = `
 <div style="padding:10px 12px;background:var(--warnSoft);border:1px solid rgba(255,149,0,0.25);border-radius:10px;font-size:12px;color:var(--warn);margin-top:10px;display:flex;align-items:center;gap:8px">
   <span style="font-size:18px">⚠️</span>
   <div>
-    <div style="font-weight:700">云端检测未能连通</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(errStr)}</div>
+    <div style="font-weight:700">部分通道检测未能连通</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc((failB && resB.detect_error ? "BETA:" + resB.detect_error : "") + (failB && failS ? "；" : "") + (failS && resS.detect_error ? "正式:" + resS.detect_error : ""))}</div>
   </div>
 </div>`;
   } else {
@@ -5425,7 +5432,7 @@ function showUpdateModal(data) {
 <div style="padding:10px 12px;background:var(--okSoft);border:1px solid rgba(52,199,89,0.25);border-radius:10px;font-size:12px;color:var(--ok);margin-top:10px;display:flex;align-items:center;gap:8px">
   <span style="font-size:18px">✨</span>
   <div>
-    <div style="font-weight:700">本地与云端均为最新版本 (v${esc(curVer)})</div>
+    <div style="font-weight:700">双通道均为最新版本 (v${esc(curVer)})</div>
     <div style="font-size:11px;color:var(--muted);margin-top:2px">当前运行代码已处于最新版本状态，运行良好，无需执行更新。</div>
   </div>
 </div>`;
@@ -5433,42 +5440,40 @@ function showUpdateModal(data) {
 
   const modalHtml = `
 <div style="background:var(--panel2);border-radius:14px;padding:12px 14px;border:1px solid var(--line);margin-bottom:12px">
+  <div style="padding:10px 12px;background:var(--panel);border-radius:10px;border:1px solid var(--line);margin-bottom:10px">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:2px">当前本地运行版本</div>
+    <div style="font-size:15px;font-weight:700;color:var(--text)">v${esc(curVer)}</div>
+  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <div style="padding:10px 12px;background:var(--panel);border-radius:10px;border:1px solid var(--line)">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:2px">当前本地运行版本</div>
-      <div style="font-size:15px;font-weight:700;color:var(--text)">v${esc(curVer)}</div>
-    </div>
-    <div style="padding:10px 12px;background:var(--panel);border-radius:10px;border:1px solid var(--line)">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:2px">云端仓库最新版本</div>
-      <div style="font-size:15px;font-weight:700;color:${isNew ? "var(--acc)" : "var(--ok)"}">v${esc(latestVer)}</div>
-    </div>
+    ${_channelCardHTML("BETA 最新（xbtest 快照）", "🚀", resB)}
+    ${_channelCardHTML("正式最新（官方 Release）", "🏷️", resS)}
   </div>
   ${statusCard}
-  ${dateStr ? `<div style="font-size:11px;color:var(--muted);margin-top:8px">${esc(dateStr)}</div>` : ""}
-  ${data.channel ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">更新通道：${esc(data.channel === "正式" ? "正式版" : "BETA版")}${data.repo ? `（${esc(data.repo)}）` : ""}</div>` : ""}
 </div>
 
-<div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px">📝 版本更新日志与特性</div>
-<div style="background:var(--panel);border-radius:10px;padding:10px 12px;border:1px solid var(--line);font-size:12px;color:var(--text);max-height:160px;overflow-y:auto;white-space:pre-wrap;line-height:1.6">
-${esc(changelog)}
+<div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px">📝 BETA 更新日志</div>
+<div style="background:var(--panel);border-radius:10px;padding:10px 12px;border:1px solid var(--line);font-size:12px;color:var(--text);max-height:120px;overflow-y:auto;white-space:pre-wrap;line-height:1.6;margin-bottom:10px">
+${esc((resB && resB.changelog) || "暂无详细更新日志。")}
+</div>
+<div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px">📝 正式版更新日志</div>
+<div style="background:var(--panel);border-radius:10px;padding:10px 12px;border:1px solid var(--line);font-size:12px;color:var(--text);max-height:120px;overflow-y:auto;white-space:pre-wrap;line-height:1.6">
+${esc((resS && resS.changelog) || "暂无详细更新日志。")}
 </div>
 `;
-
-  const modalTitle = isNew ? "发现新版本" : (errStr ? "版本检测结果" : "版本检测：已是最新版本");
-  const modalIcon = isNew ? "🚀" : (errStr ? "⚠️" : "✨");
+  const isNew = updB || updS;
+  const modalTitle = isNew ? "发现新版本" : ((failB || failS) ? "版本检测结果" : "版本检测：已是最新版本");
+  const modalIcon = isNew ? "🚀" : ((failB || failS) ? "⚠️" : "✨");
   uiAlert(modalHtml, modalTitle, modalIcon);
 }
 
-// 绑定版本徽章与检查更新按钮
+// 绑定版本徽章与检查更新按钮（无切换：只查双通道最新）
 document.getElementById("verBadge")?.addEventListener("click", () => {
-  if (LATEST_RELEASE_DATA && !LATEST_RELEASE_DATA.detect_error) showUpdateModal(LATEST_RELEASE_DATA);
+  if (typeof LATEST_DUAL !== "undefined" && LATEST_DUAL) showUpdateModal();
   else checkVersionUpdate(false);
 });
 document.getElementById("btnCheckUpdate")?.addEventListener("click", () => checkVersionUpdate(false));
-document.getElementById("btnChannelBeta")?.addEventListener("click", () => setUpdateChannel("BETA"));
-document.getElementById("btnChannelStable")?.addEventListener("click", () => setUpdateChannel("正式"));
 document.getElementById("checkUpdateStatus")?.addEventListener("click", () => {
-  if (LATEST_RELEASE_DATA) showUpdateModal(LATEST_RELEASE_DATA);
+  if (typeof LATEST_DUAL !== "undefined" && LATEST_DUAL) showUpdateModal();
   else checkVersionUpdate(false);
 });
 
