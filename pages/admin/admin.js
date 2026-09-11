@@ -1,4 +1,6 @@
-﻿const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
+const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
+// 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
+const FRONTEND_VER = "2026w0911a";
 
 let _WORKING_API_PREFIX = null;
 
@@ -5190,6 +5192,21 @@ document.getElementById("btnDbDoctor")?.addEventListener("click", runDbDoctor);
 let LATEST_RELEASE_DATA = null;
 
 let UPDATE_CHANNEL = "";
+function paintVerMatch() {
+  // 前后端对账：两边版本不同即红字（更新只拉了一半的经典症状），免得对着旧包调新问题
+  try {
+    const fz = document.getElementById("aboutFrontendVer");
+    if (fz && typeof FRONTEND_VER !== "undefined") fz.textContent = "v" + FRONTEND_VER;
+    const warn = document.getElementById("verMismatch");
+    const bv = (typeof LATEST_RELEASE_DATA !== "undefined" && LATEST_RELEASE_DATA && LATEST_RELEASE_DATA.current_version) || "";
+    if (warn) {
+      if (typeof FRONTEND_VER !== "undefined" && bv && String(FRONTEND_VER) !== String(bv)) {
+        warn.style.display = "";
+        warn.innerHTML = `⚠️ 前后端版本不一致：前端 v${esc(FRONTEND_VER)} / 后端 v${esc(bv)}。请 pull 最新代码后<b>完全重启 AstrBot</b>（仅重载插件不够）。`;
+      } else warn.style.display = "none";
+    }
+  } catch (e) {}
+}
 async function loadUpdateChannel() {
   // 更新通道：后端记忆，不存在即 BETA（beta 插件默认）
   try {
@@ -5197,6 +5214,7 @@ async function loadUpdateChannel() {
     const c = r && (r.channel || (r.data && r.data.channel));
     UPDATE_CHANNEL = (c === "正式" || c === "BETA") ? c : "BETA";
   } catch (e) { UPDATE_CHANNEL = UPDATE_CHANNEL || "BETA"; }
+  try { paintVerMatch(); } catch (e) {}
   try {
     const el = document.getElementById("aboutChannel");
     if (el) el.textContent = UPDATE_CHANNEL === "正式" ? "正式版" : "BETA版";
@@ -5209,11 +5227,18 @@ async function loadUpdateChannel() {
 }
 async function setUpdateChannel(c) {
   if (c !== "正式" && c !== "BETA") return;
+  let r = null;
   try {
-    const r = await getBridge().apiPost("version/channel", { channel: c }).catch(() => null);
-    const nc = r && (r.channel || (r.data && r.data.channel));
-    UPDATE_CHANNEL = (nc === "正式" || nc === "BETA") ? nc : c;
-  } catch (e) { UPDATE_CHANNEL = c; }
+    r = await getBridge().apiPost("version/channel", { channel: c }).catch(() => null);
+  } catch (e) { r = null; }
+  const nc = r && (r.channel || (r.data && r.data.channel));
+  if (nc !== "正式" && nc !== "BETA") {
+    // 后端无回执（旧后端无此路由或网络不通）：不玩乐观切换，直接报错
+    toast("切换失败：后端无响应（请确认已更新到含通道功能的新版并完全重启）", "bad", 5000);
+    await loadUpdateChannel();
+    return;
+  }
+  UPDATE_CHANNEL = nc;
   try {
     const el = document.getElementById("aboutChannel");
     if (el) el.textContent = UPDATE_CHANNEL === "正式" ? "正式版" : "BETA版";
@@ -5247,6 +5272,7 @@ async function checkVersionUpdate(silent = false) {
     const res = await Promise.race([getBridge().apiGet("version/check", UPDATE_CHANNEL ? { channel: UPDATE_CHANNEL } : {}), timeout]);
     if (res && (res.ok || res.has_update !== undefined || res.current_version)) {
       LATEST_RELEASE_DATA = res;
+      try { paintVerMatch(); } catch (e) {}
       try {
         const av = document.getElementById("aboutVersion");
         if (av && res.current_version) av.textContent = "v" + res.current_version;
