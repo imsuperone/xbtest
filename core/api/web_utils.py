@@ -278,3 +278,29 @@ async def read_upload_b64(request):
         pass
     return "", b""
 
+
+def read_thumb_uri(fp, max_bytes=200 * 1024):
+    """单图缩略 data URI（images 预览＋pool 预览同语义收口）：返回 (status, payload)。
+    status: ok(payload=uri) / too large / empty / error(payload=异常文本)；
+    调用方按各自契约映射（images 报 400/500 系原文案，pool 回空串）。"""
+    try:
+        sz = os.path.getsize(fp)
+    except Exception as e:
+        return "error", str(e)
+    if not sz:
+        return "empty", ""
+    if sz > max_bytes:
+        return "too large", ""
+    try:
+        with open(fp, "rb") as f:
+            raw = f.read()
+        if not raw:
+            return "empty", ""
+        ext = os.path.splitext(fp)[1].lower().lstrip(".") or "png"
+        if ext == "jpg":
+            ext = "jpeg"
+        import base64
+        return "ok", "data:image/%s;base64,%s" % (ext, base64.b64encode(raw).decode("ascii"))
+    except Exception as e:
+        return "error", str(e)
+

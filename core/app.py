@@ -128,7 +128,6 @@ def _raw_file_response(data_bytes, filename):
 
 PLUGIN_ID = "astrbot_plugin_xbbot_beta"
 PLUGIN_DESC = "小白测试版(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
-PLUGIN_AUTHOR = "Light"
 try:
     from .version import get_version as _get_version
 except ImportError:
@@ -141,7 +140,6 @@ try:
     PLUGIN_VERSION = _get_version()
 except Exception:
     PLUGIN_VERSION = "0.7.45-beta"
-PLUGIN_REPO = "https://github.com/imsuperone/xb"
 
 # 消息处理定长线程池：突发千群不再打爆默认无限池，与 ST._LOCK 串行叠加可控
 # import 期不建池（工具链 import 零线程）：首个 XbBot 实例化/首消息时懒建，全局单例，永不 shutdown

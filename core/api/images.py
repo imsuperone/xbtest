@@ -6,7 +6,7 @@ import os
 import time
 from astrbot.api.web import json_response
 
-from .web_utils import _err, get_req_query, get_req_json, plugin_root, read_upload_b64
+from .web_utils import _err, get_req_query, get_req_json, plugin_root, read_thumb_uri, read_upload_b64
 
 try:
     from .. import storage as ST
@@ -236,17 +236,14 @@ async def handle_images_thumb(request, plugin_base=""):
 
     def _work():
         try:
-            if os.path.getsize(fp) > 200 * 1024:
+            st, payload = read_thumb_uri(fp)
+            if st == "too large":
                 return _err("too large", 400)
-            with open(fp, "rb") as f:
-                raw = f.read()
-            if not raw:
+            if st == "empty":
                 return _err("empty file", 400)
-            ext = os.path.splitext(fp)[1].lower().lstrip(".") or "png"
-            if ext == "jpg":
-                ext = "jpeg"
-            return json_response({"ok": True, "path": rel,
-                                  "thumb": "data:image/%s;base64,%s" % (ext, base64.b64encode(raw).decode("ascii"))})
+            if st != "ok":
+                return _err(f"thumb failed: {payload}", 500)
+            return json_response({"ok": True, "path": rel, "thumb": payload})
         except Exception as e:
             return _err(f"thumb failed: {e}", 500)
 

@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """core/api/pool.py — 抽奖武器池文件管理（原 game.py 池段切分，语义不变）。"""
 import asyncio
-import base64
 import json
 import os as _os
 import re
 import shutil as _shutil
 from astrbot.api.web import json_response
-from .web_utils import _err, get_req_query, get_req_json, plugin_root, read_upload_b64
+from .web_utils import _err, get_req_query, get_req_json, plugin_root, read_thumb_uri, read_upload_b64
 try:
     from .. import storage as ST
     from ...games import slave
@@ -165,19 +164,10 @@ def _pool_find(stem):
 
 
 def _pool_thumb(p):
+    # 与 images 缩略同语义（200KB 上限＋空/错回空串），实现收口 web_utils.read_thumb_uri
     try:
-        sz = _os.path.getsize(p)
-    except Exception:
-        return ""
-    if not (0 < sz <= _POOL_THUMB_MAX):
-        return ""
-    try:
-        with open(p, "rb") as f:
-            raw = f.read()
-        ext = _os.path.splitext(p)[1].lower().lstrip(".") or "png"
-        if ext == "jpg":
-            ext = "jpeg"
-        return "data:image/%s;base64,%s" % (ext, base64.b64encode(raw).decode("ascii"))
+        st, uri = read_thumb_uri(p, _POOL_THUMB_MAX)
+        return uri if st == "ok" else ""
     except Exception:
         return ""
 

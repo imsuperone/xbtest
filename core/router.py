@@ -173,10 +173,12 @@ def clear_guard_cache():
 
 
 def _batch_guard_map(gid, is_admin, store):
-    # 批量预计算9引擎守卫结果，0.3s内同gid复用，避免每引擎2次kv读
+    # 批量预计算9引擎守卫结果，2s 内同键复用，避免每引擎2次kv读。
+    # key 带 is_admin：_guard 当前无视 is_admin（关＝全员静默），值恒一致；带上防后人加权限语义时穿透复用。
+    _bkey = (str(gid), bool(is_admin))
     try:
         now = _t_guard.time()
-        hit = _GUARD_BATCH_CACHE.get(str(gid))
+        hit = _GUARD_BATCH_CACHE.get(_bkey)
         if hit and now - hit[0] < _GUARD_BATCH_TTL:
             return hit[1]
     except Exception:
@@ -186,7 +188,7 @@ def _batch_guard_map(gid, is_admin, store):
         msg = _guard(gid, eng, is_admin, "", store)
         res[eng] = msg  # None表示放行
     try:
-        _GUARD_BATCH_CACHE[str(gid)] = (now, res)
+        _GUARD_BATCH_CACHE[_bkey] = (now, res)
     except Exception:
         pass
     return res
@@ -366,8 +368,7 @@ def _custom_idx(store):
     except Exception:
         fp = None
     try:
-        if _CUSTOM_IDX.get("ver") == ver and ver != -1 and _CUSTOM_IDX.get("_fp") == fp:
-            return _CUSTOM_IDX
+        # ver != -1 时上已命中返回，此处只剩 ver == -1（无版本哨兵的裸 store）才走指纹
         if ver == -1 and fp is not None and _CUSTOM_IDX.get("_fp") == fp and _CUSTOM_IDX.get("_fp") is not None:
             return _CUSTOM_IDX
     except Exception:

@@ -245,7 +245,8 @@ def _weapon_img_path(name):
                         return [_os.path.abspath(p)]
                 else:
                     try:
-                        base = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+                        # 插件根（games/slave/ 深三层；曾误写两层得 games/，该候选永 miss 靠后继回退掩盖）
+                        base = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
                         cand = _os.path.join(base, p)
                         if _os.path.isfile(cand):
                             return [_os.path.abspath(cand)]
