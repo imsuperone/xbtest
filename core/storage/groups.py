@@ -61,7 +61,8 @@ def group(gid):
         _S._GROUP_CACHE[gid] = g
         try:
             if len(_S._GROUP_CACHE) > _S._GROUP_CACHE_MAX:
-                # LRU 淘汰前落盘脏数据，防单群并发崩溃后丢档
+                # LRU 淘汰前落盘脏数据；写失败则保留 victim，下轮重试
+                _evicted = False
                 try:
                     oldest_gid, oldest_g = next(iter(_S._GROUP_CACHE.items()))
                     if oldest_g is not g and getattr(oldest_g, "_dirty", False):
@@ -82,9 +83,17 @@ def group(gid):
                         except Exception:
                             pass
                         _maybe_commit()
+                    _evicted = True
                 except Exception:
-                    pass
-                _S._GROUP_CACHE.popitem(last=False)
+                    try:
+                        _safe_rollback()
+                    except Exception:
+                        pass
+                if _evicted:
+                    try:
+                        _S._GROUP_CACHE.popitem(last=False)
+                    except Exception:
+                        pass
         except Exception:
             pass
         return g
@@ -100,11 +109,14 @@ def save_group(gid):
         if not g._dirty:
             return  # 脏检查：千群千人“我的信息”等只读指令不再触发 DB 写
         try:
-            # 增量提交：仅脏用户（单群1000人场景 1000次→1次，3.44s→0.02s）
+            # 增量提交：仅脏用户（单群1000人场景 1000次→1次，3.44s→0.02s）。
+            # 快照→写→commit→仅清快照集：写盘期间新标脏进新集合，下轮再刷，不吞并发标记。
             dirty_qqs = getattr(g, "_dirty_qqs", None)
             if dirty_qqs is not None and len(dirty_qqs) > 0 and len(dirty_qqs) < len(g._users):
-                items = [(qq, g._users.get(qq, {})) for qq in list(dirty_qqs)]
+                snap = list(dirty_qqs)
+                items = [(qq, g._users.get(qq, {})) for qq in snap]
             else:
+                snap = None
                 items = list(g._users.items())
             for qq, kv in items:
                 if not kv:
@@ -114,12 +126,21 @@ def save_group(gid):
                         "INSERT INTO groups(gid, qq, data) VALUES(?,?,?) "
                         "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
                         (int(gid), int(qq), json.dumps(kv, ensure_ascii=False)))
-            g._dirty = False
-            try:
-                g._dirty_qqs.clear()
-            except Exception:
-                pass
             _safe_commit()
+            if snap is None:
+                g._dirty = False
+                try:
+                    g._dirty_qqs.clear()
+                except Exception:
+                    pass
+            else:
+                try:
+                    for qq in snap:
+                        g._dirty_qqs.discard(qq)
+                    if not g._dirty_qqs:
+                        g._dirty = False
+                except Exception:
+                    pass
         except Exception:
             _safe_rollback()
 

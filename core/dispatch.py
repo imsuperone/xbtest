@@ -250,12 +250,14 @@ def _is_pure_custom(raw, ST):
         sec = ST._CONFIG.get("自定义指令配置") if hasattr(ST, "_CONFIG") else {}
         if isinstance(sec, dict):
             rt = raw.strip()
-            for t, e in sec.items():
-                t = str(t)
-                if t and rt.startswith(t):
+            # 最长优先（与 router 索引同序）：重叠触发词时短词不得截胡长词，误判会漏名字前缀
+            for t in sorted((str(t) for t in sec.keys() if str(t)), key=len, reverse=True):
+                e = sec[t]
+                if rt.startswith(t):
                     ev = e if isinstance(e, dict) else {"reply": str(e)}
                     if not str(ev.get("command", "") or "").strip() and str(ev.get("reply", "") or "").strip():
                         return True
+                    return False
     except Exception:
         pass
     return False

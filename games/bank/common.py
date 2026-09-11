@@ -28,9 +28,6 @@ def _disp_name(qq, gid=None):
                     return nm2
             except Exception:
                 pass
-        nm = ""
-        if nm and nm.strip():
-            return nm
         if gid:
             try:
                 st = SL.state(str(gid))

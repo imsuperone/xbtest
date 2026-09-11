@@ -120,6 +120,41 @@ class _DirtyDict(dict):
                 g._dirty_qqs.add(str(getattr(self, "_qq", "")))
             except Exception:
                 pass
+    def _mark(self):
+        # 删改类操作统一标脏（旧代码仅 setitem/update 标脏，del/pop/clear 漏标致 save_group 跳过）
+        try:
+            g = getattr(self, "_group", None)
+            if g is not None:
+                g._dirty = True
+                g._dirty_qqs.add(str(getattr(self, "_qq", "")))
+        except Exception:
+            pass
+    def __delitem__(self, k):
+        super().__delitem__(k)
+        self._mark()
+    def pop(self, *a, **kw):
+        try:
+            return super().pop(*a, **kw)
+        finally:
+            self._mark()
+    def popitem(self):
+        try:
+            return super().popitem()
+        finally:
+            self._mark()
+    def clear(self):
+        try:
+            super().clear()
+        finally:
+            self._mark()
+    def setdefault(self, k, default=None):
+        if k in self:
+            return self[k]
+        self[k] = default
+        return default
+    def __ior__(self, other):
+        self.update(other)
+        return self
     def update(self, *a, **kw):
         super().update(*a, **kw)
         g = getattr(self, "_group", None)

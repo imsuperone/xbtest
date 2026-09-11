@@ -30,15 +30,7 @@ def _invalidate_guild_cache(gid):
         pass
 
 
-def _cfg(key, default=""):
-    return ST.cfg("帮派配置", key, default)
-
-
-def _cfgi(key, default=0):
-    try:
-        return int(float(_cfg(key, default)))
-    except Exception:
-        return int(default)
+_cfg, _cfgi = ST.cfg_scope("帮派配置")
 
 
 def _acct(gid, qq):

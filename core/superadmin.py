@@ -404,6 +404,8 @@ def _maint_on(gid=None):
             pass
         return "本群已进入维修模式。"
     cur = dict(ST._CONFIG)
+    import copy as _copy
+    cur = _copy.deepcopy(cur)
     cur.setdefault("维护配置", {})["维护开关"] = "真"
     ST.set_config(cur); ST.save_config(); ST.sync_astrbot_config(cur)
     return "已开启全局维修模式。"
@@ -416,6 +418,8 @@ def _maint_off(gid=None):
             pass
         return "本群已退出维修模式。"
     cur = dict(ST._CONFIG)
+    import copy as _copy
+    cur = _copy.deepcopy(cur)
     cur.setdefault("维护配置", {})["维护开关"] = "假"
     ST.set_config(cur); ST.save_config(); ST.sync_astrbot_config(cur)
     return "已关闭全局维修模式。"
@@ -425,6 +429,8 @@ def _maint_msg(msg):
     if not msg:
         return "格式：维护信息 内容"
     cur = dict(ST._CONFIG)
+    import copy as _copy
+    cur = _copy.deepcopy(cur)
     cur.setdefault("维护配置", {})["维护信息"] = msg
     ST.set_config(cur); ST.save_config(); ST.sync_astrbot_config(cur)
     return f"已设置维护信息：{msg}"

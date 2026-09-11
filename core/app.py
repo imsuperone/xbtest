@@ -255,7 +255,12 @@ def _apply_fresh_casual(data_dir):
             return False
         _empty = True
         try:
-            if ST._DB is not None:
+            if ST._DB is not None and hasattr(ST, "_LOCK"):
+                with ST._LOCK:
+                    _c = ST._DB.execute("SELECT COUNT(*) FROM wallet").fetchone()
+                    _c2 = ST._DB.execute("SELECT COUNT(*) FROM accounts").fetchone()
+                _empty = (int((_c or [0])[0] or 0) == 0 and int((_c2 or [0])[0] or 0) == 0)
+            elif ST._DB is not None:
                 _c = ST._DB.execute("SELECT COUNT(*) FROM wallet").fetchone()
                 _c2 = ST._DB.execute("SELECT COUNT(*) FROM accounts").fetchone()
                 _empty = (int((_c or [0])[0] or 0) == 0 and int((_c2 or [0])[0] or 0) == 0)
@@ -555,6 +560,30 @@ class XbBot(Star):
                 is_admin = bool(event.is_admin())
             except Exception:
                 is_admin = False
+            # 维护统一门（与 router 管线同语义，对超管同样生效）：
+            # 开则全员不再执行业务（含测试菜单/超管列表/迎新），仅被@时回一条维护通知。
+            try:
+                _m_on = (ST.cfg("维护配置", "维护开关", "假") == "真") or (
+                    str(gid).isdigit() and ST.recall_get("group_maint_%s" % gid, "0") == "1")
+            except Exception:
+                _m_on = False
+            if _m_on:
+                try:
+                    event.stop_event()
+                except Exception:
+                    pass
+                if "[CQ:at" in raw:
+                    try:
+                        _m_note = ST.cfg("维护配置", "维护信息", "🚧 维护中")
+                    except Exception:
+                        _m_note = "🚧 维护中"
+                    try:
+                        if _HAS_CORE and _name_prefix:
+                            _m_note = _name_prefix(qq, _m_note)
+                    except Exception:
+                        pass
+                    yield event.plain_result(_m_note)
+                return
             if raw.strip() in ("测试testxb", "测试testxb 1"):
                 if not is_admin:
                     try:

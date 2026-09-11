@@ -38,9 +38,11 @@ def acct(gid, qq):
                 kv = {}
         a = Acct(gid, qq, kv)
         _S._ACC_CACHE[key] = a
-        # LRU 淘汰：超限则踢最旧
+        # LRU 淘汰：超限则踢最旧；victim 写失败则保留（不清缓存），下轮重试，数据优先于容量
         try:
             if len(_S._ACC_CACHE) > _S._ACC_CACHE_MAX:
+                _evicted = False
+                old_k = None
                 try:
                     old_k, old_a = next(iter(_S._ACC_CACHE.items()))
                     if old_a is not a and getattr(old_a, "dirty", False) and _S._DB is not None:
@@ -53,23 +55,39 @@ def acct(gid, qq):
                                 (int(old_k[0]), int(old_k[1]), json.dumps(old_a.kv, ensure_ascii=False)))
                         old_a.dirty = False
                         _maybe_commit()
+                    _evicted = True
                 except Exception:
-                    pass
-                _S._ACC_CACHE.popitem(last=False)
+                    try:
+                        _safe_rollback()
+                    except Exception:
+                        pass
+                if _evicted:
+                    try:
+                        _S._ACC_CACHE.popitem(last=False)
+                    except Exception:
+                        pass
+                elif old_k is not None:
+                    # 逐出失败：victim 搬末尾轮换，下轮换人试，别挡新键
+                    try:
+                        _S._ACC_CACHE.move_to_end(old_k)
+                    except Exception:
+                        pass
         except Exception:
             pass
         return a
 
 
 def acct_add(gid, qq, name, delta, floor=0):
-    a = acct(gid, qq)
-    cur = a.int(name)
-    newv = cur + int(delta)
-    if newv < floor:
-        newv = floor
-    a.set(name, str(newv))
-    acct_save(gid, qq)
-    return newv
+    # 读-改-写全程持锁（RLock 可重入）：防两线程同键并发丢增量
+    with _S._LOCK:
+        a = acct(gid, qq)
+        cur = a.int(name)
+        newv = cur + int(delta)
+        if newv < floor:
+            newv = floor
+        a.set(name, str(newv))
+        acct_save(gid, qq)
+        return newv
 
 
 def acct_save(gid, qq):
@@ -84,8 +102,8 @@ def acct_save(gid, qq):
                 "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
                 "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
                 (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
-            a.dirty = False
             _safe_commit()
+            a.dirty = False
         except Exception:
             _safe_rollback()
 

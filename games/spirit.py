@@ -37,31 +37,13 @@ MENU = (
 )
 
 
-def _cfg(key, default=""):
-    return ST.cfg("精灵配置", key, default)
-
-
-def _cfgi(key, default=0):
-    try:
-        return int(float(_cfg(key, default)))
-    except Exception:
-        return int(default)
+_cfg, _cfgi = ST.cfg_scope("精灵配置")
 
 
 # ---- 精灵图鉴(可在 WebUI 精灵图鉴编辑器修改, 存 精灵图鉴:spirits/maps/shop; 空=未自定义，回退 data_spirit.py 内置) ----
 def _spirit_section(key, fallback):
     """图鉴三节唯一实现：dict 直返 / JSON 串解析 / 空回退内置（_SPIRITS/_MAPS/_SHOP 薄委托，零语义差）"""
-    v = ST.cfg("精灵图鉴", key, "")
-    if isinstance(v, dict) and v:
-        return v
-    if v:
-        try:
-            d = json.loads(v)
-            if isinstance(d, dict) and d:
-                return d
-        except Exception:
-            pass
-    return fallback
+    return ST.cfg_dict("精灵图鉴", key, fallback)
 
 
 def _SPIRITS():

@@ -672,7 +672,7 @@ function renderGroupsTable() {
     const testMark = g.is_test ? ` <small style="color:var(--muted)">(测试)</small>` : "";
     const maint = g.maintenance === true;
     const maintBadge = maint ? `<span class="badge badge-bad">维修中</span>` : `<span style="color:var(--muted)">—</span>`;
-    return `<tr><td><code>${esc(gid)}</code>${testMark}</td><td>${g.member_count || 0}</td><td>${badge}</td><td>${maintBadge}</td><td><label class="switch"><input type="checkbox" data-gid="${esc(gid)}" ${on ? "checked" : ""}><span class="slider-toggle"></span></label></td><td><label class="switch" title="本群维修开关"><input type="checkbox" data-maint-gid="${esc(gid)}" ${maint ? "checked" : ""}><span class="slider-toggle"></span></label> <button class="ghost sm del" data-del="${esc(gid)}" title="删除该群配置">🗑️ 删除</button></td></tr>`;
+    return `<tr><td><code>${esc(gid)}</code>${testMark}</td><td>${g.member_count || 0}</td><td>${badge}</td><td>${maintBadge}</td><td><label class="switch" title="本群维修开关"><input type="checkbox" data-maint-gid="${esc(gid)}" ${maint ? "checked" : ""}><span class="slider-toggle"></span></label> <button class="ghost sm del" data-del="${esc(gid)}" title="删除该群配置">🗑️ 删除</button></td><td><label class="switch" title="群聊开关"><input type="checkbox" data-gid="${esc(gid)}" ${on ? "checked" : ""}><span class="slider-toggle"></span></label></td></tr>`;
   }).join("");
   box.querySelectorAll("input[data-gid]").forEach(inp => {
     inp.addEventListener("change", async () => {

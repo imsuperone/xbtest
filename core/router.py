@@ -591,7 +591,8 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
                 return None
         except Exception:
             pass
-    # 维护开关（全局＋本群）：开则非超管一律不再执行业务；仅被@时回一条维护通知，其余完全静默
+    # 维护开关（全局＋本群）：开则全员（含超管）不再执行业务；仅被@时回一条维护通知，
+    # 其余完全静默。聊天内无法自救关闭维护，WebUI 为唯一控制面（§7.8）。
     try:
         _maint_g = bool(store) and store.cfg("维护配置", "维护开关", "假") == "真"
     except Exception:
@@ -601,7 +602,7 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
                     and store.recall_get("group_maint_%s" % gid, "0") == "1")
     except Exception:
         _maint_l = False
-    if (_maint_g or _maint_l) and not is_admin:
+    if _maint_g or _maint_l:
         if "[CQ:at" in str(raw or ""):
             try:
                 return store.cfg("维护配置", "维护信息", "🚧 维护中")

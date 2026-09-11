@@ -151,7 +151,7 @@ def _route_locked(gid, qq, raw):
 
     if text in store.wake("奴隶系统", "奴隶系统"):
         return cmd_menu()
-    if text == "我的信息" or text.startswith("我的信息"):
+    if text.startswith("我的信息"):
         # 支持 我的信息 @QQ / QQ 查询他人（兼容已提取的 target）
         t = target
         if not t and text.startswith("我的信息 "):
@@ -235,8 +235,6 @@ def _route_locked(gid, qq, raw):
         return cmd_release(gid, qq, target, st)
     if text.startswith("赎身"):
         return cmd_ransom(gid, qq, target, st)
-    if text == "我要自由":
-        return cmd_freedom(gid, qq, st)
     if text.startswith("买奴隶位") or text.startswith("购买奴隶位"):
         return cmd_buyslot(gid, qq, st)
     if text.startswith("打架"):
@@ -257,10 +255,6 @@ def _route_locked(gid, qq, raw):
         return cmd_treasure_up(gid, qq, text[4:], st)
     if text.startswith("升阶"):
         return cmd_treasure_up(gid, qq, text[2:], st)
-    if text == "奴隶打工" or text == "我要打工":
-        return cmd_work_dispatch(gid, qq, st)
-    if text == "奴隶收工":
-        return cmd_work_collect(gid, qq, st)
     if text == "我要造反" or text.startswith("造反"):
         return cmd_revolt(gid, qq, st)
     if text.startswith("讨好主人") or text == "讨好":
@@ -269,16 +263,6 @@ def _route_locked(gid, qq, raw):
         return cmd_study(gid, qq, st)
     if text == "我要祈福" or text.startswith("祈福"):
         return cmd_pray(gid, qq, st)
-    if text == "武器菜单":
-        return cmd_weapon_menu(gid, qq, st)
-    if text == "宝物菜单":
-        return cmd_treasure_menu(gid, qq, st)
-    if text == "身价排行榜" or text == "身价排行":
-        return cmd_rank_price(gid, st)
-    if text == "签到排行榜" or text == "签到排行":
-        return cmd_rank_sign(gid, st)
-    if text == "排行榜":
-        return cmd_rank(gid, st)
 
     # 查询武器/宝物信息: 支持带【】或不带
     q = text

@@ -291,44 +291,51 @@ def init(db_path, config=None):
 
 
 def flush_all():
+    # 先快照→全写→commit，成功后才清脏标：中途抛错回滚＋标保留，下轮重刷（旧代码先清标后写，失败即永久丢增量）
     with _S._LOCK:
         if _S._DB is None:
             return
         try:
-            for key, a in list(_S._ACC_CACHE.items()):
-                if a.dirty:
-                    a.dirty = False
-                    # 空 kv 视作清理，避免幽灵账户
-                    if not a.kv:
-                        _S._DB.execute("DELETE FROM accounts WHERE gid=? AND qq=?", (int(key[0]), int(key[1])))
+            acc_items = [(key, a) for key, a in list(_S._ACC_CACHE.items()) if a.dirty]
+            grp_items = [(gid, g) for gid, g in list(_S._GROUP_CACHE.items()) if g._dirty]
+            for key, a in acc_items:
+                # 空 kv 视作清理，避免幽灵账户
+                if not a.kv:
+                    _S._DB.execute("DELETE FROM accounts WHERE gid=? AND qq=?", (int(key[0]), int(key[1])))
+                else:
+                    _S._DB.execute(
+                        "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
+                        "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
+                        (int(key[0]), int(key[1]), json.dumps(a.kv, ensure_ascii=False)))
+            for gid, g in grp_items:
+                dirty_qqs = getattr(g, "_dirty_qqs", None)
+                if dirty_qqs and len(dirty_qqs) > 0 and len(dirty_qqs) < len(g._users):
+                    items = [(qq, g._users.get(qq, {})) for qq in list(dirty_qqs)]
+                else:
+                    items = list(g._users.items())
+                for qq, kv in items:
+                    if not kv:
+                        _S._DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(gid), int(qq)))
                     else:
                         _S._DB.execute(
-                            "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
+                            "INSERT INTO groups(gid, qq, data) VALUES(?,?,?) "
                             "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
-                            (int(key[0]), int(key[1]), json.dumps(a.kv, ensure_ascii=False)))
-            for gid, g in list(_S._GROUP_CACHE.items()):
-                if g._dirty:
-                    dirty_qqs = getattr(g, "_dirty_qqs", None)
-                    if dirty_qqs and len(dirty_qqs) > 0 and len(dirty_qqs) < len(g._users):
-                        items = [(qq, g._users.get(qq, {})) for qq in list(dirty_qqs)]
-                    else:
-                        items = list(g._users.items())
-                    for qq, kv in items:
-                        if not kv:
-                            _S._DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(gid), int(qq)))
-                        else:
-                            _S._DB.execute(
-                                "INSERT INTO groups(gid, qq, data) VALUES(?,?,?) "
-                                "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
-                                (int(gid), int(qq), json.dumps(kv, ensure_ascii=False)))
-                    g._dirty = False
-                    try:
-                        g._dirty_qqs.clear()
-                    except Exception:
-                        pass
+                            (int(gid), int(qq), json.dumps(kv, ensure_ascii=False)))
             _safe_commit()
         except Exception:
             _safe_rollback()
+            return
+        for _, a in acc_items:
+            try:
+                a.dirty = False
+            except Exception:
+                pass
+        for _, g in grp_items:
+            try:
+                g._dirty = False
+                g._dirty_qqs.clear()
+            except Exception:
+                pass
 
 
 def merge_from(db_path):

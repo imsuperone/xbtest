@@ -71,6 +71,39 @@ def cfgf(sec, key, default=0.0):
         return float(default)
 
 
+def cfg_dict(sec, key, default=None):
+    """配置节 dict 口径单源：dict 直返 / JSON 串解析 / 空回退（商城图鉴×3＋精灵图鉴同构收口）。
+    与旧四处内联逐行等价：空串/坏串/非dict→default（缺省 {}）。"""
+    try:
+        v = cfg(sec, key, "")
+        if isinstance(v, dict) and v:
+            return v
+        if v:
+            try:
+                d = json.loads(v)
+                if isinstance(d, dict) and d:
+                    return d
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return default if isinstance(default, dict) else {}
+
+
+def cfg_scope(sec):
+    """单游戏 _cfg/_cfgi 绑定工厂（adventure/guild/spirit 同构收口，零语义差）。
+    返回 (cfg_fn, cfgi_fn)，与旧各文件内联定义逐行等价。"""
+    sec = str(sec)
+    def _sc_cfg(key, default=""):
+        return cfg(sec, key, default)
+    def _sc_cfgi(key, default=0):
+        try:
+            return int(float(_sc_cfg(key, default)))
+        except Exception:
+            return int(default)
+    return _sc_cfg, _sc_cfgi
+
+
 def coin_name():
     return cfg("设置", "货币名称", "金币")
 
@@ -274,4 +307,4 @@ def load_config_from_db():
 
 # ==================== 9. 备份 ====================
 
-__all__ = ["cfg", "cfgf", "cfgi", "coin_name", "load_config_from_db", "save_config", "set_astrbot_config", "set_config", "set_config_path", "set_ini", "sync_astrbot_config", "wake"]
+__all__ = ["cfg", "cfg_dict", "cfg_scope", "cfgf", "cfgi", "coin_name", "load_config_from_db", "save_config", "set_astrbot_config", "set_config", "set_config_path", "set_ini", "sync_astrbot_config", "wake"]

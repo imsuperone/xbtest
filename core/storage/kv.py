@@ -19,12 +19,16 @@ def _init_kv_cache():
         except Exception:
             pass
 def recall_set(k, v):
+    # 锁序 _LOCK→KV（与 _init_kv_cache 一致，防逆序死锁）；先提交后写缓存（失败不超前，下轮重写）
     k_str, v_str = str(k), str(v)
-    with _S._KV_CACHE_LOCK:
-        _S._KV_CACHE[k_str] = v_str
     _ensure_db()
     with _S._LOCK:
         if _S._DB is None:
+            try:
+                with _S._KV_CACHE_LOCK:
+                    _S._KV_CACHE[k_str] = v_str
+            except Exception:
+                pass
             return
         try:
             _S._DB.execute("INSERT INTO kv(k, v) VALUES(?,?) "
@@ -32,6 +36,12 @@ def recall_set(k, v):
             _safe_commit()
         except Exception:
             _safe_rollback()
+            return
+        try:
+            with _S._KV_CACHE_LOCK:
+                _S._KV_CACHE[k_str] = v_str
+        except Exception:
+            pass
 _WD_KEYS = ("WebDAV服务器地址", "WebDAV用户名", "WebDAV应用密码", "WebDAV远端目录", "WebDAV备份开关", "自动备份开关", "备份间隔小时", "保留备份数量")
 def wd_cfg_backup(payload_sec=None):
     """WebDAV 与自动备份配置 DB 镜像写透：仅镜像本次保存 payload 里出现的键（含清空语义）。
@@ -124,7 +134,7 @@ def recall_get(k, default=None):
         if k_str in _S._KV_CACHE:
             return _S._KV_CACHE[k_str]
     _ensure_db()
-    # 读副本快路径：kv 未命中缓存时不阻塞写锁
+    # 读副本快路径：kv 未命中缓存时不阻塞写锁；回填只补缺（setdefault），不覆盖并发新值
     try:
         rc = _read_conn()
         if rc is not None:
@@ -132,8 +142,11 @@ def recall_get(k, default=None):
                 row = rc.execute("SELECT v FROM kv WHERE k=?", (k_str,)).fetchone()
             val = row[0] if row else default
             if val is not None:
-                with _S._KV_CACHE_LOCK:
-                    _S._KV_CACHE[k_str] = str(val)
+                try:
+                    with _S._KV_CACHE_LOCK:
+                        _S._KV_CACHE.setdefault(k_str, str(val))
+                except Exception:
+                    pass
             return val
     except Exception:
         pass
@@ -144,8 +157,11 @@ def recall_get(k, default=None):
             row = _S._DB.execute("SELECT v FROM kv WHERE k=?", (k_str,)).fetchone()
             val = row[0] if row else default
             if val is not None:
-                with _S._KV_CACHE_LOCK:
-                    _S._KV_CACHE[k_str] = str(val)
+                try:
+                    with _S._KV_CACHE_LOCK:
+                        _S._KV_CACHE.setdefault(k_str, str(val))
+                except Exception:
+                    pass
             return val
         except Exception:
             return default

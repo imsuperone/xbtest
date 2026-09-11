@@ -32,17 +32,7 @@ def _treasure_names():
 
 def _treasure_effects_raw():
     """宝物自定义效果表（商城图鉴 treasure_effects {名: 效果}）；空=未自定义"""
-    try:
-        v = store.cfg("商城图鉴", "treasure_effects", "")
-        if isinstance(v, dict) and v:
-            return v
-        if v:
-            d = _json.loads(v)
-            if isinstance(d, dict) and d:
-                return d
-    except Exception:
-        pass
-    return {}
+    return store.cfg_dict("商城图鉴", "treasure_effects")
 
 
 
@@ -75,17 +65,7 @@ def _treasure_effect(tname):
 
 def _weapon_attrs_raw():
     """武器可配属性表（商城图鉴 weapon_attrs {名: {atk, desc}}）；空=未自定义"""
-    try:
-        v = store.cfg("商城图鉴", "weapon_attrs", "")
-        if isinstance(v, dict) and v:
-            return v
-        if v:
-            d = _json.loads(v)
-            if isinstance(d, dict) and d:
-                return d
-    except Exception:
-        pass
-    return {}
+    return store.cfg_dict("商城图鉴", "weapon_attrs")
 
 
 
@@ -272,17 +252,7 @@ def cmd_fight(gid, qq, target, st):
 
 def _weapon_shop_raw():
     """返回原始 weapon_shop 配置对象(可能含 {price,atk,desc,img})，供取图/数值用；空=未自定义"""
-    v = store.cfg("商城图鉴", "weapon_shop", "")
-    if isinstance(v, dict) and v:
-        return v
-    if v:
-        try:
-            d = _json.loads(v)
-            if isinstance(d, dict) and d:
-                return d
-        except Exception:
-            pass
-    return {}
+    return store.cfg_dict("商城图鉴", "weapon_shop")
 
 
 
