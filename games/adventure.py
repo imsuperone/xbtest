@@ -137,11 +137,11 @@ def cmd_start(gid, qq, mapname):
     gap = _cfgi("冒险间隔", 3) * 60
     if last and _now() - last < gap:
         return "休息一下，过会儿再冒险吧！"
-    ST.recall_set("advt_%s_%s" % (gid, qq), str(_now()))
     ST.acct_add(gid, qq, "stamina", -cs)
     ST.coins_add(gid, qq, -cost)
     adv = {"map": mapname, "round": 1, "ts": _now(), "last_choice": 0}
     _save(gid, qq, adv)
+    ST.recall_set("advt_%s_%s" % (gid, qq), str(_now()))
     return _build_start_narrative(mapname)
 
 

@@ -1,7 +1,7 @@
 """storage/groups.py — 群档案增量落盘（原 store §5）。"""
 import json
 from . import state as _S
-from .state import Group, _DirtyDict, _safe_commit, _safe_rollback, _maybe_commit, _force_commit
+from .state import Group, _safe_commit, _safe_rollback, _force_commit
 from .db import _ensure_db
 
 def group(gid):
@@ -77,12 +77,12 @@ def group(gid):
                                 _S._DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(oldest_gid), int(qq2)))
                             else:
                                 _S._DB.execute("INSERT INTO groups(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(oldest_gid), int(qq2), json.dumps(kv2, ensure_ascii=False)))
+                        _S._DB.commit()
                         oldest_g._dirty = False
                         try:
                             oldest_g._dirty_qqs.clear()
                         except Exception:
                             pass
-                        _maybe_commit()
                     _evicted = True
                 except Exception:
                     try:
@@ -155,24 +155,7 @@ def user_clear(gid, qq):
     qq_i = int(qq_s)
     _ensure_db()
     with _S._LOCK:
-        # 1. 彻底清除账户内存缓存与脏标记
-        for k in ((gid_s, qq_s), (gid_i, qq_i), (gid_s, qq_i), (gid_i, qq_s)):
-            a = _S._ACC_CACHE.pop(k, None)
-            if a is not None:
-                a.dirty = False
-                a.kv.clear()
-
-        # 2. 清除群成员内存缓存
-        for g_k in (gid_s, gid_i):
-            g = _S._GROUP_CACHE.get(g_k)
-            if g is not None:
-                g._users.pop(qq_s, None)
-                g._users.pop(qq_i, None)
-                if hasattr(g, "_dirty_qqs") and isinstance(g._dirty_qqs, set):
-                    g._dirty_qqs.discard(qq_s)
-                    g._dirty_qqs.discard(qq_i)
-
-        # 3. 彻底删除 SQLite 数据库三表数据并强制落盘
+        # 1. 先落库：三表 DELETE + 强制提交，失败直接返回 False（缓存不动，防删库假成功后数据复活）
         if _S._DB is not None:
             try:
                 _S._DB.execute("DELETE FROM wallet WHERE gid=? AND qq=?", (gid_i, qq_i))
@@ -184,6 +167,23 @@ def user_clear(gid, qq):
                     _safe_rollback()
                 except Exception:
                     pass
+                return False
+        # 2. 落库成功后再清内存缓存与脏标记
+        for k in ((gid_s, qq_s), (gid_i, qq_i), (gid_s, qq_i), (gid_i, qq_s)):
+            a = _S._ACC_CACHE.pop(k, None)
+            if a is not None:
+                a.dirty = False
+                a.kv.clear()
+
+        # 3. 清除群成员内存缓存
+        for g_k in (gid_s, gid_i):
+            g = _S._GROUP_CACHE.get(g_k)
+            if g is not None:
+                g._users.pop(qq_s, None)
+                g._users.pop(qq_i, None)
+                if hasattr(g, "_dirty_qqs") and isinstance(g._dirty_qqs, set):
+                    g._dirty_qqs.discard(qq_s)
+                    g._dirty_qqs.discard(qq_i)
     return True
 
 __all__ = ["group", "save_group", "user_clear"]

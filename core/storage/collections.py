@@ -165,6 +165,10 @@ def coll_merge(sec, kv):
 
         def _do():
             d = _coll_load(sec)
+            try:
+                _backup = dict(d)
+            except Exception:
+                _backup = None
             for k, v in kv.items():
                 if v is None or (isinstance(v, str) and v.strip() == ""):
                     d.pop(str(k), None)
@@ -175,7 +179,15 @@ def coll_merge(sec, kv):
                     if c or c == {} and v.strip() in ("{}", "[]"):
                         # 空对象串视为显式清空；不可解析串跳过防误清
                         d[str(k)] = c
-            return _coll_write(sec)
+            if not _coll_write(sec):
+                # 落盘失败回滚内存，防内存新盘旧（重启丢配置却显示成功）
+                try:
+                    if _backup is not None:
+                        _S._COLL_CACHE[sec] = _backup
+                except Exception:
+                    pass
+                return False
+            return True
 
         if _S._COLL_LOCK is not None:
             try:

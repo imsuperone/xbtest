@@ -167,7 +167,13 @@ def cmd_sign(gid, qq):
 
 
 def days_cn(chain):
-    return DAYS_CN[min(chain, 7)]
+    try:
+        c = int(chain)
+    except Exception:
+        c = 1
+    if 1 <= c <= 7:
+        return DAYS_CN[c]
+    return str(c)
 
 
 def cmd_personal(gid, qq):
@@ -218,11 +224,12 @@ def cmd_draw(gid, qq, amount=1):
     if amount > 999:
         return "单次抽奖上限999张！"
     a = _acct(gid, qq)
-    tickets = a.int("lottery_tickets")
-    if tickets < amount:
-        return f"奖券不足，需{amount}张，当前{tickets}张！"
-    # 扣除
-    a.set("lottery_tickets", str(tickets - amount))
+    with ST._LOCK:
+        tickets = a.int("lottery_tickets")
+        if tickets < amount:
+            return f"奖券不足，需{amount}张，当前{tickets}张！"
+        # 扣除（持锁：防同用户并发双花）
+        a.set("lottery_tickets", str(tickets - amount))
     # 多连抽循环
     wins = 0
     total_coin = 0

@@ -25,36 +25,20 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "2026w0911k"
+            return "2026w0912a"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "2026w0911k"
+    PLUGIN_VERSION = "2026w0912a"
 
 
 def _extract_param(request, key, default=""):
-    """多源参数提取：兼容 query/rel_url/args/match_info"""
-    for src in (getattr(request, "query", None), getattr(request, "rel_url", None), getattr(request, "args", None)):
-        try:
-            if src is not None:
-                if hasattr(src, "get"):
-                    v = src.get(key, None)
-                    if v is not None:
-                        return str(v)
-                if hasattr(src, "query") and hasattr(src.query, "get"):
-                    v = src.query.get(key, None)
-                    if v is not None:
-                        return str(v)
-        except Exception:
-            pass
+    """多源参数提取：统一走 web_utils.get_req_query（query/query_params/args/dict/全局代理全收）。
+    旧多源分支已并入，保留函数名兼容 10 余处调用。"""
     try:
-        if hasattr(request, "match_info") and request.match_info is not None:
-            v = request.match_info.get(key, None)
-            if v is not None:
-                return str(v)
+        return get_req_query(request, key, default)
     except Exception:
-        pass
-    return str(default)
+        return str(default)
 
 
 async def handle_users(request):
@@ -387,10 +371,14 @@ async def handle_users_export(request):
                 "group": gdata
             })
 
-        payload = {"count": len(out), "users": out, "export_at": int(time.time()), "version": PLUGIN_VERSION}
-        data_bytes = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
-        fn = f"xbbot_users_{'all' if not gid_valid else gid_valid}_{int(time.time())}.json"
-        b64 = base64.b64encode(data_bytes).decode()
+        # 打包（JSON 序列化 + base64，大库时上 MB 级，走线程池不冻消息循环）
+        def _pack():
+            payload = {"count": len(out), "users": out, "export_at": int(time.time()), "version": PLUGIN_VERSION}
+            data_bytes = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+            fn = f"xbbot_users_{'all' if not gid_valid else gid_valid}_{int(time.time())}.json"
+            b64 = base64.b64encode(data_bytes).decode()
+            return payload, data_bytes, b64, fn
+        payload, data_bytes, b64, fn = await asyncio.to_thread(_pack)
         return json_response({"ok": True, "data": b64, "filename": fn, "size": len(data_bytes), **payload})
     except Exception as e:
         import traceback
@@ -639,9 +627,10 @@ async def handle_user_clear(request):
         return _err("gid and qq must be digits", 400)
 
     try:
-        # 1. 底层存储与三表数据清除 (wallet, accounts, groups)
+        # 1. 底层存储与三表数据清除 (wallet, accounts, groups)；失败如实 500，不谎报 ok
         if hasattr(ST, "user_clear"):
-            ST.user_clear(gid, qq)
+            if not ST.user_clear(gid, qq):
+                return _err("clear failed: storage error", 500)
         else:
             if ST._DB is not None:
                 ST._DB.execute("DELETE FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq)))

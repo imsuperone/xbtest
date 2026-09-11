@@ -142,6 +142,7 @@ def cmd_transfer(gid, qq, target, amount):
         return f"亲，单次转账金额不能超过{cap}{ST.coin_name()}！"
     if ST.coins_get(gid, qq) < amount:
         return "亲，您的账户余额不足，转账失败！"
+    credit = int(amount)
     # 原子化：体力与双钱包同锁，避免体力扣了但转账失败半成功
     try:
         # 尝试在同一 _LOCK 内完成体力扣减 + 钱包转账
@@ -188,8 +189,14 @@ def cmd_transfer(gid, qq, target, amount):
         except Exception:
             pass
         try:
-            ST.coins_add(gid, qq, -amount)
-            ST.coins_add(gid, target, amount)
+            # 降级同样按接收上限截断并扣体力，防免费/超CAP到账
+            _dst_cur = int(ST.coins_get(gid, target) or 0)
+            credit = min(int(amount), max(0, getattr(ST, "COIN_CAP", 100000000000) - _dst_cur))
+            if credit <= 0:
+                return "对方钱包已满，无法接收转账！"
+            ST.acct_add(gid, qq, "stamina", -cs)
+            ST.coins_add(gid, qq, -credit)
+            ST.coins_add(gid, target, credit)
         except Exception:
             pass
     try:
@@ -200,7 +207,7 @@ def cmd_transfer(gid, qq, target, amount):
             tn = SL.NOTE_NAMES.get(str(target), str(target))
     except Exception:
         tn = str(target)
-    return f"转账成功！您已向 {tn} 转入{amount}{ST.coin_name()}！"
+    return f"转账成功！您已向 {tn} 转入{credit}{ST.coin_name()}！"
 
 
 
@@ -226,7 +233,6 @@ def cmd_gamble(gid, qq, amount):
     meli = cfgi("银行配置", "赌博魅力减少", 20)
     jail_mins = cfgi("银行配置", "赌博关押时间", 5)
     prob = cfgi("银行配置", "赌博成功概率", 60)
-    ST.recall_set("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), str(cnt + 1))
     gain = int(amount * GAMBLE_MULT)
     # 原子化：钱包+体力+魅力 同事务，避免半成功通胀
     try:
@@ -246,6 +252,7 @@ def cmd_gamble(gid, qq, amount):
                 ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
                 a2.dirty = False
                 ST._safe_commit()
+                ST.recall_set("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), str(cnt + 1))
                 return f"赌博成功！你获得了{gain}{ST.coin_name()}，净赚{gain - amount}！"
             else:
                 # 失败：-amount 魅力 -meli
@@ -262,6 +269,7 @@ def cmd_gamble(gid, qq, amount):
                     a2.set("release_timestamp", str(int(__import__("time").time()) + int(jail_mins) * 60))
                     ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
                 ST._safe_commit()
+                ST.recall_set("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), str(cnt + 1))
                 if jail:
                     return (f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli}！\r\n"
                             f"赌博时被抓了！被关监狱{jail_mins}分钟！")
@@ -273,6 +281,7 @@ def cmd_gamble(gid, qq, amount):
         except Exception:
             pass
     # 降级
+    ST.recall_set("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), str(cnt + 1))
     ST.acct_add(gid, qq, "stamina", -cs)
     if random.random() * 100 < prob:
         ST.coins_add(gid, qq, -amount)
@@ -326,6 +335,8 @@ def cmd_rob_zone(gid, qq):
             ST.coins_add(gid, qq, -fine)
         ST.acct_add(gid, qq, "charm", -meli)
         _jail_put(a, jail_mins)
+        a.set("rob_bank_time", _now_s())
+        ST.acct_save(gid, qq)
         return (f"打劫银行失败，打劫银行时被抓！被关监狱{jail_mins}分钟，\r\n"
                 f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
     victim = random.choice(wins)

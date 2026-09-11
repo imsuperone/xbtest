@@ -90,7 +90,7 @@ async def handle_backups_restore(request, plugin_base=""):
         rel = get_req_query(request, "path", "") or get_req_query(request, "file", "")
     rel = str(rel).strip()
     if rel == "__backup_now__":
-        dst = ST.backup_user_data(force=True)
+        dst = await asyncio.to_thread(lambda: ST.backup_user_data(force=True))
         if dst:
             return json_response({"ok": True, "path": os.path.relpath(dst, _backup_base(plugin_base)).replace(os.sep, "/")})
         return _err("backup failed", 500)

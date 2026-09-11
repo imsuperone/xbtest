@@ -311,7 +311,7 @@ def _safe_eval_24(expr):
         expr = expr.replace("×", "*").replace("÷", "/").replace("（", "(").replace("）", ")")
         node = _ast.parse(expr, mode="eval")
         # 兼容 Python3.12+：Constant 替代 Num，动态构造 allowed
-        allowed_types = [_ast.Expression, _ast.BinOp, _ast.UnaryOp, _ast.Constant, _ast.Add, _ast.Sub, _ast.Mult, _ast.Div, _ast.USub, _ast.UAdd, _ast.Mod, _ast.Pow, _ast.Load]
+        allowed_types = [_ast.Expression, _ast.BinOp, _ast.UnaryOp, _ast.Constant, _ast.Add, _ast.Sub, _ast.Mult, _ast.Div, _ast.USub, _ast.UAdd, _ast.Load]
         try:
             allowed_types.append(_ast.Num)
         except Exception:

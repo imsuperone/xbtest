@@ -82,16 +82,35 @@ async def handle_cfg_save(request, plugin_base=""):
             pass
 
         def _work():
+            # 自定义三节显式删除语义：值为 null 即删键（前端删除/改名后发 {旧触发词:null}，
+            # merge 语义下缺键≠删除，不加这段会假成功复活；仅限这三节，其他节 null 照常存）
+            try:
+                for _sec in ("自定义指令配置", "指令启用配置", "指令回复配置", "指令权限配置"):
+                    _d = norm.get(_sec)
+                    if isinstance(_d, dict):
+                        for _k in [k for k, v in _d.items() if v is None]:
+                            _d.pop(_k, None)
+                            try:
+                                if isinstance(ST._CONFIG.get(_sec), dict):
+                                    ST._CONFIG[_sec].pop(_k, None)
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+            _coll_failed = []
+            _mem_saved = False
             for sec, kv in norm.items():
                 if sec in getattr(ST, "_COLL_FILES", {}):
                     # 商城/图鉴走独立 sidecar，不进内存/_CONFIG
                     try:
-                        ST.coll_merge(sec, kv)
+                        if ST.coll_merge(sec, kv) is False:
+                            _coll_failed.append(sec)
                     except Exception:
-                        pass
+                        _coll_failed.append(sec)
                     continue
                 ST._CONFIG.setdefault(sec, {})
                 ST._CONFIG[sec].update(kv)
+                _mem_saved = True
             try:
                 if hasattr(ST, "_bump_config_ver"):
                     ST._bump_config_ver()
@@ -121,7 +140,12 @@ async def handle_cfg_save(request, plugin_base=""):
                 ST.sync_astrbot_config(ST._CONFIG)
             except Exception:
                 pass
-            return no_cache_response(json_response({"saved": True, "备份配置": ST._CONFIG.get("备份配置", {}), "webdav_secrets": "updated" if _secrets_changed else "kept"}))
+            if _coll_failed and not _mem_saved:
+                return _err("save failed: %s" % "、".join(_coll_failed), 500)
+            _resp = {"saved": True, "备份配置": ST._CONFIG.get("备份配置", {}), "webdav_secrets": "updated" if _secrets_changed else "kept"}
+            if _coll_failed:
+                _resp["coll_failed"] = _coll_failed
+            return no_cache_response(json_response(_resp))
 
         import asyncio as _aio
         return await _aio.to_thread(_work)

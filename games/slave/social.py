@@ -169,6 +169,13 @@ def cmd_work_dispatch(gid, qq, st):
         left = started + duration - _time.time()
         if left > 0:
             return _S.T.WORK_WORKING.format(min=int(left / 60) + 1)
+        # 超时先结算旧轮工资，防重派覆盖快照致上轮收益丢失
+        _old_wage = _safe_int(uget(u, "work_wage"), 0)
+        if _old_wage > 0:
+            try:
+                cmd_work_collect(gid, qq, st)
+            except Exception:
+                pass
         uset(u, "work_status", "")   # 超时自动收工
     duration = cfgi("间隔配置", "打工间隔", 1)
     target = 0

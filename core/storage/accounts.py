@@ -1,7 +1,7 @@
 """storage/accounts.py — 账户 LRU 与落盘（原 store §4）。"""
 import json
 from . import state as _S
-from .state import Acct, _safe_commit, _safe_rollback, _maybe_commit
+from .state import Acct, _safe_commit, _safe_rollback
 from .db import _ensure_db
 
 def acct(gid, qq):
@@ -53,8 +53,8 @@ def acct(gid, qq):
                                 "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
                                 "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
                                 (int(old_k[0]), int(old_k[1]), json.dumps(old_a.kv, ensure_ascii=False)))
+                        _S._DB.commit()
                         old_a.dirty = False
-                        _maybe_commit()
                     _evicted = True
                 except Exception:
                     try:

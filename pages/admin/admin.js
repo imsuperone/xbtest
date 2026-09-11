@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0911k";
+const FRONTEND_VER = "2026w0912a";
 
 let _WORKING_API_PREFIX = null;
 
@@ -56,7 +56,12 @@ function getBridge() {
       },
       apiPost(endpoint, data) {
         const { ep } = cleanEndpointAndParams(endpoint);
-        return rawBridge.apiPost(ep, data || {});
+        // 写超时 30s：黑洞 POST 不再 eternal hang（调用方 disabled 按钮可解开）
+        return apiTimeout(rawBridge.apiPost(ep, data || {}), 30000, ep);
+      },
+      async upload(endpoint, file) {
+        // 真桥无原生 upload，走 base64-JSON 直传（与 fallback 对齐，禁裸 FormData 走桥）
+        return postFile(endpoint, {}, file);
       },
       download(endpoint, params, filename) {
         const { ep, params: cleanParams } = cleanEndpointAndParams(endpoint, params);
@@ -64,7 +69,7 @@ function getBridge() {
           return rawBridge.download(ep, cleanParams, filename);
         }
       }
-      // 注：rawBridge.upload 已移除，上传一律走 postFile base64-JSON，禁裸 FormData 走桥
+      // 注：真桥无原生 upload，此处转 postFile base64-JSON（禁裸 FormData 走桥）
     };
   }
 
@@ -101,6 +106,7 @@ function getBridge() {
     },
     async apiPost(endpoint, data) {
       const { ep } = cleanEndpointAndParams(endpoint);
+      const _run = async () => {
       if (_WORKING_API_PREFIX !== null) {
         try {
           const r = await fetch(_WORKING_API_PREFIX + ep, {
@@ -131,6 +137,8 @@ function getBridge() {
         body: JSON.stringify(data || {})
       });
       return await r.json();
+      };
+      return apiTimeout(_run(), 30000, ep);
     },
     async upload(endpoint, file) {
       // 已收口：禁用裸 FormData，一律走 postFile base64-JSON（法则12）
@@ -444,7 +452,12 @@ function downloadBase64File(base64Data, filename) {
 function _formatModalText(msg) {
   if (!msg) return "";
   if (msg.includes("<div") || msg.includes("<strong") || msg.includes("<span") || msg.includes("<br")) {
-    return msg;
+    // 富文本直通（内部弹窗自拼）：先摘事件处理器属性，防后端文案（文件名/URL）带入的注入
+    try {
+      return String(msg).replace(/on\w+\s*=/gi, "on_=");
+    } catch (e) {
+      return "";
+    }
   }
   return esc(String(msg))
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
@@ -675,10 +688,12 @@ async function loadGroups() {
   box.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--muted)">加载中...</td></tr>`;
   try {
     const data = await getBridge().apiGet("groups/list");
+    if (!data || data.error) throw new Error((data && (data.error || data.msg)) || "群聊列表接口异常");
     RAW_GROUPS = data.groups || data || [];
     renderGroupsTable();
   } catch(e) {
     box.innerHTML = `<tr><td colspan="5" style="color:var(--bad);text-align:center;padding:16px">加载失败: ${esc(e.message)}</td></tr>`;
+    try { TAB_DONE.groups = false; } catch (_e) {}
   }
 }
 
@@ -825,6 +840,7 @@ async function loadImages(dir) {
     if (dir === "0") dir = "";
     IMG_DIR = dir || "";
     const d = await getBridge().apiGet("images/list", { dir: IMG_DIR });
+    if (!d || d.error) throw new Error((d && (d.error || d.msg)) || "图片库接口异常");
     IMG_CACHE = d;
     // 面包屑
     const segs = (d.dir || "").split("/").filter(Boolean);
@@ -840,6 +856,7 @@ async function loadImages(dir) {
     renderImages(d);
   } catch (e) {
     err("images: " + e.message);
+    try { TAB_DONE.imgs = false; } catch (_e) {}
   }
 }
 
@@ -1063,7 +1080,9 @@ async function saveOverviewReq() {
       if (!payload[sec]) payload[sec] = {};
       payload[sec][key] = inp.type === "number" ? Number(inp.value) : inp.value.trim();
     });
-    await getBridge().apiPost("config/save", payload);
+    await getBridge().apiPost("config/save", payload).then((r) => {
+      if (r && r.error) throw new Error(r.error);
+    });
     toastMsg("必要配置已保存", "ok");
     await loadOverviewReq();
     // 若配置页已加载过，同步刷新，使“网络.bot_uin”等在配置页立即可见
@@ -1190,6 +1209,7 @@ async function loadConfig() {
     try { refreshBalanceBadges(); } catch (e) {}
   } catch (e) {
     err("config: " + e.message);
+    try { TAB_DONE.config = false; } catch (_e) {}
   }
 }
 function filterCfg() {
@@ -1341,7 +1361,9 @@ async function saveConfig() {
       payload[sec][key] =
         inp.type === "checkbox" ? (inp.checked ? "真" : "假") : inp.value;
     });
-    await getBridge().apiPost("config/save", payload);
+    await getBridge().apiPost("config/save", payload).then((r) => {
+      if (r && r.error) throw new Error(r.error);
+    });
     msg.textContent = "配置已保存";
     msg.classList.add("ok");
     toast("配置已保存", "ok");
@@ -1377,7 +1399,9 @@ async function resetConfig() {
       if (!payload[sec]) payload[sec] = {};
       payload[sec][key] = defaults[k];
     });
-    await getBridge().apiPost("config/save", payload);
+    await getBridge().apiPost("config/save", payload).then((r) => {
+      if (r && r.error) throw new Error(r.error);
+    });
     msg.textContent = "已恢复本页默认（" + secList.join("、") + "）";
     msg.classList.add("ok");
     toast("已恢复本页默认值", "ok");
@@ -1415,7 +1439,9 @@ async function resetAllConfig() {
       `不动：备份配置（含WebDAV地址/账号/自动备份开关/间隔/保留数）、商城图鉴、精灵图鉴、自定义指令、群组开关；\n` +
       `不动用户数据（钱包/账户/群档案等）；旧数据不保留，保存前已自动快照，可到备份页恢复。`,
       "全部设置恢复默认"))) return;
-    await getBridge().apiPost("config/save", payload);
+    await getBridge().apiPost("config/save", payload).then((r) => {
+      if (r && r.error) throw new Error(r.error);
+    });
     if (msg) { msg.textContent = "已恢复全部设置默认（备份与用户定制除外）"; msg.className = "msg ok"; }
     toast("已恢复全部设置默认值", "ok");
     await loadConfig();
@@ -1429,7 +1455,9 @@ async function resetAllConfig() {
 async function loadRank(type) {
   try {
     const rows = await getBridge().apiGet("rank", { type });
+    if (!Array.isArray(rows)) throw new Error((rows && (rows.error || rows.msg)) || "排行榜接口异常");
     const body = document.getElementById("rankBody");
+    if (!body) return;
     if (!rows.length) {
       body.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">暂无榜单数据</td></tr>`;
       return;
@@ -1449,6 +1477,7 @@ async function loadRank(type) {
       .join("");
   } catch (e) {
     err("rank: " + e.message);
+    try { TAB_DONE.rank = false; } catch (_e) {}
   }
 }
 
@@ -1479,10 +1508,12 @@ async function loadUsers() {
     USER_GID_FILTER = gid;
     const params = gid ? { gid } : {};
     RAW_USERS = await getBridge().apiGet("users", params);
+    if (!Array.isArray(RAW_USERS)) throw new Error((RAW_USERS && (RAW_USERS.error || RAW_USERS.msg)) || "用户列表接口异常");
     populateUserGidOptions();
     renderUserTable();
   } catch (e) {
     err("users: " + e.message);
+    try { TAB_DONE.users = false; } catch (_e) {}
   }
 }
 
@@ -1625,6 +1656,7 @@ async function saveUserEdit(qq, gid, btn) {
   const payload = { qq, gid, money: get("mm"), stamina: get("tt"), charm: get("ma"), lottery_tickets: get("jj"), deposit: get("ck") };
   try {
     const r = await getBridge().apiPost("user/edit", payload);
+    if (r && r.error) throw new Error(r.error);
     toast("用户数据已保存", "ok");
     if (btn) { btn.textContent = "已存"; setTimeout(() => { btn.textContent = "保存"; }, 1500); }
     await loadUsers();
@@ -1687,7 +1719,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0911k"
+        version: res.version || "2026w0912a"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -2016,6 +2048,7 @@ async function loadCommands() {
     try { refreshBalanceBadges(); } catch (e) {}
   } catch (e) {
     err("commands: " + e.message);
+    try { TAB_DONE.cmds = false; } catch (_e) {}
   }
 }
 function cmdAliasesFor(cmd) {
@@ -2215,7 +2248,21 @@ async function saveCmdEditor() {
       payload[sec][key] = inp.value === "" ? "" : Number(inp.value);
     });
 
+    // 改名清旧键：纯自定义改触发词时旧词在四节中残留即幽灵（显式 null 删键）
+    try {
+      const _old = (CMD_EDIT && !CMD_EDIT.isNew) ? String(CMD_EDIT.cmd || "").trim() : "";
+      if (_old && _old !== name) {
+        ["自定义指令配置", "指令启用配置", "指令回复配置", "指令权限配置"].forEach((sec) => {
+          const _has = (CMD_CFG[sec] || {}).hasOwnProperty(_old);
+          if (_has) {
+            if (!payload[sec] || typeof payload[sec] !== "object") payload[sec] = {};
+            if (payload[sec][_old] === undefined) payload[sec][_old] = null;
+          }
+        });
+      }
+    } catch (e) {}
     const r = await getBridge().apiPost("config/save", payload);
+    if (r && r.error) throw new Error(r.error);
     if (msg) { msg.textContent = "指令已保存"; msg.classList.add("ok"); }
     toast("指令已保存", "ok");
     closeCmdEditor();
@@ -2239,15 +2286,23 @@ async function deleteCmdEditor() {
     const cust = {};
     Object.keys(oldCust).forEach((t) => { if (t !== key) cust[t] = oldCust[t]; });
     const payload = { "自定义指令配置": cust };
+    payload["自定义指令配置"][key] = null; // 显式删键（后端 merge 语义下缺键≠删除）
     const disSec = {};
     const disSecOld = (CMD_CFG["指令启用配置"] || {});
     Object.keys(disSecOld).forEach((k) => { if (k !== key) disSec[k] = disSecOld[k]; });
     if (Object.keys(disSec).length) payload["指令启用配置"] = disSec;
+    payload["指令启用配置"] = payload["指令启用配置"] || {};
+    payload["指令启用配置"][key] = null;
     const ovOld = (CMD_CFG["指令回复配置"] || {});
     const ov = {};
     Object.keys(ovOld).forEach((k) => { if (k !== key) ov[k] = ovOld[k]; });
     payload["指令回复配置"] = ov;
-    await getBridge().apiPost("config/save", payload);
+    payload["指令回复配置"][key] = null;
+    const permOld = (CMD_CFG["指令权限配置"] || {});
+    if (permOld[key] !== undefined) payload["指令权限配置"] = { [key]: null };
+    await getBridge().apiPost("config/save", payload).then((r) => {
+      if (r && r.error) throw new Error(r.error);
+    });
     toast("已删除自定义指令", "ok");
     closeCmdEditor();
     await loadCommands();
@@ -2653,7 +2708,9 @@ function bindSpiritMapCards(root) {
     spirits[sn].img = path;
     SPIRIT_DIRTY = true;
     try {
-      const card = root.querySelector(`.sp-card[data-sp="${CSS.escape(sn)}"] input[data-s-field="img"]`);
+      // 引号选择器内不用 CSS.escape（转义值≠属性原值致静默 miss），改 dataset 比对
+      const _inp = Array.from(root.querySelectorAll('.sp-card input[data-s-field="img"]'));
+      const card = _inp.find((el) => { try { return el.closest(".sp-card").dataset.sp === sn; } catch (e) { return false; } }) || null;
       if (card) card.value = path;
     } catch (e) {}
     return true;
@@ -3618,7 +3675,11 @@ function renderPoolBox(forceOpen=false){
           const thumb = r && (r.thumb || (r.data && r.data.thumb));
           if (!thumb || (r && r.error)) return;
           it.thumb = thumb;
-          const slot = box.querySelector(`[data-pool-item="${CSS.escape(rar + "|" + it.name)}"] [data-pool-thumb]`);
+          const _key = rar + "|" + it.name;
+          let slot = null;
+          box.querySelectorAll("[data-pool-item]").forEach((host) => {
+            if (!slot && host.dataset && host.dataset.poolItem === _key) slot = host.querySelector("[data-pool-thumb]");
+          });
           if (slot) slot.outerHTML = `<img loading="lazy" decoding="async" src="${esc(thumb)}" data-pool-thumb="${esc(it.name)}" style="width:36px;height:36px;object-fit:cover;border:1px solid var(--line);border-radius:6px;cursor:zoom-in" title="点击放大" onerror="this.style.display='none'">`;
         }).catch(() => {});
       });
@@ -4065,7 +4126,9 @@ function renderShopRideBox(forceOpen = false) {
           else cleanRide[k] = v;
         } else cleanRide[k] = v;
       });
-      await getBridge().apiPost("config/save", { "商城图鉴": { "ride_shop": JSON.stringify(cleanRide) } });
+    await getBridge().apiPost("config/save", { "商城图鉴": { "ride_shop": JSON.stringify(cleanRide) } }).then((r) => {
+      if (r && r.error) throw new Error(r.error);
+    });
       SHOP_DIRTY = false; SHOP_RIDE_CUSTOM = true;
       syncShopRaw(); renderShopRideBox(true);
       toast("已恢复默认", "ok");
@@ -4418,8 +4481,9 @@ let RAW_SLAVE_USERS = [];
 async function loadSlaveUsers(){
   try{
     RAW_SLAVE_USERS = await getBridge().apiGet("slave/users");
+    if (!Array.isArray(RAW_SLAVE_USERS)) throw new Error((RAW_SLAVE_USERS && (RAW_SLAVE_USERS.error || RAW_SLAVE_USERS.msg)) || "奴隶用户接口异常");
     renderSlaveTable();
-  }catch(e){ err("slave users: "+e.message); }
+  }catch(e){ err("slave users: "+e.message); try { TAB_DONE.slave = false; } catch(_e){} }
 }
 
 function renderSlaveTable() {
@@ -4462,8 +4526,9 @@ let RAW_SPIRIT_USERS = [];
 async function loadSpiritUsers(){
   try{
     RAW_SPIRIT_USERS = await getBridge().apiGet("spirit/users");
+    if (!Array.isArray(RAW_SPIRIT_USERS)) throw new Error((RAW_SPIRIT_USERS && (RAW_SPIRIT_USERS.error || RAW_SPIRIT_USERS.msg)) || "精灵用户接口异常");
     renderSpiritUsersTable();
-  }catch(e){ err("spirit users: "+e.message); }
+  }catch(e){ err("spirit users: "+e.message); try { TAB_DONE.spirit_users = false; } catch(_e){} }
 }
 
 function renderSpiritUsersTable() {
@@ -4510,6 +4575,7 @@ async function loadBackups(dir="") {
   try {
     BACKUP_DIR = dir || "";
     const d = await getBridge().apiGet("backups/list", BACKUP_DIR ? { dir: BACKUP_DIR } : {});
+    if (!d || d.error) throw new Error((d && (d.error || d.msg)) || "备份列表接口异常");
     BACKUP_CACHE = d;
     const crumbs = (d.dir || "").split("/").filter(Boolean);
     let crumb = `<a data-bkcrumb="">根目录</a>`;
@@ -4521,7 +4587,7 @@ async function loadBackups(dir="") {
     document.getElementById("backupCrumbs").innerHTML = `<span class="crumbs">${crumb}</span>`;
     document.querySelectorAll("#backupCrumbs a[data-bkcrumb]").forEach((a) => a.addEventListener("click", () => loadBackups(a.dataset.bkcrumb)));
     renderBackups(d);
-  } catch (e) { err("backups: " + e.message); }
+  } catch (e) { err("backups: " + e.message); try { TAB_DONE.backups = false; } catch (_e) {} }
 }
 function renderBackups(d, _q) {
   const box = document.getElementById("backupBrowser");
@@ -5771,7 +5837,7 @@ function initLogsEvents() {
     try {
       toast("正在清空日志…", "ok");
       const res = await callApi("logs/clear", {}, "POST");
-      if (res && res.status === "error") {
+      if (res && (res.status === "error" || res.error)) {
         throw new Error(res.error || "清空失败");
       }
       toast((res && res.message) || "日志已清空", "ok");

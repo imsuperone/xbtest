@@ -412,7 +412,6 @@ def cmd_adventure(gid, qq, place):
     if last and time.time() - float(last) < gap:
         left = int((gap - (time.time() - float(last))) / 60) + 1
         return f"{left}分钟再来冒险吧！"
-    _recall_set(key, str(time.time()))
     # 随机遭遇
     wild = random.choice(md.get("drops", []) or ["绿毛虫"])
     lb = _cfgi("等级加成下限", 3); ub = _cfgi("等级加成上限", 5)
@@ -453,6 +452,7 @@ def cmd_adventure(gid, qq, place):
         if d_stam > 0:
             ST.acct_add(gid, qq, "stamina", -d_stam)
     _save(gid, qq, sp)
+    _recall_set(key, str(time.time()))
     _deduct_msg = ""
     if d_gold or d_stam:
         _parts = []
@@ -477,6 +477,8 @@ def cmd_catch(gid, qq, ball):
     bag = sp.setdefault("bag", {})
     if int(bag.get(ball, 0)) <= 0:
         return "亲，您的背包中没有该精灵球，请到商城购买吧！"
+    if len(sp.get("list", [])) >= _cfgi("精灵数量", 8):
+        return "亲，您的精灵数量已达上限，无法收服，可丢弃后再来！"
     bag[ball] = int(bag.get(ball, 0)) - 1
     if int(bag.get(ball, 0)) <= 0:
         del bag[ball]
@@ -486,9 +488,6 @@ def cmd_catch(gid, qq, ball):
     p = max(CATCH_MIN, min(CATCH_MAX, eff - (lv - 10) // CATCH_LV_STEP)) if eff < CATCH_MASTER_EFF else CATCH_MASTER_RATE
     sp.pop("wild", None)
     if random.randint(1, 100) <= p:
-        if len(sp.get("list", [])) >= _cfgi("精灵数量", 8):
-            _save(gid, qq, sp)
-            return "亲，您的精灵数量已达上限，无法收服，可丢弃后再来！"
         sp.setdefault("list", []).append(_mk_spr(wild["name"], lv))
         _save(gid, qq, sp)
         return f"恭喜！成功收服 Lv.{lv}「{wild['name']}」！"

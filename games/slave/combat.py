@@ -2,7 +2,6 @@
 """games/slave/combat.py — 奴隶包·combat（原 slave.py 切分，语义不变）。"""
 import time as _time
 import random as _random
-import json as _json
 try:
     from ...core import storage as ST
     store = ST

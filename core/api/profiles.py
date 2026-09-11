@@ -1,7 +1,6 @@
 """游戏画像 API — 奴隶 / 精灵 用户画像 + 身价校准（图鉴已独立至 core/api/atlas.py，端点不变）"""
 import asyncio
 import json
-import re
 try:
     from astrbot.api.web import json_response
 except ImportError:

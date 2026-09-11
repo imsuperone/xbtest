@@ -488,12 +488,16 @@ def cmd_manage(gid, qq, arg):
     if arg.startswith("取消护法"):
         m = re.search(r"(\d{5,12})", arg)
         if m and _is_member(gid, name, m.group(1)):
+            if _my(gid, m.group(1)).get("pos") == "帮主":
+                return "不能对帮主使用该操作！"
             tg = _my(gid, m.group(1)); tg["pos"] = "成员"; _save_member(gid, m.group(1), tg)
             return f"已取消 <{_gname(gid, m.group(1))}> 护法！"
         return "无法取消（需是同帮护法）！"
     if arg.startswith("移出帮派"):
         m = re.search(r"(\d{5,12})", arg)
         if m and _is_member(gid, name, m.group(1)):
+            if _my(gid, m.group(1)).get("pos") == "帮主":
+                return "不能对帮主使用该操作！"
             _save_member(gid, m.group(1), {})
             return f"已将 <{_gname(gid, m.group(1))}> 移出帮派！"
         return "无法移出（需是同帮成员）！"

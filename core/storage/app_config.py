@@ -189,6 +189,7 @@ def set_ini(sec, key, value):
     if sec in _S._COLL_FILES:
         # 商城/图鉴走 sidecar，不进内存/_CONFIG（防回写污染正常库）。
         # 语义：dict（含空）/JSON 串→存对象；None/空串→删键；不可解析串→跳过（防误清）。
+        # 落盘失败回滚内存（与 coll_merge 同策，防内存新盘旧）。
         try:
             if value is None or (isinstance(value, str) and value.strip() == ""):
                 op = ("del", None)
@@ -199,27 +200,35 @@ def set_ini(sec, key, value):
                 op = ("set", c) if c else ("skip", None)
             else:
                 op = ("skip", None)
+
+            def _apply():
+                d = _coll_load(sec)
+                try:
+                    _backup = dict(d)
+                except Exception:
+                    _backup = None
+                if op[0] == "set":
+                    d[str(key)] = op[1]
+                else:
+                    d.pop(str(key), None)
+                if not _coll_write(sec):
+                    try:
+                        if _backup is not None:
+                            _S._COLL_CACHE[sec] = _backup
+                    except Exception:
+                        pass
+                    return False
+                return True
+
             if op[0] != "skip":
                 if _S._COLL_LOCK is not None:
                     try:
                         with _S._COLL_LOCK:
-                            if op[0] == "set":
-                                _coll_load(sec)[str(key)] = op[1]
-                            else:
-                                _coll_load(sec).pop(str(key), None)
-                            _coll_write(sec)
+                            _apply()
                     except Exception:
-                        if op[0] == "set":
-                            _coll_load(sec)[str(key)] = op[1]
-                        else:
-                            _coll_load(sec).pop(str(key), None)
-                        _coll_write(sec)
+                        _apply()
                 else:
-                    if op[0] == "set":
-                        _coll_load(sec)[str(key)] = op[1]
-                    else:
-                        _coll_load(sec).pop(str(key), None)
-                    _coll_write(sec)
+                    _apply()
         except Exception:
             pass
         try:

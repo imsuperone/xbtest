@@ -34,6 +34,42 @@ def _safe_path(rel, base=""):
     return p
 
 
+_BLOCKED_NAMES = {"webdav_secret.json", ".xb_last_backup.json", ".xb_backup.busy",
+                  "xb_backup.lock", ".xb_backup.lock", "config.json"}
+_BLOCKED_EXTS = (".db", ".db-wal", ".db-shm", ".db-journal")
+
+
+def _is_blocked(fp):
+    """敏感文件保护：密钥/数据库/运行配置禁读禁写删（备份走 backup.py，不走文件库）"""
+    try:
+        bn = os.path.basename(str(fp or ""))
+        if bn in _BLOCKED_NAMES:
+            return True
+        return bn.lower().endswith(_BLOCKED_EXTS)
+    except Exception:
+        return True
+
+
+def _in_data_roots(fp, base=""):
+    """写操作域：只许 data/ 与 persistent 数据目录，禁插件根直写（防覆盖 core/*.py 提权）"""
+    try:
+        b = base or _img_base()
+        data_base = os.path.join(b, "data")
+        try:
+            pers_base = ST.get_persistent_data_dir(b) if hasattr(ST, "get_persistent_data_dir") else ""
+        except Exception:
+            pers_base = ""
+        for r in (data_base, pers_base):
+            if r and (fp == r or fp.startswith(r + os.sep)):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+_IMG_UPLOAD_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico")
+
+
 async def handle_images_list(request, plugin_base=""):
     rel = get_req_query(request, "dir", "") or get_req_query(request, "path", "")
     base = _img_base(plugin_base)
@@ -116,12 +152,18 @@ async def handle_images_upload(request, plugin_base=""):
     dst_dir = _safe_path(target_dir, base)
     if not dst_dir:
         return _err("bad dir", 400)
+    if not _in_data_roots(dst_dir, base):
+        return _err("dir out of scope (only data/ allowed)", 400)
     if b64_data:
         filename = os.path.basename(b64_name or "upload.bin")
+        if _is_blocked(filename) or not filename.lower().endswith(_IMG_UPLOAD_EXTS):
+            return _err("file type not allowed (images only)", 400)
         data = bytes(b64_data)
     else:
         filename = str(getattr(f, "filename", None) or getattr(f, "name", None) or "upload.bin").strip()
         filename = os.path.basename(filename)
+        if _is_blocked(filename) or not filename.lower().endswith(_IMG_UPLOAD_EXTS):
+            return _err("file type not allowed (images only)", 400)
         # 文件内容在事件循环上读出（ plc 适配器 read 可能是 awaitable），落盘进线程池
         data = b""
         try:
@@ -176,6 +218,8 @@ async def handle_images_delete(request, plugin_base=""):
     fp = _safe_path(rel, base)
     if not fp or not os.path.exists(fp):
         return _err("file not found", 404)
+    if _is_blocked(fp) or not _in_data_roots(fp, base):
+        return _err("path out of scope", 400)
 
     def _work():
         try:
@@ -201,13 +245,15 @@ async def handle_images_rename(request, plugin_base=""):
     fp = _safe_path(src, base)
     if not fp or not os.path.exists(fp):
         return _err("src not found", 404)
+    if _is_blocked(fp):
+        return _err("path out of scope", 400)
     # dst 可能是新文件名或新路径
     if "/" in dst or "\\" in dst:
         np = _safe_path(dst, base)
     else:
         np = os.path.join(os.path.dirname(fp), dst)
         np = _safe_path(os.path.relpath(np, base), base)
-    if not np:
+    if not np or _is_blocked(np) or not _in_data_roots(np, base):
         return _err("bad dst", 400)
 
     def _work():
@@ -233,6 +279,8 @@ async def handle_images_thumb(request, plugin_base=""):
     fp = _safe_path(rel, base)
     if not fp or not os.path.isfile(fp):
         return _err("file not found", 404)
+    if _is_blocked(fp):
+        return _err("path out of scope", 400)
 
     def _work():
         try:
@@ -262,6 +310,8 @@ async def handle_images_mkdir(request, plugin_base=""):
     fp = _safe_path(rel, base)
     if not fp:
         return _err("bad path", 400)
+    if _is_blocked(fp) or not _in_data_roots(fp, base):
+        return _err("path out of scope (only data/ allowed)", 400)
 
     def _work():
         try:
@@ -284,6 +334,8 @@ async def handle_images_copy(request, plugin_base=""):
     dp = _safe_path(dst, base)
     if not sp or not dp or not os.path.exists(sp):
         return _err("src not found", 404)
+    if _is_blocked(sp) or _is_blocked(dp) or not _in_data_roots(dp, base):
+        return _err("path out of scope", 400)
 
     def _work():
         try:
@@ -345,6 +397,8 @@ async def handle_images_export(request, plugin_base=""):
             fn = f"{dirname}_{int(time.time())}.zip"
             return {"ok": True, "path": rel, "data": b64, "size": len(data), "filename": fn}
         else:
+            if _is_blocked(fp):
+                raise ValueError("file out of scope")
             if os.path.getsize(fp) > 50 * 1024 * 1024:
                 raise ValueError("file too large")
             with open(fp, "rb") as f:

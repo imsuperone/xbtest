@@ -477,11 +477,11 @@ GITHUB_REPO_XBTEST = "imsuperone/xbtest"  # BETA 通道：快照版跟踪仓
 API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 UPDATE_CHANNELS = ("正式", "BETA")
 
-_LAST_CHECK_RES = None
-_LAST_CHECK_TIME = 0.0
+_LAST_CHECK_RES = {}
+_LAST_CHECK_TIME = {}
 _CHECK_CACHE_TTL = 300.0  # 成功结果缓存 5 分钟：版本不变时不再打 GitHub，防 RateLimit
 _CHECK_FAIL_TTL = 60.0  # 失败结果缓存 1 分钟：网络故障时不再每点每试
-_CHECK_RUNNING_SINCE = 0.0  # 在途检测开始时间戳（>0 表示有检测正在跑，并发请求共享结果，防惊群）
+_CHECK_RUNNING_SINCE = {}  # channel -> 在途检测开始时间戳（分槽：双通道并查互不阻塞，防惊群）
 _CHECK_RUNNING_TTL = 30.0  # 在途超时：拥有者超过此时长未回即视为死亡，等候者自行接管
 
 
@@ -495,7 +495,7 @@ def _get_local_version(plugin_base=""):
         return _gv(plugin_base)
     except Exception:
         pass
-    return "2026w0911k"
+    return "2026w0912a"
 
 
 def _parse_version_tuple(v_str):
@@ -668,35 +668,41 @@ async def handle_version_check(request=None, plugin_base=""):
     channel = (channel or "").strip()
     if channel not in UPDATE_CHANNELS:
         channel = _update_channel()
+    # 旧单槽缓存（无 channel 键）直接丢弃重检
+    if not isinstance(_LAST_CHECK_RES, dict):
+        _LAST_CHECK_RES = {}
+    if not isinstance(_LAST_CHECK_TIME, dict):
+        _LAST_CHECK_TIME = {}
+    if not isinstance(_CHECK_RUNNING_SINCE, dict):
+        _CHECK_RUNNING_SINCE = {}
     repo = _channel_repo(channel)
     now = time.time()
-    # 成功/失败分级缓存（按通道隔离：切通道即重检；无通道键旧缓存一律 miss 重检）
-    if (_LAST_CHECK_RES is not None
-            and _LAST_CHECK_RES.get("channel") == channel):
-        _failed = bool(_LAST_CHECK_RES.get("detect_error") or _LAST_CHECK_RES.get("error"))
+    # 成功/失败分级缓存（按通道分槽隔离：双通道并查互不覆盖）
+    _cached = _LAST_CHECK_RES.get(channel)
+    if _cached is not None:
+        _failed = bool(_cached.get("detect_error") or _cached.get("error"))
         _ttl = _CHECK_FAIL_TTL if _failed else _CHECK_CACHE_TTL
-        if (now - _LAST_CHECK_TIME) < _ttl:
-            return no_cache_response(json_response(_LAST_CHECK_RES))
-    # 在途共享：已有检测在跑则等候结果（8 秒），防并发惊群打 GitHub
+        if (now - _LAST_CHECK_TIME.get(channel, 0)) < _ttl:
+            return no_cache_response(json_response(_cached))
+    # 在途共享（同通道）：已有检测在跑则等候结果（8 秒），防并发惊群打 GitHub
     _t0 = now
-    if _CHECK_RUNNING_SINCE > 0 and (now - _CHECK_RUNNING_SINCE) < _CHECK_RUNNING_TTL:
+    if _CHECK_RUNNING_SINCE.get(channel, 0) > 0 and (now - _CHECK_RUNNING_SINCE.get(channel, 0)) < _CHECK_RUNNING_TTL:
         try:
             for _ in range(16):
                 await asyncio.sleep(0.5)
-                if (_LAST_CHECK_TIME > _t0 and _LAST_CHECK_RES is not None
-                        and _LAST_CHECK_RES.get("channel") == channel):
-                    return no_cache_response(json_response(_LAST_CHECK_RES))
-                if _CHECK_RUNNING_SINCE <= 0:
+                if (_LAST_CHECK_TIME.get(channel, 0) > _t0 and _LAST_CHECK_RES.get(channel) is not None):
+                    return no_cache_response(json_response(_LAST_CHECK_RES.get(channel)))
+                if _CHECK_RUNNING_SINCE.get(channel, 0) <= 0:
                     break
         except Exception:
             pass
         now = time.time()
-        if (_LAST_CHECK_RES is not None
-                and _LAST_CHECK_RES.get("channel") == channel
-                and (now - _LAST_CHECK_TIME) < _CHECK_CACHE_TTL):
-            return no_cache_response(json_response(_LAST_CHECK_RES))
+        _cached = _LAST_CHECK_RES.get(channel)
+        if (_cached is not None
+                and (now - _LAST_CHECK_TIME.get(channel, 0)) < _CHECK_CACHE_TTL):
+            return no_cache_response(json_response(_cached))
     # 成为拥有者执行检测
-    _CHECK_RUNNING_SINCE = time.time()
+    _CHECK_RUNNING_SINCE[channel] = time.time()
     try:
         try:
             res = await asyncio.to_thread(check_latest_version, plugin_base, repo)
@@ -709,10 +715,10 @@ async def handle_version_check(request=None, plugin_base=""):
             }
         res["channel"] = channel
         res["repo"] = repo
-        _LAST_CHECK_RES = res
-        _LAST_CHECK_TIME = time.time()
+        _LAST_CHECK_RES[channel] = res
+        _LAST_CHECK_TIME[channel] = time.time()
     finally:
-        _CHECK_RUNNING_SINCE = 0.0
+        _CHECK_RUNNING_SINCE[channel] = 0.0
     return no_cache_response(json_response(res))
 
 
