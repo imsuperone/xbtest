@@ -127,6 +127,30 @@ try:
 except Exception:
     pass
 
+def _scan_welcome_gids():
+    """启动时扫描含欢迎坐骑的群：LIKE 粗筛＋Python 精判。
+    注意 rides 是双层编码（acct JSON 里套 JSON 字符串），带引号精确式
+    LIKE '%"welcome"%' 永不命中（斜杠断开，已实证），曾致重启后欢迎全灭，只能靠重设恢复。"""
+    found = set()
+    try:
+        if ST._DB is None:
+            return found
+        with ST._LOCK:
+            rows = ST._DB.execute(
+                "SELECT gid, data FROM accounts WHERE data LIKE '%welcome%'").fetchall()
+        for g, d in rows or []:
+            try:
+                _j = json.loads(d or "{}")
+                _r2 = json.loads(_j.get("rides", "{}") or "{}")
+                if isinstance(_r2, dict) and _r2.get("welcome"):
+                    found.add(str(g))
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return found
+
+
 def _ensure_welcome_init():
     global _WELCOME_INITIALIZED
     if _WELCOME_INITIALIZED:
@@ -135,25 +159,11 @@ def _ensure_welcome_init():
         if _WELCOME_GIDS_LOCK:
             with _WELCOME_GIDS_LOCK:
                 if not _WELCOME_INITIALIZED:
-                    if ST._DB is not None:
-                        try:
-                            with ST._LOCK:
-                                rows = ST._DB.execute("SELECT DISTINCT gid FROM accounts WHERE data LIKE '%\"welcome\"%'").fetchall()
-                            for (g,) in rows:
-                                _WELCOME_GIDS.add(str(g))
-                        except Exception:
-                            pass
+                    _WELCOME_GIDS.update(_scan_welcome_gids())
                     _WELCOME_INITIALIZED = True
         else:
             if not _WELCOME_INITIALIZED:
-                if ST._DB is not None:
-                    try:
-                        with ST._LOCK:
-                            rows = ST._DB.execute("SELECT DISTINCT gid FROM accounts WHERE data LIKE '%\"welcome\"%'").fetchall()
-                        for (g,) in rows:
-                            _WELCOME_GIDS.add(str(g))
-                    except Exception:
-                        pass
+                _WELCOME_GIDS.update(_scan_welcome_gids())
                 _WELCOME_INITIALIZED = True
     except Exception:
         pass
@@ -443,7 +453,15 @@ def cmd_recycle_welcome(gid, qq, name):
 
 def check_welcome(gid, qq):
     """欢迎坐骑触发: 用户 3 小时内第一次出现(发消息)时, 若设置了欢迎坐骑则推送一次。
-    返回 (文本, [图片]) 或 None。由 main._dispatch 在收到群消息时调用。欢迎文案带群昵称、坐骑图片及微量金币奖励（坐骑价值/5000）。"""
+    返回 (文本, [图片]) 或 None。由 main._dispatch 在收到群消息时调用。欢迎文案带群昵称、坐骑图片及微量金币奖励（坐骑价值/5000）。
+    维护期直接 None（与 router/_dispatch 维护门同语义，直调也不漏）。"""
+    try:
+        if ST.cfg("维护配置", "维护开关", "假") == "真":
+            return None
+        if str(gid).isdigit() and ST.recall_get("group_maint_%s" % gid, "0") == "1":
+            return None
+    except Exception:
+        pass
     try:
         # 快速过滤：该群从未设置过欢迎，直接返回，避免每消息一次 acct DB 读（千群千人关键）
         try:

@@ -23,6 +23,9 @@ function cleanEndpointAndParams(endpoint, params) {
   return { ep, params: mergedParams };
 }
 
+// 传文件类读接口不加超时（备份/镜像导出按体积走，服务端自有熔断；加了会误杀大文件下载）
+const _NO_TIMEOUT_GET = /^(backups\/export|images\/export|user\/export|users\/export)/;
+
 function getBridge() {
   let rawBridge = null;
   try {
@@ -43,10 +46,11 @@ function getBridge() {
     return {
       apiGet(endpoint, params) {
         const { ep, params: cleanParams } = cleanEndpointAndParams(endpoint, params);
-        if (cleanParams && Object.keys(cleanParams).length > 0) {
-          return rawBridge.apiGet(ep, cleanParams);
-        }
-        return rawBridge.apiGet(ep);
+        const _p = (cleanParams && Object.keys(cleanParams).length > 0)
+          ? rawBridge.apiGet(ep, cleanParams)
+          : rawBridge.apiGet(ep);
+        // 读超时 30s（传文件类排除）；写操作另有服务端熔断，此处只治读 hung
+        return _NO_TIMEOUT_GET.test(ep) ? _p : apiTimeout(_p, 30000, ep);
       },
       apiPost(endpoint, data) {
         const { ep } = cleanEndpointAndParams(endpoint);
@@ -63,8 +67,10 @@ function getBridge() {
   }
 
   return {
-    async apiGet(endpoint, params) {
+    apiGet(endpoint, params) {
       const { ep, params: cleanParams } = cleanEndpointAndParams(endpoint, params);
+      // 整条前缀链 30s 总预算（传文件类排除）：黑洞前缀不再 eternal hang
+      const _run = async () => {
       let fullEp = ep;
       if (cleanParams && Object.keys(cleanParams).length > 0) {
         fullEp += "?" + new URLSearchParams(cleanParams).toString();
@@ -87,6 +93,9 @@ function getBridge() {
       }
       const r = await fetch(fullEp);
       return await r.json();
+      };
+      const _p = _run();
+      return _NO_TIMEOUT_GET.test(ep) ? _p : apiTimeout(_p, 30000, ep);
     },
     async apiPost(endpoint, data) {
       const { ep } = cleanEndpointAndParams(endpoint);
@@ -745,7 +754,7 @@ const TAB_LOADERS = {
   config: async () => { return loadConfig(); },
   rank: async () => { const t = (document.getElementById("rankType") || {}).value || "money"; return loadRank(t); },
   cmds: async () => { return loadCommands(); },
-  spirits: async () => { try { await loadShops(true); } catch(e){} return loadSpirits(); },
+  spirits: async () => { let r; try { r = await loadSpirits(); } catch(e) { try { err("tab spirits: " + e.message); } catch(_e){} } try { await loadShops(true); try { if (typeof refreshSpiritViews === "function") refreshSpiritViews(); } catch(_e){} } catch(e){} return r; },
   shops: async () => { return loadShops(); },
   backups: async () => {
     if (typeof loadBackupCfg === "function") try { await loadBackupCfg(); } catch (e) {}
@@ -3201,9 +3210,9 @@ function _normRideObj(d) {
 }
 
 async function loadPool(skipAtlas = false) {
-  // 抽奖武器池文件列表（生效目录，操作即时生效，无需保存）
+  // 抽奖武器池文件列表（生效目录，操作即时生效，无需保存；超时转空，不断整链）
   try {
-    const d = await getBridge().apiGet("weapons/pool").catch(() => null);
+    const d = await apiTimeout(getBridge().apiGet("weapons/pool"), 20000, "weapons/pool").catch(() => null);
     if (d && d.ok && d.pool) POOL_WEAPONS = d.pool;
   } catch (e) {}
   try {

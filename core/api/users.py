@@ -250,6 +250,7 @@ async def handle_user_import(request):
         if "account" in p and isinstance(p["account"], dict):
             a = ST.acct(gid, qq)
             a.kv.clear()
+            a.dirty = True  # clear() 不标脏：空覆盖也必须落盘，否则内存与库分叉、重启复活
             for k, v in p["account"].items():
                 a.set(str(k), str(v))
             ST.acct_save(gid, qq)

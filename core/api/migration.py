@@ -358,6 +358,7 @@ def _import_users_list(users, typ="json"):
         if "account" in item and isinstance(item["account"], dict):
             a = ST.acct(gid, qq)
             a.kv.clear()
+            a.dirty = True
             for k, v in item["account"].items():
                 a.set(str(k), str(v))
             ST.acct_save(gid, qq)
@@ -598,6 +599,7 @@ def _import_file_data(filename, data):
                                         if "account" in item and isinstance(item["account"], dict):
                                             a = ST.acct(gid, qq)
                                             a.kv.clear()
+                                            a.dirty = True
                                             for k, v in item["account"].items():
                                                 a.set(str(k), str(v))
                                             ST.acct_save(gid, qq)
@@ -674,6 +676,7 @@ def _import_file_data(filename, data):
                         if "account" in item and isinstance(item["account"], dict):
                             a = ST.acct(gid, qq)
                             a.kv.clear()
+                            a.dirty = True
                             for k, v in item["account"].items():
                                 a.set(str(k), str(v))
                             ST.acct_save(gid, qq)

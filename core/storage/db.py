@@ -298,6 +298,7 @@ def flush_all():
         try:
             acc_items = [(key, a) for key, a in list(_S._ACC_CACHE.items()) if a.dirty]
             grp_items = [(gid, g) for gid, g in list(_S._GROUP_CACHE.items()) if g._dirty]
+            _grp_written = []
             for key, a in acc_items:
                 # 空 kv 视作清理，避免幽灵账户
                 if not a.kv:
@@ -310,9 +311,12 @@ def flush_all():
             for gid, g in grp_items:
                 dirty_qqs = getattr(g, "_dirty_qqs", None)
                 if dirty_qqs and len(dirty_qqs) > 0 and len(dirty_qqs) < len(g._users):
-                    items = [(qq, g._users.get(qq, {})) for qq in list(dirty_qqs)]
+                    snap = list(dirty_qqs)
+                    items = [(qq, g._users.get(qq, {})) for qq in snap]
                 else:
+                    snap = None
                     items = list(g._users.items())
+                written = set()
                 for qq, kv in items:
                     if not kv:
                         _S._DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(gid), int(qq)))
@@ -321,6 +325,8 @@ def flush_all():
                             "INSERT INTO groups(gid, qq, data) VALUES(?,?,?) "
                             "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
                             (int(gid), int(qq), json.dumps(kv, ensure_ascii=False)))
+                    written.add(str(qq))
+                _grp_written.append((g, snap, written))
             _safe_commit()
         except Exception:
             _safe_rollback()
@@ -330,10 +336,17 @@ def flush_all():
                 a.dirty = False
             except Exception:
                 pass
-        for _, g in grp_items:
+        for g, snap, written in _grp_written:
+            # 只清本次写盘的快照集：写盘期新标脏保留，下轮再刷
             try:
-                g._dirty = False
-                g._dirty_qqs.clear()
+                if snap is None:
+                    for qq in written:
+                        g._dirty_qqs.discard(qq)
+                else:
+                    for qq in snap:
+                        g._dirty_qqs.discard(qq)
+                if not g._dirty_qqs:
+                    g._dirty = False
             except Exception:
                 pass
 

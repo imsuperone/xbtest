@@ -134,7 +134,8 @@ def recall_get(k, default=None):
         if k_str in _S._KV_CACHE:
             return _S._KV_CACHE[k_str]
     _ensure_db()
-    # 读副本快路径：kv 未命中缓存时不阻塞写锁；回填只补缺（setdefault），不覆盖并发新值
+    # 读副本快路径：kv 未命中缓存时不阻塞写锁；回填只补缺（setdefault），返回缓存最新值
+    # （DB 读与返回之间若有并发写入，返回新值而非本次旧快照，消一次性 stale 窗）
     try:
         rc = _read_conn()
         if rc is not None:
@@ -145,6 +146,7 @@ def recall_get(k, default=None):
                 try:
                     with _S._KV_CACHE_LOCK:
                         _S._KV_CACHE.setdefault(k_str, str(val))
+                        return _S._KV_CACHE[k_str]
                 except Exception:
                     pass
             return val
@@ -160,6 +162,7 @@ def recall_get(k, default=None):
                 try:
                     with _S._KV_CACHE_LOCK:
                         _S._KV_CACHE.setdefault(k_str, str(val))
+                        return _S._KV_CACHE[k_str]
                 except Exception:
                     pass
             return val

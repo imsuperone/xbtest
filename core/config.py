@@ -7,12 +7,12 @@ import json
 import os
 import re
 
-# 全量 schema 文件名（WebUI/播种共用；根 _conf_schema.json 仅留 AstrBot 原生页引导占位）
-_SCHEMA_CANDS = ("data/webui_schema.json", "_conf_schema.json")
+# 全量 schema 文件名单源：data/webui_schema.json（_conf_schema.json 已删，不再回退）
+_SCHEMA_CANDS = ("data/webui_schema.json",)
 
 
 def _schema_path(base_dir=""):
-    """全量 schema 路径：data/webui_schema.json 优先，根 _conf_schema.json 兼容回退。"""
+    """全量 schema 路径：data/webui_schema.json 单源（_conf_schema.json 已删，无回退）。"""
     try:
         if not base_dir:
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -1,8 +1,0 @@
-{
-  "_comment": {
-    "description": "小白配置请前往插件WebUI设置",
-    "type": "string",
-    "default": "None",
-    "options": ["None"]
-  }
-}
