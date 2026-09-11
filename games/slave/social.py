@@ -8,6 +8,18 @@ try:
 except ImportError:
     from core import storage as ST
 from . import slave_state as _S
+try:
+    from ..config.slave import (STUDY_FEE_LO, STUDY_FEE_HI, STUDY_EXP_LO, STUDY_EXP_HI,
+                                PRAY_LOSE_CHANCE, PRAY_LOSE_LO, PRAY_LOSE_HI, PRAY_NINJA_CHANCE,
+                                WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WAGE_FLOOR,
+                                REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
+                                TREASURE_GOURD_NAME)
+except ImportError:
+    from games.config.slave import (STUDY_FEE_LO, STUDY_FEE_HI, STUDY_EXP_LO, STUDY_EXP_HI,  # type: ignore
+                                    PRAY_LOSE_CHANCE, PRAY_LOSE_LO, PRAY_LOSE_HI, PRAY_NINJA_CHANCE,
+                                    WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WAGE_FLOOR,
+                                    REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
+                                    TREASURE_GOURD_NAME)
 from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgi, cn_fmt, cn_parse, coins_add, coins_get, slaves_of, treasures_of, uget, uset
 from .combat import _treasure_names, battle_power
 from .nick import uname
@@ -60,7 +72,7 @@ def cmd_study(gid, qq, st):
     ok, mins = cd_check(u, "study_time", "学习间隔")
     if not ok:
         return _fmt(mins, "学习")
-    fee = _random.randint(100, 800)
+    fee = _random.randint(STUDY_FEE_LO, STUDY_FEE_HI)
     if owner:
         oc = coins_get(gid, owner)
         if oc < fee:
@@ -68,7 +80,7 @@ def cmd_study(gid, qq, st):
     # 学费由主人支付(原版机制); 无主者自付
     payer = owner if owner else qq
     coins_add(gid, payer, -fee)
-    exp_gain = _random.randint(20, 150)
+    exp_gain = _random.randint(STUDY_EXP_LO, STUDY_EXP_HI)
     uset(u, "weapon_exp", str(int(uget(u, "weapon_exp", "0") or 0) + exp_gain))
     cd_commit(u, "study_time")
     head = f"缴纳学费 {fee} 后开始学习! 武器经验 +{exp_gain}"
@@ -127,14 +139,14 @@ def cmd_pray(gid, qq, st):
         amt = cfgi("祈福配置", "人品爆发奖励", 30000)
         coins_add(gid, qq, amt)
         return _S.T.PRAY_BIG.format(amt=f"{amt}{cn}") + f"\r\n[{name}] 获得 {amt} {cn}!!"
-    if _random.randint(1, 100) <= 25:
-        lose = min(coins_get(gid, qq), _random.randint(50, 300))
+    if _random.randint(1, 100) <= PRAY_LOSE_CHANCE:
+        lose = min(coins_get(gid, qq), _random.randint(PRAY_LOSE_LO, PRAY_LOSE_HI))
         coins_add(gid, qq, -lose)
         return (_S.T.PRAY_PITY_HEAD.format(who=f"[{name}]")
                 + f"\r\n被顺走了 {lose} {cn}...")
     lo = cfgi("祈福配置", "祈福奖励下限", 1000)
     hi = cfgi("祈福配置", "祈福奖励上限", 6000)
-    if _random.randint(1, 100) <= 30:
+    if _random.randint(1, 100) <= PRAY_NINJA_CHANCE:
         amt = _random.randint(lo, hi)
         coins_add(gid, qq, amt)
         return _S.T.PRAY_NINJA.format(who=f"[{name}]", amt=f"{amt}{cn}")
@@ -162,7 +174,7 @@ def cmd_work_dispatch(gid, qq, st):
     target = 0
     for s in my:
         su = U(st, s)
-        w = _random.randint(100, 500) + int(uget(su, "price") or 0) // 50
+        w = _random.randint(WORK_BASE_LO, WORK_BASE_HI) + int(uget(su, "price") or 0) // WORK_WORTH_DIV
         uset(su, "_work_wage", str(w))
         target += w
     uset(u, "work_status", "真")
@@ -197,7 +209,7 @@ def cmd_work_collect(gid, qq, st):
             lines.append(f"[{uname(st,s)}]新加入未参与本次打工，无工资")
             continue
         wage = _safe_int(uget(su, "_work_wage"), 0)
-        if _safe_int(uget(su, "price"), 0) < 100:
+        if _safe_int(uget(su, "price"), 0) < WORK_WAGE_FLOOR:
             lines.append(f"[{uname(st,s)}]{_S.T.WORK_NO_WAGE}")
             continue
         got = wage * ratio // 100
@@ -234,15 +246,15 @@ def cmd_revolt(gid, qq, st):
     my_power = battle_power(st, qq)
     om_power = battle_power(st, owner)
     if m_slaves >= 2 * max(1, len(slaves_of(st, qq))) and om_power > my_power:
-        fine = min(coins_get(gid, qq), 500)
+        fine = min(coins_get(gid, qq), REVOLT_FINE)
         coins_add(gid, qq, -fine)
         coins_add(gid, owner, fine)
         return _S.T.REVOLT_CRUSHED + f"(被罚{fine})"
     sn = uget(u, "name") or (str(qq))
-    loot = min(coins_get(gid, owner), _random.randint(500, 5000))
+    loot = min(coins_get(gid, owner), _random.randint(REVOLT_LOOT_LO, REVOLT_LOOT_HI))
 
-    i_have_gourd = "酒神葫芦" in treasures_of(u)
-    master_has_gourd = "酒神葫芦" in treasures_of(U(st, owner))
+    i_have_gourd = TREASURE_GOURD_NAME in treasures_of(u)
+    master_has_gourd = TREASURE_GOURD_NAME in treasures_of(U(st, owner))
 
     if i_have_gourd:
         uset(u, "owner", "")

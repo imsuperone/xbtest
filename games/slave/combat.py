@@ -10,6 +10,14 @@ except ImportError:
     from core import storage as ST
     store = ST
 from . import slave_state as _S
+try:
+    from ..config.slave import (FIGHT_REFUSE_POWER, FIGHT_STAKE_PCT, FIGHT_STAKE_CAP,
+                                FIGHT_POOR_LIMIT, FIGHT_CRIT_PER_STAR, FIGHT_CRIT_MULT,
+                                SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS)
+except ImportError:
+    from games.config.slave import (FIGHT_REFUSE_POWER, FIGHT_STAKE_PCT, FIGHT_STAKE_CAP,  # type: ignore
+                                    FIGHT_POOR_LIMIT, FIGHT_CRIT_PER_STAR, FIGHT_CRIT_MULT,
+                                    SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS)
 from .base import U, _fmt, _safe_int, cd_check, cd_commit, cfg, cfgf, cfgi, cn_fmt, cn_parse, coins_add, coins_get, slaves_of, star_of, treasures_of, uget, uset, weapons_of
 from .nick import uname
 
@@ -50,9 +58,9 @@ def _treasure_effect(tname):
                 return _custom
         except Exception:
             pass
-        if "酒神" in t:
+        if TREASURE_GOURD_KEY in t:
             return _S.T.GOURD_EFFECT
-        if "四象" in t or "护符" in t:
+        if any(k in t for k in TREASURE_CHARM_KEYS):
             return _S.T.CHARM_EFFECT
         if hasattr(_S.T, "TREASURE_EFFECT_GENERIC") and _S.T.TREASURE_EFFECT_GENERIC:
             return _S.T.TREASURE_EFFECT_GENERIC
@@ -158,13 +166,13 @@ def cmd_fight(gid, qq, target, st):
 
     my_p = battle_power(st, qq)
     ta_p = battle_power(st, tid)
-    if my_p >= ta_p * 3:
+    if my_p >= ta_p * FIGHT_REFUSE_POWER:
         return _S.T.FIGHT_TOO_STRONG
 
     ca, cdd = coins_get(gid, qq), coins_get(gid, tid)
-    stake = min(int(ca * 0.1), int(cdd * 0.1), 50000)
+    stake = min(int(ca * FIGHT_STAKE_PCT), int(cdd * FIGHT_STAKE_PCT), FIGHT_STAKE_CAP)
     if stake <= 0:
-        if ca < 100:
+        if ca < FIGHT_POOR_LIMIT:
             return _S.T.FIGHT_I_AM_POOR.replace("@", "")
         return _S.T.FIGHT_TA_IS_POOR
 
@@ -176,12 +184,12 @@ def cmd_fight(gid, qq, target, st):
     uset(U(st, qq), "战斗恢复时间", now_fmt)
     uset(U(st, tid), "战斗恢复时间", now_fmt)
 
-    # 5星武器狂热: 每把5星+10%概率战力翻倍
+    # 5星武器狂热: 每把5星+N%概率战力翻倍
     crit = False
     five = sum(1 for w in weapons_of(U(st, qq)) if star_of(U(st, qq), w) >= 5)
-    if five and _random.randint(1, 100) <= five * 10:
+    if five and _random.randint(1, 100) <= five * FIGHT_CRIT_PER_STAR:
         crit = True
-        my_p *= 2
+        my_p *= FIGHT_CRIT_MULT
 
     lines = [_S.T.FIGHT_HEAD,
              _S.T.FIGHT_CALL_UP.format(who="[" + (U(st, tid).get("name") or str(tid)) + "]"),
@@ -194,7 +202,7 @@ def cmd_fight(gid, qq, target, st):
     win = _random.random() < pwin
 
     def _shield(owner_q):
-        return "四象护符" in treasures_of(U(st, owner_q))
+        return SHIELD_TREASURE in treasures_of(U(st, owner_q))
 
     if win:
         lines.append(_S.T.FIGHT_WIN)

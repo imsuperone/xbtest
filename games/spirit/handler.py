@@ -16,6 +16,14 @@ try:
     from . import data_spirit as SD
 except ImportError:
     from games.spirit import data_spirit as SD
+try:
+    from ..config.spirit import (POWER_DIV, EXP_FLOOR, CATCH_MIN, CATCH_MAX,
+                                 CATCH_LV_STEP, CATCH_MASTER_EFF, CATCH_MASTER_RATE,
+                                 PVP_STAKE_CAP, PVP_STAKE_DIV)
+except ImportError:
+    from games.config.spirit import (POWER_DIV, EXP_FLOOR, CATCH_MIN, CATCH_MAX,  # type: ignore
+                                     CATCH_LV_STEP, CATCH_MASTER_EFF, CATCH_MASTER_RATE,
+                                     PVP_STAKE_CAP, PVP_STAKE_DIV)
 
 MENU = (
     "✨ 精灵系统\r\n"
@@ -34,7 +42,24 @@ MENU = (
 )
 
 
-_cfg, _cfgi = ST.cfg_scope("精灵配置")
+_cfg, _cfgi0 = ST.cfg_scope("精灵配置")
+try:
+    from ..config.spirit import DEFAULTS as _SP_DEFAULTS
+except ImportError:
+    try:
+        from games.config.spirit import DEFAULTS as _SP_DEFAULTS  # type: ignore
+    except Exception:
+        _SP_DEFAULTS = {}
+
+
+def _cfgi(key, default=0):
+    # 默认值单源：games/config/spirit.py DEFAULTS 表命中即用表值
+    try:
+        if key in _SP_DEFAULTS:
+            default = _SP_DEFAULTS[key]
+    except Exception:
+        pass
+    return _cfgi0(key, default)
 
 
 # ---- 精灵图鉴(可在 WebUI 精灵图鉴编辑器修改, 存 精灵图鉴:spirits/maps/shop; 空=未自定义，回退 data_spirit.py 内置) ----
@@ -85,7 +110,7 @@ def _power(it):
     """精灵总战力 = 等级*(生命+攻击+防御+特攻+特防)//5"""
     return int(it.get("level", 1)) * (int(it.get("hp", 0)) + int(it.get("atk", 0))
                                       + int(it.get("def", 0)) + int(it.get("spa", 0))
-                                      + int(it.get("spd", 0))) // 5
+                                      + int(it.get("spd", 0))) // POWER_DIV
 
 
 def _desc(it):
@@ -100,8 +125,8 @@ def _exp_need(it):
     try:
         need = int(it.get("level", 1)) * int(_cfgi("升级经验", 300))
     except Exception:
-        need = 300
-    return need if need >= 1 else 1
+        need = _SP_DEFAULTS.get("升级经验", 300)
+    return need if need >= EXP_FLOOR else EXP_FLOOR
 
 
 def _mk_spr(name, level=1):
@@ -458,7 +483,7 @@ def cmd_catch(gid, qq, ball):
     # 抓取概率 = 球效果 / 100 + 等级修正
     eff = int(_SHOP()[ball].get("effect", 0) or 0)
     lv = int(wild.get("level", 1))
-    p = max(5, min(95, eff - (lv - 10) // 2)) if eff < 90 else 100
+    p = max(CATCH_MIN, min(CATCH_MAX, eff - (lv - 10) // CATCH_LV_STEP)) if eff < CATCH_MASTER_EFF else CATCH_MASTER_RATE
     sp.pop("wild", None)
     if random.randint(1, 100) <= p:
         if len(sp.get("list", [])) >= _cfgi("精灵数量", 8):
@@ -584,7 +609,7 @@ def cmd_pvp(gid, qq, target):
     if theirs is None:
         return "对方没有出战的精灵，无法对战！"
     myp, tap = _power(mine), _power(theirs)
-    stake = min(2000, ST.coins_get(gid, qq) // 10, ST.coins_get(gid, target) // 10)
+    stake = min(PVP_STAKE_CAP, ST.coins_get(gid, qq) // PVP_STAKE_DIV, ST.coins_get(gid, target) // PVP_STAKE_DIV)
     if stake <= 0:
         stake = 200
     pwin = myp / (myp + tap) if (myp + tap) else 0.5

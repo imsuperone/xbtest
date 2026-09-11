@@ -8,6 +8,12 @@ try:
 except ImportError:
     from core import storage as ST
 from . import slave_state as _S
+try:
+    from ..config.slave import (TORTURE_VICTIM_CD, TORTURE_FALLBACK_LO, TORTURE_FALLBACK_HI,
+                                TORTURE_FALLBACK_OWNER_DIV, SLOT_GROWTH)
+except ImportError:
+    from games.config.slave import (TORTURE_VICTIM_CD, TORTURE_FALLBACK_LO, TORTURE_FALLBACK_HI,  # type: ignore
+                                    TORTURE_FALLBACK_OWNER_DIV, SLOT_GROWTH)
 from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgf, cfgi, cn_fmt, cn_parse, coins_add, coins_get, protected_until, slaves_of, uget, uset
 from .nick import exists_user, uname
 from .profile import coin_name
@@ -101,7 +107,7 @@ def cmd_torture(gid, qq, target, st):
     if uget(s, "owner") != qq:
         return _S.T.TORTURE_NOT_MINE
     last_tor = cn_parse(uget(s, "tortured_time"))
-    if last_tor and _time.time() - last_tor < 300:
+    if last_tor and _time.time() - last_tor < TORTURE_VICTIM_CD:
         return _S.T.TORTURE_JUST
     my_slaves = slaves_of(st, qq)
     ok, mins = cd_check(U(st, qq), "torture_time", "折磨间隔")
@@ -115,9 +121,9 @@ def cmd_torture(gid, qq, target, st):
         return _S.T.TORTURE_MERCY
     evs = [e for e in _S.EVENTS if e.get("type", "").startswith("折磨")]
     if not evs:
-        take = min(sc, _random.randint(20, 100))
+        take = min(sc, _random.randint(TORTURE_FALLBACK_LO, TORTURE_FALLBACK_HI))
         coins_add(gid, tid, -take)
-        coins_add(gid, qq, take // 2)
+        coins_add(gid, qq, take // TORTURE_FALLBACK_OWNER_DIV)
         uset(s, "tortured_time", cn_fmt(_time.time()))
         return f"折磨了 [{uname(st,tid)}], 掠夺 {take}"
     up_pool = [e for e in evs if e.get("effect") == "主人货币上涨"]
@@ -271,7 +277,7 @@ def cmd_buyslot(gid, qq, st):
         return _S.T.SLOT_SYS_MAX
     base_price = cfgi("设置", "奴隶位价格", 5000)
     base_cap = cfgi("设置", "奴隶个数", 5)
-    price = int(base_price * (2 ** max(0, cur - base_cap)))
+    price = int(base_price * (SLOT_GROWTH ** max(0, cur - base_cap)))
     if coins_get(gid, qq) < price:
         return (_S.T.SLOT_NEED.format(price=price) + "\r\n" +
                 _S.T.SLOT_POOR.format(coin=coin_name()))
@@ -281,7 +287,7 @@ def cmd_buyslot(gid, qq, st):
         f"恭喜您花费{price}{coin_name()}",
         _S.T.SLOT_BUY_ONE,
         _S.T.SLOT_NOW_CAP.format(cap=cur + 1),
-        _S.T.SLOT_NEXT_PRICE.format(price=int(price * 2)),
+        _S.T.SLOT_NEXT_PRICE.format(price=int(price * SLOT_GROWTH)),
     ]))
 
 

@@ -15,11 +15,10 @@ except ImportError:
     except ImportError:
         from core import storage as ST
 
-RIDES = {
-    "企鹅": 213250, "伞兵": 500000, "宝驴": 1000000, "保时捷": 1500000,
-    "法拉利": 1500000, "玛莎拉蒂": 1500000, "劳斯莱斯": 1500000,
-    "布加迪威龙": 1500000, "私人航空": 5000000,
-}
+try:
+    from .config.shop import RIDE_PRICES as RIDES, RIDE_SHOP as DEFAULT_RIDE_SHOP_EXT
+except ImportError:
+    from games.config.shop import RIDE_PRICES as RIDES, RIDE_SHOP as DEFAULT_RIDE_SHOP_EXT  # type: ignore
 RIDE_TYPE = "坐骑"
 
 _PLUGIN_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -258,20 +257,6 @@ def cmd_my(gid, qq):
         else:
             lines.append("发送【设置欢迎坐骑 名称】可设置欢迎坐骑！")
     return "\r\n".join(lines)
-
-
-DEFAULT_RIDE_SHOP_EXT = {
-    "企鹅": {"price": 213250, "img": "data/games/img/rides/企鹅.jpg"},
-    "伞兵": {"price": 500000, "img": "data/games/img/rides/伞兵.jpg"},
-    "宝驴": {"price": 1000000, "img": "data/games/img/rides/宝驴.jpg"},
-    "保时捷": {"price": 1500000, "img": "data/games/img/rides/保时捷.jpg"},
-    "法拉利": {"price": 1500000, "img": "data/games/img/rides/法拉利.jpg"},
-    "玛莎拉蒂": {"price": 1500000, "img": "data/games/img/rides/玛莎拉蒂.jpg"},
-    "劳斯莱斯": {"price": 1500000, "img": "data/games/img/rides/劳斯莱斯.jpg"},
-    "布加迪威龙": {"price": 1500000, "img": "data/games/img/rides/布加迪威龙.jpg"},
-    "私人航空": {"price": 5000000, "img": "data/games/img/rides/私人航空.jpg"},
-    "老八": {"price": 500000, "img": "data/games/img/rides/老八.jpg"},
-}
 
 
 def _ride_shop_raw():

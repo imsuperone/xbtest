@@ -19,6 +19,13 @@ except ImportError:
         from core.keymap import cn_to_en as _cn2en  # type: ignore
     except Exception:
         def _cn2en(k): return k
+try:
+    from ..config.slave import DEFAULTS as _SLAVE_DEFAULTS
+except ImportError:
+    try:
+        from games.config.slave import DEFAULTS as _SLAVE_DEFAULTS  # type: ignore
+    except Exception:
+        _SLAVE_DEFAULTS = {}
 from . import slave_state as _S
 
 def _cmd_lock(gid):
@@ -32,6 +39,12 @@ def _cmd_lock(gid):
 
 
 def cfg(sec, key, default=""):
+    # 默认值单源：games/config/slave.py DEFAULTS 表命中即用表值（行内兜底仅动态键时生效）
+    try:
+        if (sec, key) in _SLAVE_DEFAULTS:
+            default = _SLAVE_DEFAULTS[(sec, key)]
+    except Exception:
+        pass
     return store.cfg(sec, key, default)
 
 

@@ -57,8 +57,10 @@ async def handle_gacha_weapons(request):
 
 
 
-_POOL_RARS = ("SSR", "SR", "R")
-_POOL_IMG_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp")
+try:
+    from ...games.config.shop import POOL_RARS as _POOL_RARS, POOL_IMG_EXTS as _POOL_IMG_EXTS
+except ImportError:
+    from games.config.shop import POOL_RARS as _POOL_RARS, POOL_IMG_EXTS as _POOL_IMG_EXTS  # type: ignore
 _POOL_THUMB_MAX = 200 * 1024
 
 
