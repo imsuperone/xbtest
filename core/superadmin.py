@@ -460,7 +460,16 @@ def _version():
                 pass
     except Exception:
         pass
-    return "小白测试版版本：0.7.45-beta"
+    try:
+        from .version import get_version as _gv
+        return f"小白测试版版本：{_gv()}"
+    except Exception:
+        try:
+            from core.version import get_version as _gv2  # type: ignore
+            return f"小白测试版版本：{_gv2()}"
+        except Exception:
+            pass
+    return "小白测试版版本：2026w0911a"
 
 
 

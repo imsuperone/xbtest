@@ -5,10 +5,13 @@
 全仓 Python 代码一律 `get_version()` 获取，禁止各自硬编码版本号字面量。
 （Web 前端显示回退与 CHANGELOG/README 文档行由 `tools/verify_plugin.py` 校验对齐，
 打包脚本负责把占位回退刷成当前版。）
+
+beta 快照制（正式版仍走 semver）：`YYYYwMMDDx`（年＋w＋月日＋序号字母，同日递增 a→b…c，
+跨日归 a）。快照恒大于任何 semver（epoch 2），快照之间按日期＋序号比。
 """
 import os as _os
 
-_FALLBACK = "0.7.45-beta"
+_FALLBACK = "2026w0911a"
 _CACHE = ""
 
 
@@ -52,10 +55,21 @@ def get_version(plugin_base=""):
 
 
 def parse_version_tuple(v_str):
-    """纪元比较 (epoch, major, minor, patch)：0.10~0.68 为旧纪元 0，其余为 1。
+    """比较元组：快照 `YYYYwMMDDS` → (2, 日期, 序号)，恒大于 semver；
+    semver 走纪元比较 (epoch, major, minor, patch)：0.10~0.68 为旧纪元 0，其余为 1。
     保证 0.7.0+ 恒大于历史 0.68.x。原 `core/api/updater._parse_version_tuple` 已委托至此。"""
     import re as _re
-    m = _re.findall(r"\d+", str(v_str or ""))
+    s = str(v_str or "").strip()
+    m = _re.match(r"^(\d{4})[wW](\d{2})(\d{2})([a-zA-Z]+)$", s)
+    if m:
+        try:
+            seq = 0
+            for _ch in m.group(4).lower():
+                seq = seq * 26 + (ord(_ch) - 96)
+            return (2, int(m.group(1) + m.group(2) + m.group(3)), seq)
+        except Exception:
+            pass
+    m = _re.findall(r"\d+", s)
     nums = [int(x) for x in m] if m else [0, 0, 0]
     while len(nums) < 3:
         nums.append(0)

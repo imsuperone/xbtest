@@ -135,11 +135,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "0.7.45-beta"
+            return "2026w0911a"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "0.7.45-beta"
+    PLUGIN_VERSION = "2026w0911a"
 
 # 消息处理定长线程池：突发千群不再打爆默认无限池，与 ST._LOCK 串行叠加可控
 # import 期不建池（工具链 import 零线程）：首个 XbBot 实例化/首消息时懒建，全局单例，永不 shutdown
@@ -359,6 +359,7 @@ _XB_API_ROUTES = [
     ("groups/delete", "POST", "page_groups_delete", "删除群聊配置"),
     ("admin/clear", "POST", "page_clear_all", "清空所有数据（三重确认）"),
     ("version/check", "GET,POST", "page_version_check", "在线检查版本更新"),
+    ("version/channel", "GET,POST", "page_version_channel", "更新通道查询与切换"),
     ("logs", "GET,POST", "page_logs_get", "获取插件运行日志"),
     ("logs/clear", "POST,GET", "page_logs_clear", "清空插件运行日志"),
     ("logs/export", "GET,POST", "page_logs_export", "导出插件运行日志"),
@@ -834,6 +835,9 @@ class XbBot(Star):
 
     async def page_version_check(self, request=None, *args, **kwargs):
         return await self._call_api("core.api.stats", "handle_version_check", "version check", request, args, mode="req", with_base=True)
+
+    async def page_version_channel(self, request=None, *args, **kwargs):
+        return await self._call_api("core.api.stats", "handle_version_channel", "version channel", request, args, mode="req")
 
 
     async def page_clear_all(self, request=None, *args, **kwargs):

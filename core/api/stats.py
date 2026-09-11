@@ -473,7 +473,9 @@ async def handle_groups_delete(request):
 
 # ==================== 在线版本检测（原 updater.py 并入） ====================
 GITHUB_REPO = "imsuperone/xb"
+GITHUB_REPO_XBTEST = "imsuperone/xbtest"  # BETA 通道：快照版跟踪仓
 API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+UPDATE_CHANNELS = ("正式", "BETA")
 
 _LAST_CHECK_RES = None
 _LAST_CHECK_TIME = 0.0
@@ -493,11 +495,11 @@ def _get_local_version(plugin_base=""):
         return _gv(plugin_base)
     except Exception:
         pass
-    return "0.7.45-beta"
+    return "2026w0911a"
 
 
 def _parse_version_tuple(v_str):
-    """纪元比较：委托 version.parse_version_tuple（单源），失败走本地同逻辑兜底。"""
+    """纪元比较：委托 version.parse_version_tuple（单源，含快照制），失败走本地同逻辑兜底。"""
     try:
         try:
             from ..version import parse_version_tuple as _pvt
@@ -506,7 +508,17 @@ def _parse_version_tuple(v_str):
         return _pvt(v_str)
     except Exception:
         pass
-    m = re.findall(r"\d+", str(v_str or ""))
+    s = str(v_str or "").strip()
+    m0 = re.match(r"^(\d{4})[wW](\d{2})(\d{2})([a-zA-Z]+)$", s)
+    if m0:
+        try:
+            _seq = 0
+            for _ch in m0.group(4).lower():
+                _seq = _seq * 26 + (ord(_ch) - 96)
+            return (2, int(m0.group(1) + m0.group(2) + m0.group(3)), _seq)
+        except Exception:
+            pass
+    m = re.findall(r"\d+", s)
     nums = [int(x) for x in m] if m else [0, 0, 0]
     while len(nums) < 3:
         nums.append(0)
@@ -518,14 +530,32 @@ def _parse_version_tuple(v_str):
 
 
 
-def check_latest_version(plugin_base=""):
+def _update_channel():
+    """更新通道：recall 记忆，缺省 BETA（beta 插件；正式版树可另行默认正式）。"""
+    try:
+        c = str(ST.recall_get("update_channel", "BETA") or "BETA").strip()
+        if c in UPDATE_CHANNELS:
+            return c
+    except Exception:
+        pass
+    return "BETA"
+
+
+def _channel_repo(channel):
+    return GITHUB_REPO_XBTEST if channel == "BETA" else GITHUB_REPO
+
+
+def check_latest_version(plugin_base="", repo=""):
     """
     双通道检测最新版本：
     1. GitHub Releases 接口 (官方标准发版，带版本日志与元数据)
     2. GitHub main 分支 metadata.yaml (实时 Git 提交版本，支持多镜像加速容灾)
     择优选取版本号最高者，并与本地版本进行纪元元组比较。
+    repo 为空则用官方仓；BETA 通道传 xbtest 仓。
     """
     local_ver = _get_local_version(plugin_base)
+    repo = (repo or "").strip() or GITHUB_REPO
+    api_url = f"https://api.github.com/repos/{repo}/releases/latest"
     headers = {
         "User-Agent": "XbBot-AutoUpdater/1.0",
         "Accept": "application/vnd.github.v3+json"
@@ -536,9 +566,9 @@ def check_latest_version(plugin_base=""):
     main_ver = ""
     ts = int(time.time())
     raw_meta_urls = [
-        f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/metadata.yaml",
-        f"https://cdn.jsdelivr.net/gh/{GITHUB_REPO}@main/metadata.yaml?_t={ts}",
-        f"https://fastly.jsdelivr.net/gh/{GITHUB_REPO}@main/metadata.yaml?_t={ts}"
+        f"https://raw.githubusercontent.com/{repo}/main/metadata.yaml",
+        f"https://cdn.jsdelivr.net/gh/{repo}@main/metadata.yaml?_t={ts}",
+        f"https://fastly.jsdelivr.net/gh/{repo}@main/metadata.yaml?_t={ts}"
     ]
     for url in raw_meta_urls:
         try:
@@ -561,7 +591,7 @@ def check_latest_version(plugin_base=""):
     rel_date = ""
     rel_body = ""
     try:
-        req = urllib.request.Request(API_URL, headers=headers)
+        req = urllib.request.Request(api_url, headers=headers)
         with urllib.request.urlopen(req, timeout=4) as resp:
             if resp.status == 200:
                 data = json.loads(resp.read().decode("utf-8"))
@@ -613,12 +643,26 @@ def check_latest_version(plugin_base=""):
 
 
 async def handle_version_check(request=None, plugin_base=""):
-    """从云端检测是否有最新 Release 或 main 分支版本（完全异步化，绝不阻塞主事件循环）"""
+    """从云端检测是否有最新 Release 或 main 分支版本（完全异步化，绝不阻塞主事件循环）。
+    通道：显式 channel 参数 > 存储记忆 > 默认 BETA；BETA 查 xbtest 快照仓，正式查官方仓。"""
     global _LAST_CHECK_RES, _LAST_CHECK_TIME, _CHECK_RUNNING_SINCE
     import asyncio
+    channel = ""
+    try:
+        if isinstance(request, dict):
+            channel = str(request.get("channel") or "")
+        elif request is not None:
+            channel = get_req_query(request, "channel", "")
+    except Exception:
+        pass
+    channel = (channel or "").strip()
+    if channel not in UPDATE_CHANNELS:
+        channel = _update_channel()
+    repo = _channel_repo(channel)
     now = time.time()
-    # 成功/失败分级缓存
-    if _LAST_CHECK_RES is not None:
+    # 成功/失败分级缓存（按通道隔离：切通道即重检）
+    if (_LAST_CHECK_RES is not None
+            and _LAST_CHECK_RES.get("channel", "正式") == channel):
         _failed = bool(_LAST_CHECK_RES.get("detect_error") or _LAST_CHECK_RES.get("error"))
         _ttl = _CHECK_FAIL_TTL if _failed else _CHECK_CACHE_TTL
         if (now - _LAST_CHECK_TIME) < _ttl:
@@ -636,13 +680,15 @@ async def handle_version_check(request=None, plugin_base=""):
         except Exception:
             pass
         now = time.time()
-        if _LAST_CHECK_RES is not None and (now - _LAST_CHECK_TIME) < _CHECK_CACHE_TTL:
+        if (_LAST_CHECK_RES is not None
+                and _LAST_CHECK_RES.get("channel", "正式") == channel
+                and (now - _LAST_CHECK_TIME) < _CHECK_CACHE_TTL):
             return no_cache_response(json_response(_LAST_CHECK_RES))
     # 成为拥有者执行检测
     _CHECK_RUNNING_SINCE = time.time()
     try:
         try:
-            res = await asyncio.to_thread(check_latest_version, plugin_base)
+            res = await asyncio.to_thread(check_latest_version, plugin_base, repo)
         except Exception as e:
             res = {
                 "current_version": _get_local_version(plugin_base),
@@ -650,8 +696,33 @@ async def handle_version_check(request=None, plugin_base=""):
                 "has_update": False,
                 "error": str(e)
             }
+        res["channel"] = channel
+        res["repo"] = repo
         _LAST_CHECK_RES = res
         _LAST_CHECK_TIME = time.time()
     finally:
         _CHECK_RUNNING_SINCE = 0.0
     return no_cache_response(json_response(res))
+
+
+async def handle_version_channel(request=None):
+    """更新通道读写：GET 查当前；POST {channel: 正式/BETA} 切换（记忆进 recall，检测即时跟随）"""
+    try:
+        data = None
+        if isinstance(request, dict):
+            data = request
+        elif request is not None:
+            try:
+                data = await get_req_json(request, default={})
+            except Exception:
+                data = {}
+        if isinstance(data, dict):
+            _c = str(data.get("channel") or "").strip()
+            if _c in UPDATE_CHANNELS:
+                try:
+                    ST.recall_set("update_channel", _c)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return json_response({"ok": True, "channel": _update_channel(), "channels": list(UPDATE_CHANNELS)})

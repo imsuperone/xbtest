@@ -763,6 +763,7 @@ const TAB_LOADERS = {
   },
   imgs: async () => { return loadImages(""); },
   groups: async () => { return loadGroups(); },
+  about: async () => { try { await loadUpdateChannel(); } catch(e){} },
   logs: async () => { return loadLogs(); },
 };
 const TAB_DONE = {};
@@ -1684,7 +1685,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "0.7.45-beta"
+        version: res.version || "2026w0911a"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -2324,9 +2325,13 @@ async function loadSpirits(force) {
     try { refreshSpiritViews(); } catch (e) { toast("图鉴渲染失败: " + (e.message || e), "bad"); }
   } catch (e) {
     err("spirits: " + e.message);
+    // 失败兜底：先试缓存渲染（旧数据可看），再不行两盒同显示可重试错误（曾商城盒永久“加载中”假死）
+    try { refreshSpiritViews(); } catch (_e) {}
     try {
       const _ab = document.getElementById("atlasBox");
-      if (_ab) _ab.innerHTML = `<div style="text-align:center;padding:24px;color:var(--bad)">图鉴加载失败: ${esc(e.message || e)}<br><button class="ghost sm" onclick="loadSpirits()">重试</button></div>`;
+      if (_ab && !_ab.innerHTML.trim()) _ab.innerHTML = `<div style="text-align:center;padding:24px;color:var(--bad)">图鉴加载失败: ${esc(e.message || e)}<br><button class="ghost sm" onclick="loadSpirits()">重试</button></div>`;
+      const _sb = document.getElementById("shopSpiritBox");
+      if (_sb && /加载中/.test(_sb.innerHTML || "")) _sb.innerHTML = `<div style="text-align:center;padding:16px;color:var(--bad)">商城加载失败，可<button class="ghost sm" onclick="loadSpirits()">重试</button></div>`;
     } catch (_e) {}
   }
 }
@@ -5184,6 +5189,42 @@ document.getElementById("btnDbDoctor")?.addEventListener("click", runDbDoctor);
 // ---------- 在线版本检测系统 ----------
 let LATEST_RELEASE_DATA = null;
 
+let UPDATE_CHANNEL = "";
+async function loadUpdateChannel() {
+  // 更新通道：后端记忆，不存在即 BETA（beta 插件默认）
+  try {
+    const r = await getBridge().apiGet("version/channel").catch(() => null);
+    const c = r && (r.channel || (r.data && r.data.channel));
+    UPDATE_CHANNEL = (c === "正式" || c === "BETA") ? c : "BETA";
+  } catch (e) { UPDATE_CHANNEL = UPDATE_CHANNEL || "BETA"; }
+  try {
+    const el = document.getElementById("aboutChannel");
+    if (el) el.textContent = UPDATE_CHANNEL === "正式" ? "正式版" : "BETA版";
+    const bb = document.getElementById("btnChannelBeta");
+    const bs = document.getElementById("btnChannelStable");
+    if (bb) bb.style.borderColor = UPDATE_CHANNEL === "BETA" ? "var(--acc)" : "";
+    if (bs) bs.style.borderColor = UPDATE_CHANNEL === "正式" ? "var(--acc)" : "";
+  } catch (e) {}
+  return UPDATE_CHANNEL;
+}
+async function setUpdateChannel(c) {
+  if (c !== "正式" && c !== "BETA") return;
+  try {
+    const r = await getBridge().apiPost("version/channel", { channel: c }).catch(() => null);
+    const nc = r && (r.channel || (r.data && r.data.channel));
+    UPDATE_CHANNEL = (nc === "正式" || nc === "BETA") ? nc : c;
+  } catch (e) { UPDATE_CHANNEL = c; }
+  try {
+    const el = document.getElementById("aboutChannel");
+    if (el) el.textContent = UPDATE_CHANNEL === "正式" ? "正式版" : "BETA版";
+    const bb = document.getElementById("btnChannelBeta");
+    const bs = document.getElementById("btnChannelStable");
+    if (bb) bb.style.borderColor = UPDATE_CHANNEL === "BETA" ? "var(--acc)" : "";
+    if (bs) bs.style.borderColor = UPDATE_CHANNEL === "正式" ? "var(--acc)" : "";
+  } catch (e) {}
+  toast("更新通道已切换为" + (UPDATE_CHANNEL === "正式" ? "正式版" : "BETA版") + "，正在重新检测", "ok");
+  checkVersionUpdate(false);
+}
 async function checkVersionUpdate(silent = false) {
   const btn = document.getElementById("btnCheckUpdate");
   const statusEl = document.getElementById("checkUpdateStatus");
@@ -5200,9 +5241,10 @@ async function checkVersionUpdate(silent = false) {
       statusEl.style.border = "1px solid var(--line)";
       statusEl.textContent = "⏳ 正在检测云端版本…";
     }
-    // 20秒超时熔断：任何挂起都转为可见报错，杜绝点击无反应
+    // 20秒超时熔断：任何挂起都转为可见报错，杜绝点击无反应；带当前通道，后端按通道查仓
     const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("请求超时(20s)，请检查网络后重试")), 20000));
-    const res = await Promise.race([getBridge().apiGet("version/check"), timeout]);
+    try { if (!UPDATE_CHANNEL) await loadUpdateChannel(); } catch (e) {}
+    const res = await Promise.race([getBridge().apiGet("version/check", UPDATE_CHANNEL ? { channel: UPDATE_CHANNEL } : {}), timeout]);
     if (res && (res.ok || res.has_update !== undefined || res.current_version)) {
       LATEST_RELEASE_DATA = res;
       try {
@@ -5371,6 +5413,7 @@ function showUpdateModal(data) {
   </div>
   ${statusCard}
   ${dateStr ? `<div style="font-size:11px;color:var(--muted);margin-top:8px">${esc(dateStr)}</div>` : ""}
+  ${data.channel ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">更新通道：${esc(data.channel === "正式" ? "正式版" : "BETA版")}${data.repo ? `（${esc(data.repo)}）` : ""}</div>` : ""}
 </div>
 
 <div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px">📝 版本更新日志与特性</div>
@@ -5390,6 +5433,8 @@ document.getElementById("verBadge")?.addEventListener("click", () => {
   else checkVersionUpdate(false);
 });
 document.getElementById("btnCheckUpdate")?.addEventListener("click", () => checkVersionUpdate(false));
+document.getElementById("btnChannelBeta")?.addEventListener("click", () => setUpdateChannel("BETA"));
+document.getElementById("btnChannelStable")?.addEventListener("click", () => setUpdateChannel("正式"));
 document.getElementById("checkUpdateStatus")?.addEventListener("click", () => {
   if (LATEST_RELEASE_DATA) showUpdateModal(LATEST_RELEASE_DATA);
   else checkVersionUpdate(false);

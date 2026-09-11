@@ -1556,7 +1556,7 @@
   <div class="wrap">
     <header>
       <div class="brand">
-        <h1>管理控制台 <span class="ver">v0.7.45-beta</span> <span id="verBadge" style="display:none;font-size:11px;padding:3px 8px;border-radius:12px;background:linear-gradient(135deg, #10B981, #059669);color:#fff;font-weight:600;cursor:pointer;margin-left:4px;box-shadow:0 2px 6px rgba(16,185,129,0.3)" title="点击查看更新并一键升级">🚀 发现新版本</span></h1>
+        <h1>管理控制台 <span class="ver">v2026w0911a</span> <span id="verBadge" style="display:none;font-size:11px;padding:3px 8px;border-radius:12px;background:linear-gradient(135deg, #10B981, #059669);color:#fff;font-weight:600;cursor:pointer;margin-left:4px;box-shadow:0 2px 6px rgba(16,185,129,0.3)" title="点击查看更新并一键升级">🚀 发现新版本</span></h1>
         <div class="sub">
           <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
         </div>
@@ -2063,7 +2063,12 @@
           <div>📦 插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
           <div>🔗 仓库：<a href="https://github.com/imsuperone/xb" target="_blank" rel="noopener">https://github.com/imsuperone/xb</a></div>
           <div>🏷️ 当前版本：<b id="aboutVersion">读取中…</b> <span id="aboutLatest" style="color:var(--muted)"></span></div>
-          <div class="hint">版本检测走纪元算法，20 秒熔断；可在顶部点击版本徽标检查更新。</div>
+          <div>🔀 更新通道：<b id="aboutChannel">读取中…</b>
+            <button id="btnChannelBeta" class="ghost sm" title="跟踪 xbtest 快照版">BETA版</button>
+            <button id="btnChannelStable" class="ghost sm" title="跟踪官方正式 Release">正式版</button>
+          </div>
+          <div><button id="btnCheckUpdate" class="ghost sm">🔍 检测更新</button> <span id="checkUpdateStatus" style="display:none"></span></div>
+          <div class="hint">BETA 通道跟踪 xbtest 快照版（2026w0911a 式，每日快照a/b/c延续）；正式通道跟踪官方 Release。版本检测走纪元/快照算法，20 秒熔断；也可在顶部点击版本徽标检查更新。</div>
         </div>
       </div>
     </div>
