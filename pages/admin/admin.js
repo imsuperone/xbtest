@@ -129,6 +129,24 @@ function getBridge() {
 }
 let CFG = {};
 
+// 请求超时竞速（桥 sequential fallback 无超时，环境黑洞会 eternal hang：
+// Tab 首次加载卡死即此因。超时转拒绝，调用方显示可重试错误，不再永久占位）。
+function apiTimeout(promise, ms, label) {
+  const t = (typeof ms === "number" && ms > 0) ? ms : 20000;
+  let timer = null;
+  try {
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("请求超时(" + Math.round(t / 1000) + "s)" + (label ? ":" + label : "") + "，点重试")), t);
+        try { if (timer && typeof timer.unref === "function") timer.unref(); } catch (e) {}
+      })
+    ]).finally(() => { try { if (timer) clearTimeout(timer); } catch (e) {} });
+  } catch (e) {
+    return Promise.resolve(promise);
+  }
+}
+
 // 各配置节归属系统（用于分类）+ 必要/玩法分层
 const NECESSARY_SECTIONS = ["总开关配置", "群组开关配置", "网络", "维护配置"];
 // 备份配置（含 WebDAV）已迁移至「备份管理」Tab 专属卡片，不在配置页重复渲染
@@ -672,7 +690,7 @@ function renderGroupsTable() {
     const testMark = g.is_test ? ` <small style="color:var(--muted)">(测试)</small>` : "";
     const maint = g.maintenance === true;
     const maintBadge = maint ? `<span class="badge badge-bad">维修中</span>` : `<span style="color:var(--muted)">—</span>`;
-    return `<tr><td><code>${esc(gid)}</code>${testMark}</td><td>${g.member_count || 0}</td><td>${badge}</td><td>${maintBadge}</td><td><label class="switch" title="本群维修开关"><input type="checkbox" data-maint-gid="${esc(gid)}" ${maint ? "checked" : ""}><span class="slider-toggle"></span></label></td><td><label class="switch" title="群聊开关"><input type="checkbox" data-gid="${esc(gid)}" ${on ? "checked" : ""}><span class="slider-toggle"></span></label> <button class="ghost sm del" data-del="${esc(gid)}" title="删除该群配置">🗑️ 删除</button></td></tr>`;
+    return `<tr><td><code>${esc(gid)}</code>${testMark}</td><td>${g.member_count || 0}</td><td>${badge}</td><td>${maintBadge}</td><td><label class="switch" title="本群维修开关"><input type="checkbox" data-maint-gid="${esc(gid)}" ${maint ? "checked" : ""}><span class="slider-toggle"></span></label></td><td><label class="switch" title="群聊开关"><input type="checkbox" data-gid="${esc(gid)}" ${on ? "checked" : ""}><span class="slider-toggle"></span></label></td></tr>`;
   }).join("");
   box.querySelectorAll("input[data-gid]").forEach(inp => {
     inp.addEventListener("change", async () => {
@@ -712,22 +730,6 @@ function renderGroupsTable() {
         inp.checked = !on;
       } finally {
         inp.disabled = false;
-      }
-    });
-  });
-  box.querySelectorAll("button[data-del]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const gid = btn.dataset.del;
-      if (!(await uiConfirm(`确定彻底删除群 ${gid} 的所有配置吗？此操作不可逆。`, "删除群聊配置"))) return;
-      btn.disabled = true;
-      try {
-        const r = await getBridge().apiPost("groups/delete", { gid });
-        if (r && r.ok === false) throw new Error(r.msg || "删除失败");
-        toast(`群 ${gid} 配置已彻底删除`, "ok");
-        await loadGroups();
-      } catch(e) {
-        toast("删除失败: " + e.message, "bad");
-        btn.disabled = false;
       }
     });
   });
@@ -974,7 +976,11 @@ function bindTabs() {
       }
       if (!TAB_DONE[tab] && TAB_LOADERS[tab]) {
         TAB_DONE[tab] = true;
-        Promise.resolve(TAB_LOADERS[tab]()).catch((e) => err("tab " + tab + ": " + e.message));
+        // 失败回退未完成态：下次切回重跑（曾首次 hang 即永久占位，只能整页刷新）
+        Promise.resolve(TAB_LOADERS[tab]()).then(() => {}).catch((e) => {
+          try { TAB_DONE[tab] = false; } catch (_e) {}
+          err("tab " + tab + ": " + e.message);
+        });
       }
     });
   });
@@ -2255,7 +2261,8 @@ const SHOP_FIELDS = [["price", "价格"], ["attr", "类型"], ["effect", "效果
 const SHOP_ATTR_OPTS = ["精灵球", "等级", "HP", "攻击", "防御", "特攻", "特防", "进化"];
 const SHOP_ATTR_HELP = { "精灵球": "收服率%", "等级": "奇异甜食+Lv数", "HP": "吐司类+生命", "攻击": "+攻击", "防御": "+防御", "特攻": "+特攻", "特防": "+特防", "进化": "进化液=1" };
 
-async function loadSpirits() {
+let SPIRIT_TS = 0; // 最近成功加载时间戳：Tab 打开 5s 内复用，免重复 GET（loadShops 已顺带拉过时）
+async function loadSpirits(force) {
   // 先占位（桥慢时不再空白卡死），两次渲染并一次（refreshSpiritViews 内已含 renderShop）
   try {
     const _ab = document.getElementById("atlasBox");
@@ -2264,8 +2271,14 @@ async function loadSpirits() {
     if (_sb) _sb.innerHTML = `<div style="text-align:center;padding:16px;color:var(--muted)">商城加载中…</div>`;
   } catch (e) {}
   try {
-    const res = await getBridge().apiGet("spirits");
+    // 5s 内复用（loadShops 刚拉过时免重复 GET）；导入后强制刷新，防读到旧内存
+    let res = null;
+    const _fresh = !force && (typeof SPIRIT !== "undefined" && SPIRIT && typeof SPIRIT === "object"
+      && typeof SPIRIT_TS === "number" && SPIRIT_TS && (Date.now() - SPIRIT_TS < 5000));
+    if (_fresh) res = SPIRIT;
+    else res = await apiTimeout(getBridge().apiGet("spirits"), 20000, "spirits");
     SPIRIT = res || {};
+    try { SPIRIT_TS = Date.now(); } catch (e) {}
     // 编辑区：有自定义用自定义；无则预填内置为起点并标记未自定义（保存后即转自定义）。
     // 用后端 _meta.configured 判定显式清空（_raw 恒含三键，不可用 in 判断）。
     // 兼容旧后端（无 _raw/_meta）：顶层即有效数据，直接沿用。
@@ -2939,17 +2952,20 @@ async function importSpirits() {
   inp.onchange = async (e) => {
     const file = e.target.files[0]; if (!file) return;
     try {
-      const txt = await file.text();
+      // BOM 头（Windows 记事本存档常见）先剥，否则 JSON.parse 必炸，导出文件反而导不回
+      const txt = (await file.text()).replace(/^\uFEFF/, "");
       const data = JSON.parse(txt);
-      const src = (data && (data.spirits || data.maps || data.shop)) ? data : null;
-      if (!src) throw new Error("JSON需包含 spirits/maps/shop（请用本页导出的文件）");
+      // 空图鉴导出的 {spirits:{},maps:{},shop:{}} 全空对象仍合法（旧代码按值真假判空文件直接拒掉）
+      const has = data && typeof data === "object" && !Array.isArray(data)
+        && ("spirits" in data || "maps" in data || "shop" in data);
+      if (!has) throw new Error("JSON需包含 spirits/maps/shop（请用本页导出的文件）");
       const payload = {};
-      ["spirits", "maps", "shop"].forEach((k) => { if (src[k] && typeof src[k] === "object") payload[k] = src[k]; });
+      ["spirits", "maps", "shop"].forEach((k) => { if (data[k] && typeof data[k] === "object" && !Array.isArray(data[k])) payload[k] = data[k]; });
       if (!Object.keys(payload).length) throw new Error("文件中无有效数据");
       const r = await getBridge().apiPost("spirits/save", payload);
       if (r && r.error) throw new Error(r.error);
       toast("已导入" + Object.keys(payload).join("、"), "ok");
-      await loadSpirits();
+      await loadSpirits(true);
     } catch (err) { toast("导入失败: " + err.message, "bad"); }
   };
   inp.click();
@@ -4025,10 +4041,10 @@ async function loadShops(skipAtlas = false) {
   const msg = document.getElementById("shopMsg");
   try {
     const [cur, spiritData] = await Promise.all([
-      getBridge().apiGet("config/get"),
-      SPIRIT ? Promise.resolve(SPIRIT) : getBridge().apiGet("spirits").catch(() => null)
+      apiTimeout(getBridge().apiGet("config/get"), 20000, "config/get"),
+      SPIRIT ? Promise.resolve(SPIRIT) : apiTimeout(getBridge().apiGet("spirits"), 20000, "spirits").catch(() => null)
     ]);
-    if (spiritData) SPIRIT = spiritData;
+    if (spiritData) { SPIRIT = spiritData; try { SPIRIT_TS = Date.now(); } catch (e) {} }
     const sec = (cur || {})["商城图鉴"] || {};
     const _rr = _parseShopInput(sec["ride_shop"], _normRideObj);
     if (Object.keys(_rr.data).length) { SHOP_RIDE = _rr.data; SHOP_RIDE_CUSTOM = true; }
