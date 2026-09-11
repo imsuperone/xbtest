@@ -7,6 +7,29 @@ try:
     from ...core import storage as ST
 except ImportError:
     from core import storage as ST
+try:
+    from ..config.bank import DEFAULTS as _BANK_DEFAULTS
+except ImportError:
+    try:
+        from games.config.bank import DEFAULTS as _BANK_DEFAULTS  # type: ignore
+    except Exception:
+        _BANK_DEFAULTS = {}
+
+
+try:
+    from ..config.bank import (GAMBLE_MULT, REDPACK_MIN_DIV, REDPACK_MAX_DIV)
+except ImportError:
+    from games.config.bank import (GAMBLE_MULT, REDPACK_MIN_DIV, REDPACK_MAX_DIV)  # type: ignore
+
+
+def cfgi(sec, key, default=0):
+    # 默认值单源：games/config/bank.py DEFAULTS 表命中即用表值（行内兜底仅动态键时生效）
+    try:
+        if (sec, key) in _BANK_DEFAULTS:
+            default = _BANK_DEFAULTS[(sec, key)]
+    except Exception:
+        pass
+    return ST.cfgi(sec, key, default)
 
 
 def _disp_name(qq, gid=None):
@@ -250,4 +273,4 @@ def _ensure_target_qq(target, gid=None):
 
 
 
-__all__ = ["_MENU", "_acct", "_cd", "_disp_name", "_ensure_target_qq", "_extract_transfer_target", "_now_s", "_resolve_qq_from_name"]
+__all__ = ["_MENU", "_acct", "_cd", "_disp_name", "_ensure_target_qq", "_extract_transfer_target", "_now_s", "_resolve_qq_from_name", "cfgi", "GAMBLE_MULT", "REDPACK_MIN_DIV", "REDPACK_MAX_DIV"]

@@ -1,5 +1,11 @@
 # 更新日志
 
+## v2026w0911k
+- 🎛️ **可调集全系统**：`games/config/` 补齐 sign/bank/guild/adventure/ent（DEFAULTS＋公式参数），
+  bank 经 `common` 转手、ent 经 `content` 转手（`__all__` 已同步），其余单文件自包 wrapper；
+  表优先、动态键走行内；同键多值（冒险结局键/炸弹键）故意不进表。零语义差。
+  附：接线时 replaceAll 误改 wrapper 自身致 sign 无限递归，被探针当场抓获（门禁有效性实证）。
+
 ## v2026w0911j
 - 🎛️ **可调集落地**：新增 `games/config/`（slave 27 默认＋21 公式参数 / spirit 13 默认＋9 公式参数 /
   shop 坐骑两表＋池常量），纯数据无导入；引擎查表（表优先，行内兜底仅动态键），公式具名引用；

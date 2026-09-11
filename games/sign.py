@@ -10,6 +10,29 @@ except ImportError:
         from . import storage as ST
     except ImportError:
         from core import storage as ST
+try:
+    from .config.sign import DEFAULTS as _SIGN_DEFAULTS, CHAIN_CAP
+except ImportError:
+    from games.config.sign import DEFAULTS as _SIGN_DEFAULTS, CHAIN_CAP  # type: ignore
+
+
+def cfgi(sec, key, default=0):
+    # 默认值单源：games/config/sign.py DEFAULTS 表命中即用表值（行内兜底仅动态键时生效）
+    try:
+        if (sec, key) in _SIGN_DEFAULTS:
+            default = _SIGN_DEFAULTS[(sec, key)]
+    except Exception:
+        pass
+    return ST.cfgi(sec, key, default)
+
+
+def cfg(sec, key, default=""):
+    try:
+        if (sec, key) in _SIGN_DEFAULTS:
+            default = _SIGN_DEFAULTS[(sec, key)]
+    except Exception:
+        pass
+    return ST.cfg(sec, key, default)
 
 DAYS_CN = ("", "一", "二", "三", "四", "五", "六", "日")
 
@@ -62,7 +85,7 @@ def cmd_sign(gid, qq):
     a = _acct(gid, qq)
     today = _today().isoformat()
     if a.get("sign_date") == today:
-        return ST.cfg("签到配置", "重复签到文案",
+        return cfg("签到配置", "重复签到文案",
                       "亲，您今天已经签到过了，请明天继续吧！")
     total = int(float(a.get("sign_count", "0")))
     chain = int(float(a.get("consecutive_days", "0")))
@@ -71,11 +94,11 @@ def cmd_sign(gid, qq):
     chain = chain + 1 if prev == yest else 1
     # 签到奖励按区间(优先支持中英双向键与休闲高福利默认值)
     def _rng(cn_k, en_k, d_lo, d_hi):
-        lo = ST.cfgi("签到配置", cn_k + "下限", ST.cfgi("签到配置", en_k + "下限", d_lo))
-        hi = ST.cfgi("签到配置", cn_k + "上限", ST.cfgi("签到配置", en_k + "上限", d_hi))
+        lo = cfgi("签到配置", cn_k + "下限", cfgi("签到配置", en_k + "下限", d_lo))
+        hi = cfgi("签到配置", cn_k + "上限", cfgi("签到配置", en_k + "上限", d_hi))
         if lo > hi: lo, hi = hi, lo
         return random.randint(lo, hi)
-    base_cfg = ST.cfgi("签到配置", "基础奖励", 0)
+    base_cfg = cfgi("签到配置", "基础奖励", 0)
     if base_cfg:
         base = base_cfg
     else:
@@ -83,8 +106,8 @@ def cmd_sign(gid, qq):
     tili = _rng("体力", "stamina", 50, 100)
     meili = _rng("魅力", "charm", 15, 30)
     juan = _rng("奖券", "lottery_tickets", 3, 8)
-    bonus = ST.cfgi("签到配置", "连签加成", 100)
-    chain_bonus = bonus * min(chain, 30)
+    bonus = cfgi("签到配置", "连签加成", 100)
+    chain_bonus = bonus * min(chain, CHAIN_CAP)
     total += 1
     # 预取当前额外属性旧值，用于一次事务内计算新值（避免 3次 acct_add+acct_save 的 3锁3提交）
     cur_stam = int(float(a.get("stamina", "0") or 0))
@@ -209,12 +232,12 @@ def cmd_draw(gid, qq, amount=1):
     out_lines = []
     for i in range(amount):
         must_win = lose_streak >= 5
-        win = must_win or (random.randint(1, 100) <= ST.cfgi("抽奖配置", "中奖率", 70))
+        win = must_win or (random.randint(1, 100) <= cfgi("抽奖配置", "中奖率", 70))
         if win:
             pool = [
-                (ST.coin_name(), "coin", ST.cfgi("抽奖配置", "现金奖", 2000)),
-                ("体力", "stamina", ST.cfgi("抽奖配置", "体力奖", 60)),
-                ("魅力", "charm", ST.cfgi("抽奖配置", "魅力奖", 40)),
+                (ST.coin_name(), "coin", cfgi("抽奖配置", "现金奖", 2000)),
+                ("体力", "stamina", cfgi("抽奖配置", "体力奖", 60)),
+                ("魅力", "charm", cfgi("抽奖配置", "魅力奖", 40)),
             ]
             name_cn, kind, val = random.choice(pool)
             if kind == "coin":
@@ -265,7 +288,7 @@ def cmd_gift(gid, qq, kind, amount):
     if amount > 999:
         return f"亲，{kind_cn}单次购买数量上限为999！"
     key = "stamina" if kind == "stamina" else "charm"
-    price = ST.cfgi("签到配置", "体力价格" if kind == "stamina" else "魅力价格", 30 if kind == "stamina" else 3)
+    price = cfgi("签到配置", "体力价格" if kind == "stamina" else "魅力价格", 30 if kind == "stamina" else 3)
     total = price * amount
     have = ST.coins_get(gid, qq)
     dep = ST.acct(gid, qq).int("deposit")
@@ -289,10 +312,10 @@ def cmd_newbie(gid, qq):
     a = _acct(gid, qq)
     if a.get("novice_gift", "") == "1":
         return "亲，您已经领取过新手礼包了，无法再次领取！"
-    money = ST.cfgi("新手配置", "现金", ST.cfgi("新手配置", "新手金币", ST.cfgi("新手配置", "money", 10000)))
-    tili = ST.cfgi("新手配置", "体力", ST.cfgi("新手配置", "新手体力", ST.cfgi("新手配置", "stamina", 300)))
-    meili = ST.cfgi("新手配置", "魅力", ST.cfgi("新手配置", "新手魅力", ST.cfgi("新手配置", "charm", 100)))
-    jq = ST.cfgi("新手配置", "奖券", ST.cfgi("新手配置", "新手奖券", ST.cfgi("新手配置", "lottery_tickets", 15)))
+    money = cfgi("新手配置", "现金", cfgi("新手配置", "新手金币", cfgi("新手配置", "money", 10000)))
+    tili = cfgi("新手配置", "体力", cfgi("新手配置", "新手体力", cfgi("新手配置", "stamina", 300)))
+    meili = cfgi("新手配置", "魅力", cfgi("新手配置", "新手魅力", cfgi("新手配置", "charm", 100)))
+    jq = cfgi("新手配置", "奖券", cfgi("新手配置", "新手奖券", cfgi("新手配置", "lottery_tickets", 15)))
     # 单事务原子领取：钱包+账户同锁一次提交，避免签到并发时 database is locked
     try:
         cur_stam = int(float(a.get("stamina", "0") or 0))
@@ -330,7 +353,7 @@ def cmd_like(gid, qq):
     if a.get("like_date", "") == today:
         return "您今日已经点过赞，明天再来~"
     a.set("like_date", today)
-    n = ST.cfgi("点赞配置", "点赞数", 5)
+    n = cfgi("点赞配置", "点赞数", 5)
     try:
         n = max(1, min(int(n), 10))  # OneBot send_like 单次上限 10
     except Exception:

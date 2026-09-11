@@ -30,7 +30,21 @@ def _invalidate_guild_cache(gid):
         pass
 
 
-_cfg, _cfgi = ST.cfg_scope("帮派配置")
+_cfg, _cfgi0 = ST.cfg_scope("帮派配置")
+try:
+    from .config.guild import DEFAULTS as _GUILD_DEFAULTS, CONTRIBUTE_DIV, WELFARE_PER_GONG
+except ImportError:
+    from games.config.guild import DEFAULTS as _GUILD_DEFAULTS, CONTRIBUTE_DIV, WELFARE_PER_GONG  # type: ignore
+
+
+def _cfgi(key, default=0):
+    # 默认值单源：games/config/guild.py DEFAULTS 表命中即用表值
+    try:
+        if key in _GUILD_DEFAULTS:
+            default = _GUILD_DEFAULTS[key]
+    except Exception:
+        pass
+    return _cfgi0(key, default)
 
 
 def _acct(gid, qq):
@@ -353,9 +367,9 @@ def cmd_contribute(gid, qq, amt):
     if ST.coins_get(gid, qq) < amt:
         return f"笑~你没有那么多{ST.coin_name()}！"
     ST.coins_add(gid, qq, -amt)
-    g["gong"] = int(g.get("gong", 0)) + amt // 100
+    g["gong"] = int(g.get("gong", 0)) + amt // CONTRIBUTE_DIV
     _save_member(gid, qq, g)
-    return f"贡献成功！帮派帮贡 +{amt // 100}，你的贡献 {g['gong']}"
+    return f"贡献成功！帮派帮贡 +{amt // CONTRIBUTE_DIV}，你的贡献 {g['gong']}"
 
 
 def cmd_mine(gid, qq):
@@ -393,7 +407,7 @@ def cmd_welfare(gid, qq):
     if ST.recall_get(key, ""):
         return "亲，您今天已经领取过帮派福利了，明天再来吧！"
     base = _cfgi("福利基数", 4000)
-    got = base + int(g.get("gong", 0)) * 10
+    got = base + int(g.get("gong", 0)) * WELFARE_PER_GONG
     ST.coins_add(gid, qq, got)
     ST.recall_set(key, "1")
     return f"领取帮派福利成功！获得 {got}{ST.coin_name()}（基础{base}+帮贡奖励）"

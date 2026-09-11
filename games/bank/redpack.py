@@ -17,10 +17,10 @@ def cmd_redpack(gid, qq, amount, pwd=None):
     a = _acct(gid, qq)
     if _check_jail(a):
         return _show_jail(a)
-    min_amt = ST.cfgi("银行配置", "红包_最小金额", 2000)
-    max_amt = ST.cfgi("银行配置", "红包_最大金额", getattr(ST, "COIN_CAP", 100000000000))
-    cost_tili = ST.cfgi("银行配置", "红包_发体力", 2)
-    interval = ST.cfgi("银行配置", "红包_间隔时间", 60)
+    min_amt = cfgi("银行配置", "红包_最小金额", 2000)
+    max_amt = cfgi("银行配置", "红包_最大金额", getattr(ST, "COIN_CAP", 100000000000))
+    cost_tili = cfgi("银行配置", "红包_发体力", 2)
+    interval = cfgi("银行配置", "红包_间隔时间", 60)
     if amount < min_amt:
         return f"亲，发红包最小金额为：{min_amt}！请输入正确格式：发红包 金额"
     if amount > max_amt:
@@ -104,17 +104,17 @@ def cmd_recv_red(gid, qq, pwd):
             a = _acct(gid, qq)
             if a.get("redpack_code") == pwd:
                 return "你已经抢过这个红包了！"
-            cost_tili = ST.cfgi("银行配置", "红包_抢体力", 1)
-            gain_meili = ST.cfgi("银行配置", "红包_抢魅力", 10)
-            base_meili = ST.cfgi("银行配置", "红包_基本魅力", 1)
+            cost_tili = cfgi("银行配置", "红包_抢体力", 1)
+            gain_meili = cfgi("银行配置", "红包_抢魅力", 10)
+            base_meili = cfgi("银行配置", "红包_基本魅力", 1)
             if a.int("stamina") < cost_tili:
                 return f"体力不足，抢红包需要{cost_tili}体力！"
             total = int(row[1])
             if total <= 0:
                 return "红包已被抢空！"
             # 按剩余金额随机瓜分，避免超过剩余
-            lo = max(1, total // 20)
-            hi = max(1, total // 3)
+            lo = max(1, total // REDPACK_MIN_DIV)
+            hi = max(1, total // REDPACK_MAX_DIV)
             if lo > total:
                 lo = 1
             if hi > total:
@@ -158,9 +158,9 @@ def cmd_recv_red(gid, qq, pwd):
     a = _acct(gid, qq)
     if a.get("redpack_code") == pwd:
         return "你已经抢过这个红包了！"
-    cost_tili = ST.cfgi("银行配置", "红包_抢体力", 1)
-    gain_meili = ST.cfgi("银行配置", "红包_抢魅力", 10)
-    base_meili = ST.cfgi("银行配置", "红包_基本魅力", 1)
+    cost_tili = cfgi("银行配置", "红包_抢体力", 1)
+    gain_meili = cfgi("银行配置", "红包_抢魅力", 10)
+    base_meili = cfgi("银行配置", "红包_基本魅力", 1)
     if a.int("stamina") < cost_tili:
         return f"体力不足，抢红包需要{cost_tili}体力！"
     ST.acct_add(gid, qq, "stamina", -cost_tili)
@@ -168,7 +168,7 @@ def cmd_recv_red(gid, qq, pwd):
     # P0: 降级路径缺空包检查会凭空印钱
     if total <= 0:
         return "红包已被抢空！"
-    got = random.randint(max(1, total // 20), max(1, total // 3))
+    got = random.randint(max(1, total // REDPACK_MIN_DIV), max(1, total // REDPACK_MAX_DIV))
     ST.coins_add(gid, qq, got)
     ST.acct_add(gid, qq, "charm", gain_meili + base_meili)
     a.set("redpack_code", pwd)

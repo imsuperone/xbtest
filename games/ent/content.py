@@ -13,6 +13,29 @@ try:
     from ...core import storage as ST
 except ImportError:
     from core import storage as ST
+try:
+    from ..config.ent import DEFAULTS as _ENT_DEFAULTS
+except ImportError:
+    try:
+        from games.config.ent import DEFAULTS as _ENT_DEFAULTS  # type: ignore
+    except Exception:
+        _ENT_DEFAULTS = {}
+try:
+    from ..config.ent import (CHOUQIAN_P1, CHOUQIAN_P2, CHOUQIAN_P3,
+                              MORA_DRAW_BAND, JIELONG_MIN, JIELONG_MAX)
+except ImportError:
+    from games.config.ent import (CHOUQIAN_P1, CHOUQIAN_P2, CHOUQIAN_P3,  # type: ignore
+                                  MORA_DRAW_BAND, JIELONG_MIN, JIELONG_MAX)
+
+
+def cfgi(sec, key, default=0):
+    # 默认值单源：games/config/ent.py DEFAULTS 表命中即用表值（行内兜底仅动态键时生效）
+    try:
+        if (sec, key) in _ENT_DEFAULTS:
+            default = _ENT_DEFAULTS[(sec, key)]
+    except Exception:
+        pass
+    return ST.cfgi(sec, key, default)
 
 _MENU = (
     "🎮 娱乐系统\r\n"
@@ -49,8 +72,8 @@ def _fee(gid, qq, kind):
 
 def _ent_cost(gid, qq, prefix):
     """通用娱乐消耗：需要金钱 + 消耗体力（0=免费）"""
-    need = ST.cfgi("娱乐配置", prefix + "需要金钱", 0)
-    tili = ST.cfgi("娱乐配置", prefix + "消耗体力", 0)
+    need = cfgi("娱乐配置", prefix + "需要金钱", 0)
+    tili = cfgi("娱乐配置", prefix + "消耗体力", 0)
     if need and ST.coins_get(gid, qq) < need:
         return f"笑~你没有那么多{ST.coin_name()}（{prefix}需{need}）"
     if tili and ST.acct(gid, qq).int("stamina") < tili:
@@ -384,4 +407,5 @@ def _generate_solvable_24(max_try=100):
     return random.choice(fallback)
 
 
-__all__ = ["CHAIN_WORDS", "MIRI", "QUIZ", "TRICK", "_CHAIN_WORDS_CACHE", "_CHAIN_WORDS_CFG_RAW", "_MENU", "_PRE_SOLVABLE", "_can_make_24", "_can_make_24_cached", "_ensure_pre_solvable", "_ent_cost", "_fee", "_generate_solvable_24", "_get_chain_words", "_get_miri", "_get_quiz", "_get_trick", "_parse_custom_qa", "_parse_custom_words", "_safe_eval_24"]
+__all__ = ["CHAIN_WORDS", "MIRI", "QUIZ", "TRICK", "_CHAIN_WORDS_CACHE", "_CHAIN_WORDS_CFG_RAW", "_MENU", "_PRE_SOLVABLE", "_can_make_24", "_can_make_24_cached", "_ensure_pre_solvable", "_ent_cost", "_fee", "_generate_solvable_24", "_get_chain_words", "_get_miri", "_get_quiz", "_get_trick", "_parse_custom_qa", "_parse_custom_words", "_safe_eval_24", "cfgi",
+  "CHOUQIAN_P1", "CHOUQIAN_P2", "CHOUQIAN_P3", "MORA_DRAW_BAND", "JIELONG_MIN", "JIELONG_MAX"]

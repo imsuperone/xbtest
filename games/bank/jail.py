@@ -111,19 +111,19 @@ def cmd_bail(gid, qq, target, self_bail=False, kind="保释"):
     # 劫狱免费，仅需少量体力；保释收费
     if kind == "劫狱":
         fee = 0
-        tili = ST.cfgi("银行配置", "劫狱消耗体力", 5)
-        meli = ST.cfgi("银行配置", "劫狱魅力减少", 0)
+        tili = cfgi("银行配置", "劫狱消耗体力", 5)
+        meli = cfgi("银行配置", "劫狱魅力减少", 0)
         # 劫狱有独立冷却
-        ok, mins = _cd(a, "jailbreak_time", ST.cfgi("银行配置", "劫狱间隔", 5))
+        ok, mins = _cd(a, "jailbreak_time", cfgi("银行配置", "劫狱间隔", 5))
         if not ok:
             return f"{mins}分钟后再来劫狱吧！"
         a.set("jailbreak_time", _now_s())
     else:
-        fee_lo = ST.cfgi("银行配置", "保释金钱下限", 5000)
-        fee_hi = ST.cfgi("银行配置", "保释金钱上限", 10000)
+        fee_lo = cfgi("银行配置", "保释金钱下限", 5000)
+        fee_hi = cfgi("银行配置", "保释金钱上限", 10000)
         fee = random.randint(fee_lo, fee_hi) if fee_hi > fee_lo else fee_lo
-        tili = ST.cfgi("银行配置", "保释消耗体力", 15)
-        meli = ST.cfgi("银行配置", "保释魅力减少", 20)
+        tili = cfgi("银行配置", "保释消耗体力", 15)
+        meli = cfgi("银行配置", "保释魅力减少", 20)
     if fee and ST.coins_get(gid, qq) < fee:
         return f"亲，您的{ST.coin_name()}不足，无法{kind}！{kind}金需要{fee}{ST.coin_name()}！"
     if tili and a.int("stamina") < tili:
@@ -180,9 +180,9 @@ def cmd_jailbreak(gid, qq):
     cnt = int(a.get("escape_attempts", "0") or "0")
     if cnt >= 10:
         return "本轮牢狱越狱次数已达10次上限，请等待刑满或寻求保释/劫狱！"
-    tili = ST.cfgi("银行配置", "越狱消耗体力", 5)
-    meli = ST.cfgi("银行配置", "越狱魅力减少", 5)
-    prob = ST.cfgi("银行配置", "越狱成功概率", 25)
+    tili = cfgi("银行配置", "越狱消耗体力", 5)
+    meli = cfgi("银行配置", "越狱魅力减少", 5)
+    prob = cfgi("银行配置", "越狱成功概率", 25)
     if a.int("stamina") < tili:
         return f"亲，您的体力不足，无法越狱！越狱需要{tili}体力！"
     ST.acct_add(gid, qq, "stamina", -tili)
@@ -208,12 +208,12 @@ def cmd_go_jail(gid, qq):
         return "您已在监狱中，无需再次入狱！"
     key = f"jailgo_{gid}_{qq}_{dt.date.today()}"
     cnt = int(ST.recall_get(key, "0") or 0)
-    lim = ST.cfgi("银行配置", "进监狱次数", 8)
+    lim = cfgi("银行配置", "进监狱次数", 8)
     if lim <= 0:
         lim = 8
     if cnt >= lim:
         return f"亲，您今日主动入狱次数已达上限({lim}次)！"
-    add_stam = ST.cfgi("银行配置", "进监狱增加体力", 10)
+    add_stam = cfgi("银行配置", "进监狱增加体力", 10)
     if add_stam <= 0:
         add_stam = 10
     _jail_put(a, 10)

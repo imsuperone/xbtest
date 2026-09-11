@@ -17,7 +17,26 @@ except ImportError:
 
 from .text.text_adventure import MAPS, CHOICE_LABELS, RANDOM_EVENTS, MAP_SPECIFIC_EVENTS
 
-_cfg, _cfgi = ST.cfg_scope("冒险配置")
+_cfg, _cfgi0 = ST.cfg_scope("冒险配置")
+try:
+    from .config.adventure import (DEFAULTS as _ADV_DEFAULTS, ADV_TTL_MINS, BIAS_1, BIAS_2,
+                                   BIAS_3, BIAS_DEFAULT, BONUS_GAP, BONUS_FLIP, TRAP_FLIP,
+                                   EXCLUSIVE_CHANCE, REVIVE_CHANCE, CLEAR_MULT)
+except ImportError:
+    from games.config.adventure import (DEFAULTS as _ADV_DEFAULTS, ADV_TTL_MINS, BIAS_1, BIAS_2,  # type: ignore
+                                        BIAS_3, BIAS_DEFAULT, BONUS_GAP, BONUS_FLIP, TRAP_FLIP,
+                                        EXCLUSIVE_CHANCE, REVIVE_CHANCE, CLEAR_MULT)
+
+
+def _cfgi(key, default=0):
+    # 默认值单源：games/config/adventure.py DEFAULTS 表命中即用表值
+    # （结局金钱下限/上限两处含义不同，故意不进表，各走行内值）
+    try:
+        if key in _ADV_DEFAULTS:
+            default = _ADV_DEFAULTS[key]
+    except Exception:
+        pass
+    return _cfgi0(key, default)
 
 
 def _acct(gid, qq):
@@ -32,7 +51,7 @@ def _now():
     return int(time.time())
 
 
-_ADV_TTL = 30 * 60  # P1: 30分钟无操作自动过期，避免数字1/2/3被永久吞掉
+_ADV_TTL = ADV_TTL_MINS * 60  # P1: 无操作自动过期，避免数字1/2/3被永久吞掉
 
 def _cur(gid, qq):
     a = _acct(gid, qq)
@@ -129,7 +148,7 @@ def cmd_start(gid, qq, mapname):
 def _pick_event(mapname):
     # 60% 全局池，40% 地图专属，增加代入感
     pool = []
-    if random.random() < 0.4 and mapname in MAP_SPECIFIC_EVENTS:
+    if random.random() < EXCLUSIVE_CHANCE and mapname in MAP_SPECIFIC_EVENTS:
         pool = MAP_SPECIFIC_EVENTS[mapname]
         # 展开为 (text, kind)
     else:
@@ -164,26 +183,26 @@ def cmd_choose(gid, qq, n):
 
     # 根据 kind 与随机分支决定奖励/惩罚
     # 选择影响概率：选 1 偏向 bonus，选 2 平衡，选 3 偏向 trap 但 high reward
-    bias = {1: 0.65, 2: 0.5, 3: 0.4}.get(choice, 0.5)
+    bias = {1: BIAS_1, 2: BIAS_2, 3: BIAS_3}.get(choice, BIAS_DEFAULT)
     r = random.random()
     # 结合 bias 调整 kind 的实际走向
     if kind == "bonus":
         # bonus 事件有小概率反转为 trap（冒进惩罚）
-        if r > 0.85:
+        if r > BONUS_FLIP:
             kind = "trap"
     elif kind == "trap":
-        if r < 0.3:
+        if r < TRAP_FLIP:
             kind = "bonus"
     # 最终按 bias 再校正
     if r < bias and kind == "trap":
         # 好运抵消陷阱
         kind = "bonus"
-    elif r > bias + 0.3 and kind == "bonus":
+    elif r > bias + BONUS_GAP and kind == "bonus":
         kind = "trap"
 
     if kind == "bonus":
-        # 20% 额外复活币
-        if random.random() < 0.35:
+        # 35% 额外复活币
+        if random.random() < REVIVE_CHANCE:
             ST.coins_add(gid, qq, money)
             ST.acct_add(gid, qq, "revive_coins", 1)
             outcome = f"{event_text}\r\n✨ 关键抉择生效！奖励{money}{ST.coin_name()}，复活币+1（选择{choice}的勇气得到回应）"
@@ -207,9 +226,9 @@ def cmd_choose(gid, qq, n):
             _elo, _ehi = (_end_lo, _end_hi) if _end_lo <= _end_hi else (_end_hi, _end_lo)
             _elo = max(0, _elo)
             _ehi = max(0, _ehi)
-            reward = random.randint(_elo, _ehi) if _ehi > 0 else int(max(lo, hi) * 1.8)
+            reward = random.randint(_elo, _ehi) if _ehi > 0 else int(max(lo, hi) * CLEAR_MULT)
         else:
-            reward = int(max(lo, hi) * 1.8)
+            reward = int(max(lo, hi) * CLEAR_MULT)
         ST.coins_add(gid, qq, reward)
         _save(gid, qq, {})
         return (

@@ -34,21 +34,21 @@ def handle(gid, qq, raw):
             return "今日已抽过签，明日再来试试手气吧～"
         ST.recall_set(f"chouqian_{gid}_{qq}", cur_day)
         n = random.randint(1, 100)
-        if n <= 15:
+        if n <= CHOUQIAN_P1:
             r = "大吉"
-            reward = ST.cfgi("娱乐配置", "抽签大吉奖励", 888)
+            reward = cfgi("娱乐配置", "抽签大吉奖励", 888)
             ST.coins_add(gid, qq, reward)
             ST.acct_add(gid, qq, "charm", 2)
             return f"你抽到了【{r}】🎉 今日运势极佳！奖励{reward}{ST.coin_name()} 魅力+2，好好把握哦～"
-        elif n <= 40:
+        elif n <= CHOUQIAN_P2:
             r = "上签"
-            reward = ST.cfgi("娱乐配置", "抽签上签奖励", 388)
+            reward = cfgi("娱乐配置", "抽签上签奖励", 388)
             ST.coins_add(gid, qq, reward)
             ST.acct_add(gid, qq, "charm", 1)
             return f"你抽到了【{r}】✨ 运势不错！奖励{reward}{ST.coin_name()} 魅力+1"
-        elif n <= 70:
+        elif n <= CHOUQIAN_P3:
             r = "中签"
-            reward = ST.cfgi("娱乐配置", "抽签中签奖励", 88)
+            reward = cfgi("娱乐配置", "抽签中签奖励", 88)
             if reward:
                 ST.coins_add(gid, qq, reward)
             return f"你抽到了【{r}】 平稳之签，奖励{reward}{ST.coin_name()}，继续加油～"
@@ -278,13 +278,13 @@ def handle(gid, qq, raw):
         choice = {"石头": 0, "剪刀": 1, "布": 2}[m.group(1)]
         names = ["石头", "剪刀", "布"]
         # 胜率走配置 猜拳成功概率%（需求19 默认50）
-        win_prob = ST.cfgi("娱乐配置", "猜拳成功概率", 50)
+        win_prob = cfgi("娱乐配置", "猜拳成功概率", 50)
         r = random.random() * 100
         if r < win_prob:
             ai = (choice + 2) % 3  # 必输给玩家
             res = f"我出{names[ai]}！你赢了！"
-            coin = ST.cfgi("娱乐配置", "猜拳奖励金币", 58)
-            meili = ST.cfgi("娱乐配置", "猜拳奖励魅力", 1)
+            coin = cfgi("娱乐配置", "猜拳奖励金币", 58)
+            meili = cfgi("娱乐配置", "猜拳奖励魅力", 1)
             if coin:
                 ST.coins_add(gid, qq, coin)
             if meili:
@@ -292,7 +292,7 @@ def handle(gid, qq, raw):
             if coin or meili:
                 res += f" 奖励{coin}{ST.coin_name()}" + (f" 魅力+{meili}" if meili else "")
             return res
-        elif r < win_prob + 20:
+        elif r < win_prob + MORA_DRAW_BAND:
             ai = choice
             return f"我出{names[ai]}！平局！"
         else:
@@ -380,8 +380,8 @@ def _play(gid, qq, text):
                 S.recall_set(f"ent_game_{gid}", "")
                 # 奖励（全量可配，默认值保持旧行为）
                 cfg_prefix = _LABEL_CFG.get(label, label)
-                coin = S.cfgi("娱乐配置", f"{cfg_prefix}奖励金币", 88 if label!="答题" else 128)
-                meili = S.cfgi("娱乐配置", f"{cfg_prefix}奖励魅力", 1)
+                coin = cfgi("娱乐配置", f"{cfg_prefix}奖励金币", 88 if label!="答题" else 128)
+                meili = cfgi("娱乐配置", f"{cfg_prefix}奖励魅力", 1)
                 _reward(gid, qq, coin, meili)
                 return f"恭喜！【{label}】答案正确：{ans} 奖励{coin}{S.coin_name()} 魅力+{meili}"
             return f"答案不对，再想想~（发送【退出{label}】结束）"
@@ -423,8 +423,8 @@ def _play(gid, qq, text):
                     S.recall_set(f"guessnum_start_{gid}", "")
                     S.recall_set(f"guessnum_last_time_{gid}", "")
                     S.recall_set(f"ent_game_{gid}", "")
-                    coin = S.cfgi("娱乐配置", "猜数奖励金币", 188)
-                    meili = S.cfgi("娱乐配置", "猜数奖励魅力", 2)
+                    coin = cfgi("娱乐配置", "猜数奖励金币", 188)
+                    meili = cfgi("娱乐配置", "猜数奖励魅力", 2)
                     _reward(gid, qq, coin, meili)
                     return f"🎉 猜中啦！答案是 {n}！奖励{coin}{S.coin_name()} 魅力+{meili}"
                 return "📉 小了，再猜！" if v < n else "📈 大了，再猜！"
@@ -487,8 +487,8 @@ def _play(gid, qq, text):
                                 S.recall_set(f"game24_start_{gid}", "")
                                 S.recall_set(f"game24_last_time_{gid}", "")
                                 S.recall_set(f"ent_game_{gid}", "")
-                                coin = S.cfgi("娱乐配置", "二四点奖励金币", 128)
-                                meili = S.cfgi("娱乐配置", "二四点奖励魅力", 1)
+                                coin = cfgi("娱乐配置", "二四点奖励金币", 128)
+                                meili = cfgi("娱乐配置", "二四点奖励魅力", 1)
                                 _reward(gid, qq, coin, meili)
                                 return f"太棒了！『{t}』= 24，二四点通关！奖励{coin}{S.coin_name()} 魅力+{meili}"
                             return "算式得数不是 24，再试试~"
@@ -510,8 +510,8 @@ def _play(gid, qq, text):
                         if abs(val - 24) < 1e-6:
                             S.recall_set(f"game24_{gid}_{qq}", "")
                             S.recall_set(f"ent_game_{gid}", "")
-                            coin = S.cfgi("娱乐配置", "二四点奖励金币", 128)
-                            meili = S.cfgi("娱乐配置", "二四点奖励魅力", 1)
+                            coin = cfgi("娱乐配置", "二四点奖励金币", 128)
+                            meili = cfgi("娱乐配置", "二四点奖励魅力", 1)
                             _reward(gid, qq, coin, meili)
                             return f"太棒了！『{t}』= 24，二四点通关！奖励{coin}{S.coin_name()} 魅力+{meili}"
                         return "算式得数不是 24，再试试~"
@@ -540,10 +540,10 @@ def _play(gid, qq, text):
                 return "接龙超过30秒无人作答，已自动结束~"
             if not _is_player(gid, qq, "chain"):
                 # 仅当非参与者尝试接龙（2-6字且首字接尾字）才提醒
-                if text and 2 <= len(text) <= 6 and not text.startswith(("开始", "加入", "退出")) and last and text[0] == last[-1]:
+                if text and JIELONG_MIN <= len(text) <= JIELONG_MAX and not text.startswith(("开始", "加入", "退出")) and last and text[0] == last[-1]:
                     return "您不是本局参与者，无法接龙！发送【加入接龙】加入吧~"
                 return None
-            if text and 2 <= len(text) <= 6 and not text.startswith(("开始", "加入", "退出")):
+            if text and JIELONG_MIN <= len(text) <= JIELONG_MAX and not text.startswith(("开始", "加入", "退出")):
                 if last:
                     # 关键优化：首字不匹配上一词尾字，说明参与者在群里正常闲聊，绝不拦截轰炸，直接静默放行！
                     if text[0] != last[-1]:
@@ -570,8 +570,8 @@ def _play(gid, qq, text):
                 S.recall_set(f"chain_last_qq_{gid}", str(qq))
                 S.recall_set(f"chain_last_time_{gid}", str(now))
 
-                coin = S.cfgi("娱乐配置", "接龙奖励金币", 20)
-                meili = S.cfgi("娱乐配置", "接龙奖励魅力", 0)
+                coin = cfgi("娱乐配置", "接龙奖励金币", 20)
+                meili = cfgi("娱乐配置", "接龙奖励魅力", 0)
                 _reward(gid, qq, coin, meili)
                 if meili > 0:
                     return f"→ {text} 奖励{coin}{S.coin_name()} 魅力+{meili}"
