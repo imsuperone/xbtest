@@ -672,7 +672,7 @@ function renderGroupsTable() {
     const testMark = g.is_test ? ` <small style="color:var(--muted)">(测试)</small>` : "";
     const maint = g.maintenance === true;
     const maintBadge = maint ? `<span class="badge badge-bad">维修中</span>` : `<span style="color:var(--muted)">—</span>`;
-    return `<tr><td><code>${esc(gid)}</code>${testMark}</td><td>${g.member_count || 0}</td><td>${badge}</td><td>${maintBadge}</td><td><label class="switch" title="本群维修开关"><input type="checkbox" data-maint-gid="${esc(gid)}" ${maint ? "checked" : ""}><span class="slider-toggle"></span></label> <button class="ghost sm del" data-del="${esc(gid)}" title="删除该群配置">🗑️ 删除</button></td><td><label class="switch" title="群聊开关"><input type="checkbox" data-gid="${esc(gid)}" ${on ? "checked" : ""}><span class="slider-toggle"></span></label></td></tr>`;
+    return `<tr><td><code>${esc(gid)}</code>${testMark}</td><td>${g.member_count || 0}</td><td>${badge}</td><td>${maintBadge}</td><td><label class="switch" title="本群维修开关"><input type="checkbox" data-maint-gid="${esc(gid)}" ${maint ? "checked" : ""}><span class="slider-toggle"></span></label></td><td><label class="switch" title="群聊开关"><input type="checkbox" data-gid="${esc(gid)}" ${on ? "checked" : ""}><span class="slider-toggle"></span></label> <button class="ghost sm del" data-del="${esc(gid)}" title="删除该群配置">🗑️ 删除</button></td></tr>`;
   }).join("");
   box.querySelectorAll("input[data-gid]").forEach(inp => {
     inp.addEventListener("change", async () => {
@@ -2256,6 +2256,13 @@ const SHOP_ATTR_OPTS = ["精灵球", "等级", "HP", "攻击", "防御", "特攻
 const SHOP_ATTR_HELP = { "精灵球": "收服率%", "等级": "奇异甜食+Lv数", "HP": "吐司类+生命", "攻击": "+攻击", "防御": "+防御", "特攻": "+特攻", "特防": "+特防", "进化": "进化液=1" };
 
 async function loadSpirits() {
+  // 先占位（桥慢时不再空白卡死），两次渲染并一次（refreshSpiritViews 内已含 renderShop）
+  try {
+    const _ab = document.getElementById("atlasBox");
+    if (_ab) _ab.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted)">图鉴加载中…</div>`;
+    const _sb = document.getElementById("shopSpiritBox");
+    if (_sb) _sb.innerHTML = `<div style="text-align:center;padding:16px;color:var(--muted)">商城加载中…</div>`;
+  } catch (e) {}
   try {
     const res = await getBridge().apiGet("spirits");
     SPIRIT = res || {};
@@ -2292,10 +2299,13 @@ async function loadSpirits() {
     SPIRIT_OPEN = {};
     const msg = document.getElementById("spiritMsg");
     if (msg) { msg.className = "msg"; msg.textContent = ""; }
-    try { renderShop(); } catch (e) {}
-    refreshSpiritViews();
+    try { refreshSpiritViews(); } catch (e) { toast("图鉴渲染失败: " + (e.message || e), "bad"); }
   } catch (e) {
     err("spirits: " + e.message);
+    try {
+      const _ab = document.getElementById("atlasBox");
+      if (_ab) _ab.innerHTML = `<div style="text-align:center;padding:24px;color:var(--bad)">图鉴加载失败: ${esc(e.message || e)}<br><button class="ghost sm" onclick="loadSpirits()">重试</button></div>`;
+    } catch (_e) {}
   }
 }
 
@@ -2395,9 +2405,15 @@ function _renameSpirit(oldName, newName) {
 
 // 地图卡片 HTML（图鉴主体与总览精灵页签共用，同一可编辑样式）
 function spiritMapCardsHTML(mapNames, maps, spirits, q) {
+  // 脏条目隔离：单地图数据坏只跳过本卡，不整页空白（曾整页卡死）
   return mapNames.map((mname) => {
-    const d = maps[mname] || {};
-    const drops = (d.drops || []).map(String);
+    try {
+      const raw = (maps && maps[mname]) || {};
+      const d = (raw && typeof raw === "object" && !Array.isArray(raw)) ? raw : {};
+      let drops = d.drops;
+      if (typeof drops === "string") drops = drops.split(/[,，]/).map((s) => String(s || "").trim()).filter(Boolean);
+      if (!Array.isArray(drops)) drops = [];
+      drops = drops.map(String);
     const open = q ? true : !!SPIRIT_OPEN[mname];
     return `<div class="s-mapcard ${open ? "open" : ""}" data-map="${esc(mname)}">
       <div class="s-maphead" data-map-toggle="${esc(mname)}">
@@ -2417,6 +2433,9 @@ function spiritMapCardsHTML(mapNames, maps, spirits, q) {
         <button class="ghost" data-add-spirit="${esc(mname)}">＋ 添加精灵</button>
       </div>
     </div>`;
+    } catch (e) {
+      return `<div class="s-mapcard" style="border-color:var(--bad)"><div class="s-maphead"><span class="s-mapname">⚠️ ${esc(mname)} 数据损坏已跳过</span></div></div>`;
+    }
   }).join("");
 }
 

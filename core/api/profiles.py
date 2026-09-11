@@ -288,15 +288,73 @@ def _raw_spirit_cfg(key):
     except Exception:
         return {}
     if isinstance(v, dict):
-        return v
+        return _coerce_atlas_section(key, v)
     if v:
         try:
             d = json.loads(v)
             if isinstance(d, dict):
-                return d
+                return _coerce_atlas_section(key, d)
         except Exception:
             pass
     return {}
+def _coerce_atlas_section(key, val):
+    """图鉴读出口径整形（与保存清洗同构）：坏条目就地规范化，脏 sidecar 不再卡死前端渲染。
+    只整 WebUI 下发口径，引擎 _SPIRITS/_MAPS/_SHOP 语义不动。"""
+    try:
+        if not isinstance(val, dict):
+            return {}
+        if key == "maps":
+            out = {}
+            for n, m in val.items():
+                if not isinstance(m, dict):
+                    m = {}
+                try:
+                    lv = int(float(m.get("lv", 1) or 1))
+                except Exception:
+                    lv = 1
+                drops = m.get("drops", [])
+                if isinstance(drops, str):
+                    drops = [s.strip() for s in re.split(r"[,，]", drops) if s.strip()]
+                if not isinstance(drops, list):
+                    drops = []
+                out[str(n)] = {"lv": lv if lv >= 1 else 1,
+                               "drops": [str(x) for x in drops if str(x).strip()]}
+            return out
+        if key == "spirits":
+            out = {}
+            for n, it in val.items():
+                if not isinstance(it, dict):
+                    continue
+                o = {"type": str(it.get("type", "") or "")}
+                for f in ("hp", "atk", "def", "spa", "spd", "spe", "lv"):
+                    try:
+                        o[f] = int(float(it.get(f, 0) or 0))
+                    except Exception:
+                        o[f] = 0
+                o["evolve"] = str(it.get("evolve", "") or "")
+                o["img"] = str(it.get("img", "") or "")
+                out[str(n)] = o
+            return out
+        if key == "shop":
+            out = {}
+            for n, it in val.items():
+                if not isinstance(it, dict):
+                    continue
+                try:
+                    price = int(float(it.get("price", 0) or 0))
+                except Exception:
+                    price = 0
+                try:
+                    effect = int(float(it.get("effect", 0) or 0))
+                except Exception:
+                    effect = 0
+                out[str(n)] = {"price": price if price >= 0 else 0,
+                               "attr": str(it.get("attr", "") or ""),
+                               "effect": effect if effect >= 0 else 0}
+            return out
+    except Exception:
+        pass
+    return val if isinstance(val, dict) else {}
 def _load_spirit_data():
     try:
         try:
@@ -306,7 +364,9 @@ def _load_spirit_data():
         sp = dict(spirit._SPIRITS() or {})  # type: ignore
         mp = dict(spirit._MAPS() or {})
         sh = dict(spirit._SHOP() or {})
-        return {"spirits": sp, "maps": mp, "shop": sh}
+        return {"spirits": _coerce_atlas_section("spirits", sp),
+                "maps": _coerce_atlas_section("maps", mp),
+                "shop": _coerce_atlas_section("shop", sh)}
     except Exception:
         try:
             try:
