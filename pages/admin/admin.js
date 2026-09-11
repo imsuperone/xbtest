@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0911c";
+const FRONTEND_VER = "2026w0911d";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1687,7 +1687,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0911c"
+        version: res.version || "2026w0911d"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -2324,14 +2324,14 @@ async function loadSpirits(force) {
     SPIRIT_OPEN = {};
     const msg = document.getElementById("spiritMsg");
     if (msg) { msg.className = "msg"; msg.textContent = ""; }
-    try { refreshSpiritViews(); } catch (e) { toast("图鉴渲染失败: " + (e.message || e), "bad"); }
+    refreshSpiritViews();
   } catch (e) {
     err("spirits: " + e.message);
-    // 失败兜底：先试缓存渲染（旧数据可看），再不行两盒同显示可重试错误（曾商城盒永久“加载中”假死）
-    try { refreshSpiritViews(); } catch (_e) {}
+    // 失败兜底：有缓存才试渲染旧数据（无缓存不掩盖，直接报错重试，防渲染默认值掩盖失败）
+    try { if (typeof SPIRIT !== "undefined" && SPIRIT && Object.keys(SPIRIT).length) refreshSpiritViews(); } catch (_e) {}
     try {
       const _ab = document.getElementById("atlasBox");
-      if (_ab && !_ab.innerHTML.trim()) _ab.innerHTML = `<div style="text-align:center;padding:24px;color:var(--bad)">图鉴加载失败: ${esc(e.message || e)}<br><button class="ghost sm" onclick="loadSpirits()">重试</button></div>`;
+      if (_ab && (/加载中/.test(_ab.innerHTML || "") || !_ab.innerHTML.trim())) _ab.innerHTML = `<div style="text-align:center;padding:24px;color:var(--bad)">图鉴加载失败: ${esc(e.message || e)}<br><button class="ghost sm" onclick="loadSpirits()">重试</button></div>`;
       const _sb = document.getElementById("shopSpiritBox");
       if (_sb && /加载中/.test(_sb.innerHTML || "")) _sb.innerHTML = `<div style="text-align:center;padding:16px;color:var(--bad)">商城加载失败，可<button class="ghost sm" onclick="loadSpirits()">重试</button></div>`;
     } catch (_e) {}
@@ -5235,6 +5235,12 @@ async function setUpdateChannel(c) {
   if (nc !== "正式" && nc !== "BETA") {
     // 后端无回执（旧后端无此路由或网络不通）：不玩乐观切换，直接报错
     toast("切换失败：后端无响应（请确认已更新到含通道功能的新版并完全重启）", "bad", 5000);
+    await loadUpdateChannel();
+    return;
+  }
+  if (nc !== c) {
+    // 后端回执与请求不一致（未持久化）：不谎报成功，直接报错并重读
+    toast("切换失败：后端返回" + (nc === "正式" ? "正式版" : "BETA版") + "，与请求不一致，已重读", "bad", 5000);
     await loadUpdateChannel();
     return;
   }

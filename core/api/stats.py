@@ -495,7 +495,7 @@ def _get_local_version(plugin_base=""):
         return _gv(plugin_base)
     except Exception:
         pass
-    return "2026w0911c"
+    return "2026w0911d"
 
 
 def _parse_version_tuple(v_str):
@@ -655,14 +655,24 @@ async def handle_version_check(request=None, plugin_base=""):
             channel = get_req_query(request, "channel", "")
     except Exception:
         pass
+    if (not channel or channel.strip() not in UPDATE_CHANNELS):
+        # 官方 proxy 直读（真机唯一真相，request=None 时唯一有效路）
+        try:
+            from astrbot.api.web import request as _proxy
+            try:
+                channel = str(_proxy.query.get("channel", "") or "")
+            except Exception:
+                pass
+        except Exception:
+            pass
     channel = (channel or "").strip()
     if channel not in UPDATE_CHANNELS:
         channel = _update_channel()
     repo = _channel_repo(channel)
     now = time.time()
-    # 成功/失败分级缓存（按通道隔离：切通道即重检）
+    # 成功/失败分级缓存（按通道隔离：切通道即重检；无通道键旧缓存一律 miss 重检）
     if (_LAST_CHECK_RES is not None
-            and _LAST_CHECK_RES.get("channel", "正式") == channel):
+            and _LAST_CHECK_RES.get("channel") == channel):
         _failed = bool(_LAST_CHECK_RES.get("detect_error") or _LAST_CHECK_RES.get("error"))
         _ttl = _CHECK_FAIL_TTL if _failed else _CHECK_CACHE_TTL
         if (now - _LAST_CHECK_TIME) < _ttl:
@@ -673,7 +683,8 @@ async def handle_version_check(request=None, plugin_base=""):
         try:
             for _ in range(16):
                 await asyncio.sleep(0.5)
-                if _LAST_CHECK_TIME > _t0 and _LAST_CHECK_RES is not None:
+                if (_LAST_CHECK_TIME > _t0 and _LAST_CHECK_RES is not None
+                        and _LAST_CHECK_RES.get("channel") == channel):
                     return no_cache_response(json_response(_LAST_CHECK_RES))
                 if _CHECK_RUNNING_SINCE <= 0:
                     break
@@ -681,7 +692,7 @@ async def handle_version_check(request=None, plugin_base=""):
             pass
         now = time.time()
         if (_LAST_CHECK_RES is not None
-                and _LAST_CHECK_RES.get("channel", "正式") == channel
+                and _LAST_CHECK_RES.get("channel") == channel
                 and (now - _LAST_CHECK_TIME) < _CHECK_CACHE_TTL):
             return no_cache_response(json_response(_LAST_CHECK_RES))
     # 成为拥有者执行检测
@@ -706,7 +717,8 @@ async def handle_version_check(request=None, plugin_base=""):
 
 
 async def handle_version_channel(request=None):
-    """更新通道读写：GET 查当前；POST {channel: 正式/BETA} 切换（记忆进 recall，检测即时跟随）"""
+    """更新通道读写：GET 查当前；POST {channel: 正式/BETA} 切换（记忆进 recall，检测即时跟随）。
+    取参全收：dict/body/query/官方 proxy（request=None 真机路），防桥转发形态差异致切换无效。"""
     try:
         data = None
         if isinstance(request, dict):
@@ -716,13 +728,48 @@ async def handle_version_channel(request=None):
                 data = await get_req_json(request, default={})
             except Exception:
                 data = {}
-        if isinstance(data, dict):
-            _c = str(data.get("channel") or "").strip()
-            if _c in UPDATE_CHANNELS:
+        _c = ""
+        try:
+            if isinstance(data, dict) and str(data.get("channel") or "").strip() in UPDATE_CHANNELS:
+                _c = str(data.get("channel")).strip()
+        except Exception:
+            pass
+        if not _c:
+            try:
+                _q = get_req_query(request, "channel", "")
+                if str(_q or "").strip() in UPDATE_CHANNELS:
+                    _c = str(_q).strip()
+            except Exception:
+                pass
+        if not _c:
+            # 官方 proxy 直读（request=None 真机路；body/query 双收）
+            try:
+                from astrbot.api.web import request as _proxy
                 try:
-                    ST.recall_set("update_channel", _c)
+                    _jb = _proxy.json
+                    if callable(_jb):
+                        import inspect as _ins
+                        _r = _jb(default={})
+                        if _ins.isawaitable(_r):
+                            _r = await _r
+                        if isinstance(_r, dict) and str(_r.get("channel") or "").strip() in UPDATE_CHANNELS:
+                            _c = str(_r.get("channel")).strip()
                 except Exception:
                     pass
+                if not _c:
+                    try:
+                        _pq = str(_proxy.query.get("channel", "") or "").strip()
+                        if _pq in UPDATE_CHANNELS:
+                            _c = _pq
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        if _c in UPDATE_CHANNELS:
+            try:
+                ST.recall_set("update_channel", _c)
+            except Exception:
+                pass
     except Exception:
         pass
     return json_response({"ok": True, "channel": _update_channel(), "channels": list(UPDATE_CHANNELS)})
