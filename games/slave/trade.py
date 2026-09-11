@@ -64,7 +64,7 @@ def cmd_buy_slave(gid, qq, target, st):
     uset(tgt, "purchase_price", str(price))
     uset(tgt, "purchase_time", _dt.datetime.now().strftime("%Y年%m月%d日%H时%M分%S秒"))
     uset(tgt, "_work_wage", "")
-    newp = min(1000000, int(price * cfgf("费用配置", "买入身价上涨", 1.25)))
+    newp = min(_S.MAX_PRICE, int(price * cfgf("费用配置", "买入身价上涨", _S.PRICE_UP)))
     uset(tgt, "price", str(newp))
     tn = uname(st, tid)
     head = _S.T.BUY_OK_HEAD.format(who=tn)

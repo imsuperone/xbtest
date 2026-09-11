@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """astrbot_plugin_xbbot_beta: 小白测试版统一模块 v2(奴隶/签到/银行/娱乐/群管 + WebUI 管理台 Pages) — v0.53 优化版"""
 import os
+import threading as _threading_mod
 from importlib import import_module
 from typing import Optional
 
@@ -143,11 +144,27 @@ except Exception:
 PLUGIN_REPO = "https://github.com/imsuperone/xb"
 
 # 消息处理定长线程池：突发千群不再打爆默认无限池，与 ST._LOCK 串行叠加可控
-try:
-    from concurrent.futures import ThreadPoolExecutor as _TPE
-    _XB_EXEC = _TPE(max_workers=12, thread_name_prefix="xbb-msg")
-except Exception:
-    _XB_EXEC = None
+# import 期不建池（工具链 import 零线程）：首个 XbBot 实例化/首消息时懒建，全局单例，永不 shutdown
+_XB_EXEC = None
+_XB_EXEC_WORKERS = 12
+_XB_EXEC_LOCK = _threading_mod.Lock()
+
+
+def _get_exec():
+    """消息线程池懒单例：并发度 12＋线程名前缀 xbb-msg 不变，语义与旧 import 期建池一致"""
+    global _XB_EXEC
+    ex = _XB_EXEC
+    if ex is not None:
+        return ex
+    with _XB_EXEC_LOCK:
+        if _XB_EXEC is not None:
+            return _XB_EXEC
+        try:
+            from concurrent.futures import ThreadPoolExecutor as _TPE
+            _XB_EXEC = _TPE(max_workers=_XB_EXEC_WORKERS, thread_name_prefix="xbb-msg")
+        except Exception:
+            _XB_EXEC = None
+        return _XB_EXEC
 
 _ENGINES = None  # 模块级单例：每消息重建10项字典+线程切换约0.2-0.5ms，启动即冻结
 try:
@@ -233,7 +250,8 @@ def _merge_persistent_config(data_dir):
 
 def _apply_fresh_casual(data_dir):
     """新装默认休闲（仅真新装：无持久配置＋空库；老用户升级绝不覆盖）。
-    无 AstrBot 下发可用时给出一套完整休闲数值，而非各引擎兜底拼凑的混合态。"""
+    无 AstrBot 下发可用时给出一套完整休闲数值，而非各引擎兜底拼凑的混合态。
+    只改内存＋bump（返回 True 表脏），落盘由 XbBot.__init__ 尾部统一一次完成，省重复全量序列化。"""
     try:
         if os.path.isfile(os.path.join(data_dir, "config.json")):
             return False
@@ -274,11 +292,7 @@ def _apply_fresh_casual(data_dir):
                 ST._bump_config_ver()
         except Exception:
             pass
-        try:
-            ST.save_config()
-            ST.sync_astrbot_config(ST._CONFIG)
-        except Exception:
-            pass
+        # 落盘合并到 XbBot.__init__ 尾部一次完成（本函数只改内存＋bump，调用方统一 save+sync）
         return True
     except Exception:
         return False
@@ -360,6 +374,7 @@ _XB_WEBDAV_ROUTES = [
 class XbBot(Star):
     def __init__(self, context: Context, config: Optional[dict] = None):
         super().__init__(context)
+        _get_exec()  # 实例化时建消息池（import 期零线程；并发语义不变）
         cfg = _normalize_cfg(config) if isinstance(config, dict) and config else _fallback_cfg()
         _BASE = _PLUGIN_BASE
         try:
@@ -370,13 +385,18 @@ class XbBot(Star):
         except Exception:
             pass
         data_dir = ST.get_persistent_data_dir(_BASE) if hasattr(ST, "get_persistent_data_dir") else os.path.join(_BASE, "data")
+        if _logger_layer:
+            try:
+                _logger_layer.set_log_dir(os.path.join(data_dir, "logs"))
+            except Exception:
+                pass
         db_path = str(cfg.get("网络", {}).get("db_path", "") or "") or os.path.join(data_dir, "xb.db")
         ST.init(db_path, cfg)
         ST.set_config_path(os.path.join(data_dir, "config.json"))
         ST.set_backup_dir(os.path.join(data_dir, "backups"))
         ST.set_astrbot_config(config)
         _merge_persistent_config(data_dir)
-        _apply_fresh_casual(data_dir)
+        _need_save = bool(_apply_fresh_casual(data_dir))
         # DB 镜像最后一道兜底：文件也被污染时仍可从库恢复
         try:
             if hasattr(ST, "wd_cfg_restore"):
@@ -384,16 +404,13 @@ class XbBot(Star):
         except Exception:
             pass
         # 接龙奖励全局锁定 20 金币 + 0 魅力：历史旧档（400+2 等）残留会被一次性纠正
+        # （只标脏，落盘并入尾部统一 save+sync）
         try:
             _ent = ST._CONFIG.setdefault("娱乐配置", {})
             if str(_ent.get("接龙奖励金币", "20")) != "20" or str(_ent.get("接龙奖励魅力", "0")) != "0":
                 _ent["接龙奖励金币"] = "20"
                 _ent["接龙奖励魅力"] = "0"
-                try:
-                    ST.save_config()
-                    ST.sync_astrbot_config(ST._CONFIG)
-                except Exception:
-                    pass
+                _need_save = True
         except Exception:
             pass
         self._db_path = db_path
@@ -417,13 +434,16 @@ class XbBot(Star):
                 sec["像素方块的硬核才是王道"] = {"command": "", "reply": "你的卡通画风根本没技巧"}
                 need = True
             if need:
-                try:
-                    ST.save_config()
-                    ST.sync_astrbot_config(ST._CONFIG)
-                except Exception:
-                    pass
+                _need_save = True
         except Exception:
             pass
+        # __init__ 种子三处（新装预设/接龙纠正/mj 示例）落盘合并为一次：全量 JSON＋文件＋DB 三写只付一次
+        if _need_save:
+            try:
+                ST.save_config()
+                ST.sync_astrbot_config(ST._CONFIG)
+            except Exception:
+                pass
         if _logger_layer:
             try:
                 _logger_layer.info(f"小白测试版 v{PLUGIN_VERSION} 启动初始化完成 (PID={os.getpid()}) 数据:{self._db_path}")
@@ -579,7 +599,7 @@ class XbBot(Star):
                 return
             # 单次 executor 内串行 handle + 迎新检查，闲聊消息不再付双倍线程切换
             reply = await _dispatch_reply.run_business(
-                gid, qq, raw, is_admin, _XB_EXEC, handle, ride)
+                gid, qq, raw, is_admin, _get_exec(), handle, ride)
             if reply:
                 async for r in _dispatch_reply.send_reply(
                         event, reply, qq, raw, gid, ST, _logger_layer,

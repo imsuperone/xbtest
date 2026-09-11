@@ -12,7 +12,8 @@ BOT_UIN = ""   # engine overwrites at runtime
 import os as _os
 import threading as _threading
 STAR_ATK = [100, 200, 400, 600, 800, 1600]  # 0-5星
-MAX_PRICE = 1000000
+MAX_PRICE = 1000000  # 奴隶身价上限（trade/combat 涨价钳位，坐骑/配置内的同名数值是目录数据勿动）
+PRICE_UP = 1.25  # 买入身价上涨默认倍率（与“费用配置.买入身价上涨”缺省一致）
 _CMD_LOCKS = {}
 _CMD_LOCKS_GUARD = _threading.Lock()
 try:

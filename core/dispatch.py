@@ -114,7 +114,11 @@ async def handle_test_menu(event, gid, qq, mods, slave):
             return
         except Exception as e:
             try:
-                print(f"forward failed: {e}")
+                try:
+                    from .logger import error as _log_err
+                except ImportError:
+                    from core.logger import error as _log_err  # type: ignore
+                _log_err(f"forward failed: {e}")
             except Exception:
                 pass
     merged = "\n\n===== 测试testxb =====\n\n".join(menus)

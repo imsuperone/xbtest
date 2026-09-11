@@ -232,7 +232,7 @@ def cmd_fight(gid, qq, target, st):
                 uset(U(st, victim), "purchase_price", str(int(uget(U(st, victim), "price") or 0)))
                 uset(U(st, victim), "purchase_time", cn_fmt(_time.time()))
                 uset(U(st, victim), "_work_wage", "")
-                newp = min(1000000, int(int(uget(U(st, victim), "price") or 0) * cfgf("费用配置", "买入身价上涨", 1.25)))
+                newp = min(_S.MAX_PRICE, int(int(uget(U(st, victim), "price") or 0) * cfgf("费用配置", "买入身价上涨", _S.PRICE_UP)))
                 uset(U(st, victim), "price", str(newp))
                 lines.append(_S.T.FIGHT_GET_SLAVE.format(slave="[" + uname(st, victim) + "]"))
         elif stealable:
@@ -253,7 +253,7 @@ def cmd_fight(gid, qq, target, st):
                 uset(U(st, victim), "purchase_price", str(int(uget(U(st, victim), "price") or 0)))
                 uset(U(st, victim), "purchase_time", cn_fmt(_time.time()))
                 uset(U(st, victim), "_work_wage", "")
-                newp = min(1000000, int(int(uget(U(st, victim), "price") or 0) * cfgf("费用配置", "买入身价上涨", 1.25)))
+                newp = min(_S.MAX_PRICE, int(int(uget(U(st, victim), "price") or 0) * cfgf("费用配置", "买入身价上涨", _S.PRICE_UP)))
                 uset(U(st, victim), "price", str(newp))
                 lines.append(_S.T.FIGHT_LOSE_SLAVE.format(slave="[" + uname(st, victim) + "]"))
             else:

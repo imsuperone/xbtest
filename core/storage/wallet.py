@@ -44,8 +44,8 @@ def coins_add(gid, qq, delta):
             newv = cur + int(delta)
             if newv < 0:
                 newv = 0
-            if newv > 100000000000:
-                newv = 100000000000
+            if newv > _S.COIN_CAP:
+                newv = _S.COIN_CAP
             _S._DB.execute(
                 "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
                 "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
@@ -72,8 +72,8 @@ def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
             newv = cur + int(delta_coins)
             if newv < 0:
                 newv = 0
-            if newv > 100000000000:
-                newv = 100000000000
+            if newv > _S.COIN_CAP:
+                newv = _S.COIN_CAP
             _S._DB.execute(
                 "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
                 "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
@@ -126,7 +126,7 @@ def txn_two_wallets(gid, src_qq, dst_qq, amount):
             row2 = _S._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(dst_qq))).fetchone()
             dst_cur = int(row2[0]) if row2 else 0
             new_src = src_cur - int(amount)
-            new_dst = min(100000000000, dst_cur + int(amount))
+            new_dst = min(_S.COIN_CAP, dst_cur + int(amount))
             _S._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(src_qq), new_src))
             _S._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(dst_qq), new_dst))
             _safe_commit()

@@ -338,7 +338,7 @@ def backup_user_data(force=False, auto_upload=True):
         with _S._BACKUP_GEN_LOCK:
             _S._BACKUP_IN_PROGRESS = dst
         import sqlite3 as _sql
-        bck = _sql.connect(dst, timeout=30.0)
+        bck = _sql.connect(dst, timeout=_S.DB_TIMEOUT)
         # 非阻塞冷备：仅短持锁做 checkpoint+commit，备份经独立读连接执行，不阻塞消息分发
         with _S._LOCK:
             try:
@@ -348,7 +348,7 @@ def backup_user_data(force=False, auto_upload=True):
                 pass
             src_path = _S._DB_PATH
         try:
-            src2 = _sql.connect(src_path, timeout=30.0)
+            src2 = _sql.connect(src_path, timeout=_S.DB_TIMEOUT)
             try:
                 src2.execute("PRAGMA query_only=ON")
             except Exception:

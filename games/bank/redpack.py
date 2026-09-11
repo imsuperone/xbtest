@@ -18,7 +18,7 @@ def cmd_redpack(gid, qq, amount, pwd=None):
     if _check_jail(a):
         return _show_jail(a)
     min_amt = ST.cfgi("银行配置", "红包_最小金额", 2000)
-    max_amt = ST.cfgi("银行配置", "红包_最大金额", 100000000000)
+    max_amt = ST.cfgi("银行配置", "红包_最大金额", getattr(ST, "COIN_CAP", 100000000000))
     cost_tili = ST.cfgi("银行配置", "红包_发体力", 2)
     interval = ST.cfgi("银行配置", "红包_间隔时间", 60)
     if amount < min_amt:
@@ -132,8 +132,8 @@ def cmd_recv_red(gid, qq, pwd):
             row_w = ST._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
             cur = int(row_w[0]) if row_w else 0
             newv = cur + int(got)
-            if newv > 100000000000:
-                newv = 100000000000
+            if newv > getattr(ST, "COIN_CAP", 100000000000):
+                newv = getattr(ST, "COIN_CAP", 100000000000)
             ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), newv))
             # 更新红包剩余
             remain = total - got

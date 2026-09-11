@@ -2,6 +2,7 @@
 """games/slave/handler.py — 奴隶包·handler（原 slave.py 切分，语义不变）。"""
 import os as _os
 import re as _re
+import threading as _threading
 try:
     from ...core import storage as ST
     store = ST
@@ -17,8 +18,33 @@ from .profile import cmd_menu, cmd_myinfo, cmd_query, cmd_rank, cmd_rank_price, 
 from .social import cmd_flatter, cmd_pray, cmd_revolt, cmd_study, cmd_work_collect, cmd_work_dispatch
 from .trade import cmd_buy_slave, cmd_buyslot, cmd_freedom, cmd_protect, cmd_ransom, cmd_release, cmd_torture
 from .slave_state import _resolve_persistent_data_dir
+
+_LEGACY_ONCE = {"done": False}  # 旧档迁移＋gacha 预热只跑一次（锁＋flag 防并发双跑）
+_LEGACY_LOCK = _threading.Lock()
+
+
+def _ensure_legacy_once():
+    """懒入口：首个奴隶 handle 时执行一次；init_slave 不再同步做，启动少 listdir＋ini 解析"""
+    if _LEGACY_ONCE.get("done"):
+        return
+    with _LEGACY_LOCK:
+        if _LEGACY_ONCE.get("done"):
+            return
+        try:
+            for rar in ("SSR", "SR", "R"):
+                _gacha_pool(rar)
+        except Exception:
+            pass
+        try:
+            _migrate_legacy_group_ini()
+        except Exception:
+            pass
+        _LEGACY_ONCE["done"] = True
+
+
 def handle(gid, qq, raw):
     try:
+        _ensure_legacy_once()
         reply = _route(gid, qq, raw)
     except Exception:
         return "奴隶系统繁忙，请稍后重试~"
@@ -323,17 +349,7 @@ def init_slave(bot_uin="", note_names=None, import_wallet_dir=""):
             log("旧drea钱包导入(请用WebUI配置: 已切换为现代存储方案)")
         except Exception as e:
             log(f"钱包导入失败: {e}")
-    # 预加载 gacha 池（千群并发下避免每消息 listdir 0.285s）
-    try:
-        for rar in ("SSR", "SR", "R"):
-            _gacha_pool(rar)
-    except Exception:
-        pass
-    # 兼容旧群档案: 若存在 ini 且 sqlite 仍为空, 尝试搬入
-    try:
-        _migrate_legacy_group_ini()
-    except Exception:
-        pass
+    # gacha 预热＋旧 ini 迁移已懒化（首个 handle 时 _ensure_legacy_once 跑一次），此处不再同步做
 
 
 

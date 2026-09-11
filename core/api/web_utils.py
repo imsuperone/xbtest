@@ -2,6 +2,7 @@
 """API helpers — _err / _raw_file_response / get_req_query / get_req_json 统一出口"""
 import inspect
 import json
+import os
 try:
     from ..adapters import json_response, _orig_error_response
 except ImportError:
@@ -247,4 +248,33 @@ async def get_req_json(request, default=None):
         pass
 
     return default
+
+
+def plugin_root(anchor_file):
+    """插件根目录单源（core/api/* 深度固定 dirname×3；images/weapon_pool/gacha 三处同值收口）"""
+    try:
+        p = os.path.abspath(anchor_file)
+        for _ in range(3):
+            p = os.path.dirname(p)
+        return p
+    except Exception:
+        return ""
+
+
+async def read_upload_b64(request):
+    """base64 直传提取（iframe 桥 postMessage 无法克隆 FormData 时用）：返回 (filename, bytes)。
+    与旧 images/weapon_pool 内联 14 行逐行等价，抽取后零语义差。"""
+    try:
+        pj = await get_req_json(request, default={})
+        if isinstance(pj, dict):
+            b64_name = str(pj.get("filename", "") or "").strip()
+            _b64s = str(pj.get("file_base64", "") or pj.get("data", "") or "")
+            if "," in _b64s:
+                _b64s = _b64s.split(",", 1)[1]
+            if _b64s.strip():
+                import base64
+                return b64_name, base64.b64decode(_b64s.strip())
+    except Exception:
+        pass
+    return "", b""
 

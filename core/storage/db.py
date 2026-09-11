@@ -13,7 +13,7 @@ def _read_conn():
     try:
         if not _S._DB_PATH or not os.path.isfile(_S._DB_PATH):
             return None
-        c = sqlite3.connect(_S._DB_PATH, timeout=30.0, check_same_thread=False)
+        c = sqlite3.connect(_S._DB_PATH, timeout=_S.DB_TIMEOUT, check_same_thread=False)
         try:
             c.execute("PRAGMA query_only=ON")
         except Exception:
@@ -26,7 +26,7 @@ def _read_conn():
 _SQL_INIT = """
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
-PRAGMA busy_timeout=30000;
+PRAGMA busy_timeout=""" + str(_S.DB_BUSY_MS) + """;
 PRAGMA cache_size=-64000;
 PRAGMA temp_store=MEMORY;
 PRAGMA journal_size_limit=67108864;
@@ -117,10 +117,19 @@ def set_persistent_data_dir(path):
                 pass
 
 
+_MIGRATED_DIRS = set()  # 进程内 once：同目录重复解析不再重跑迁移探测（热切换新目录仍跑）
+
+
 def _auto_migrate_and_heal(cand, base):
     """自动双向自愈与迁移：把旧数据/图库无损同步迁移到持久化目录"""
     if not cand or not os.path.isdir(cand):
         return
+    try:
+        _key = os.path.abspath(cand)
+        if _key in _MIGRATED_DIRS:
+            return
+    except Exception:
+        _key = ""
     try:
         import shutil
         cand_db = os.path.join(cand, "xb.db")
@@ -169,6 +178,11 @@ def _auto_migrate_and_heal(cand, base):
                     shutil.copytree(src_sub, dst_sub, dirs_exist_ok=True)
                 except Exception:
                     pass
+        try:
+            if _key:
+                _MIGRATED_DIRS.add(_key)
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -260,7 +274,7 @@ def init(db_path, config=None):
             except Exception:
                 pass
             _S._DB_R = None
-            _S._DB = sqlite3.connect(db_path, timeout=30.0, check_same_thread=False)
+            _S._DB = sqlite3.connect(db_path, timeout=_S.DB_TIMEOUT, check_same_thread=False)
             _S._DB_PATH = db_path
             _S._DB.executescript(_SQL_INIT)
             _S._DB.commit()

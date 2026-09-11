@@ -324,7 +324,11 @@ async def handle_db_doctor(request, plugin_base=""):
         def _vacuum_work(path):
             import sqlite3 as _sql
             try:
-                c = _sql.connect(path, timeout=30.0)
+                try:
+                    from .. import storage as _ST
+                except ImportError:
+                    from core import storage as _ST  # type: ignore
+                c = _sql.connect(path, timeout=getattr(_ST, "DB_TIMEOUT", 30.0))
                 try:
                     c.execute("PRAGMA wal_checkpoint(TRUNCATE)")
                 except Exception:

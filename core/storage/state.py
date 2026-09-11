@@ -22,6 +22,10 @@ except Exception:
 _AT_QQ_TO_NAME = {}  # 反向索引：qq -> name，用于增量更新时清理旧昵称
 _AT_NAMES_LOCK = threading.RLock()
 _LOCK = threading.RLock()
+# ---- 全仓经济/IO常量单源（魔法数收口，语义零变化） ----
+COIN_CAP = 100000000000  # 钱包/空投/红包统一钳位上限 1e11
+DB_TIMEOUT = 30.0  # sqlite3.connect 超时（秒）
+DB_BUSY_MS = 30000  # PRAGMA busy_timeout（毫秒，与 DB_TIMEOUT 同口径）
 _DB = None
 _DB_PATH = ""
 _DB_R = None

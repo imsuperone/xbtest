@@ -6,7 +6,7 @@ import os
 import time
 from astrbot.api.web import json_response
 
-from .web_utils import _err, get_req_query, get_req_json
+from .web_utils import _err, get_req_query, get_req_json, plugin_root, read_upload_b64
 
 try:
     from .. import storage as ST
@@ -16,7 +16,7 @@ except ImportError:
 def _img_base(plugin_base=""):
     if plugin_base:
         return plugin_base
-    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return plugin_root(__file__)
 
 
 def _safe_path(rel, base=""):
@@ -94,20 +94,10 @@ async def handle_images_upload(request, plugin_base=""):
     else:
         if hasattr(form, "filename") or hasattr(form, "read"):
             f = form
-    # base64 直传（iframe 桥 postMessage 无法克隆 FormData 时用）
+    # base64 直传（iframe 桥 postMessage 无法克隆 FormData 时用，见 web_utils.read_upload_b64）
     b64_name, b64_data = "", b""
     if not f:
-        try:
-            pj = await get_req_json(request, default={})
-            if isinstance(pj, dict):
-                b64_name = str(pj.get("filename", "") or "").strip()
-                _b64s = str(pj.get("file_base64", "") or pj.get("data", "") or "")
-                if "," in _b64s:
-                    _b64s = _b64s.split(",", 1)[1]
-                if _b64s.strip():
-                    b64_data = base64.b64decode(_b64s.strip())
-        except Exception:
-            b64_data = b""
+        b64_name, b64_data = await read_upload_b64(request)
     if not f and not b64_data:
         return _err("no file", 400)
     # 目标目录

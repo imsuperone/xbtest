@@ -107,6 +107,35 @@ def _load_schema(base_dir=""):
     return {"groups": groups, "defaults": defaults}
 
 
+_WAKE_CACHE = {"path": "", "mt": 0.0, "items": {}}  # 唤醒词节缓存：path+mtime 双键，文件不变零重解析
+
+
+def _load_wake_items(base_dir=""):
+    """唤醒词语配置节（items dict）：_collect_commands 专用缓存，store 当前值仍每次实时读（语义不变）"""
+    try:
+        sch_path = _schema_path(base_dir)
+        if not sch_path:
+            return {}
+        try:
+            mt = os.path.getmtime(sch_path)
+        except Exception:
+            mt = 0.0
+        if _WAKE_CACHE.get("path") == sch_path and _WAKE_CACHE.get("mt") == mt and isinstance(_WAKE_CACHE.get("items"), dict):
+            return _WAKE_CACHE["items"]
+        with open(sch_path, encoding="utf-8") as f:
+            sch = json.load(f)
+        wc = sch.get("唤醒词配置", {}).get("items", {}) if isinstance(sch.get("唤醒词配置"), dict) else {}
+        if not isinstance(wc, dict):
+            wc = {}
+        _WAKE_CACHE["path"], _WAKE_CACHE["mt"], _WAKE_CACHE["items"] = sch_path, mt, wc
+        return wc
+    except Exception:
+        try:
+            return _WAKE_CACHE.get("items") or {}
+        except Exception:
+            return {}
+
+
 # 指令索引正则（与 main._collect_commands 保持一致）
 _CMD_RE1 = re.compile(r'\b(?:text|m)\s*\.startswith\(\s*\(?([^)]*)\)')
 _CMD_RE1_TUPLE = re.compile(r'\b(?:text|m)\s*\.startswith\(\s*\(([^)]*)\)')
@@ -230,12 +259,9 @@ def _collect_commands(base_dir="", store=None):
             except Exception:
                 pass
             out[name] = cmds
-        # 唤醒词显式展示
+        # 唤醒词显式展示（77KB schema 按 path+mtime 缓存，miss/VER 失效时才重解析；当前值仍实时读 store）
         try:
-            sch_path = _schema_path(base_dir)
-            with open(sch_path, encoding="utf-8") as f:
-                sch = json.load(f)
-            wc = sch.get("唤醒词配置", {}).get("items", {}) if isinstance(sch.get("唤醒词配置"), dict) else {}
+            wc = _load_wake_items(base_dir)
             for sysname, it in wc.items():
                 eng_name = None
                 for _e, _s in (("sign", "签到系统"), ("spirit", "精灵系统"), ("ent", "娱乐系统"), ("bank", "银行系统"), ("slave", "奴隶系统"), ("ride", "坐骑系统"), ("guild", "帮派系统"), ("adventure", "冒险系统"), ("superadmin", "超管系统")):

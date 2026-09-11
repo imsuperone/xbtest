@@ -312,7 +312,7 @@ def load_events():
     except Exception:
         _S.EVENTS = []
 
-load_events()
+# 注：import 期不再预读（曾在此调用一次＋init_slave 又读一次）：唯一调用方 init_slave/懒迁移负责加载
 
 
 

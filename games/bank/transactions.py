@@ -137,7 +137,7 @@ def cmd_transfer(gid, qq, target, amount):
     cs = ST.cfgi("银行配置", "转账消耗体力", 2)
     if _acct(gid, qq).int("stamina") < cs:
         return "亲，您的游戏体力不足，无法进行转账！"
-    cap = ST.cfgi("银行配置", "转账接收额度", 100000000000)
+    cap = ST.cfgi("银行配置", "转账接收额度", getattr(ST, "COIN_CAP", 100000000000))
     if amount > cap:
         return f"亲，单次转账金额不能超过{cap}{ST.coin_name()}！"
     if ST.coins_get(gid, qq) < amount:
@@ -164,7 +164,7 @@ def cmd_transfer(gid, qq, target, amount):
                 # 钱包转账（P1: 接收方达上限截断时差额不得销毁，按实际credit扣减）
                 row2 = ST._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(target))).fetchone()
                 dst_cur = int(row2[0]) if row2 else 0
-                credit = min(int(amount), max(0, 100000000000 - dst_cur))
+                credit = min(int(amount), max(0, getattr(ST, "COIN_CAP", 100000000000) - dst_cur))
                 if credit <= 0:
                     ST._safe_rollback()
                     return "对方钱包已满，无法接收转账！"

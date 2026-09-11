@@ -192,9 +192,6 @@ def _batch_guard_map(gid, is_admin, store):
     return res
 
 
-__all__ = ["_batch_guard_map", "_cfg_sys_off", "_guard", "_sys_off", "clear_guard_cache"]
-
-
 # ==================== commands（原 router/commands.py 并入） ====================
 import os
 
@@ -222,7 +219,7 @@ def _engine_cache_ver(store=None):
             _pd = os.path.join(eng_dir, _pkg)
             if os.path.isdir(_pd):
                 _watch.extend(os.path.join(_pd, f) for f in os.listdir(_pd) if f.endswith(".py"))
-        _watch.append(os.path.join(base, "core", "superadmin.py"))
+        _watch.append(os.path.join(base, "superadmin.py"))  # base 即 core/，超管与其同级（曾误拼 core/superadmin.py 永不存在）
         for _p in _watch:
             try:
                 _mt = os.path.getmtime(_p)
@@ -255,15 +252,7 @@ def _get_engine_cmds(engine, store=None):
                     _ENGINE_CMDS_VER = cur_ver
             except Exception:
                 pass
-            if engine not in _ENGINE_CMDS and not _ENGINE_CMDS:
-                try:
-                    from .config import _collect_commands as _cc2
-                    all_cmds2 = _cc2(base, store)
-                    if all_cmds2:
-                        _ENGINE_CMDS.update(all_cmds2)
-                        _ENGINE_CMDS_VER = cur_ver
-                except Exception:
-                    pass
+            # 注：曾有第二遍同参重扫回退（_cc2），与首遍完全等价，删（零语义差）
     except Exception:
         pass
     return _ENGINE_CMDS.get(engine, [])
@@ -289,10 +278,6 @@ def _matches_engine(raw, engine, store=None):
         if c and rt_n.startswith(_norm_cmd(c)):
             return True
     return False
-
-
-
-__all__ = ["_engine_cache_ver", "_get_engine_cmds", "_matches_engine"]
 
 
 # ==================== rules（原 router/rules.py 并入） ====================
@@ -583,9 +568,6 @@ def _cmd_need_admin(raw, store):
 
 
 
-__all__ = ["_cmd_disabled", "_cmd_need_admin", "_custom_cmd", "_custom_fp", "_custom_idx", "apply_reply_override"]
-
-
 # ==================== pipeline（原 router/pipeline.py 并入） ====================
 def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mod=None):
     # 自定义索引版本兜底：handle_cfg_save 直改 _CONFIG 不走 set_config 时 ver 未 bump，
@@ -740,8 +722,6 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
                         return "【超管系统】当前人数较多，系统繁忙，请稍后重试~"
                     return f"【超管系统】处理指令时出现异常，请稍后重试（原因: {e}）"
     return None
-
-__all__ = ["handle"]
 
 
 __all__ = ["_MAIN_MENU", "_SYS_ENG", "_resolve_reply", "_norm_cmd",

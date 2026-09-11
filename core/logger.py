@@ -44,6 +44,21 @@ def get_log_dir():
     return _LOG_DIR
 
 
+def set_log_dir(ldir):
+    """预置日志目录（XbBot.__init__ 已算出数据目录时调用，省一次目录探测；路径不变）"""
+    global _LOG_DIR
+    try:
+        ldir = str(ldir or "").strip()
+        if not ldir:
+            return _LOG_DIR
+        os.makedirs(ldir, exist_ok=True)
+        if os.path.isdir(ldir):
+            _LOG_DIR = ldir
+    except Exception:
+        pass
+    return _LOG_DIR
+
+
 def get_log_file_path():
     return os.path.join(get_log_dir(), "xb.log")
 

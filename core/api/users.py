@@ -841,10 +841,12 @@ def _airdrop_batch(targets, add_money, add_stamina, add_tickets):
             if add_money > 0:
                 ST._DB.executemany(
                     "INSERT OR IGNORE INTO wallet(gid, qq, money) VALUES(?, ?, 0)", batched)
+                _cap = int(getattr(ST, "COIN_CAP", 100000000000))
+                _sql_air = ("UPDATE wallet SET money = CASE WHEN money + ? < 0 THEN 0 "
+                            "WHEN money + ? > " + str(_cap) + " THEN " + str(_cap) + " "
+                            "ELSE money + ? END WHERE gid = ? AND qq = ?")
                 ST._DB.executemany(
-                    "UPDATE wallet SET money = CASE WHEN money + ? < 0 THEN 0 "
-                    "WHEN money + ? > 100000000000 THEN 100000000000 "
-                    "ELSE money + ? END WHERE gid = ? AND qq = ?",
+                    _sql_air,
                     [(add_money, add_money, add_money, g, q) for g, q in batched])
             if add_stamina > 0 or add_tickets > 0:
                 ST._DB.executemany(
