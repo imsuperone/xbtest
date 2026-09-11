@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0911f";
+const FRONTEND_VER = "2026w0911g";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1687,7 +1687,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0911f"
+        version: res.version || "2026w0911g"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -5039,7 +5039,6 @@ async function loadAnalytics() {
     if (el("anaSlaveWorth")) el("anaSlaveWorth").textContent = fmt(sum.total_slave_worth);
     if (el("anaSlaveCount")) el("anaSlaveCount").textContent = `奴隶: ${sum.total_slaves_count || 0} 人 / 奴隶主: ${sum.total_masters_count || 0} 人`;
     if (el("anaSignCount")) el("anaSignCount").textContent = `${fmt(sum.total_sign_count)} 次`;
-    if (el("anaSignRate")) el("anaSignRate").textContent = `活跃度: 稳健`;
   } catch(e) {
     console.error("loadAnalytics error:", e);
   }
@@ -5233,7 +5232,7 @@ function _paintChannelRow(elId, res) {
     const el = document.getElementById(elId);
     if (!el) return;
     if (res && !res.detect_error && res.latest_version) {
-      el.textContent = res.has_update ? ("v" + res.latest_version + "（有更新）") : ("v" + res.latest_version + "（已是最新）");
+      el.textContent = res.has_update ? ("v" + res.latest_version + "（有更新）") : ("v" + res.latest_version);
     } else {
       el.textContent = "检测失败" + (res && res.detect_error ? "：" + res.detect_error : "");
     }
@@ -5264,12 +5263,6 @@ async function checkVersionUpdate(silent = false) {
     try {
       const av = document.getElementById("aboutVersion");
       if (av && cur) av.textContent = "v" + cur;
-      const al = document.getElementById("aboutLatest");
-      if (al) {
-        const pb = (resB && resB.latest_version) ? ("BETA v" + resB.latest_version) : "BETA 未知";
-        const ps = (resS && resS.latest_version) ? ("正式 v" + resS.latest_version) : "正式未知";
-        al.textContent = "(" + pb + " / " + ps + ")";
-      }
     } catch (e) {}
     _paintChannelRow("aboutLatestBeta", resB);
     _paintChannelRow("aboutLatestStable", resS);
@@ -5345,10 +5338,8 @@ async function checkVersionUpdate(silent = false) {
         statusEl.textContent = "";
       }
       if (badge) {
-        badge.style.display = "inline-flex";
-        badge.style.background = "linear-gradient(135deg, #10B981, #059669)";
-        badge.textContent = "🟢 最新版 v" + cur;
-        badge.title = "双通道均为最新版本（点击查看详情）";
+        // 双最新时徽标隐藏（顶栏已有版本号，不重复展示）
+        badge.style.display = "none";
       }
       if (!silent) {
         showUpdateModal();
@@ -5384,7 +5375,7 @@ function _channelCardHTML(title, icon, data) {
     body = `<div style="font-size:15px;font-weight:700;color:var(--warn)">检测失败</div>`
       + `<div style="font-size:11px;color:var(--muted);margin-top:4px">${esc(errStr)}</div>`;
   } else if (lat) {
-    body = `<div style="font-size:15px;font-weight:700;color:${isNew ? "var(--acc)" : "var(--ok)"}">v${esc(lat)}${isNew ? "（有更新）" : "（已是最新）"}</div>`
+    body = `<div style="font-size:15px;font-weight:700;color:${isNew ? "var(--acc)" : "var(--ok)"}">v${esc(lat)}${isNew ? "（有更新）" : ""}</div>`
       + (d.release_date ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">发布于 ${esc(d.release_date)}</div>` : "")
       + (d.repo ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(d.repo)}</div>` : "");
   } else {
