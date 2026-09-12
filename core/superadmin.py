@@ -210,7 +210,7 @@ def _parse_target_amount(arg):
 def cmd_deduct(gid, qq, arg):
     """扣钱: 超管扣除指定用户指定金额，显示群昵称"""
     t, amt = _parse_target_amount(arg)
-    if not t or amt is None:
+    if not t or amt is None or amt <= 0:
         return "格式：扣钱 @QQ 金额（正整数）"
     cur = _sum_money(gid, t)
     nv = ST.coins_add(gid, t, -amt)
@@ -221,7 +221,7 @@ def cmd_deduct(gid, qq, arg):
 def cmd_recharge(gid, qq, arg):
     """充钱: 超管给指定用户充值指定金额，显示群昵称"""
     t, amt = _parse_target_amount(arg)
-    if not t or amt is None:
+    if not t or amt is None or amt <= 0:
         return "格式：充钱 @QQ 金额（正整数）"
     nv = ST.coins_add(gid, t, amt)
     t_name = _target_name(gid, t)
@@ -304,6 +304,18 @@ def cmd_clear(gid, qq, arg):
             except Exception:
                 pass
         ST.flush_all()
+        # 昵称同步清：否则 NOTE_NAMES 残留幽灵名，反查误中已删用户
+        try:
+            from ..games import slave as _sl4
+            if hasattr(_sl4, "clear_note_name"):
+                _sl4.clear_note_name(gid, t)
+        except Exception:
+            try:
+                import slave as _sl5
+                if hasattr(_sl5, "clear_note_name"):
+                    _sl5.clear_note_name(gid, t)
+            except Exception:
+                pass
         # 清空后帮派缓存即时失效，避免列表/排行残留已删成员（15 秒窗口）
         try:
             from ..games import guild as _gd
@@ -353,15 +365,25 @@ def cmd_mute(gid, qq, arg):
 
 
 def cmd_kick(gid, qq, arg):
-    """踢人 @QQ"""
+    """踢人 @QQ（支持 @ 昵称，与禁言同口径）"""
     arg = (arg or "").strip()
-    m = re.match(r"@?\s*(\d{5,12})", arg)
-    if not m:
+    target = None
+    try:
+        t, _ = ST.parse_at(arg)
+        if t:
+            target = str(t).strip()
+    except Exception:
+        pass
+    if not target:
+        m = re.match(r"@?\s*(\d{5,12})", arg)
+        if not m:
+            return "格式：踢人 @QQ"
+        target = m.group(1)
+    if not target.isdigit():
         return "格式：踢人 @QQ"
-    t = m.group(1)
-    if str(t) == str(qq):
+    if target == str(qq):
         return "不能对自己执行踢人！"
-    return "__XB_PLATFORM__|kick|%s|0" % t
+    return "__XB_PLATFORM__|kick|%s|0" % target
 
 
 def cmd_backup_xb():
@@ -393,13 +415,15 @@ def cmd_backup_xb():
 
 
 def _maint_on(gid=None):
-    # 群内发送只维修本群（recall 标记）；无群号（理论不可达）则维修全局
+    # 群内发送只维修本群（recall 标记）；群号异常直接拒绝，禁回退全局（防误锁全群）
     if gid and str(gid).isdigit():
         try:
             ST.recall_set("group_maint_%s" % gid, "1")
         except Exception:
             pass
         return "本群已进入维修模式。"
+    if gid:
+        return "群号异常，已拒绝执行（未改动任何配置）。"
     cur = dict(ST._CONFIG)
     import copy as _copy
     cur = _copy.deepcopy(cur)
@@ -414,6 +438,8 @@ def _maint_off(gid=None):
         except Exception:
             pass
         return "本群已退出维修模式。"
+    if gid:
+        return "群号异常，已拒绝执行（未改动任何配置）。"
     cur = dict(ST._CONFIG)
     import copy as _copy
     cur = _copy.deepcopy(cur)

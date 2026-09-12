@@ -389,6 +389,8 @@ def cmd_build(gid, qq, amt):
     if not g.get("name"):
         return "亲，您还没有加入任何帮派！"
     amt = int(amt or 1)
+    if amt <= 0:
+        return "修筑数量至少为 1，格式：【修筑 数量】！"
     price = _cfgi("修筑价格", 10000)
     cap = _cfgi("修筑上限", 50)
     cur = int(g.get("build", 0) or 0)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """用户管理 API — 列表/编辑/单用户清除/退群清理（导入导出已拆至 user_io.py，空投已拆至 airdrop.py，端点不变）"""
 import asyncio
+import json
 from astrbot.api.web import json_response
 
 from .web_utils import _err, get_req_query, get_req_json
@@ -22,11 +23,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "2026w0912n"
+            return "2026w0912o"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "2026w0912n"
+    PLUGIN_VERSION = "2026w0912o"
 
 
 def _extract_param(request, key, default=""):
@@ -81,13 +82,8 @@ async def handle_users(request):
                         "LEFT JOIN accounts a ON a.gid=w.gid AND a.qq=w.qq WHERE w.gid=? "
                         "ORDER BY w.money DESC LIMIT ? OFFSET ?", (_gid_i, _lim, _off)).fetchall() if ST._DB else []
                 except Exception:
-                    try:
-                        rows = ST._DB.execute(
-                            "SELECT w.gid, w.qq, w.money, a.data FROM wallet w "
-                            "LEFT JOIN accounts a ON a.gid=w.gid AND a.qq=w.qq "
-                            "ORDER BY w.money DESC LIMIT ? OFFSET ?", (_lim, _off)).fetchall() if ST._DB else []
-                    except Exception:
-                        rows = []
+                    # 分群查询失败直接空：禁回退无 WHERE 全表（越群泄漏）
+                    rows = []
             else:
                 try:
                     rows = ST._DB.execute(
@@ -220,6 +216,13 @@ async def handle_users_clean_left(request, context=None):
 
         if live_qqs is None and "valid_qqs" in p and isinstance(p["valid_qqs"], list):
             live_qqs = set(str(x).strip() for x in p["valid_qqs"] if str(x).strip().isdigit())
+
+        # 活名单归一化 str：整型混入即“全员不在”致误删整群
+        if live_qqs is not None:
+            try:
+                live_qqs = set(str(x).strip() for x in live_qqs)
+            except Exception:
+                live_qqs = None
 
         if live_qqs is None:
             failed_gids.append(g)

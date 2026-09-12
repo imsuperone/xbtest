@@ -657,15 +657,28 @@ def handle(gid, qq, raw):
         return cmd_mine_rank(gid, qq)
     if text.startswith("抽奖"):
         m = _r.search(r"(\d+)", text)
-        return cmd_draw(gid, qq, int(m.group(1)) if m else 1)
+        if m:
+            return cmd_draw(gid, qq, int(m.group(1)))
+        # 无数字后缀且非裸词（如抽奖系统）禁扣券：此前一律扣 1 奖券
+        if text.strip() == "抽奖":
+            return cmd_draw(gid, qq, 1)
+        return "抽奖格式：【抽奖】或【抽奖 数量】（如抽奖 10），奖券不足可先签到领取~"
     if text.startswith("领取新手礼包") or text.startswith("领取新人礼包"):
         return cmd_newbie(gid, qq)
     if text == "赞我" or text.startswith("赞我 "):
         return cmd_like(gid, qq)
     if text.startswith("购买体力"):
         m = _r.search(r"(\d+)", text)
-        return cmd_gift(gid, qq, "stamina", int(m.group(1)) if m else 1)
+        if m:
+            return cmd_gift(gid, qq, "stamina", int(m.group(1)))
+        if text.strip() == "购买体力":
+            return cmd_gift(gid, qq, "stamina", 1)
+        return "购买体力格式：【购买体力】或【购买体力 数量】"
     if text.startswith("购买魅力"):
         m = _r.search(r"(\d+)", text)
-        return cmd_gift(gid, qq, "charm", int(m.group(1)) if m else 1)
+        if m:
+            return cmd_gift(gid, qq, "charm", int(m.group(1)))
+        if text.strip() == "购买魅力":
+            return cmd_gift(gid, qq, "charm", 1)
+        return "购买魅力格式：【购买魅力】或【购买魅力 数量】"
     return None

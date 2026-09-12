@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0912n";
+const FRONTEND_VER = "2026w0912o";
 
 let _WORKING_API_PREFIX = null;
 
@@ -965,7 +965,18 @@ async function postFile(api, extra, file) {
   // base64 JSON 直传：iframe 桥 postMessage 无法克隆 FormData，后端同样受理
   const b64 = await fileToBase64(file);
   if (!b64) throw new Error("文件读取失败");
-  return getBridge().apiPost(api, { ...(extra || {}), filename: file.name, file_base64: b64 });
+  // endpoint 自带查询串（如 ?dir=/ ?rar=）并入 body：apiPost 只发 body 不带 query，不并即丢目录
+  let ep = api;
+  const q = {};
+  try {
+    const s = String(api || "");
+    const qi = s.indexOf("?");
+    if (qi >= 0) {
+      ep = s.slice(0, qi);
+      new URLSearchParams(s.slice(qi + 1)).forEach((v, k) => { q[k] = v; });
+    }
+  } catch (e) {}
+  return getBridge().apiPost(ep, { ...q, ...(extra || {}), filename: file.name, file_base64: b64 });
 }
 async function uploadImage(file) {
   if (!file) return;
@@ -1078,6 +1089,8 @@ async function saveOverviewReq() {
     document.querySelectorAll("#ovReq [data-ov-sec]").forEach((inp) => {
       const sec = inp.dataset.ovSec, key = inp.dataset.ovKey;
       if (!payload[sec]) payload[sec] = {};
+      // 数字框清空=保持原值：Number("")===0 会把清空误存成 0
+      if (inp.type === "number" && String(inp.value || "").trim() === "") return;
       payload[sec][key] = inp.type === "number" ? Number(inp.value) : inp.value.trim();
     });
     await getBridge().apiPost("config/save", payload).then((r) => {
@@ -1385,6 +1398,11 @@ async function resetConfig() {
     // 仅恢复本页实际展示的节（cfgForm 内已渲染行），不碰其他页（指令数值/商城/图鉴等）
     const visibleSecs = new Set();
     document.querySelectorAll("#cfgForm .cfg-row [data-key]").forEach((inp) => {
+      // 搜索隐藏行不计入：否则“搜后恢复”误带隐藏节
+      try {
+        const box = inp.closest(".cfg-sec");
+        if (box && box.style.display === "none") return;
+      } catch (e) {}
       if (inp.dataset.sec) visibleSecs.add(inp.dataset.sec);
     });
     if (!visibleSecs.size) { toast("当前页无可恢复配置", "bad"); return; }
@@ -1567,7 +1585,7 @@ function renderUserTable() {
     .map((u) => {
       const nm = u.name ? esc(u.name) : '<span style="color:var(--muted)">-</span>';
       const inp = (id, v, w = 64) =>
-        `<input type="number" id="${id}_${u.qq}_${u.gid}" value="${v}" title="${v}" style="width:${w}px;font-size:12.5px;padding:5px 8px;font-variant-numeric:tabular-nums">`;
+        `<input type="number" id="${id}_${esc(u.qq)}_${esc(u.gid)}" value="${esc(v)}" title="${esc(v)}" style="width:${w}px;font-size:12.5px;padding:5px 8px;font-variant-numeric:tabular-nums">`;
       return `<tr>
         <td><strong>${esc(u.qq)}</strong></td>
         <td>${nm}</td>
@@ -1680,7 +1698,8 @@ async function cleanLeftUsers() {
   toast("正在对比群成员并清理退群人员...", "ok");
   try {
     // 清理退群：调 users/clean_left（曾误调 users/export，res.ok 恒真致“清理0人”假成功）
-    const res = await callApi("users/clean_left", {}, "GET");
+    // POST：GET 有副作用，禁走读通道（预取/重试误触发批量删除）
+    const res = await callApi("users/clean_left", {}, "POST");
     if (res && res.ok) {
       toast(`清理完成！已清理 ${res.cleaned_count || 0} 名退群人员数据`, "ok");
       await loadUsers();
@@ -1719,7 +1738,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0912n"
+        version: res.version || "2026w0912o"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -2199,6 +2218,9 @@ async function saveCmdEditor() {
     if (Object.keys(wakeSec).length) payload["唤醒词配置"] = wakeSec;
 
     const cust = {};
+    // 改名旧词：后文 null 块靠“payload 缺键”删键，两处保留循环须先剔旧词，否则改名变复制
+    const _oldName = (typeof CMD_EDIT !== "undefined" && CMD_EDIT && !CMD_EDIT.isNew) ? String(CMD_EDIT.cmd || "").trim() : "";
+    const _renaming = !!(_oldName && _oldName !== name);
     if (mapCmd) {
       if (!KNOWN_CMDS.has(mapCmd)) {
         if (msg) { msg.textContent = `映射的引擎指令「${mapCmd}」不存在，请留空走纯自定义或填已有指令`; msg.classList.add("bad"); }
@@ -2212,6 +2234,7 @@ async function saveCmdEditor() {
       const oldCust = (CMD_CFG["自定义指令配置"] || {});
       Object.keys(oldCust).forEach((t) => {
         const e = oldCust[t];
+        if (_renaming && t === _oldName) return;
         if (!(e && e.command === mapCmd && t !== mapCmd)) cust[t] = e;
       });
       trigs.forEach((t) => {
@@ -2222,7 +2245,7 @@ async function saveCmdEditor() {
       if (!name) { if (msg) { msg.textContent = "请填写触发词"; msg.classList.add("bad"); } return; }
       if (!reply) { if (msg) { msg.textContent = "纯自定义指令需填写回复内容"; msg.classList.add("bad"); } return; }
       const oldCust = (CMD_CFG["自定义指令配置"] || {});
-      Object.keys(oldCust).forEach((t) => { if (t !== name) cust[t] = oldCust[t]; });
+      Object.keys(oldCust).forEach((t) => { if (t !== name && !(_renaming && t === _oldName)) cust[t] = oldCust[t]; });
       cust[name] = { command: "", reply: reply };
     }
     if (Object.keys(cust).length) payload["自定义指令配置"] = cust;
@@ -2713,10 +2736,13 @@ function openTreasureEditModal(name) {
       const type = document.getElementById("treEditType")?.value || "";
       const value = Math.max(0, Number(document.getElementById("treEditValue")?.value) || 0);
       window._TREAS_EFF = window._TREAS_EFF || {};
-      if (!desc && !type) delete window._TREAS_EFF[name];
-      else window._TREAS_EFF[name] = { effect: desc, type: (_treasureTypeOk(type) ? type : ""), value };
-      try { await persistTreasure(); toast("已保存", "ok"); }
-      catch (e) { toast("保存失败: " + e.message, "bad"); }
+      // 清空即删键：显式 null 穿透 merge（缺键≠删除，不传即复活）
+      if (!desc && !type) { delete window._TREAS_EFF[name]; try { await persistTreasure([name]); toast("已保存", "ok"); } catch (e) { toast("保存失败: " + e.message, "bad"); } }
+      else {
+        window._TREAS_EFF[name] = { effect: desc, type: (_treasureTypeOk(type) ? type : ""), value };
+        try { await persistTreasure(); toast("已保存", "ok"); }
+        catch (e) { toast("保存失败: " + e.message, "bad"); }
+      }
       modal.className = "";
       renderAtlas();
     };
@@ -4001,7 +4027,8 @@ async function savePoolAttrs(silent = false) {
     Object.entries(POOL_ATTRS || {}).forEach(([k, v]) => {
       const atk = Math.max(0, Number((v && v.atk) || 0));
       const desc = String((v && v.desc) || "").trim();
-      if (atk || desc) clean[k] = { atk, desc };
+      // 显式下发零值：后端见 {atk:0,desc:""} 即删键；省略即保留，清不掉
+      clean[k] = { atk, desc };
     });
     const r = await getBridge().apiPost("weapons/pool/attrs", { attrs: clean });
     if (r && r.error) throw new Error(r.error);
@@ -4931,6 +4958,12 @@ document.getElementById("btnWebDAVBackupNow")?.addEventListener("click", async (
     if (["db", "json"].includes(ext)) {
       payload.path = sel;
       desc = sel.split("/").pop();
+    } else {
+      // .zip 等非备份文件禁默默传最新：此前静默改传，用户以为传了选中包
+      if (msgEl) { msgEl.textContent = "❌ 请先选中 .db/.json 备份文件（不可上传 .zip 包）"; msgEl.className = "msg bad"; }
+      toast("请先选中 .db/.json 备份文件", "bad");
+      if (btn) { btn.disabled = false; btn.textContent = origTxt; }
+      return;
     }
   }
   if (msgEl) {
@@ -5179,6 +5212,7 @@ document.getElementById("btnBackupRestore")?.addEventListener("click", async () 
   const sel = window.BACKUP_SELECTED || "";
   if (!sel) { toast("请先单击选中要恢复的备份", "bad"); return; }
   if (!(await uiConfirm("确认恢复备份 " + sel + "？当前数据将被覆盖！", "恢复备份"))) return;
+  if (!(await uiConfirm("再次确认恢复 \"" + sel + "\"？覆盖后只能从备份恢复！", "终极确认恢复"))) return;
   try { await getBridge().apiPost("backups/restore", { path: sel }); toast("已恢复，需重启插件生效", "ok"); } catch (err) { toast("恢复失败: " + err.message, "bad"); }
 });
 document.getElementById("btnBackupExportSel")?.addEventListener("click", async () => {

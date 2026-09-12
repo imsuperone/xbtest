@@ -90,6 +90,13 @@ async def handle_user_import(request):
     qq = str(p.get("qq") or "").strip()
     if not gid or not qq:
         return _err("gid and qq required", 400)
+    # 脏 key 禁入库（SQLite 列亲和会存 TEXT 污染主键； legado 数据先洗）
+    if not (gid.isdigit() and qq.isdigit()):
+        return _err("gid/qq must be digits", 400)
+    if isinstance(p.get("account"), dict) and len(p["account"]) > 200:
+        return _err("account too large", 400)
+    if isinstance(p.get("group"), dict) and len(p["group"]) > 5000:
+        return _err("group too large", 400)
     try:
         if "wallet" in p:
             try:

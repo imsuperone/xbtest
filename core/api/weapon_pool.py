@@ -198,20 +198,27 @@ def _pool_item(rar, p, base):
 
 
 def _pool_write_file(rar, stem, data, ext):
-    """写池文件：先清同名旧文件（扩展名可能不同），再写入；返回 abspath"""
+    """写池文件：tmp+replace 原子；同茎旧文件（含残留 tmp）成功后清理；返回 abspath"""
     d = _pool_dir(rar)
+    dst = _os.path.join(d, stem + ext)
+    _tmp = dst + ".tmp"
+    with open(_tmp, "wb") as w:
+        w.write(data)
     try:
         for fn in _os.listdir(d):
             try:
-                if _os.path.splitext(fn)[0] == stem and _os.path.isfile(_os.path.join(d, fn)):
-                    _os.remove(_os.path.join(d, fn))
+                _fp = _os.path.join(d, fn)
+                if not _os.path.isfile(_fp):
+                    continue
+                if fn == stem + ext or fn == _os.path.basename(_tmp):
+                    continue
+                if _os.path.splitext(fn)[0] == stem or (fn.startswith(stem) and fn.endswith(".tmp")):
+                    _os.remove(_fp)
             except Exception:
                 continue
     except Exception:
         pass
-    dst = _os.path.join(d, stem + ext)
-    with open(dst, "wb") as w:
-        w.write(data)
+    _os.replace(_tmp, dst)
     _pool_bust(rar)
     return dst
 
@@ -600,6 +607,9 @@ async def handle_pool_upload(request):
                 data = data.encode("utf-8", errors="ignore")
             if not data:
                 return _err("empty file", 400)
+            # 与 base64 直传对齐：multipart 同样 50M 上限（防大包堵 loop＋OOM）
+            if len(data or b"") > 50 * 1024 * 1024:
+                return _err("file too large (50M)", 400)
         if fixname:
             stem = _pool_clean_stem(fixname) or stem
         if not stem:

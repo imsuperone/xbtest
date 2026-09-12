@@ -100,6 +100,14 @@ def _make_ssl_context():
 _VERIFIED_REMOTE_DIRS = set()
 
 
+def _qpath(s):
+    """URL 路径段逐段 quote（远端目录/文件名含中文空格不再 400）"""
+    try:
+        return "/".join(urllib.parse.quote(p, safe="") for p in str(s or "").split("/"))
+    except Exception:
+        return s
+
+
 def _ensure_remote_dir(base_url, remote_dir, auth, timeout=6):
     """递归检查并创建 WebDAV 远端多级目录 (MKCOL)，带内存去重防触发服务商 429 频控"""
     cache_key = f"{base_url}|{remote_dir}|{auth}"
@@ -107,6 +115,9 @@ def _ensure_remote_dir(base_url, remote_dir, auth, timeout=6):
         return True
     parts = [p for p in remote_dir.strip("/").split("/") if p]
     cur_url = base_url.rstrip("/")
+    _fatal = False
+    for part in parts:
+        cur_url = f"{cur_url}/{urllib.parse.quote(part, safe='')}"
     for part in parts:
         cur_url = f"{cur_url}/{part}"
         try:
@@ -123,9 +134,13 @@ def _ensure_remote_dir(base_url, remote_dir, auth, timeout=6):
             elif e.code == 429:
                 # 触发服务商频控，通常目录已就绪，跳过后续以保护配额
                 break
+            else:
+                # 硬失败（如 404 目录被删）：不缓存，下次重建
+                _fatal = True
         except Exception:
             pass
-    _VERIFIED_REMOTE_DIRS.add(cache_key)
+    if not _fatal:
+        _VERIFIED_REMOTE_DIRS.add(cache_key)
     return True
 
 
@@ -155,7 +170,7 @@ def upload_backup(local_path):
 
     fname = os.path.basename(local_path)
     clean_rdir = rdir.strip("/")
-    target_url = f"{base_url}/{clean_rdir}/{fname}" if clean_rdir else f"{base_url}/{fname}"
+    target_url = f"{base_url}/{_qpath(clean_rdir)}/{urllib.parse.quote(fname, safe='')}" if clean_rdir else f"{base_url}/{urllib.parse.quote(fname, safe='')}"
 
     try:
         with open(local_path, "rb") as f:
@@ -422,7 +437,7 @@ def download_remote_file(remote_name, local_dest=None, url=None, user=None, pwd=
     if not clean_name:
         return False, "未指定远端文件名"
 
-    target_url = f"{base_url}/{clean_rdir}/{clean_name}" if clean_rdir else f"{base_url}/{clean_name}"
+    target_url = f"{base_url}/{_qpath(clean_rdir)}/{urllib.parse.quote(clean_name, safe='')}" if clean_rdir else f"{base_url}/{urllib.parse.quote(clean_name, safe='')}"
 
     if not local_dest:
         bdir = ST.BACKUP_DIR or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "backups")
@@ -432,7 +447,7 @@ def download_remote_file(remote_name, local_dest=None, url=None, user=None, pwd=
     else:
         os.makedirs(os.path.dirname(os.path.abspath(local_dest)), exist_ok=True)
 
-    tmp_dest = local_dest + f".part_{int(time.time())}"
+    tmp_dest = local_dest + f".part_{time.time_ns()}_{os.getpid()}"
     try:
         req = urllib.request.Request(target_url, method="GET")
         req.add_header("Authorization", auth)
@@ -503,7 +518,7 @@ def delete_remote_file(remote_name, url=None, user=None, pwd=None, rdir=None, ti
     if not clean_name:
         return False, "未指定待删除远端文件名"
 
-    target_url = f"{base_url}/{clean_rdir}/{clean_name}" if clean_rdir else f"{base_url}/{clean_name}"
+    target_url = f"{base_url}/{_qpath(clean_rdir)}/{urllib.parse.quote(clean_name, safe='')}" if clean_rdir else f"{base_url}/{urllib.parse.quote(clean_name, safe='')}"
 
     try:
         req = urllib.request.Request(target_url, method="DELETE")
