@@ -22,11 +22,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "2026w0912i"
+            return "2026w0912j"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "2026w0912i"
+    PLUGIN_VERSION = "2026w0912j"
 
 
 def _extract_param(request, key, default=""):

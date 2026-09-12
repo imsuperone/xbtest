@@ -2,7 +2,7 @@ name: "astrbot_plugin_xbbot_beta"
 display_name: "小白测试版"
 short_desc: "【测试版】小白统一模块：28大系统群互动玩法与现代WebUI管理台（数据与正式版完全隔离）"
 desc: "小白统一模块：奴隶-签到-银行-娱乐-私聊-精灵-坐骑-超管-帮派-冒险-主菜单-WebUI管理台，SQLite存储"
-version: "2026w0912i"
+version: "2026w0912j"
 author: "Light"
 repo: "https://github.com/imsuperone/xbtest"
 support_platforms:

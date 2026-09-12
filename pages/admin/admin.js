@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0912i";
+const FRONTEND_VER = "2026w0912j";
 
 let _WORKING_API_PREFIX = null;
 
@@ -780,7 +780,7 @@ const TAB_LOADERS = {
   },
   imgs: async () => { return loadImages(""); },
   groups: async () => { return loadGroups(); },
-  about: async () => { try { await checkVersionUpdate(true); } catch (e) {} },
+  about: async () => { return Promise.resolve(); },
   logs: async () => { return loadLogs(); },
 };
 const TAB_DONE = {};
@@ -1719,7 +1719,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0912i"
+        version: res.version || "2026w0912j"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -5583,281 +5583,7 @@ async function runDbDoctor() {
 
 document.getElementById("btnDbDoctor")?.addEventListener("click", runDbDoctor);
 
-
-// ---------- 在线版本检测系统 ----------
-let LATEST_RELEASE_DATA = null;
-
-let LATEST_DUAL = null; // 双通道检测结果 {beta, stable}：只查最新，不切换
-function paintVerMatch() {
-  // 前后端对账：两边版本不同即红字（更新只拉了一半的经典症状），免得对着旧包调新问题
-  try {
-    const fz = document.getElementById("aboutFrontendVer");
-    if (fz && typeof FRONTEND_VER !== "undefined") fz.textContent = "v" + FRONTEND_VER;
-    const warn = document.getElementById("verMismatch");
-    const bv = (typeof LATEST_RELEASE_DATA !== "undefined" && LATEST_RELEASE_DATA && LATEST_RELEASE_DATA.current_version) || "";
-    if (warn) {
-      if (typeof FRONTEND_VER !== "undefined" && bv && String(FRONTEND_VER) !== String(bv)) {
-        warn.style.display = "";
-        warn.innerHTML = `⚠️ 前后端版本不一致：前端 v${esc(FRONTEND_VER)} / 后端 v${esc(bv)}。请 pull 最新代码后<b>完全重启 AstrBot</b>（仅重载插件不够）。`;
-      } else warn.style.display = "none";
-    }
-  } catch (e) {}
-}
-async function _checkOneChannel(c) {
-  // 单通道检测：成功即后端原样；失败转可显示错误对象（另一通道不受影响）
-  try {
-    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("请求超时(20s)，请检查网络后重试")), 20000));
-    const r = await Promise.race([getBridge().apiGet("version/check", { channel: c }), timeout]);
-    if (r && (r.ok || r.has_update !== undefined || r.current_version)) return r;
-    let raw = "";
-    try { raw = JSON.stringify(r).slice(0, 120); } catch (e) {}
-    return { ok: true, current_version: "", latest_version: "", has_update: false, channel: c, detect_error: "无有效响应" + (raw ? "：" + raw : "") };
-  } catch (e) {
-    return { ok: true, current_version: "", latest_version: "", has_update: false, channel: c, detect_error: (e && e.message) || String(e) };
-  }
-}
-function _paintChannelRow(elId, res) {
-  // 双通道行绘制：最新版 / 已是最新 / 检测失败 三态
-  try {
-    const el = document.getElementById(elId);
-    if (!el) return;
-    if (res && !res.detect_error && res.latest_version) {
-      el.textContent = "v" + res.latest_version;
-    } else {
-      el.textContent = "检测失败" + (res && res.detect_error ? "：" + res.detect_error : "");
-    }
-  } catch (e) {}
-}
-async function checkVersionUpdate(silent = false) {
-  const btn = document.getElementById("btnCheckUpdate");
-  const statusEl = document.getElementById("checkUpdateStatus");
-  try {
-    if (!silent) toast("正在检测双通道最新版本...", "ok");
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "⏳ 检测中…";
-    }
-    if (statusEl && !silent) {
-      statusEl.style.display = "inline-flex";
-      statusEl.style.color = "var(--muted)";
-      statusEl.style.background = "var(--panel2)";
-      statusEl.style.border = "1px solid var(--line)";
-      statusEl.textContent = "⏳ 正在检测 BETA/正式版…";
-    }
-    // 双通道并查：BETA 查 xbtest 快照仓，正式查官方仓；单路失败不影响另一路
-    const [resB, resS] = await Promise.all([_checkOneChannel("BETA"), _checkOneChannel("正式")]);
-    LATEST_DUAL = { beta: resB, stable: resS };
-    const cur = (resB && resB.current_version) || (resS && resS.current_version) || "";
-    LATEST_RELEASE_DATA = { current_version: cur, beta: resB, stable: resS };
-    try { paintVerMatch(); } catch (e) {}
-    try {
-      const av = document.getElementById("aboutVersion");
-      if (av && cur) av.textContent = "v" + cur;
-    } catch (e) {}
-    _paintChannelRow("aboutLatestBeta", resB);
-    _paintChannelRow("aboutLatestStable", resS);
-    const updB = Boolean(resB && resB.has_update && resB.latest_version);
-    const updS = Boolean(resS && resS.has_update && resS.latest_version);
-    const failB = Boolean(!resB || resB.detect_error);
-    const failS = Boolean(!resS || resS.detect_error);
-    const updVer = updB ? resB.latest_version : (updS ? resS.latest_version : "");
-    const badge = document.getElementById("verBadge");
-    if (updVer) {
-      if (btn) {
-        btn.textContent = "🚀 发现新版 v" + updVer;
-        btn.style.color = "var(--acc)";
-        btn.style.borderColor = "var(--acc)";
-        btn.style.background = "rgba(59,130,246,0.1)";
-      }
-      if (statusEl) {
-        // 有更新只亮按钮和徽标，状态行保持隐藏（版号到处贴太挤）
-        statusEl.style.display = "none";
-        statusEl.textContent = "";
-      }
-      if (badge) {
-        badge.style.display = "inline-flex";
-        badge.style.background = "linear-gradient(135deg, #3B82F6, #1D4ED8)";
-        badge.textContent = "🚀 发现新版本 v" + updVer;
-        badge.title = "点击查看双通道更新详情";
-      }
-      if (!silent) {
-        toast("发现新版本: v" + updVer, "ok");
-        showUpdateModal();
-      }
-    } else if (failB || failS) {
-      if (btn) {
-        btn.textContent = "⚠️ 重试检测";
-        btn.style.color = "var(--warn)";
-        btn.style.borderColor = "var(--warn)";
-        btn.style.background = "rgba(255,149,0,0.08)";
-      }
-      if (statusEl) {
-        if (!silent) {
-          statusEl.style.display = "inline-flex";
-          statusEl.style.color = "var(--warn)";
-          statusEl.style.background = "rgba(255,149,0,0.12)";
-          statusEl.style.border = "1px solid rgba(255,149,0,0.3)";
-          const _fe = (failB && resB && resB.detect_error ? "BETA:" + resB.detect_error : "") + (failB && failS ? "；" : "") + (failS && resS && resS.detect_error ? "正式:" + resS.detect_error : "");
-          statusEl.textContent = "⚠️ 检测失败：" + _fe;
-        } else {
-          statusEl.style.display = "none";
-        }
-      }
-      if (badge) {
-        badge.style.display = "inline-flex";
-        badge.style.background = "linear-gradient(135deg,#F59E0B,#D97706)";
-        badge.textContent = "⚠️ 更新检测失败";
-        badge.title = "部分通道检测失败（点击重试）";
-      }
-      if (!silent) {
-        toast("更新检测失败", "bad", 8000);
-        showUpdateModal();
-      }
-    } else {
-      if (btn) {
-        btn.textContent = "🟢 已是最新 (v" + cur + ")";
-        btn.style.color = "var(--ok)";
-        btn.style.borderColor = "var(--ok)";
-        btn.style.background = "rgba(52,199,89,0.08)";
-      }
-      if (statusEl) {
-        statusEl.style.display = "none";
-        statusEl.textContent = "";
-      }
-      if (badge) {
-        // 双最新时徽标隐藏（顶栏已有版本号，不重复展示）
-        badge.style.display = "none";
-      }
-      if (!silent) {
-        showUpdateModal();
-      }
-    }
-  } catch (err) {
-    if (btn) {
-      btn.textContent = "⚠️ 检测超时/失败";
-      btn.style.color = "var(--warn)";
-    }
-    if (statusEl) {
-      statusEl.style.display = "inline-flex";
-      statusEl.style.color = "var(--warn)";
-      statusEl.style.background = "rgba(255,149,0,0.12)";
-      statusEl.style.border = "1px solid rgba(255,149,0,0.3)";
-      statusEl.textContent = "⚠️ 请求失败: " + err.message;
-    }
-    if (!silent) toast("检测更新失败: " + err.message, "bad");
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
-function _channelCardHTML(title, icon, data) {
-  // 单通道卡片：最新版/有更新/检测失败 三态（二卡并列，结构对称）
-  const d = (data && typeof data === "object") ? data : {};
-  const cur = d.current_version || "";
-  const lat = d.latest_version || "";
-  const isNew = Boolean(d.has_update && lat);
-  const errStr = d.detect_error || "";
-  let body = "";
-  if (errStr) {
-    body = `<div style="font-size:15px;font-weight:700;color:var(--warn)">检测失败</div>`
-      + `<div style="font-size:11px;color:var(--muted);margin-top:4px">${esc(errStr)}</div>`;
-  } else if (lat) {
-    body = `<div style="font-size:15px;font-weight:700;color:${isNew ? "var(--acc)" : "var(--ok)"}">v${esc(lat)}${isNew ? "（有更新）" : ""}</div>`
-      + (d.release_date ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">发布于 ${esc(d.release_date)}</div>` : "")
-      + (d.repo ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(d.repo)}</div>` : "");
-  } else {
-    body = `<div style="font-size:15px;font-weight:700;color:var(--muted)">未知</div>`;
-  }
-  void cur;
-  return `<div style="padding:10px 12px;background:var(--panel);border-radius:10px;border:1px solid var(--line)">`
-    + `<div style="font-size:11px;color:var(--muted);margin-bottom:2px">${icon} ${esc(title)}</div>` + body + `</div>`;
-}
-
-function showUpdateModal() {
-  // 双通道详情弹窗：当前本地＋BETA 最新＋正式最新（只查不切）
-  const dual = (typeof LATEST_DUAL !== "undefined" && LATEST_DUAL) || {};
-  const resB = dual.beta || {};
-  const resS = dual.stable || {};
-  const curVer = resB.current_version || resS.current_version || "未知";
-  const updB = Boolean(resB.has_update && resB.latest_version);
-  const updS = Boolean(resS.has_update && resS.latest_version);
-  const failB = Boolean(!resB.latest_version);
-  const failS = Boolean(!resS.latest_version);
-
-  let statusCard = "";
-  if (updB || updS) {
-    const _which = updB && updS ? "BETA/正式均" : (updB ? "BETA " : "正式 ");
-    const _ver = updB ? resB.latest_version : resS.latest_version;
-    statusCard = `
-<div style="padding:10px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:10px;font-size:12px;color:var(--acc);margin-top:10px;display:flex;align-items:center;gap:8px">
-  <span style="font-size:18px">🚀</span>
-  <div>
-    <div style="font-weight:700">${_which}发现云端更新！建议升级至 v${esc(_ver)}</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">前往 AstrBot 官方面板的「插件管理」页面，点击「更新」即可一键无损升级。</div>
-  </div>
-</div>`;
-  } else if (failB || failS) {
-    statusCard = `
-<div style="padding:10px 12px;background:var(--warnSoft);border:1px solid rgba(255,149,0,0.25);border-radius:10px;font-size:12px;color:var(--warn);margin-top:10px;display:flex;align-items:center;gap:8px">
-  <span style="font-size:18px">⚠️</span>
-  <div>
-    <div style="font-weight:700">部分通道检测未能连通</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc((failB && resB.detect_error ? "BETA:" + resB.detect_error : "") + (failB && failS ? "；" : "") + (failS && resS.detect_error ? "正式:" + resS.detect_error : ""))}</div>
-  </div>
-</div>`;
-  } else {
-    statusCard = `
-<div style="padding:10px 12px;background:var(--okSoft);border:1px solid rgba(52,199,89,0.25);border-radius:10px;font-size:12px;color:var(--ok);margin-top:10px;display:flex;align-items:center;gap:8px">
-  <span style="font-size:18px">✨</span>
-  <div>
-    <div style="font-weight:700">双通道均为最新版本 (v${esc(curVer)})</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">当前运行代码已处于最新版本状态，运行良好，无需执行更新。</div>
-  </div>
-</div>`;
-  }
-
-  const modalHtml = `
-<div style="background:var(--panel2);border-radius:14px;padding:12px 14px;border:1px solid var(--line);margin-bottom:12px">
-  <div style="padding:10px 12px;background:var(--panel);border-radius:10px;border:1px solid var(--line);margin-bottom:10px">
-    <div style="font-size:11px;color:var(--muted);margin-bottom:2px">当前本地运行版本</div>
-    <div style="font-size:15px;font-weight:700;color:var(--text)">v${esc(curVer)}</div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    ${_channelCardHTML("BETA 最新（xbtest 快照）", "🚀", resB)}
-    ${_channelCardHTML("正式最新（官方 Release）", "🏷️", resS)}
-  </div>
-  ${statusCard}
-</div>
-
-<div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px">📝 BETA 更新日志</div>
-<div style="background:var(--panel);border-radius:10px;padding:10px 12px;border:1px solid var(--line);font-size:12px;color:var(--text);max-height:120px;overflow-y:auto;white-space:pre-wrap;line-height:1.6;margin-bottom:10px">
-${esc((resB && resB.changelog) || "暂无详细更新日志。")}
-</div>
-<div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px">📝 正式版更新日志</div>
-<div style="background:var(--panel);border-radius:10px;padding:10px 12px;border:1px solid var(--line);font-size:12px;color:var(--text);max-height:120px;overflow-y:auto;white-space:pre-wrap;line-height:1.6">
-${esc((resS && resS.changelog) || "暂无详细更新日志。")}
-</div>
-`;
-  const isNew = updB || updS;
-  const modalTitle = isNew ? "发现新版本" : ((failB || failS) ? "版本检测结果" : "版本检测：已是最新版本");
-  const modalIcon = isNew ? "🚀" : ((failB || failS) ? "⚠️" : "✨");
-  uiAlert(modalHtml, modalTitle, modalIcon);
-}
-
-// 绑定版本徽章与检查更新按钮（无切换：只查双通道最新）
-document.getElementById("verBadge")?.addEventListener("click", () => {
-  if (typeof LATEST_DUAL !== "undefined" && LATEST_DUAL) showUpdateModal();
-  else checkVersionUpdate(false);
-});
-document.getElementById("btnCheckUpdate")?.addEventListener("click", () => checkVersionUpdate(false));
-document.getElementById("checkUpdateStatus")?.addEventListener("click", () => {
-  if (typeof LATEST_DUAL !== "undefined" && LATEST_DUAL) showUpdateModal();
-  else checkVersionUpdate(false);
-});
-
-// 启动时静默检查一次
-setTimeout(() => { checkVersionUpdate(true); }, 1500);
-
+// 关于页检测更新已下线（用户拍板）：版本走静态文本（bump 同步），后端 version/check 路由保留（超管聊天指令用）。
 // ---------- 插件运行日志 ----------
 let LOGS_CACHE = [];
 let LOGS_TIMER = null;
