@@ -601,11 +601,12 @@ def handle(gid, qq, raw, is_admin=False):
             except ValueError:
                 try:
                     from .api import stats as updater
-                    info = updater.check_latest_version()
+                    # 测试版查 BETA 通道（xbtest 快照仓）；空 repo 默认查官方仓，对 beta 是误导
+                    info = updater.check_latest_version("", getattr(updater, "GITHUB_REPO_XBTEST", "imsuperone/xbtest"))
                 except Exception:
                     try:
                         from core.api import stats as updater
-                        info = updater.check_latest_version()
+                        info = updater.check_latest_version("", getattr(updater, "GITHUB_REPO_XBTEST", "imsuperone/xbtest"))
                     except Exception:
                         pass
                 try:
