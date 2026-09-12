@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0912j";
+const FRONTEND_VER = "2026w0912k";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1719,7 +1719,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0912j"
+        version: res.version || "2026w0912k"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -2477,8 +2477,9 @@ async function renderAtlas(curCfg){
       + `</div>`
       + `<input id="atlasSearch" placeholder="🔍 搜宝物 / 地图 / 精灵…" value="${esc(_q)}" style="flex:1;min-width:140px;padding:5px 10px;border-radius:8px">`
       + `</div><div style="display:flex;flex-direction:column;gap:8px">`;
-    const _effOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); return String(e || ""); } catch (e) { return ""; } };
-    const _treOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; return null; } catch (e) { return null; } };
+    const _TREAS_BUILTIN = { "酒神葫芦": { effect: "灌醉您的奴隶,极大的增加其造反难度", type: "pardon", value: 0 }, "四象护符": { effect: "打架失败时降低赔偿奴隶的概率", type: "shield", value: 0 } };
+    const _effOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); if (e) return String(e); const b = _TREAS_BUILTIN[n]; return b ? b.effect : ""; } catch (e) { return ""; } };
+    const _treOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; return _TREAS_BUILTIN[n] || null; } catch (e) { return null; } };
     const _typeTag = (n) => { try { const o = _treOf(n) || {}; const t = String(o.type || ""); const v = Number(o.value) || 0; if (t === "atk" && v > 0) return "攻" + v; if (t === "shield") return "盾"; if (t === "pardon") return "免"; if ((t === "work" || t === "worth") && v > 0) return (t === "work" ? "工" : "价") + v + "%"; return ""; } catch (e) { return ""; } };
     if (ATLAS_CUR === "treasure") {
       let h = `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)"><div style="font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">奴隶系统-宝物 (${Treas.length}) <span style="margin-left:auto;display:inline-flex;gap:4px;flex-wrap:wrap"><button class="ghost sm" id="btnAtlasSaveTreasure">💾 保存宝物</button><button class="ghost sm" id="btnAtlasResetTreasure">↩️ 恢复默认</button><button class="ghost sm" id="btnAtlasAddTreasure">＋ 添加</button></span></div><div style="display:flex;flex-wrap:wrap;gap:8px">`;
