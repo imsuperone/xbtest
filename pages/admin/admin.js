@@ -1226,10 +1226,29 @@ let IMG_CLIP = "";    // 复制的路径
 let IMG_SELECTED = ""; // 选中的文件/文件夹路径（用于复制/导出）
 
 
+function _updateImgSelectedDisplay() {
+  const btnDel = document.getElementById("btnImgDelete");
+  const btnRename = document.getElementById("btnImgRename");
+  if (!btnDel) return;
+  if (IMG_SELECTED) {
+    const fn = IMG_SELECTED.split("/").pop() || IMG_SELECTED;
+    btnDel.innerHTML = `🗑️ 删除选中 <span style="font-size:11px;opacity:0.85;font-weight:400">(${esc(fn)})</span>`;
+    btnDel.title = `删除当前选中的文件或文件夹: ${IMG_SELECTED}`;
+    if (btnRename) btnRename.title = `重命名当前选中的文件或文件夹: ${IMG_SELECTED}`;
+  } else {
+    btnDel.innerHTML = `🗑️ 删除选中`;
+    btnDel.title = "请先单击选中要删除的文件或文件夹";
+    if (btnRename) btnRename.title = "请先单击选中要重命名的文件或文件夹";
+  }
+}
+
 async function loadImages(dir) {
   try {
     if (dir === "0") dir = "";
     IMG_DIR = dir || "";
+    IMG_SELECTED = ""; // 切换目录重置选中，彻底杜绝跨目录幽灵删除与错位
+    _updateImgSelectedDisplay();
+
     const d = await getBridge().apiGet("images/list", { dir: IMG_DIR });
     if (!d || d.error) throw new Error((d && (d.error || d.msg)) || "图片库接口异常");
     IMG_CACHE = d;
@@ -1254,76 +1273,83 @@ async function loadImages(dir) {
 function renderImages(d) {
   const box = document.getElementById("imgBrowser");
   const q = (document.getElementById("imgSearch").value || "").trim().toLowerCase();
-  // 供内置选图校验（是否为文件夹）
   window._imgIsDir = (p) => (d.dirs || []).some(x => x.path === p);
   const isShopPick = !!window.SHOP_PICK_TARGET;
   let html = `<div class="grid">`;
+
   (d.dirs || []).forEach((x) => {
     if (q && !x.name.toLowerCase().includes(q)) return;
-    // 内置选图模式下：文件夹仅可双击进入，不可选中
-    if (isShopPick) {
-      html += `<div class="fcard" data-imgdir="${esc(x.path)}"><div class="fi">📁</div><div class="fn">${esc(x.name)}</div></div>`;
-    } else {
-      const selCls = IMG_SELECTED===x.path ? ' selected' : '';
-      html += `<div class="fcard${selCls}" data-imgdir="${esc(x.path)}" data-selpath="${esc(x.path)}"><div class="fi">📁</div><div class="fn">${esc(x.name)}</div></div>`;
-    }
+    const selCls = IMG_SELECTED === x.path ? ' selected' : '';
+    html += `<div class="fcard${selCls}" data-imgdir="${esc(x.path)}" title="${esc(x.name)} (双击进入)">
+      <div class="fi">📁</div>
+      <div class="fn">${esc(x.name)}</div>
+    </div>`;
   });
+
   (d.files || []).forEach((x) => {
     if (q && !x.name.toLowerCase().includes(q)) return;
-    const ext = (x.name.split(".").pop()||"").toLowerCase();
+    const ext = (x.name.split(".").pop() || "").toLowerCase();
     const isImg = ["png","jpg","jpeg","gif","webp","bmp","ico"].includes(ext);
-    // 内置选图模式：仅展示图片文件
     if (isShopPick && !isImg) return;
-    const selCls = IMG_SELECTED===x.path ? ' selected' : '';
+    const selCls = IMG_SELECTED === x.path ? ' selected' : '';
     let ficon = "📄";
-    if (isImg) ficon="";
-    else if (ext==="json") ficon="📄";
-    else if (ext==="md") ficon="📝";
-    else if (ext==="txt") ficon="📃";
-    else if (ext==="py") ficon="🐍";
-    else if (ext==="db"||ext==="db-wal"||ext==="db-shm") ficon="🗄️";
-    else if (ext==="ini") ficon="⚙️";
-    else if (ext==="zip") ficon="🗜️";
-    else if (ext==="log") ficon="📜";
-    html += `<div class="icard${selCls}" data-imgsrc="${esc(x.img)}" data-imgname="${esc(x.name)}" data-imgpath="${esc(x.path)}" data-selpath="${esc(x.path)}">` +
-      (ficon ? `<div style="height:120px;display:flex;align-items:center;justify-content:center;font-size:42px;background:var(--panel2)">${ficon}</div>` : `<img loading="lazy" decoding="async" src="${esc(_safeImgSrc(x.img))}" alt="">`) + `<div class="nm">${esc(x.name)}</div></div>`;
+    if (isImg) ficon = "";
+    else if (ext === "json") ficon = "📄";
+    else if (ext === "md") ficon = "📝";
+    else if (ext === "txt") ficon = "📃";
+    else if (ext === "py") ficon = "🐍";
+    else if (ext === "db" || ext === "db-wal" || ext === "db-shm") ficon = "🗄️";
+    else if (ext === "ini") ficon = "⚙️";
+    else if (ext === "zip") ficon = "🗜️";
+    else if (ext === "log") ficon = "📜";
+
+    html += `<div class="icard${selCls}" data-imgsrc="${esc(x.img)}" data-imgname="${esc(x.name)}" data-selpath="${esc(x.path)}" title="${esc(x.name)} (单击选中)">
+      ${isImg ? `<button type="button" class="img-preview-badge" data-action="preview" title="查看大图" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;z-index:2">👁️</button>` : ""}
+      ${ficon ? `<div style="height:110px;display:flex;align-items:center;justify-content:center;font-size:42px;background:var(--panel2)">${ficon}</div>` : `<img loading="lazy" decoding="async" src="${esc(_safeImgSrc(x.img))}" alt="" style="height:110px;width:100%;object-fit:cover;display:block;pointer-events:none">`}
+      <div class="nm">${esc(x.name)}</div>
+    </div>`;
   });
+
   html += `</div>`;
   box.innerHTML = html;
-  // 文件夹：单击选中（非选图模式）/双击进入
-  box.querySelectorAll("[data-imgdir]").forEach((el) =>{
-    el.addEventListener("click", (e) => {
-      if (window.SHOP_PICK_TARGET) return;
-      IMG_SELECTED = el.dataset.imgdir;
-      box.querySelectorAll(".fcard, .icard").forEach(c => c.classList.remove("selected"));
-      el.classList.add("selected");
-    });
-    el.addEventListener("dblclick", (e) => {
-      loadImages(el.dataset.imgdir);
-    });
-  });
-  // 文件：单击选中（高亮）
-  box.querySelectorAll("[data-selpath]").forEach((el)=>{
-    el.addEventListener("click", (e)=>{
-      IMG_SELECTED = el.dataset.selpath;
-      box.querySelectorAll(".fcard, .icard").forEach(c => c.classList.remove("selected"));
-      el.classList.add("selected");
-    });
-  });
-  // 图片点击：先选中再预览（不阻断选中）
-  box.querySelectorAll("[data-imgsrc]").forEach((el) => {
-    el.querySelector("img")?.addEventListener("click", (e) => {
+
+  // 统一事件委托处理选择、双击与大图预览
+  box.onclick = (e) => {
+    // 点击查看大图按钮
+    const prevBtn = e.target.closest('[data-action="preview"]');
+    if (prevBtn) {
       e.stopPropagation();
-      const p = el.dataset.imgpath || el.dataset.selpath;
-      if (p) {
-        IMG_SELECTED = p;
-        box.querySelectorAll(".fcard, .icard").forEach(c => c.classList.remove("selected"));
-        el.classList.add("selected");
+      const card = prevBtn.closest(".icard");
+      if (card && card.dataset.imgsrc) {
+        showLightbox(card.dataset.imgsrc, card.dataset.imgname);
       }
-      if (el.dataset.imgsrc) showLightbox(el.dataset.imgsrc, el.dataset.imgname);
-    });
-  });
-  // 文件列表供搜索(懒加载图片已在上面)
+      return;
+    }
+
+    const card = e.target.closest(".fcard, .icard");
+    if (!card) return;
+
+    if (window.SHOP_PICK_TARGET && card.dataset.imgdir) return; // 选图模式下文件夹仅可双击进入
+
+    const path = card.dataset.imgdir || card.dataset.selpath;
+    if (path) {
+      IMG_SELECTED = path;
+      box.querySelectorAll(".fcard, .icard").forEach(c => c.classList.remove("selected"));
+      card.classList.add("selected");
+      _updateImgSelectedDisplay();
+    }
+  };
+
+  box.ondblclick = (e) => {
+    const card = e.target.closest(".fcard, .icard");
+    if (!card) return;
+    if (card.dataset.imgdir) {
+      loadImages(card.dataset.imgdir);
+    } else if (card.dataset.imgsrc) {
+      showLightbox(card.dataset.imgsrc, card.dataset.imgname);
+    }
+  };
+
   window._imgFiles = (d.files || []).map((x) => x.name);
 }
 
@@ -1352,11 +1378,10 @@ function fileToBase64(file) {
     } catch (e) { rej(e); }
   });
 }
+
 async function postFile(api, extra, file) {
-  // base64 JSON 直传：iframe 桥 postMessage 无法克隆 FormData，后端同样受理
   const b64 = await fileToBase64(file);
   if (!b64) throw new Error("文件读取失败");
-  // endpoint 自带查询串（如 ?dir=/ ?rar=）并入 body：apiPost 只发 body 不带 query，不并即丢目录
   let ep = api;
   const q = {};
   try {
@@ -1369,6 +1394,7 @@ async function postFile(api, extra, file) {
   } catch (e) {}
   return getBridge().apiPost(ep, { ...q, ...(extra || {}), filename: file.name, file_base64: b64 });
 }
+
 async function uploadImage(file) {
   if (!file) return;
   toast("上传中…", "");
@@ -1397,9 +1423,7 @@ function bindTabs() {
       } else {
         if (typeof stopLogsAutoRefresh === "function") stopLogsAutoRefresh();
       }
-      // 切换 Tab 时保证当前选中按钮在可视区内
       try { b.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }); } catch (e) {}
-      // 总览页每次点击都刷新，确保机器人QQ等快捷配置与配置页保持一致（同一接口 ST._CONFIG）
       if (tab === "overview") {
         Promise.resolve(loadOverviewReq()).catch((e) => err("tab overview: " + e.message));
         Promise.resolve(loadStats()).catch(() => {});
@@ -1407,7 +1431,6 @@ function bindTabs() {
       }
       if (!TAB_DONE[tab] && TAB_LOADERS[tab]) {
         TAB_DONE[tab] = true;
-        // 失败回退未完成态：下次切回重跑（曾首次 hang 即永久占位，只能整页刷新）
         Promise.resolve(TAB_LOADERS[tab]()).then(() => {}).catch((e) => {
           try { TAB_DONE[tab] = false; } catch (_e) {}
           err("tab " + tab + ": " + e.message);
@@ -1416,7 +1439,6 @@ function bindTabs() {
     });
   });
 
-  // Tab 栏左右滚动箭头 + 滚轮横滑
   const tabsContainer = document.getElementById("mainTabs");
   document.getElementById("tabNavPrev")?.addEventListener("click", () => {
     if (tabsContainer) tabsContainer.scrollBy({ left: -160, behavior: "smooth" });
@@ -1431,7 +1453,6 @@ function bindTabs() {
     }
   }, { passive: false });
 }
-
 function err(m) {
   const e = document.getElementById("footErr");
   if (e) e.textContent = "加载/操作异常: " + m;

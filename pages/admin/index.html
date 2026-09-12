@@ -2255,9 +2255,9 @@
     <!-- 根目录 -->
     <div class="tab" id="tab-imgs">
       <div class="panel">
-        <div class="toolbar">
+        <div class="toolbar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
           <h2>📁 根目录文件浏览器</h2>
-          <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             <button id="btnImgBack" class="ghost">⬆️ 返回上级</button>
             <button id="btnImgNewFolder" class="ghost">📁 新建文件夹</button>
             <button id="btnImgUp">📤 上传文件</button>
@@ -2266,9 +2266,7 @@
             <button id="btnImgCopy" class="ghost">📋 复制</button>
             <button id="btnImgPaste" class="ghost">📥 粘贴</button>
             <button id="btnImgRename" class="ghost">✏️ 重命名</button>
-          </div>
-          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
-            <button id="btnImgDelete" class="ghost del">🗑️ 删除选中</button>
+            <button id="btnImgDelete" class="ghost del" title="删除当前选中的文件或文件夹">🗑️ 删除选中</button>
           </div>
         </div>
         <div class="hint crumbs" id="imgCrumbs" style="margin:5px 0 8px"></div>
