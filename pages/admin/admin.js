@@ -184,18 +184,159 @@ const SYSTEM_MAP = {
 };
 let CUR_SYSTEM = "全部";
 
-// ---------- 主题(沙箱 iframe 禁止 localStorage, 仅内存切换) ----------
+// ---------- Material You (Android 16 Monet) 动态主题色彩引擎 ----------
+function hexToRgb(hex) {
+  let c = String(hex || "").replace(/^#/, "").trim();
+  if (c.length === 3) c = c.split("").map(x => x + x).join("");
+  const num = parseInt(c, 16);
+  if (isNaN(num)) return { r: 11, g: 87, b: 208 };
+  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+let _CURRENT_MONET_COLOR = "#0B57D0";
+
+function applyMonetTheme(hex) {
+  if (!hex || !/^#[0-9a-fA-F]{3,6}$/i.test(hex)) hex = "#0B57D0";
+  _CURRENT_MONET_COLOR = hex;
+  try { localStorage.setItem("xbbot_monet_color", hex); } catch (e) {}
+
+  const { r, g, b } = hexToRgb(hex);
+  const { h, s, l } = rgbToHsl(r, g, b);
+  const isDark = document.documentElement.dataset.theme === "dark";
+  const root = document.documentElement;
+
+  if (!isDark) {
+    root.style.setProperty("--md-sys-color-primary", hex);
+    root.style.setProperty("--md-sys-color-on-primary", "#FFFFFF");
+    root.style.setProperty("--md-sys-color-primary-container", `hsl(${h}, ${Math.max(25, Math.min(85, s * 0.8))}%, 91%)`);
+    root.style.setProperty("--md-sys-color-on-primary-container", `hsl(${h}, ${Math.max(40, s)}%, 16%)`);
+    root.style.setProperty("--acc", hex);
+    root.style.setProperty("--acc-hover", `hsl(${h}, ${s}%, ${Math.max(15, l * 0.85)}%)`);
+    root.style.setProperty("--acc-active", `hsl(${h}, ${s}%, ${Math.max(10, l * 0.70)}%)`);
+    root.style.setProperty("--accSoft", `rgba(${r}, ${g}, ${b}, 0.10)`);
+    root.style.setProperty("--accSoft2", `rgba(${r}, ${g}, ${b}, 0.20)`);
+    root.style.setProperty("--accBorder", `rgba(${r}, ${g}, ${b}, 0.35)`);
+  } else {
+    const darkPrimary = `hsl(${h}, ${Math.max(40, Math.min(90, s * 0.85))}%, 78%)`;
+    root.style.setProperty("--md-sys-color-primary", darkPrimary);
+    root.style.setProperty("--md-sys-color-on-primary", `hsl(${h}, ${s}%, 15%)`);
+    root.style.setProperty("--md-sys-color-primary-container", `hsl(${h}, ${Math.max(30, s * 0.9)}%, 30%)`);
+    root.style.setProperty("--md-sys-color-on-primary-container", `hsl(${h}, ${Math.max(30, s * 0.8)}%, 90%)`);
+    root.style.setProperty("--acc", darkPrimary);
+    root.style.setProperty("--acc-hover", `hsl(${h}, ${s}%, 86%)`);
+    root.style.setProperty("--acc-active", `hsl(${h}, ${s}%, 70%)`);
+    root.style.setProperty("--accSoft", `rgba(${r}, ${g}, ${b}, 0.18)`);
+    root.style.setProperty("--accSoft2", `rgba(${r}, ${g}, ${b}, 0.30)`);
+    root.style.setProperty("--accBorder", `rgba(${r}, ${g}, ${b}, 0.40)`);
+  }
+
+  const inputEl = document.getElementById("monetColorInput");
+  const hexEl = document.getElementById("monetColorHex");
+  if (inputEl) inputEl.value = hex;
+  if (hexEl) hexEl.textContent = hex.toUpperCase();
+
+  document.querySelectorAll(".monet-item").forEach((el) => {
+    if (el.dataset.color && el.dataset.color.toLowerCase() === hex.toLowerCase()) {
+      el.classList.add("on");
+    } else {
+      el.classList.remove("on");
+    }
+  });
+}
+
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
   const b = document.getElementById("themeBtn");
   if (b) b.textContent = t === "dark" ? "☀" : "☾";
+  applyMonetTheme(_CURRENT_MONET_COLOR);
 }
 function initTheme() {
+  let savedColor = "#0B57D0";
+  try { savedColor = localStorage.getItem("xbbot_monet_color") || "#0B57D0"; } catch (e) {}
+  _CURRENT_MONET_COLOR = savedColor;
   applyTheme("light");
+
   const b = document.getElementById("themeBtn");
   if (b) b.addEventListener("click", () => {
     applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
   });
+
+  initMonetPalette();
+}
+
+function initMonetPalette() {
+  const btn = document.getElementById("themePaletteBtn");
+  const card = document.getElementById("monetPaletteCard");
+  const closeBtn = document.getElementById("monetPaletteClose");
+  const input = document.getElementById("monetColorInput");
+  const resetBtn = document.getElementById("monetResetDefault");
+
+  if (btn && card) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isShow = card.style.display !== "none";
+      card.style.display = isShow ? "none" : "block";
+    });
+  }
+
+  if (closeBtn && card) {
+    closeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      card.style.display = "none";
+    });
+  }
+
+  document.addEventListener("click", (e) => {
+    if (card && card.style.display !== "none" && !card.contains(e.target) && e.target !== btn) {
+      card.style.display = "none";
+    }
+  });
+
+  document.querySelectorAll(".monet-item").forEach((it) => {
+    it.addEventListener("click", () => {
+      const c = it.dataset.color;
+      if (c) {
+        applyMonetTheme(c);
+        toast("已应用 Android 16 主题色：" + (it.querySelector("span")?.textContent || c), "ok");
+      }
+    });
+  });
+
+  if (input) {
+    input.addEventListener("input", (e) => {
+      applyMonetTheme(e.target.value);
+    });
+    input.addEventListener("change", (e) => {
+      applyMonetTheme(e.target.value);
+      toast("已应用自定义主色：" + e.target.value.toUpperCase(), "ok");
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      applyMonetTheme("#0B57D0");
+      toast("已恢复默认谷歌蓝", "ok");
+    });
+  }
 }
 
 // ---------- toast ----------

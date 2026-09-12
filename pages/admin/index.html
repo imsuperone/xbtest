@@ -554,6 +554,89 @@
     tr:last-child td { border-bottom: 0; }
     tbody tr:hover { background: var(--panel-hover); }
 
+    
+    /* Android 16 Material You 动态调色盘浮层 */
+    .monet-popover {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: 280px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow-lg);
+      padding: 14px 16px;
+      z-index: 95;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      animation: monetPopIn 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    @keyframes monetPopIn {
+      from { opacity: 0; transform: scale(0.94) translateY(-6px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .monet-pop-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .monet-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .monet-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 4px;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+      user-select: none;
+    }
+    .monet-item:hover {
+      background: var(--panel-hover);
+      transform: translateY(-2px);
+      border-color: var(--accBorder);
+    }
+    .monet-item.on {
+      border-color: var(--acc) !important;
+      background: var(--primary-container) !important;
+      box-shadow: 0 0 0 2px var(--acc);
+    }
+    .monet-item.on span {
+      color: var(--on-primary-container) !important;
+      font-weight: 600;
+    }
+    .monet-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+      border: 2px solid #FFFFFF;
+    }
+    [data-theme="dark"] .monet-swatch {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .monet-item span {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .monet-custom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid var(--line-subtle);
+    }
+
     /* Badges */
     .badge {
       display: inline-flex;
@@ -1855,10 +1938,59 @@
           <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
         </div>
       </div>
-      <div class="header-ctrl">
+      <div class="header-ctrl" style="position:relative">
         <button id="btnOpenExportHub" class="btn sm" style="background:var(--primary-container);color:var(--on-primary-container);border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px" title="打开模块化数据与预设导出中心"><span class="hdr-btn-full">📦 导出/预设中心</span><span class="hdr-btn-short">📦 导出</span></button>
         <button id="btnOpenImportHub" class="ghost sm" style="display:inline-flex;align-items:center;gap:5px" title="智能选择性导入文件"><span class="hdr-btn-full">📤 智能导入</span><span class="hdr-btn-short">📤 导入</span></button>
+        <button class="iconBtn" id="themePaletteBtn" title="动态调色盘 (Material You / Android 16)">🎨</button>
         <button class="iconBtn" id="themeBtn" title="切换深浅主题">☀</button>
+
+        <!-- Android 16 Material You 动态调色盘浮层 -->
+        <div id="monetPaletteCard" class="monet-popover" style="display:none">
+          <div class="monet-pop-header">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:18px">🎨</span>
+              <div>
+                <div style="font-size:13.5px;font-weight:600;color:var(--text)">Material You 调色盘</div>
+                <div style="font-size:11px;color:var(--muted)">Android 16 动态主色与自适应色阶</div>
+              </div>
+            </div>
+            <button id="monetPaletteClose" class="iconBtn" style="width:28px;height:28px;font-size:13px;border:none;background:transparent" title="关闭">✕</button>
+          </div>
+          <div class="monet-grid">
+            <div class="monet-item" data-color="#0B57D0" title="谷歌经典蓝 (Google Blue)">
+              <div class="monet-swatch" style="background:#0B57D0"></div>
+              <span>谷歌蓝</span>
+            </div>
+            <div class="monet-item" data-color="#006C4C" title="翡翠薄荷绿 (Emerald Mint)">
+              <div class="monet-swatch" style="background:#006C4C"></div>
+              <span>翡翠绿</span>
+            </div>
+            <div class="monet-item" data-color="#6750A4" title="鸢尾梦境紫 (Iris Violet)">
+              <div class="monet-swatch" style="background:#6750A4"></div>
+              <span>鸢尾紫</span>
+            </div>
+            <div class="monet-item" data-color="#B35C00" title="暖阳琥珀橙 (Amber Gold)">
+              <div class="monet-swatch" style="background:#B35C00"></div>
+              <span>琥珀橙</span>
+            </div>
+            <div class="monet-item" data-color="#BA1A1A" title="珊瑚赤霞红 (Coral Rose)">
+              <div class="monet-swatch" style="background:#BA1A1A"></div>
+              <span>珊瑚红</span>
+            </div>
+            <div class="monet-item" data-color="#006782" title="深海极光青 (Cyan Ocean)">
+              <div class="monet-swatch" style="background:#006782"></div>
+              <span>极光青</span>
+            </div>
+          </div>
+          <div class="monet-custom-row">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;cursor:pointer">
+              <span>自定义主色：</span>
+              <input type="color" id="monetColorInput" value="#0B57D0" style="width:26px;height:26px;padding:0;border:none;border-radius:50%;cursor:pointer;background:transparent">
+              <span id="monetColorHex" style="font-family:monospace;font-size:11.5px;color:var(--text-secondary)">#0B57D0</span>
+            </label>
+            <button id="monetResetDefault" class="sm ghost" style="margin-left:auto;padding:3px 10px;font-size:11.5px">恢复默认</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -2195,7 +2327,7 @@
             <button id="btnBackupDelete" class="ghost del">🗑️ 删除选中</button>
           </div>
         </div>
-        <div class="hint">系统每 3 小时自动增量冷备（或发送 `备份xb`）归档至 <code>data/backups/YYYY-MM-DD/HHMMSS.db</code>，默认自动保留最新 30 份数据并自动清理过期冷备。支持 WebDAV 自动云端备份（坚果云/Alist/NAS等），点击文件项可快速恢复或单独导出。</div>
+        
         <div class="hint crumbs" id="backupCrumbs" style="margin:5px 0 8px"></div>
         <div class="search"><span>🔍</span><input id="backupSearch" placeholder="搜索日期目录 / 备份文件名…" /></div>
         <div id="backupBrowser"></div>
