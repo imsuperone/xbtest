@@ -225,15 +225,16 @@ function applyMonetTheme(hex) {
   const root = document.documentElement;
 
   if (!isDark) {
-    const bgL = `hsl(${h}, ${Math.min(s * 0.16, 12)}%, 97.5%)`;
+    const isGoogleBlue = hex.toLowerCase() === "#0b57d0";
+    const bgL = isGoogleBlue ? "#F8F9FA" : `hsl(${h}, ${Math.min(s * 0.16, 12)}%, 97.5%)`;
     const panelL = "#FFFFFF";
-    const panelHoverL = `hsl(${h}, ${Math.min(s * 0.18, 14)}%, 95%)`;
-    const panel2L = `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 93%)`;
-    const panel3L = `hsl(${h}, ${Math.min(s * 0.22, 18)}%, 89%)`;
-    const lineL = `hsla(${h}, ${Math.min(s * 0.20, 18)}%, 30%, 0.08)`;
-    const lineSubtleL = `hsla(${h}, ${Math.min(s * 0.20, 18)}%, 30%, 0.04)`;
-    const priContL = `hsl(${h}, ${Math.max(40, Math.min(85, s * 0.75))}%, 90%)`;
-    const onPriContL = `hsl(${h}, ${Math.max(45, s)}%, 15%)`;
+    const panelHoverL = isGoogleBlue ? "#F1F4F9" : `hsl(${h}, ${Math.min(s * 0.18, 14)}%, 95%)`;
+    const panel2L = isGoogleBlue ? "#EDF2F9" : `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 93%)`;
+    const panel3L = isGoogleBlue ? "#E2E8F0" : `hsl(${h}, ${Math.min(s * 0.22, 18)}%, 89%)`;
+    const lineL = isGoogleBlue ? "#C4C7C5" : `hsla(${h}, ${Math.min(s * 0.20, 18)}%, 30%, 0.12)`;
+    const lineSubtleL = "rgba(0, 0, 0, 0.06)";
+    const priContL = isGoogleBlue ? "#D3E3FD" : `hsl(${h}, ${Math.max(40, Math.min(85, s * 0.75))}%, 90%)`;
+    const onPriContL = "#041E49";
 
     root.style.setProperty("--md-sys-color-primary", hex);
     root.style.setProperty("--md-sys-color-on-primary", "#FFFFFF");
@@ -243,12 +244,17 @@ function applyMonetTheme(hex) {
     root.style.setProperty("--md-sys-color-surface-container", panelL);
     root.style.setProperty("--md-sys-color-surface-container-high", panel2L);
     root.style.setProperty("--md-sys-color-surface-container-highest", panel3L);
+    root.style.setProperty("--surface-container-high", panel2L);
+    root.style.setProperty("--outline", "#74777F");
 
     root.style.setProperty("--bg", bgL);
     root.style.setProperty("--panel", panelL);
     root.style.setProperty("--panel-hover", panelHoverL);
     root.style.setProperty("--panel2", panel2L);
     root.style.setProperty("--panel3", panel3L);
+    root.style.setProperty("--text", "#1F1F1F");
+    root.style.setProperty("--text-secondary", "#444746");
+    root.style.setProperty("--muted", "#444746");
     root.style.setProperty("--line", lineL);
     root.style.setProperty("--line-subtle", lineSubtleL);
 
@@ -261,31 +267,37 @@ function applyMonetTheme(hex) {
     root.style.setProperty("--primary-container", priContL);
     root.style.setProperty("--on-primary-container", onPriContL);
   } else {
-    const darkPrimary = `hsl(${h}, ${Math.max(45, Math.min(90, s * 0.85))}%, 78%)`;
-    const bgD = `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 6.5%)`;
-    const panelD = `hsl(${h}, ${Math.min(s * 0.18, 14)}%, 10%)`;
-    const panelHoverD = `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 15%)`;
-    const panel2D = `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 14%)`;
-    const panel3D = `hsl(${h}, ${Math.min(s * 0.22, 18)}%, 19%)`;
-    const lineD = `hsla(${h}, ${Math.min(s * 0.20, 18)}%, 70%, 0.10)`;
-    const lineSubtleD = `hsla(${h}, ${Math.min(s * 0.20, 18)}%, 70%, 0.05)`;
-    const priContD = `hsl(${h}, ${Math.max(35, s * 0.8)}%, 24%)`;
-    const onPriContD = `hsl(${h}, ${Math.max(35, s * 0.75)}%, 94%)`;
+    const isGoogleBlue = hex.toLowerCase() === "#0b57d0";
+    const darkPrimary = isGoogleBlue ? "#A8C7FA" : `hsl(${h}, ${Math.max(45, Math.min(90, s * 0.85))}%, 78%)`;
+    const bgD = "#111318";
+    const panelD = "#191C20";
+    const panelHoverD = "#21252C";
+    const panel2D = "#22262B";
+    const panel3D = "#2C3036";
+    const lineD = "rgba(255, 255, 255, 0.12)";
+    const lineSubtleD = "rgba(255, 255, 255, 0.06)";
+    const priContD = isGoogleBlue ? "#0842A0" : `hsl(${h}, ${Math.max(35, s * 0.8)}%, 24%)`;
+    const onPriContD = isGoogleBlue ? "#D3E3FD" : `hsl(${h}, ${Math.max(35, s * 0.75)}%, 94%)`;
 
     root.style.setProperty("--md-sys-color-primary", darkPrimary);
-    root.style.setProperty("--md-sys-color-on-primary", `hsl(${h}, ${s}%, 15%)`);
+    root.style.setProperty("--md-sys-color-on-primary", "#041E49");
     root.style.setProperty("--md-sys-color-primary-container", priContD);
     root.style.setProperty("--md-sys-color-on-primary-container", onPriContD);
     root.style.setProperty("--md-sys-color-surface", bgD);
     root.style.setProperty("--md-sys-color-surface-container", panelD);
     root.style.setProperty("--md-sys-color-surface-container-high", panel2D);
     root.style.setProperty("--md-sys-color-surface-container-highest", panel3D);
+    root.style.setProperty("--surface-container-high", panel2D);
+    root.style.setProperty("--outline", "#8E918F");
 
     root.style.setProperty("--bg", bgD);
     root.style.setProperty("--panel", panelD);
     root.style.setProperty("--panel-hover", panelHoverD);
     root.style.setProperty("--panel2", panel2D);
     root.style.setProperty("--panel3", panel3D);
+    root.style.setProperty("--text", "#E2E2E6");
+    root.style.setProperty("--text-secondary", "#C4C7D0");
+    root.style.setProperty("--muted", "#8E918F");
     root.style.setProperty("--line", lineD);
     root.style.setProperty("--line-subtle", lineSubtleD);
 
@@ -3059,18 +3071,33 @@ function spiritAttrCards(spirits, dropNames, assignMaps) {
   return dropNames.map((sn) => {
     const it = spirits[sn] || { type: "", hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0, lv: 0, evolve: "否" };
     const _img = String(it.img || "").trim();
-    const cells = SPIRIT_FIELDS.map(([fk, label]) => {
+    // 8 项核心数值（HP、物攻、物防、特攻、特防、速度、等级、进化），4列自适应网格
+    const coreAttrs = [
+      ["hp", "HP"], ["atk", "物攻"], ["def", "物防"], ["spa", "特攻"],
+      ["spd", "特防"], ["spe", "速度"], ["lv", "等级"], ["evolve", "进化"]
+    ];
+    const coreCells = coreAttrs.map(([fk, label]) => {
       const _list = fk === "evolve" ? ` list="spEvolveList"` : "";
       return `<div class="s-row"><small>${label}</small>` +
-        `<input data-sp-spirit="${esc(sn)}" data-s-field="${fk}" value="${esc(it[fk] ?? "")}"${_list} style="width:78px"></div>`;
+        `<input data-sp-spirit="${esc(sn)}" data-s-field="${fk}" value="${esc(it[fk] ?? "")}"${_list}></div>`;
     });
     return `<div class="sp-card" data-sp="${esc(sn)}">
-      <div class="sp-name">✦ <input data-sp-rename value="${esc(sn)}" title="直接改名，回车/失焦生效" style="width:110px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:2px 6px;font-size:12px;font-weight:600"></div>
-      <div class="s-fields">${cells.join("")}
-        <button class="s-del" data-del-spirit="${esc(sn)}">移除精灵</button></div>
-      <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">${_img ? `<button class="ghost sm" data-sp-view="${esc(_img)}">浏览图片</button>` : ""}<button class="ghost sm" data-sp-pick-upload="${esc(sn)}">外置选图</button><button class="ghost sm" data-sp-pick-builtin="${esc(sn)}">内置选图</button></div>
-        ${_assignOpts ? `<div style="display:flex;gap:4px;margin-top:4px;align-items:center"><select data-assign-map="${esc(sn)}" style="flex:1;padding:4px 6px;border-radius:6px">${_assignOpts}</select><button class="ghost sm" data-assign-spirit="${esc(sn)}">分配进图</button></div>` : ""}
-      </div>`;
+      <div class="sp-header">
+        <div class="sp-name">✦ <input data-sp-rename value="${esc(sn)}" title="直接改名，回车/失焦生效"></div>
+        <button type="button" class="s-del" data-del-spirit="${esc(sn)}" title="移除精灵">×</button>
+      </div>
+      <div class="sp-core-grid">${coreCells.join("")}</div>
+      <div class="sp-extra-row">
+        <div class="s-row"><small>属性</small><input data-sp-spirit="${esc(sn)}" data-s-field="type" value="${esc(it.type ?? "")}" placeholder="如: 水/火"></div>
+        <div class="s-row"><small>形象图</small><input data-sp-spirit="${esc(sn)}" data-s-field="img" value="${esc(it.img ?? "")}" placeholder="图片文件名"></div>
+      </div>
+      <div class="sp-actions">
+        ${_img ? `<button type="button" class="ghost sm" data-sp-view="${esc(_img)}">浏览图片</button>` : ""}
+        <button type="button" class="ghost sm" data-sp-pick-upload="${esc(sn)}">外置选图</button>
+        <button type="button" class="ghost sm" data-sp-pick-builtin="${esc(sn)}">内置选图</button>
+      </div>
+      ${_assignOpts ? `<div class="sp-assign-row"><select data-assign-map="${esc(sn)}" style="flex:1;padding:4px 8px;border-radius:10px">${_assignOpts}</select><button type="button" class="ghost sm" data-assign-spirit="${esc(sn)}">分配进图</button></div>` : ""}
+    </div>`;
   }).join("") + _dl;
 }
 
@@ -6256,7 +6283,7 @@ function renderLogs(logsList) {
 
   const autoScroll = document.getElementById("logsAutoScroll");
   if (autoScroll && autoScroll.checked) {
-    const terminal = document.getElementById("logTerminal");
+    const terminal = document.getElementById("logTerminal") || document.getElementById("logBox");
     if (terminal) {
       terminal.scrollTop = terminal.scrollHeight;
     }
