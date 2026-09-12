@@ -3,8 +3,6 @@ import json
 from . import state as _S
 from .state import Acct, _safe_commit, _safe_rollback
 from .db import _ensure_db, _read_conn
-from .accounts import acct
-from .groups import group
 def coins_get(gid, qq):
     _ensure_db()
     # 读副本快路径：不持全局写锁，WAL 读与写并行

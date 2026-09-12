@@ -370,9 +370,17 @@ async def handle_pool_replace_path(request):
             fp = _img_safe(src, _pool_base())
             if not fp or not _os.path.isfile(fp):
                 return _err("源文件不存在或越界", 400)
+            try:
+                from .images import _is_blocked as _img_blocked
+            except ImportError:
+                from images import _is_blocked as _img_blocked  # type: ignore
+            if _img_blocked(fp):
+                return _err("源文件越界", 400)
             ext = _os.path.splitext(fp)[1].lower()
             if ext not in _POOL_IMG_EXTS:
                 return _err("源文件非图片", 400)
+            if _os.path.getsize(fp) > 5 * 1024 * 1024:
+                return _err("源文件过大（限5MB）", 400)
             with open(fp, "rb") as f:
                 blob = f.read()
             if not blob:

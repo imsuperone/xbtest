@@ -536,23 +536,28 @@ def _import_file_data(filename, data):
             return json_response({"error": f"write tmp failed: {e}", "imported": 0})
         lower = filename.lower()
         if lower.endswith(".zip"):
+            def _safe_extract(zf, dest):
+                # ZipSlip 防护：跳过绝对路径与 .. 逃逸条目
+                for info in zf.infolist():
+                    try:
+                        if info.flag_bits & 0x800 == 0:
+                            info.filename = info.filename.encode("cp437").decode("gbk", errors="replace")
+                    except Exception:
+                        pass
+                    _name = str(info.filename or "").replace("\\", "/")
+                    if not _name or _name.startswith("/") or ".." in _name.split("/"):
+                        continue
+                    try:
+                        zf.extract(info, dest)
+                    except Exception:
+                        pass
             try:
                 ztmp = tempfile.mkdtemp(prefix="xbbot_legacy_")
                 try:
                     with zipfile.ZipFile(tmp, "r") as zf:
-                        zf.extractall(ztmp)
+                        _safe_extract(zf, ztmp)
                 except Exception as ze:
-                    try:
-                        with zipfile.ZipFile(tmp, "r") as zf:
-                            for info in zf.infolist():
-                                try:
-                                    if info.flag_bits & 0x800 == 0:
-                                        info.filename = info.filename.encode("cp437").decode("gbk", errors="replace")
-                                except Exception:
-                                    pass
-                                zf.extract(info, ztmp)
-                    except Exception:
-                        raise ze
+                    raise ze
                 total = 0
                 for root2, _, files2 in os.walk(ztmp):
                     for fn in files2:
