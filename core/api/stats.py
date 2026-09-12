@@ -188,6 +188,7 @@ async def handle_logs_get(request=None):
             limit = int(limit_str)
         except Exception:
             limit = 200
+        limit = max(1, min(limit, 1000))  # API 层钳制：防传百万读爆（底层另有 1000 硬上限）
 
         # 日志文件读 + 正则过滤走线程池，不堵消息循环
         data = await asyncio.to_thread(
@@ -495,7 +496,7 @@ def _get_local_version(plugin_base=""):
         return _gv(plugin_base)
     except Exception:
         pass
-    return "2026w0912g"
+    return "2026w0912h"
 
 
 def _parse_version_tuple(v_str):

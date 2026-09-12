@@ -273,7 +273,11 @@ async def read_upload_b64(request):
                 _b64s = _b64s.split(",", 1)[1]
             if _b64s.strip():
                 import base64
-                return b64_name, base64.b64decode(_b64s.strip())
+                _raw = base64.b64decode(_b64s.strip())
+                # 上传上限 50M（与单文件导出对齐，防大包内存爆）
+                if len(_raw) > 50 * 1024 * 1024:
+                    return "", b""
+                return b64_name, _raw
     except Exception:
         pass
     return "", b""

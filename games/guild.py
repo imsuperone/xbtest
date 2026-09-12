@@ -35,6 +35,10 @@ try:
     from .config.guild import DEFAULTS as _GUILD_DEFAULTS, CONTRIBUTE_DIV, WELFARE_PER_GONG
 except ImportError:
     from games.config.guild import DEFAULTS as _GUILD_DEFAULTS, CONTRIBUTE_DIV, WELFARE_PER_GONG  # type: ignore
+try:
+    from .config.spirit import POWER_DIV as _SPIRIT_POWER_DIV
+except ImportError:
+    from games.config.spirit import POWER_DIV as _SPIRIT_POWER_DIV  # type: ignore
 
 
 def _cfgi(key, default=0):
@@ -122,7 +126,7 @@ def _spirit_power(gid, qq):
             if it.get("name") == act:
                 return int(it.get("level", 1)) * (
                     int(it.get("hp", 0)) + int(it.get("atk", 0)) +
-                    int(it.get("def", 0)) + int(it.get("spa", 0)) + int(it.get("spd", 0))) // 5
+                    int(it.get("def", 0)) + int(it.get("spa", 0)) + int(it.get("spd", 0))) // _SPIRIT_POWER_DIV
     except Exception:
         pass
     return 0

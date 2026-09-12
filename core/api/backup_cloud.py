@@ -34,7 +34,8 @@ async def handle_webdav_test(request):
         p = await get_req_json(request, default={})
         url = (p.get("url") if isinstance(p, dict) else None) or get_req_query(request, "url", None)
         user = (p.get("user") if isinstance(p, dict) else None) or get_req_query(request, "user", None)
-        pwd = (p.get("pwd") if isinstance(p, dict) else None) or get_req_query(request, "pwd", None)
+        # 密码只走 POST body：禁 query 明文进日志/代理留痕（前端已是 apiPost）
+        pwd = (p.get("pwd") if isinstance(p, dict) else None)
         rdir = (p.get("dir") if isinstance(p, dict) else None) or get_req_query(request, "dir", None)
         ok, msg = await asyncio.to_thread(_wd.test_connection, url, user, pwd, rdir)
         return json_response({"ok": ok, "msg": msg})
@@ -89,7 +90,8 @@ async def handle_webdav_files(request):
         p = await get_req_json(request, default={})
         url = (p.get("url") if isinstance(p, dict) else None) or get_req_query(request, "url", None)
         user = (p.get("user") if isinstance(p, dict) else None) or get_req_query(request, "user", None)
-        pwd = (p.get("pwd") if isinstance(p, dict) else None) or get_req_query(request, "pwd", None)
+        # 密码只走 POST body：禁 query 明文进日志/代理留痕
+        pwd = (p.get("pwd") if isinstance(p, dict) else None)
         rdir = (p.get("dir") if isinstance(p, dict) else None) or get_req_query(request, "dir", None)
         ok, res = await asyncio.to_thread(_wd.list_remote_files, url, user, pwd, rdir)
         if not ok:
@@ -116,7 +118,7 @@ async def handle_webdav_restore(request, plugin_base=""):
     if not file_name:
         return _err("缺少待恢复文件名 (file)", 400)
     clean_name = os.path.basename(file_name)
-    if not clean_name.endswith(".db"):
+    if not clean_name.lower().endswith(".db"):
         return _err("仅支持从 .db 格式的数据库备份恢复", 400)
 
     # 1. 异步下载远端备份文件至本地 downloads 目录

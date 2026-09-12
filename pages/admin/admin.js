@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0912g";
+const FRONTEND_VER = "2026w0912h";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1719,7 +1719,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0912g"
+        version: res.version || "2026w0912h"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -5924,7 +5924,7 @@ async function loadLogs(isAuto = false) {
       const total = data.total_lines !== undefined ? data.total_lines : logsList.length;
       const size = data.file_size_kb !== undefined ? data.file_size_kb : 0;
       const maxMb = data.max_file_mb !== undefined ? data.max_file_mb : 2.0;
-      meta.textContent = `当前展示: ${count} / ${total} 行 | 文件大小: ${size} KB (上限 ${maxMb} MB)`;
+      meta.textContent = `当前展示: ${count} / 近${total}行 | 文件大小: ${size} KB (上限 ${maxMb} MB)`;
     }
     return true;
   } catch (e) {

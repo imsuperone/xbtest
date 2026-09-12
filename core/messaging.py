@@ -5,7 +5,11 @@
 """
 import os
 import re
+import threading as _threading
 import time
+
+# @卡片待落盘池锁：事件循环线程写、后台线程读清，加小锁防交错
+_CARDS_LOCK = _threading.Lock()
 
 
 _CQ_IMG = re.compile(r"\[CQ:image,([^\]]*)\]")
@@ -59,6 +63,8 @@ def _build_chain(reply):
         text, imgs = s, []
 
     tt = text or ""
+    _tt_orig = tt  # CQ 原样留底：图片全丢时回退原文，防图文全失
+    _img_ok = False
     if "[CQ:image," in tt:
         def _repl(m):
             attrs = {}
@@ -97,8 +103,12 @@ def _build_chain(reply):
                     p_clean = p_clean[1:]
                 if _Img is not None and isinstance(p_clean, str) and os.path.isfile(p_clean):
                     comp.append(_Img.fromFileSystem(p_clean))
+                    _img_ok = True
             except Exception:
                 pass
+        if not _img_ok and _tt_orig and _tt_orig != tt:
+            # 非文件图静默丢曾致图文全失：无一图可用时转文本 CQ 原样
+            return [Plain(_tt_orig)]
     if not comp and tt:
         comp = [Plain(tt)]
     return comp
@@ -115,7 +125,8 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
         ats = []
         for comp in chain:
             comp_type = getattr(comp, "type", "") or getattr(comp, "component_type", "") or comp.__class__.__name__
-            is_at = "at" in str(comp_type).lower() or hasattr(comp, "qq") or hasattr(comp, "target")
+            # @判定收紧：仅类型名含 at 的真@段，防 hasattr(qq/target) 过度匹配
+            is_at = "at" in str(comp_type).lower()
             if not is_at:
                 continue
             q = getattr(comp, "qq", None)
@@ -143,11 +154,12 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
                             except Exception:
                                 pass
                             try:
-                                _cards = getattr(_append_at_segments, "_pending_cards", None)
-                                if _cards is None:
-                                    _cards = {}
-                                    _append_at_segments._pending_cards = _cards
-                                _cards[(str(gid), str(q))] = nm
+                                with _CARDS_LOCK:
+                                    _cards = getattr(_append_at_segments, "_pending_cards", None)
+                                    if _cards is None:
+                                        _cards = {}
+                                        _append_at_segments._pending_cards = _cards
+                                    _cards[(str(gid), str(q))] = nm
                             except Exception:
                                 pass
                 except Exception:
@@ -159,10 +171,14 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
             raw += " ".join("@" + q for q in ats)
         # @卡片落盘合并为单后台任务（@轰炸不再每 @ 起一个线程），复用分群写入
         try:
-            _cards = getattr(_append_at_segments, "_pending_cards", None)
-            if _cards:
-                _jobs = list(_cards.items())
-                _cards.clear()
+            with _CARDS_LOCK:
+                _cards = getattr(_append_at_segments, "_pending_cards", None)
+                if _cards:
+                    _jobs = list(_cards.items())
+                    _cards.clear()
+                else:
+                    _jobs = []
+            if _jobs:
                 def _bg_save_cards(_jobs, _sm=sm):
                     try:
                         for (_g, _tq), _tn in _jobs:

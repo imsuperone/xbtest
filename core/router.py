@@ -103,6 +103,10 @@ def _sys_off(gid, engine, store):
     try:
         hit = _GUARD_CACHE.get(key)
         if hit and _t_guard.time() - hit[0] < _GUARD_CACHE_TTL:
+            try:
+                _GUARD_CACHE[key] = _GUARD_CACHE.pop(key)  # LRU：命中上浮，淘汰真正最久未用
+            except Exception:
+                pass
             return hit[1]
     except Exception:
         pass
@@ -217,7 +221,7 @@ def _engine_cache_ver(store=None):
         max_mt = 0.0
         _watch = [os.path.join(eng_dir, _n + ".py")
                   for _n in ("sign", "spirit", "ride", "guild", "adventure")]
-        for _pkg in ("slave", "bank", "ent"):
+        for _pkg in ("slave", "bank", "ent", "ride", "guild", "adventure"):
             _pd = os.path.join(eng_dir, _pkg)
             if os.path.isdir(_pd):
                 _watch.extend(os.path.join(_pd, f) for f in os.listdir(_pd) if f.endswith(".py"))
@@ -603,7 +607,13 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
     except Exception:
         _maint_l = False
     if _maint_g or _maint_l:
-        if "[CQ:at" in str(raw or ""):
+        try:
+            _pa = getattr(store, "parse_at", None) if store is not None else None
+            # 被@才回一条：走 storage.parse_at（CQ:at,qq=/@QQ/@昵称），防 "[CQ:at" 子串误判
+            _mentioned = (_pa(str(raw or ""))[0] is not None) if callable(_pa) else ("[CQ:at" in str(raw or ""))
+        except Exception:
+            _mentioned = ("[CQ:at" in str(raw or ""))
+        if _mentioned:
             try:
                 return store.cfg("维护配置", "维护信息", "🚧 维护中")
             except Exception:
@@ -664,7 +674,7 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
                         msg_l = str(e).lower()
                     except Exception:
                         msg_l = ""
-                    if any(k in msg_l for k in ("database", "locked", "rollback", "transaction", "sqlite", "misuse", "owner", "not defined")):
+                    if any(k in msg_l for k in ("database", "locked", "rollback", "transaction", "sqlite", "misuse")):
                         return f"【{sysname}系统】当前人数较多，系统繁忙，请稍后重试~"
                     return f"【{sysname}系统】处理指令时出现异常，请稍后重试（原因: {e}）"
                 r = None

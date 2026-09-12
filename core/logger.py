@@ -9,6 +9,7 @@
 """
 import os
 import datetime
+import re as _re
 import threading
 
 _LOCK = threading.RLock()
@@ -176,7 +177,7 @@ def get_logs(limit=200, level="", keyword=""):
     for line in reversed(all_lines):
         if not line.strip():
             continue
-        if level and f"[{level}]" not in line:
+        if level and not _re.match(r"^\[[^\]]*\]\s*\[" + _re.escape(level) + r"\]", line):
             continue
         if keyword and keyword not in line.lower():
             continue

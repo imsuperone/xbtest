@@ -65,7 +65,13 @@ _build_chain = getattr(_plat_layer, "_build_chain", None) if _HAS_CORE else None
 _append_at_segments = getattr(_plat_layer, "_append_at_segments", None) if _HAS_CORE else None
 _name_prefix = getattr(_plat_layer, "_name_prefix", None) if _HAS_CORE else None
 _do_platform = getattr(_plat_layer, "_do_platform", None) if _HAS_CORE else None
-assert _maybe_dict and _normalize_cfg and _build_chain, "core 层未加载，请检查 pages→main→core 单向依赖"
+if not (_maybe_dict and _normalize_cfg and _build_chain):
+    # import 期不再 assert 崩插件：告警＋降级（下游调用点均判 callable，缺失即走空配置/静默）
+    try:
+        import warnings as _warnings
+        _warnings.warn("core 层未加载，请检查 pages→main→core 单向依赖")
+    except Exception:
+        pass
 # core.dispatch 导入（分发流水线单文件，纯逻辑无 astrbot 依赖）
 try:
     from . import dispatch as _dispatch_all
@@ -135,11 +141,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "2026w0912g"
+            return "2026w0912h"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "2026w0912g"
+    PLUGIN_VERSION = "2026w0912h"
 
 # 消息处理定长线程池：突发千群不再打爆默认无限池，与 ST._LOCK 串行叠加可控
 # import 期不建池（工具链 import 零线程）：首个 XbBot 实例化/首消息时懒建，全局单例，永不 shutdown
@@ -259,11 +265,13 @@ def _apply_fresh_casual(data_dir):
                 with ST._LOCK:
                     _c = ST._DB.execute("SELECT COUNT(*) FROM wallet").fetchone()
                     _c2 = ST._DB.execute("SELECT COUNT(*) FROM accounts").fetchone()
-                _empty = (int((_c or [0])[0] or 0) == 0 and int((_c2 or [0])[0] or 0) == 0)
+                    _c3 = ST._DB.execute("SELECT COUNT(*) FROM groups").fetchone()
+                _empty = (int((_c or [0])[0] or 0) == 0 and int((_c2 or [0])[0] or 0) == 0 and int((_c3 or [0])[0] or 0) == 0)
             elif ST._DB is not None:
                 _c = ST._DB.execute("SELECT COUNT(*) FROM wallet").fetchone()
                 _c2 = ST._DB.execute("SELECT COUNT(*) FROM accounts").fetchone()
-                _empty = (int((_c or [0])[0] or 0) == 0 and int((_c2 or [0])[0] or 0) == 0)
+                _c3 = ST._DB.execute("SELECT COUNT(*) FROM groups").fetchone()
+                _empty = (int((_c or [0])[0] or 0) == 0 and int((_c2 or [0])[0] or 0) == 0 and int((_c3 or [0])[0] or 0) == 0)
         except Exception:
             return False
         if not _empty:
@@ -379,7 +387,14 @@ class XbBot(Star):
     def __init__(self, context: Context, config: Optional[dict] = None):
         super().__init__(context)
         _get_exec()  # 实例化时建消息池（import 期零线程；并发语义不变）
-        cfg = _normalize_cfg(config) if isinstance(config, dict) and config else _fallback_cfg()
+        if isinstance(config, dict) and config and callable(_normalize_cfg):
+            cfg = _normalize_cfg(config)
+        elif callable(_fallback_cfg):
+            cfg = _fallback_cfg()
+        else:
+            cfg = {}
+        if not isinstance(cfg, dict):
+            cfg = {}
         _BASE = _PLUGIN_BASE
         try:
             from astrbot.api.star import StarTools
@@ -573,7 +588,13 @@ class XbBot(Star):
                     event.stop_event()
                 except Exception:
                     pass
-                if "[CQ:at" in raw:
+                try:
+                    _pa = getattr(ST, "parse_at", None)
+                    # 被@才回一条：走 storage.parse_at，防 "[CQ:at" 子串误判
+                    _m_mentioned = (_pa(str(raw or ""))[0] is not None) if callable(_pa) else ("[CQ:at" in raw)
+                except Exception:
+                    _m_mentioned = ("[CQ:at" in raw)
+                if _m_mentioned:
                     try:
                         _m_note = ST.cfg("维护配置", "维护信息", "🚧 维护中")
                     except Exception:
@@ -605,15 +626,6 @@ class XbBot(Star):
                     except Exception:
                         pass
                     yield event.plain_result(f"测试testxb 异常: {e}")
-                    return
-            # 探针已外迁本地（空路由零产出，不污染正常导入链）
-            if raw.strip().startswith("测试testxb"):
-                _probed = False
-                async for r in _dispatch_probes.run_probes(
-                        event, raw, gid, qq, is_admin):
-                    _probed = True
-                    yield r
-                if _probed:
                     return
             if raw.strip() == "超管列表":
                 if not is_admin:

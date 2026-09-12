@@ -170,6 +170,33 @@ def recall_get(k, default=None):
             return default
 
 
+def recall_prefix(prefix):
+    """kv 前缀扫描（超管列表等管理面只读；异常降级空列表，禁裸抛）。
+    LIKE 通配转义：前缀含 %/_ 时按字面匹配（admin_ 即严格前缀）。"""
+    try:
+        pre = str(prefix or "")
+        if not pre:
+            return []
+        _ensure_db()
+        with _S._LOCK:
+            if _S._DB is None:
+                return []
+            try:
+                _esc = pre.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+                rows = _S._DB.execute("SELECT k FROM kv WHERE k LIKE ? ESCAPE '\\'", (_esc,)).fetchall()
+            except Exception:
+                return []
+        out = []
+        for r in rows or []:
+            try:
+                out.append(str(r[0]))
+            except Exception:
+                continue
+        return out
+    except Exception:
+        return []
+
+
 def redpack_put(gid, qq, pwd, amount):
     """红包存入（原 storage/redpack.py 并入）：DELETE 同口令 + 清 86400 前过期，再 INSERT"""
     _ensure_db()

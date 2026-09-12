@@ -6,7 +6,7 @@ import threading as _threading
 import asyncio as _asyncio
 import time as _time
 
-__all__ = ["maybe_sync_card", "SYS_LABELS", "handle_test_menu", "run_probes",
+__all__ = ["maybe_sync_card", "SYS_LABELS", "handle_test_menu",
            "handle_admin_list", "run_business", "send_reply"]
 
 
@@ -129,14 +129,6 @@ async def handle_test_menu(event, gid, qq, mods, slave):
     yield event.plain_result(merged)
 
 
-async def run_probes(event, raw, gid, qq, is_admin):
-    """探针执行已外迁 backup/xbbot_dev/selftest（本地直跑），插件包内不再内置。
-    此处保留空路由（零产出，调用方判定未处理后继续走正常流水线；superadmin 侧同静默）。
-    如需恢复聊天内探针，把 selftest 包放回 games/ 并恢复下述懒加载。"""
-    return
-    yield  # pragma: no cover - 使本函数保持为异步生成器
-
-
 # ==================== admin_list（原 dispatch/admin_list.py 并入） ====================
 _ADMIN_LIST_CACHE = None
 
@@ -155,15 +147,18 @@ def _fetch_admins(qq, ST):
         if _ac and (_now_a - _ac[0] < 30):
             admins = list(_ac[1])
         else:
-            with ST._LOCK:
-                rows = ST._DB.execute("SELECT k FROM kv WHERE k LIKE 'admin_%'").fetchall() if ST._DB else []
-            for r in rows:
+            # 经 storage 公共函数前缀扫描，不直访 _LOCK/_DB 私有成员
+            try:
+                _keys = ST.recall_prefix("admin_") if hasattr(ST, "recall_prefix") else []
+            except Exception:
+                _keys = []
+            for _k in _keys or []:
                 try:
-                    q = str(r[0]).split("_", 1)[1]
+                    q = str(_k).split("_", 1)[1]
                     if q.isdigit():
                         admins.append(q)
                 except Exception:
-                    pass
+                    continue
             admins = sorted(set(admins), key=lambda x: int(x))
             _ADMIN_LIST_CACHE = (_now_a, list(admins))
     except Exception:
@@ -172,12 +167,8 @@ def _fetch_admins(qq, ST):
 
 
 def _render_admin_list(gid, qq, admins, slave):
-    admins = list(admins)
-    if str(qq) not in admins:
-        admins.append(str(qq))
-    admins = sorted(set(admins), key=lambda x: int(x))
-    if not admins:
-        admins = [str(qq)]
+    # 仅展示真实超管：不再强塞请求者 QQ（记录机制 recall_set 保留，hint 文案如实说明）
+    admins = sorted(set(str(a) for a in (admins or []) if str(a).isdigit()), key=lambda x: int(x))
     lines = ["🔧 超管列表（AstrBot 管理员）"]
     for q in admins:
         try:
@@ -199,7 +190,9 @@ def _render_admin_list(gid, qq, admins, slave):
         except Exception:
             lines.append(f"- {q}")
     txt = "\r\n".join(lines)
-    if len(admins) == 1:
+    if not admins:
+        txt += "\r\n暂无记录：超管需至少触发一次超管指令后才会记录"
+    elif len(admins) == 1:
         txt += "\r\n提示：其他超管需至少触发一次超管指令后才会记录"
     return txt
 

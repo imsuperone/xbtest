@@ -10,10 +10,7 @@ import re
 try:
     from . import storage as ST
 except ImportError:
-    try:
-        from . import storage as ST
-    except ImportError:
-        from core import storage as ST
+    from core import storage as ST
 
 MENU = (
     "🔧 超管系统\r\n"

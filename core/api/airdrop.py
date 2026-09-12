@@ -32,9 +32,19 @@ async def handle_users_airdrop(request):
             return _err("invalid json body", 400)
 
         target_gid = str(data.get("gid") or "").strip()
-        add_money = int(data.get("money") or 0)
-        add_stamina = int(data.get("stamina") or 0)
-        add_tickets = int(data.get("tickets") or 0)
+        # 脏串 400 化：管理台手工填数写错时报 400 而非 500（缺键/空串仍按 0）
+        def _num(_v):
+            if _v is None or (isinstance(_v, str) and not _v.strip()):
+                return 0
+            try:
+                return int(_v)
+            except Exception:
+                return None
+        add_money = _num(data.get("money"))
+        add_stamina = _num(data.get("stamina"))
+        add_tickets = _num(data.get("tickets"))
+        if add_money is None or add_stamina is None or add_tickets is None:
+            return _err("发放数值格式错误（需为整数）", 400)
         reason = str(data.get("reason") or "全员福利空投").strip()
 
         if add_money <= 0 and add_stamina <= 0 and add_tickets <= 0:
@@ -81,13 +91,13 @@ async def handle_users_airdrop(request):
         if not targets:
             return _err("未找到符合发放条件的目标用户", 404)
 
-        def _do_airdrop():
+        def _do_airdrop(_targets):
             try:
-                return _airdrop_batch(targets, add_money, add_stamina, add_tickets)
+                return _airdrop_batch(_targets, add_money, add_stamina, add_tickets)
             except Exception:
                 # 批量失败降级为逐用户老路径，保证发放不中断
                 success_count = 0
-                for g, q in targets:
+                for g, q in _targets:
                     try:
                         if add_money > 0:
                             ST.coins_add(g, q, add_money)
@@ -102,7 +112,11 @@ async def handle_users_airdrop(request):
                         pass
                 return success_count
 
-        success_count = await asyncio.to_thread(_do_airdrop)
+        # 大库分批（500/批）：批量持锁单事务，大库一次冻锁太久，拆批逐次提交
+        success_count = 0
+        _tlist = list(targets)
+        for _i in range(0, len(_tlist), 500):
+            success_count += await asyncio.to_thread(_do_airdrop, _tlist[_i:_i + 500])
 
         try:
             ST.flush_all()

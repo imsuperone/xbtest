@@ -121,17 +121,18 @@ def _load_wake_items(base_dir=""):
         except Exception:
             mt = 0.0
         if _WAKE_CACHE.get("path") == sch_path and _WAKE_CACHE.get("mt") == mt and isinstance(_WAKE_CACHE.get("items"), dict):
-            return _WAKE_CACHE["items"]
+            # 返回拷贝：调用方改动不得污染缓存（外改污染曾致唤醒词漂移）
+            return dict(_WAKE_CACHE.get("items") or {})
         with open(sch_path, encoding="utf-8") as f:
             sch = json.load(f)
         wc = sch.get("唤醒词配置", {}).get("items", {}) if isinstance(sch.get("唤醒词配置"), dict) else {}
         if not isinstance(wc, dict):
             wc = {}
         _WAKE_CACHE["path"], _WAKE_CACHE["mt"], _WAKE_CACHE["items"] = sch_path, mt, wc
-        return wc
+        return dict(wc)
     except Exception:
         try:
-            return _WAKE_CACHE.get("items") or {}
+            return dict(_WAKE_CACHE.get("items") or {})
         except Exception:
             return {}
 
@@ -285,8 +286,32 @@ def _collect_commands(base_dir="", store=None):
                 for w in words:
                     if w not in out.setdefault(eng_name, []):
                         out[eng_name].insert(0, w)
+        except Exception as _e_wake:
+            # 唤醒词扩展失败记日志（曾 except:pass 吞错，语义不变：失败即无扩展词）
+            try:
+                from .logger import error as _log_err_wake
+            except ImportError:
+                try:
+                    from core.logger import error as _log_err_wake  # type: ignore
+                except Exception:
+                    _log_err_wake = None
+            try:
+                if _log_err_wake:
+                    _log_err_wake(f"_collect_commands 唤醒词扩展失败: {_e_wake}")
+            except Exception:
+                pass
+    except Exception as _e_coll:
+        # 采集整体失败记日志（曾吞错致指令索引静默为空）
+        try:
+            from .logger import error as _log_err_coll
+        except ImportError:
+            try:
+                from core.logger import error as _log_err_coll  # type: ignore
+            except Exception:
+                _log_err_coll = None
+        try:
+            if _log_err_coll:
+                _log_err_coll(f"_collect_commands 采集失败: {_e_coll}")
         except Exception:
             pass
-    except Exception:
-        pass
     return out
