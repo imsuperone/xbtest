@@ -300,28 +300,22 @@ function showExportModal({ filename, blob, blobUrl, rawText, base64Data }) {
   if (inputWrap) inputWrap.style.display = "none";
 
   const sizeKb = blob ? (blob.size / 1024).toFixed(1) : (rawText ? (new Blob([rawText]).size / 1024).toFixed(1) : "");
-  
-    let actionsHtml = `
-  <div style="margin:4px 0 10px;padding:12px;background:var(--panel2);border-radius:12px;border:1px solid var(--line);font-size:12.5px">
-    <div style="font-weight:600;color:var(--text);margin-bottom:4px;word-break:break-all;font-size:13px">📄 ${esc(filename)} ${sizeKb ? `<span class="badge badge-primary" style="margin-left:6px">${sizeKb} KB</span>` : ""}</div>
-    <div style="color:var(--muted);font-size:11.5px;line-height:1.5">文件已生成完成。若浏览器未自动弹出保存提示，请点击下方按钮手动保存：</div>
-  </div>
-  <div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap">
-    <a href="${blobUrl}" download="${esc(filename)}" id="btnModalSaveFileLink" class="btn" style="display:inline-flex;align-items:center;gap:5px;padding:8px 18px;background:var(--acc);color:#fff;border-radius:8px;font-weight:600;font-size:13px;text-decoration:none;cursor:pointer">⬇️ 保存文件到电脑</a>
-    ${rawText ? `<button id="btnCopyExportData" class="ghost" style="padding:8px 14px;font-size:12.5px;cursor:pointer">📋 复制全部内容</button>` : ""}
-  </div>
-  ${rawText ? `<div style="margin-top:10px"><div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">数据预览（点击文本框可自动全选）：</div><textarea readonly style="width:100%;height:100px;background:var(--panel);color:var(--text);font-family:monospace;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:8px;outline:none;resize:vertical;line-height:1.4" onclick="this.select()">${esc(rawText.slice(0, 5000))}${rawText.length > 5000 ? "\n\n... (数据过长已截断预览，点击上方按钮复制全部数据)" : ""}</textarea></div>` : ""}
-  `;
-
-  if (content) content.innerHTML = actionsHtml;
+  if (content) {
+    content.innerHTML = `
+      <div style="margin:4px 0 10px;padding:12px;background:var(--panel2);border-radius:12px;border:1px solid var(--line);font-size:12.5px">
+        <div style="font-weight:600;color:var(--text);margin-bottom:4px;word-break:break-all;font-size:13px">📄 ${esc(filename)} ${sizeKb ? `<span class="badge badge-primary" style="margin-left:6px">${sizeKb} KB</span>` : ""}</div>
+        <div style="color:var(--muted);font-size:11.5px;line-height:1.5">文件已生成完成。若浏览器未自动弹出保存提示，请点击下方按钮手动保存：</div>
+      </div>
+      <div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap">
+        <a href="${blobUrl}" download="${esc(filename)}" id="btnModalSaveFileLink" class="btn" style="display:inline-flex;align-items:center;gap:5px;padding:8px 18px;background:var(--acc);color:#fff;border-radius:8px;font-weight:600;font-size:13px;text-decoration:none;cursor:pointer">⬇️ 保存文件到电脑</a>
+        ${rawText ? `<button id="btnCopyExportData" class="ghost" style="padding:8px 14px;font-size:12.5px;cursor:pointer">📋 复制全部内容</button>` : ""}
+      </div>
+      ${rawText ? `<div style="margin-top:10px"><div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">数据预览（点击文本框可自动全选）：</div><textarea readonly style="width:100%;height:100px;background:var(--panel);color:var(--text);font-family:monospace;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:8px;outline:none;resize:vertical;line-height:1.4" onclick="this.select()">${esc(rawText.slice(0, 5000))}${rawText.length > 5000 ? "\n\n... (数据过长已截断预览，点击上方按钮复制全部数据)" : ""}</textarea></div>` : ""}
+    `;
+  }
 
   const saveBtn = document.getElementById("btnModalSaveFileLink");
-  if (saveBtn) {
-    saveBtn.onclick = (e) => {
-      e.preventDefault();
-      triggerDownload(blob, filename, rawText);
-    };
-  }
+  if (saveBtn) saveBtn.onclick = (e) => { e.preventDefault(); triggerDownload(blob, filename, rawText); };
 
   const copyBtn = document.getElementById("btnCopyExportData");
   if (copyBtn && rawText) {
@@ -347,23 +341,17 @@ function showExportModal({ filename, blob, blobUrl, rawText, base64Data }) {
 function triggerExportResult({ filename, mime, blob, rawText, base64Data }) {
   if (!blob) {
     if (base64Data) {
-      const rawData = String(base64Data || "").replace(/^data:.*?;base64,/, "").replace(/\s/g, "").trim();
-      const bin = atob(rawData);
-      const len = bin.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+      const bin = atob(String(base64Data || "").replace(/^data:.*?;base64,/, "").replace(/\s/g, "").trim());
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       blob = new Blob([bytes], { type: mime || "application/octet-stream" });
     } else if (rawText) {
       blob = new Blob([rawText], { type: mime || "application/json;charset=utf-8" });
     }
   }
-
   const blobUrl = blob ? URL.createObjectURL(blob) : "";
   let ok = false;
-  if (blob) {
-    ok = triggerDownload(blob, filename, rawText);
-  }
-  // 自动下载成功不再弹手动窗；失败才弹兜底（顺手释放预览URL防大zip常驻内存）
+  if (blob) ok = triggerDownload(blob, filename, rawText);
   if (!ok) {
     showExportModal({ filename, blob, blobUrl, rawText, base64Data });
   } else if (blobUrl) {
@@ -374,38 +362,28 @@ function triggerExportResult({ filename, mime, blob, rawText, base64Data }) {
 function triggerDownload(blob, filename, rawText = "") {
   let downloaded = false;
   filename = filename || "download.json";
-
-  // 1. 尝试通过 window.parent.document 触发（突破 iframe sandbox 拦截）
   try {
     if (window.parent && window.parent !== window && window.parent.document && window.parent.document.body) {
       const url = URL.createObjectURL(blob);
       const a = window.parent.document.createElement("a");
-      a.style.display = "none";
-      a.href = url;
-      a.download = filename;
+      a.style.display = "none"; a.href = url; a.download = filename;
       window.parent.document.body.appendChild(a);
       a.click();
-      setTimeout(() => { try { a.remove(); URL.revokeObjectURL(url); } catch(e) {} }, 1000);
+      setTimeout(() => { try { a.remove(); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
       downloaded = true;
     }
   } catch (e) {}
-
-  // 2. 尝试在本窗口 document 触发
   if (!downloaded) {
     try {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.style.display = "none";
-      a.href = url;
-      a.download = filename;
+      a.style.display = "none"; a.href = url; a.download = filename;
       document.body.appendChild(a);
       a.click();
-      setTimeout(() => { try { a.remove(); URL.revokeObjectURL(url); } catch(e) {} }, 1000);
+      setTimeout(() => { try { a.remove(); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
       downloaded = true;
     } catch (e) {}
   }
-
-  // 3. 尝试 data URI (针对文本/JSON)
   if (!downloaded && rawText) {
     try {
       const a = document.createElement("a");
@@ -414,11 +392,10 @@ function triggerDownload(blob, filename, rawText = "") {
       a.download = filename;
       document.body.appendChild(a);
       a.click();
-      setTimeout(() => { try { a.remove(); } catch(e) {} }, 1000);
+      setTimeout(() => { try { a.remove(); } catch (e) {} }, 1000);
       downloaded = true;
     } catch (e) {}
   }
-
   toast("已触发下载: " + filename, "ok");
   return downloaded;
 }
@@ -426,259 +403,182 @@ function triggerDownload(blob, filename, rawText = "") {
 function downloadJson(data, filename) {
   try {
     const str = typeof data === "string" ? data : JSON.stringify(data, null, 2);
-    const blob = new Blob([str], { type: "application/json;charset=utf-8" });
-    triggerDownload(blob, filename || "export.json", str);
-  } catch (err) {
-    toast("导出失败: " + err.message, "bad");
-  }
+    triggerDownload(new Blob([str], { type: "application/json;charset=utf-8" }), filename || "export.json", str);
+  } catch (err) { toast("导出失败: " + err.message, "bad"); }
 }
 
 function downloadBase64File(base64Data, filename) {
   try {
-    const rawData = String(base64Data || "").replace(/^data:.*?;base64,/, "").replace(/\s/g, "").trim();
-    if (!rawData) throw new Error("数据为空");
-    const bin = atob(rawData);
-    const len = bin.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+    const bin = atob(String(base64Data || "").replace(/^data:.*?;base64,/, "").replace(/\s/g, "").trim());
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     const mime = filename.endsWith(".zip") ? "application/zip" : (filename.endsWith(".json") ? "application/json;charset=utf-8" : "application/octet-stream");
-    const blob = new Blob([bytes], { type: mime });
-    triggerDownload(blob, filename || "download.bin");
-  } catch (err) {
-    toast("下载文件失败: " + err.message, "bad");
-  }
+    triggerDownload(new Blob([bytes], { type: mime }), filename || "download.bin");
+  } catch (err) { toast("下载文件失败: " + err.message, "bad"); }
 }
 
-
-
 // ============================================================================
-// Android 15 / Material 3 模块化数据与预设导出/导入中心 (Modular Export & Import Hub)
-// 解决问题：分类清晰独立、按项目精准选择、绝不多导无关数据、绝不少导关联数据
+// Android 15 / Material 3 模块化数据定义表 (Data-Driven Hub Architecture)
 // ============================================================================
-
-// 提取当前干净的宝物数据
-function _gatherTreasuresData(curConfig) {
-  const shopSec = (curConfig && curConfig["商城图鉴"]) || {};
-  const setSec = (curConfig && curConfig["设置"]) || {};
-  let tlist = "";
-  if (window._TREAS_DIRTY && Array.isArray(window._TREAS_LIST)) {
-    tlist = window._TREAS_LIST.filter(Boolean).join("|");
-  } else {
-    tlist = String(setSec["宝物"] || "");
-  }
-
-  const _normT = (o) => {
-    const out = {};
-    try {
-      Object.entries(o || {}).forEach(([k, v]) => {
-        if (v && typeof v === "object" && !Array.isArray(v)) {
-          out[k] = {
-            effect: String(v.effect || v.desc || ""),
-            type: (typeof _treasureTypeOk === "function" && _treasureTypeOk(String(v.type || ""))) ? String(v.type) : "",
-            value: Math.max(0, Number(v.value) || 0)
-          };
-        } else if (v && String(v).trim()) {
-          out[k] = { effect: String(v).trim(), type: "", value: 0 };
-        }
-      });
-    } catch (e) {}
-    return out;
-  };
-
-  let titems = {};
-  let teff = {};
-  const _tn = shopSec["treasures"];
-  if (_tn && typeof _tn === "object" && !Array.isArray(_tn) && Object.keys(_tn).length) {
-    titems = _normT(_tn);
-    Object.entries(titems).forEach(([k, v]) => { if (v.effect) teff[k] = v.effect; });
-  } else {
-    const _te = shopSec["treasure_effects"];
-    if (_te && typeof _te === "object" && !Array.isArray(_te)) teff = _te;
-    else if (typeof _te === "string" && _te.trim()) { try { teff = JSON.parse(_te); } catch (e) { teff = {}; } }
-    titems = _normT(teff);
-  }
-  if (window._TREAS_EFF && typeof window._TREAS_EFF === "object") {
-    const _m = _normT(window._TREAS_EFF);
-    teff = Object.assign({}, teff, window._TREAS_EFF);
-    titems = Object.assign({}, titems, _m);
-  }
-  return { list: tlist, eff: teff, items: titems };
-}
-
-// 提取当前干净的商城数据 (坐骑与武器属性)
-function _gatherShopsData(curConfig) {
-  const shopSec = (curConfig && curConfig["商城图鉴"]) || {};
-  const pool = [];
-  try {
-    ["SSR", "SR", "R"].forEach((rar) => {
-      ((window.POOL_WEAPONS && window.POOL_WEAPONS[rar]) || []).forEach((it) => {
-        pool.push({
-          rar,
-          name: it.name,
-          attrs: (window.POOL_ATTRS && window.POOL_ATTRS[it.name]) || { atk: 0, desc: "" }
+const EXPORT_MODULES = [
+  {
+    key: "atlas",
+    title: "📖 精灵与地图图鉴",
+    desc: "包含精灵属性数值、地图探索配置、掉落概率与商城",
+    defaultChecked: true,
+    gather: async () => {
+      let sp = (typeof SPIRIT !== "undefined" && SPIRIT) || null;
+      if (!sp || (!sp.maps && !sp.spirits && !sp._raw)) {
+        try { sp = await apiTimeout(getBridge().apiGet("spirits"), 20000, "spirits"); } catch (e) { sp = null; }
+      }
+      const out = {};
+      if (sp && typeof sp === "object") {
+        const raw = (sp._raw && sp._meta) ? sp._raw : sp;
+        ["spirits", "maps", "shop"].forEach(k => { if (raw[k] && typeof raw[k] === "object") out[k] = raw[k]; });
+      }
+      return out;
+    },
+    apply: async (data) => {
+      await getBridge().apiPost("spirits/save", data);
+      try { await loadSpirits(true); } catch (e) {}
+    },
+    detect: (d) => (d.kind === "spirits" || d.spirits || d.parts?.atlas) ? (d.parts?.atlas || (d.spirits ? { spirits: d.spirits, maps: d.maps, shop: d.shop } : null)) : null
+  },
+  {
+    key: "shops",
+    title: "🛒 坐骑商城与武器库",
+    desc: "包含商城坐骑上架列表、抽奖武器加成与顺序",
+    defaultChecked: true,
+    gather: (cfg) => {
+      const sec = (cfg && cfg["商城图鉴"]) || {};
+      const pool = [];
+      try {
+        ["SSR", "SR", "R"].forEach(rar => ((window.POOL_WEAPONS && window.POOL_WEAPONS[rar]) || []).forEach(it => {
+          pool.push({ rar, name: it.name, attrs: (window.POOL_ATTRS && window.POOL_ATTRS[it.name]) || { atk: 0, desc: "" } });
+        }));
+      } catch (e) {}
+      return { ride_shop: sec.ride_shop || "", weapon_attrs: sec.weapon_attrs || "", weapon_order: sec.weapon_order || "", pool };
+    },
+    apply: async (data) => {
+      const p = {};
+      ["ride_shop", "weapon_attrs", "weapon_order"].forEach(k => { if (data[k] !== undefined) p[k] = data[k]; });
+      await getBridge().apiPost("config/save", { "商城图鉴": p });
+      try { await loadShops(); } catch (e) {}
+    },
+    detect: (d) => (d.kind === "shops" || d.parts?.shops || d.ride_shop !== undefined) ? (d.parts?.shops || { ride_shop: d.ride_shop, weapon_attrs: d.weapon_attrs, weapon_order: d.weapon_order, pool: d.pool }) : null
+  },
+  {
+    key: "treasures",
+    title: "🔮 宝物专有效果库",
+    desc: "包含宝物卡片清单、加成效果类型与自定义文案",
+    defaultChecked: true,
+    gather: (cfg) => {
+      const sec = (cfg && cfg["商城图鉴"]) || {};
+      const setSec = (cfg && cfg["设置"]) || {};
+      const list = (window._TREAS_DIRTY && Array.isArray(window._TREAS_LIST)) ? window._TREAS_LIST.filter(Boolean).join("|") : String(setSec["宝物"] || "");
+      let eff = {}, items = {};
+      try {
+        const raw = sec["treasures"] || sec["treasure_effects"];
+        if (typeof raw === "object" && !Array.isArray(raw)) eff = raw;
+        else if (typeof raw === "string" && raw.trim()) { try { eff = JSON.parse(raw); } catch (e) {} }
+        if (window._TREAS_EFF && typeof window._TREAS_EFF === "object") eff = Object.assign({}, eff, window._TREAS_EFF);
+        Object.entries(eff).forEach(([k, v]) => {
+          items[k] = (v && typeof v === "object") ? { effect: String(v.effect || v.desc || ""), type: String(v.type || ""), value: Number(v.value) || 0 } : { effect: String(v || ""), type: "", value: 0 };
         });
-      });
-    });
-  } catch (e) {}
-
-  return {
-    ride_shop: shopSec["ride_shop"] || "",
-    weapon_attrs: shopSec["weapon_attrs"] || "",
-    weapon_order: shopSec["weapon_order"] || "",
-    pool: pool
-  };
-}
-
-// 提取当前干净的图鉴数据
-async function _gatherAtlasData() {
-  let sp = null;
-  try { sp = (typeof SPIRIT !== "undefined" && SPIRIT) ? SPIRIT : null; } catch (e) { sp = null; }
-  if (!sp || (!sp.maps && !sp.spirits && !sp.shop && !sp._raw)) {
-    try { sp = await apiTimeout(getBridge().apiGet("spirits"), 20000, "spirits"); } catch (e) { sp = null; }
+      } catch (e) {}
+      return { list, eff, items };
+    },
+    apply: async (data) => {
+      const p = {}, sp = {};
+      if (data.list !== undefined) p["宝物"] = data.list;
+      if (data.items) sp["treasures"] = data.items;
+      if (data.eff) sp["treasure_effects"] = data.eff;
+      await getBridge().apiPost("config/save", { "设置": p, "商城图鉴": sp });
+    },
+    detect: (d) => (d.kind === "treasures" || d.parts?.treasures || d.parts?.treasure || d.treasures) ? (d.parts?.treasures || d.parts?.treasure || d.treasures) : null
+  },
+  {
+    key: "rules",
+    title: "⚙️ 玩法规则与数值",
+    desc: "包含28大系统玩法数值与自定义指令回复（零玩家数据）",
+    defaultChecked: false,
+    gather: (cfg) => {
+      const clean = {}, EX = new Set(["备份配置", "webdav_secret", "商城图鉴"]);
+      Object.keys(cfg || {}).forEach(k => { if (!EX.has(k)) clean[k] = cfg[k]; });
+      return clean;
+    },
+    apply: async (data) => {
+      await getBridge().apiPost("config/save", data);
+      try { await loadConfig(); } catch (e) {}
+    },
+    detect: (d) => (d.kind === "gamerules" || d.parts?.rules || d.rules) ? (d.parts?.rules || d.rules) : null
+  },
+  {
+    key: "users",
+    title: "👤 玩家资产与经济账本",
+    desc: "包含全群玩家金币钱包、奴隶买卖关系与背包资产",
+    defaultChecked: false,
+    gather: async () => {
+      try {
+        const res = await callApi("users/export", {}, "GET");
+        return (res && (res.users || res.result?.users)) || [];
+      } catch (e) { return []; }
+    },
+    apply: async (data) => {
+      if (Array.isArray(data)) {
+        await callApi("users/import", { users: data }, "POST");
+        try { await loadUsers(); } catch (e) {}
+      }
+    },
+    detect: (d) => (d.users || d.parts?.users) ? (d.users || d.parts?.users) : null
   }
-  const out = {};
-  if (sp && typeof sp === "object") {
-    const _hasMeta = sp._raw && sp._meta;
-    ["spirits", "maps", "shop"].forEach((k) => {
-      const v = _hasMeta ? sp._raw[k] : sp[k];
-      if (v && typeof v === "object" && !Array.isArray(v)) out[k] = v;
-    });
-  }
-  return out;
-}
+];
 
-// 提取当前玩法数值与规则配置 (排除密码密钥等敏感私密项)
-function _gatherGameRulesData(curConfig) {
-  const EXCLUDE = new Set(["备份配置", "webdav_secret"]);
-  const clean = {};
-  Object.keys(curConfig || {}).forEach((sec) => {
-    if (!EXCLUDE.has(sec) && sec !== "商城图鉴") {
-      clean[sec] = curConfig[sec];
-    }
-  });
-  return clean;
-}
-
-// 单项纯净导出：仅导出精灵图鉴
-async function exportSpiritsOnly() {
+// 单项纯净导出通用调度
+async function exportSingleModule(modKey) {
+  const mod = EXPORT_MODULES.find(m => m.key === modKey);
+  if (!mod) return;
   try {
-    toast("正在读取精灵图鉴数据…", "");
-    const atlas = await _gatherAtlasData();
+    toast(`正在读取${mod.title}…`, "");
+    const cur = (modKey === "shops" || modKey === "treasures" || modKey === "rules") ? await apiTimeout(getBridge().apiGet("config/get"), 20000, "config/get") : null;
+    const data = await mod.gather(cur);
     const payload = {
       app: typeof PLUGIN_ID !== "undefined" ? PLUGIN_ID : "astrbot_plugin_xbbot_beta",
-      kind: "spirits",
+      kind: modKey,
       version: 1,
       exported_at: new Date().toISOString(),
-      spirits: atlas.spirits || {},
-      maps: atlas.maps || {},
-      shop: atlas.shop || {}
+      [modKey]: data
     };
     triggerExportResult({
-      filename: `xbbot_spirits_${Date.now()}.json`,
+      filename: `xbbot_${modKey}_${Date.now()}.json`,
       mime: "application/json;charset=utf-8",
       rawText: JSON.stringify(payload, null, 2)
     });
-    toast("精灵图鉴纯净包已导出", "ok");
-  } catch (e) {
-    toast("导出精灵图鉴失败: " + (e.message || e), "bad");
-  }
+    toast(`${mod.title}已导出`, "ok");
+  } catch (e) { toast(`导出失败: ${e.message || e}`, "bad"); }
 }
 
-// 单项纯净导出：仅导出商城与武器
-async function exportShopsOnly() {
-  try {
-    toast("正在读取商城与武器配置…", "");
-    const cur = await getBridge().apiGet("config/get");
-    const shops = _gatherShopsData(cur);
-    const payload = {
-      app: typeof PLUGIN_ID !== "undefined" ? PLUGIN_ID : "astrbot_plugin_xbbot_beta",
-      kind: "shops",
-      version: 1,
-      exported_at: new Date().toISOString(),
-      ...shops
-    };
-    triggerExportResult({
-      filename: `xbbot_shops_${Date.now()}.json`,
-      mime: "application/json;charset=utf-8",
-      rawText: JSON.stringify(payload, null, 2)
-    });
-    toast("商城与武器纯净包已导出", "ok");
-  } catch (e) {
-    toast("导出商城失败: " + (e.message || e), "bad");
-  }
-}
-
-// 单项纯净导出：仅导出宝物效果库
-async function exportTreasuresOnly() {
-  try {
-    toast("正在读取宝物库…", "");
-    const cur = await getBridge().apiGet("config/get");
-    const treasures = _gatherTreasuresData(cur);
-    const payload = {
-      app: typeof PLUGIN_ID !== "undefined" ? PLUGIN_ID : "astrbot_plugin_xbbot_beta",
-      kind: "treasures",
-      version: 1,
-      exported_at: new Date().toISOString(),
-      treasures: treasures
-    };
-    triggerExportResult({
-      filename: `xbbot_treasures_${Date.now()}.json`,
-      mime: "application/json;charset=utf-8",
-      rawText: JSON.stringify(payload, null, 2)
-    });
-    toast("宝物效果库已导出", "ok");
-  } catch (e) {
-    toast("导出宝物失败: " + (e.message || e), "bad");
-  }
-}
-
-// 单项纯净导出：仅导出玩法规则与数值
-async function exportGameRulesOnly() {
-  try {
-    toast("正在读取28大系统玩法配置…", "");
-    const cur = await getBridge().apiGet("config/get");
-    const rules = _gatherGameRulesData(cur);
-    const payload = {
-      app: typeof PLUGIN_ID !== "undefined" ? PLUGIN_ID : "astrbot_plugin_xbbot_beta",
-      kind: "gamerules",
-      version: 1,
-      exported_at: new Date().toISOString(),
-      rules: rules
-    };
-    triggerExportResult({
-      filename: `xbbot_gamerules_${Date.now()}.json`,
-      mime: "application/json;charset=utf-8",
-      rawText: JSON.stringify(payload, null, 2)
-    });
-    toast("玩法规则纯净包已导出", "ok");
-  } catch (e) {
-    toast("导出玩法规则失败: " + (e.message || e), "bad");
-  }
-}
+const exportSpiritsOnly = () => exportSingleModule("atlas");
+const exportShopsOnly = () => exportSingleModule("shops");
+const exportTreasuresOnly = () => exportSingleModule("treasures");
+const exportGameRulesOnly = () => exportSingleModule("rules");
 
 // 更新导出中心勾选计数与实时摘要
 function updateExportHubSummary() {
-  const chkAtlas = document.getElementById("chkExpAtlas")?.checked;
-  const chkShops = document.getElementById("chkExpShops")?.checked;
-  const chkTreasures = document.getElementById("chkExpTreasures")?.checked;
-  const chkRules = document.getElementById("chkExpGameRules")?.checked;
-  const chkUsers = document.getElementById("chkExpUsers")?.checked;
-
-  const names = [];
-  if (chkAtlas) names.push("精灵图鉴");
-  if (chkShops) names.push("商城坐骑武器");
-  if (chkTreasures) names.push("宝物效果");
-  if (chkRules) names.push("玩法规则数值");
-  if (chkUsers) names.push("玩家数据资产");
+  const selected = [];
+  const mapIds = { atlas: "chkExpAtlas", shops: "chkExpShops", treasures: "chkExpTreasures", rules: "chkExpGameRules", users: "chkExpUsers" };
+  EXPORT_MODULES.forEach(m => {
+    if (document.getElementById(mapIds[m.key])?.checked) selected.push(m.title.replace(/^[^\s]+\s*/, ""));
+  });
 
   const sumTxt = document.getElementById("exportHubSummaryText");
   const doBtn = document.getElementById("exportHubDoExport");
   if (sumTxt) {
-    if (names.length === 0) {
+    if (selected.length === 0) {
       sumTxt.innerHTML = `<span style="color:var(--bad)">未勾选任何项目（请至少选择 1 项导出）</span>`;
       if (doBtn) doBtn.disabled = true;
     } else {
-      sumTxt.innerHTML = `已选择 <strong>${names.length}</strong> 个项目：[${names.join(" · ")}]`;
+      sumTxt.innerHTML = `已选择 <strong>${selected.length}</strong> 个项目：[${selected.join(" · ")}]`;
       if (doBtn) doBtn.disabled = false;
     }
   }
@@ -688,46 +588,24 @@ function updateExportHubSummary() {
 function openExportHub(presetKey = "") {
   const modal = document.getElementById("exportHubModal");
   if (!modal) return;
+  const mapIds = { atlas: "chkExpAtlas", shops: "chkExpShops", treasures: "chkExpTreasures", rules: "chkExpGameRules", users: "chkExpUsers" };
 
-  // 根据传入的预设初始化勾选状态
-  const chkAtlas = document.getElementById("chkExpAtlas");
-  const chkShops = document.getElementById("chkExpShops");
-  const chkTreasures = document.getElementById("chkExpTreasures");
-  const chkRules = document.getElementById("chkExpGameRules");
-  const chkUsers = document.getElementById("chkExpUsers");
+  const presets = {
+    atlas_gear: ["atlas", "shops", "treasures"],
+    atlas: ["atlas", "shops", "treasures"],
+    game_rules: ["rules"],
+    users_only: ["users"],
+    full_all: ["atlas", "shops", "treasures", "rules", "users"],
+    reset_none: []
+  };
 
-  if (presetKey === "atlas_gear" || presetKey === "atlas") {
-    if (chkAtlas) chkAtlas.checked = true;
-    if (chkShops) chkShops.checked = true;
-    if (chkTreasures) chkTreasures.checked = true;
-    if (chkRules) chkRules.checked = false;
-    if (chkUsers) chkUsers.checked = false;
-  } else if (presetKey === "game_rules") {
-    if (chkAtlas) chkAtlas.checked = false;
-    if (chkShops) chkShops.checked = false;
-    if (chkTreasures) chkTreasures.checked = false;
-    if (chkRules) chkRules.checked = true;
-    if (chkUsers) chkUsers.checked = false;
-  } else if (presetKey === "users_only") {
-    if (chkAtlas) chkAtlas.checked = false;
-    if (chkShops) chkShops.checked = false;
-    if (chkTreasures) chkTreasures.checked = false;
-    if (chkRules) chkRules.checked = false;
-    if (chkUsers) chkUsers.checked = true;
-  } else if (presetKey === "full_all") {
-    if (chkAtlas) chkAtlas.checked = true;
-    if (chkShops) chkShops.checked = true;
-    if (chkTreasures) chkTreasures.checked = true;
-    if (chkRules) chkRules.checked = true;
-    if (chkUsers) chkUsers.checked = true;
-  } else if (presetKey === "reset_none") {
-    if (chkAtlas) chkAtlas.checked = false;
-    if (chkShops) chkShops.checked = false;
-    if (chkTreasures) chkTreasures.checked = false;
-    if (chkRules) chkRules.checked = false;
-    if (chkUsers) chkUsers.checked = false;
+  if (presetKey && presets[presetKey] !== undefined) {
+    const active = new Set(presets[presetKey]);
+    Object.entries(mapIds).forEach(([k, id]) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = active.has(k);
+    });
   }
-
   updateExportHubSummary();
   modal.style.display = "flex";
   modal.classList.add("show");
@@ -735,50 +613,37 @@ function openExportHub(presetKey = "") {
 
 function closeExportHub() {
   const modal = document.getElementById("exportHubModal");
-  if (modal) {
-    modal.classList.remove("show");
-    modal.style.display = "none";
-  }
+  if (modal) { modal.classList.remove("show"); modal.style.display = "none"; }
 }
 
-// 绑定导出中心事件（仅绑定一次）
+// 绑定导出中心事件
 function initExportHubEvents() {
   if (window._EXPORT_HUB_INITIALIZED) return;
   window._EXPORT_HUB_INITIALIZED = true;
 
-  // 顶栏与各处打开按钮
   document.getElementById("btnOpenExportHub")?.addEventListener("click", () => openExportHub("atlas_gear"));
   document.getElementById("exportHubClose")?.addEventListener("click", closeExportHub);
   document.getElementById("exportHubCancel")?.addEventListener("click", closeExportHub);
 
-  // 预设 Chips 快捷勾选
-  document.querySelectorAll(".preset-pill[data-preset]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      openExportHub(btn.dataset.preset);
-    });
+  document.querySelectorAll(".preset-pill[data-preset]").forEach(btn => {
+    btn.addEventListener("click", () => openExportHub(btn.dataset.preset));
   });
 
-  // 勾选框监听
-  ["chkExpAtlas", "chkExpShops", "chkExpTreasures", "chkExpGameRules", "chkExpUsers"].forEach((id) => {
+  ["chkExpAtlas", "chkExpShops", "chkExpTreasures", "chkExpGameRules", "chkExpUsers"].forEach(id => {
     document.getElementById(id)?.addEventListener("change", updateExportHubSummary);
   });
 
-  // 单独导出按钮
   document.getElementById("btnSoloExportAtlas")?.addEventListener("click", (e) => { e.stopPropagation(); exportSpiritsOnly(); });
   document.getElementById("btnSoloExportShops")?.addEventListener("click", (e) => { e.stopPropagation(); exportShopsOnly(); });
   document.getElementById("btnSoloExportTreasures")?.addEventListener("click", (e) => { e.stopPropagation(); exportTreasuresOnly(); });
   document.getElementById("btnSoloExportRules")?.addEventListener("click", (e) => { e.stopPropagation(); exportGameRulesOnly(); });
   document.getElementById("btnSoloExportUsers")?.addEventListener("click", (e) => { e.stopPropagation(); exportAllUsers(); });
 
-  // 执行组合打包导出
   document.getElementById("exportHubDoExport")?.addEventListener("click", async () => {
-    const chkAtlas = document.getElementById("chkExpAtlas")?.checked;
-    const chkShops = document.getElementById("chkExpShops")?.checked;
-    const chkTreasures = document.getElementById("chkExpTreasures")?.checked;
-    const chkRules = document.getElementById("chkExpGameRules")?.checked;
-    const chkUsers = document.getElementById("chkExpUsers")?.checked;
+    const mapIds = { atlas: "chkExpAtlas", shops: "chkExpShops", treasures: "chkExpTreasures", rules: "chkExpGameRules", users: "chkExpUsers" };
+    const selectedMods = EXPORT_MODULES.filter(m => document.getElementById(mapIds[m.key])?.checked);
 
-    if (!chkAtlas && !chkShops && !chkTreasures && !chkRules && !chkUsers) {
+    if (!selectedMods.length) {
       toast("请至少选择一项需要导出的内容", "warn");
       return;
     }
@@ -786,37 +651,13 @@ function initExportHubEvents() {
     try {
       toast("正在收集所选模块数据…", "");
       let cur = null;
-      if (chkShops || chkTreasures || chkRules) {
+      if (selectedMods.some(m => m.key === "shops" || m.key === "treasures" || m.key === "rules")) {
         cur = await apiTimeout(getBridge().apiGet("config/get"), 20000, "config/get");
       }
 
       const parts = {};
-      const summaryNames = [];
-
-      if (chkAtlas) {
-        parts.atlas = await _gatherAtlasData();
-        summaryNames.push("atlas");
-      }
-      if (chkShops) {
-        parts.shops = _gatherShopsData(cur);
-        summaryNames.push("shops");
-      }
-      if (chkTreasures) {
-        parts.treasures = _gatherTreasuresData(cur);
-        summaryNames.push("treasures");
-      }
-      if (chkRules) {
-        parts.rules = _gatherGameRulesData(cur);
-        summaryNames.push("rules");
-      }
-      if (chkUsers) {
-        try {
-          const ures = await callApi("users/export", {}, "GET");
-          if (ures && (ures.users || (ures.result && ures.result.users))) {
-            parts.users = ures.users || ures.result.users;
-            summaryNames.push("users");
-          }
-        } catch (_ue) {}
+      for (const m of selectedMods) {
+        parts[m.key] = await m.gather(cur);
       }
 
       const payload = {
@@ -825,16 +666,15 @@ function initExportHubEvents() {
         version: 4,
         exported_at: new Date().toISOString(),
         from_version: (typeof FRONTEND_VER !== "undefined" ? FRONTEND_VER : ""),
-        parts: parts
+        parts
       };
 
-      const fn = `xbbot_custom_preset_${Date.now()}.json`;
       triggerExportResult({
-        filename: fn,
+        filename: `xbbot_custom_preset_${Date.now()}.json`,
         mime: "application/json;charset=utf-8",
         rawText: JSON.stringify(payload, null, 2)
       });
-      toast(`已成功打包 ${summaryNames.length} 个独立模块`, "ok");
+      toast(`已成功打包 ${selectedMods.length} 个独立模块`, "ok");
       closeExportHub();
     } catch (err) {
       toast("打包导出失败: " + (err.message || err), "bad");
@@ -845,76 +685,25 @@ function initExportHubEvents() {
 // ============================================================================
 // Android 15 / Material 3 智能选择性导入中心 (Smart Selective Importer)
 // ============================================================================
-
 let _PARSED_IMPORT_PACKAGE = null;
 
-// 智能分析导入文件包含的模块
 function _analyzeImportPackage(data) {
-  const modules = [];
-
-  // 1. 精灵图鉴
-  if (data.kind === "spirits" || (data.spirits && typeof data.spirits === "object") || (data.parts && data.parts.atlas)) {
-    const spCount = Object.keys((data.parts ? data.parts.atlas?.spirits : data.spirits) || {}).length;
-    modules.push({
-      key: "atlas",
-      title: "📖 精灵与地图图鉴",
-      desc: `包含约 ${spCount} 只精灵及捕捉地图配置`,
-      checked: true,
-      data: data.parts ? data.parts.atlas : (data.spirits ? { spirits: data.spirits, maps: data.maps, shop: data.shop } : null)
-    });
-  }
-
-  // 2. 商城与坐骑
-  if (data.kind === "shops" || (data.parts && data.parts.shops) || data.ride_shop !== undefined) {
-    modules.push({
-      key: "shops",
-      title: "🛒 坐骑商城与武器库",
-      desc: "包含坐骑上架列表与抽奖武器属性顺序",
-      checked: true,
-      data: data.parts ? data.parts.shops : { ride_shop: data.ride_shop, weapon_attrs: data.weapon_attrs, weapon_order: data.weapon_order, pool: data.pool }
-    });
-  }
-
-  // 3. 宝物专有效果库
-  if (data.kind === "treasures" || (data.parts && data.parts.treasures) || (data.parts && data.parts.treasure) || data.treasures) {
-    const tData = (data.parts && data.parts.treasures) || (data.parts && data.parts.treasure) || data.treasures;
-    modules.push({
-      key: "treasures",
-      title: "🔮 宝物专属效果库",
-      desc: "包含宝物效果加成与自定义属性文案",
-      checked: true,
-      data: tData
-    });
-  }
-
-  // 4. 玩法规则与数值
-  if (data.kind === "gamerules" || (data.parts && data.parts.rules) || data.rules) {
-    const rData = (data.parts && data.parts.rules) || data.rules;
-    modules.push({
-      key: "rules",
-      title: "⚙️ 玩法规则与数值参数",
-      desc: `包含 ${Object.keys(rData || {}).length} 节玩法系统核心规则`,
-      checked: true,
-      data: rData
-    });
-  }
-
-  // 5. 玩家数据
-  if (data.users || (data.parts && data.parts.users)) {
-    const uList = data.users || (data.parts && data.parts.users) || [];
-    modules.push({
-      key: "users",
-      title: "👤 玩家资产与经济账本",
-      desc: `包含 ${uList.length} 名玩家数据与钱包记录`,
-      checked: false, // 玩家数据默认不主动覆盖，由用户手动勾选确认
-      data: uList
-    });
-  }
-
-  return modules;
+  const recognized = [];
+  EXPORT_MODULES.forEach(m => {
+    const d = m.detect(data);
+    if (d) {
+      recognized.push({
+        key: m.key,
+        title: m.title,
+        desc: m.desc,
+        checked: m.defaultChecked,
+        data: d
+      });
+    }
+  });
+  return recognized;
 }
 
-// 打开智能导入检查抽屉/弹窗
 function showImportInspectModal(filename, parsedData) {
   const modal = document.getElementById("importHubModal");
   if (!modal) return;
@@ -936,7 +725,7 @@ function showImportInspectModal(filename, parsedData) {
     if (modules.length === 0) {
       listEl.innerHTML = `<div style="padding:16px;text-align:center;color:var(--bad);background:var(--badSoft);border-radius:10px">⚠️ 无法在当前文件中识别出有效的插件模块，请确认文件格式是否正确。</div>`;
     } else {
-      listEl.innerHTML = modules.map((m, idx) => `
+      listEl.innerHTML = modules.map(m => `
         <div class="hub-mod-card" style="padding:12px 14px">
           <label class="hub-checkbox-label" style="display:flex;align-items:flex-start;gap:10px">
             <input type="checkbox" data-import-key="${esc(m.key)}" ${m.checked ? "checked" : ""} style="margin-top:2px">
@@ -956,25 +745,15 @@ function showImportInspectModal(filename, parsedData) {
 
 function closeImportHub() {
   const modal = document.getElementById("importHubModal");
-  if (modal) {
-    modal.classList.remove("show");
-    modal.style.display = "none";
-  }
+  if (modal) { modal.classList.remove("show"); modal.style.display = "none"; }
 }
 
-// 统一智能导入入口
 function openImportHub(file = null) {
-  if (file) {
-    _handleImportFile(file);
-    return;
-  }
+  if (file) { _handleImportFile(file); return; }
   const inp = document.createElement("input");
   inp.type = "file";
   inp.accept = ".json,application/json";
-  inp.onchange = (e) => {
-    const f = e.target.files[0];
-    if (f) _handleImportFile(f);
-  };
+  inp.onchange = (e) => { const f = e.target.files[0]; if (f) _handleImportFile(f); };
   inp.click();
 }
 
@@ -990,7 +769,6 @@ async function _handleImportFile(file) {
   }
 }
 
-// 绑定导入中心操作事件
 function initImportHubEvents() {
   if (window._IMPORT_HUB_INITIALIZED) return;
   window._IMPORT_HUB_INITIALIZED = true;
@@ -1004,13 +782,12 @@ function initImportHubEvents() {
     const { data } = _PARSED_IMPORT_PACKAGE;
     const modules = _analyzeImportPackage(data);
 
-    // 检查哪些被勾选
     const checkedKeys = new Set();
-    document.querySelectorAll("#importHubModulesList input[data-import-key]:checked").forEach((inp) => {
+    document.querySelectorAll("#importHubModulesList input[data-import-key]:checked").forEach(inp => {
       checkedKeys.add(inp.dataset.importKey);
     });
 
-    if (checkedKeys.size === 0) {
+    if (!checkedKeys.size) {
       toast("请至少选择一项需要导入应用的模块", "warn");
       return;
     }
@@ -1020,70 +797,21 @@ function initImportHubEvents() {
     if (btn) { btn.disabled = true; btn.textContent = "正在应用中…"; }
 
     try {
-      // 1. 自动快照保护
+      // 1. 自动快照保护（接口路径：backups/config/snapshot/save）
       if (doSnapshot) {
         try {
-          await getBridge().apiPost("config/snapshot/save", { note: `智能导入前自动快照_${Date.now()}` }).catch(() => null);
+          await getBridge().apiPost("backups/config/snapshot/save", { note: `智能导入前自动快照_${Date.now()}` }).catch(() => null);
         } catch (_se) {}
       }
 
       const applied = [];
-
-      // 2. 导入精灵图鉴
-      if (checkedKeys.has("atlas")) {
-        const m = modules.find((x) => x.key === "atlas");
-        if (m && m.data) {
-          await getBridge().apiPost("spirits/save", m.data);
-          applied.push("精灵图鉴");
-          try { await loadSpirits(true); } catch (_e) {}
-        }
-      }
-
-      // 3. 导入商城与坐骑
-      if (checkedKeys.has("shops")) {
-        const m = modules.find((x) => x.key === "shops");
-        if (m && m.data) {
-          const p = {};
-          if (m.data.ride_shop !== undefined) p.ride_shop = m.data.ride_shop;
-          if (m.data.weapon_attrs !== undefined) p.weapon_attrs = m.data.weapon_attrs;
-          if (m.data.weapon_order !== undefined) p.weapon_order = m.data.weapon_order;
-          await getBridge().apiPost("config/save", { "商城图鉴": p });
-          applied.push("商城与武器");
-          try { await loadShops(); } catch (_e) {}
-        }
-      }
-
-      // 4. 导入宝物库
-      if (checkedKeys.has("treasures")) {
-        const m = modules.find((x) => x.key === "treasures");
-        if (m && m.data) {
-          const p = {};
-          if (m.data.list) p["宝物"] = m.data.list;
-          const shopP = {};
-          if (m.data.items) shopP["treasures"] = m.data.items;
-          if (m.data.eff) shopP["treasure_effects"] = m.data.eff;
-          await getBridge().apiPost("config/save", { "设置": p, "商城图鉴": shopP });
-          applied.push("宝物库");
-        }
-      }
-
-      // 5. 导入玩法规则
-      if (checkedKeys.has("rules")) {
-        const m = modules.find((x) => x.key === "rules");
-        if (m && m.data && typeof m.data === "object") {
-          await getBridge().apiPost("config/save", m.data);
-          applied.push("玩法规则配置");
-          try { await loadConfig(); } catch (_e) {}
-        }
-      }
-
-      // 6. 导入用户数据
-      if (checkedKeys.has("users")) {
-        const m = modules.find((x) => x.key === "users");
-        if (m && m.data && Array.isArray(m.data)) {
-          await callApi("users/import", { users: m.data }, "POST");
-          applied.push("玩家数据");
-          try { await loadUsers(); } catch (_e) {}
+      for (const m of modules) {
+        if (checkedKeys.has(m.key)) {
+          const modDef = EXPORT_MODULES.find(x => x.key === m.key);
+          if (modDef && modDef.apply) {
+            await modDef.apply(m.data);
+            applied.push(m.title.replace(/^[^\s]+\s*/, ""));
+          }
         }
       }
 
@@ -1102,12 +830,14 @@ window.openExportHub = openExportHub;
 window.closeExportHub = closeExportHub;
 window.openImportHub = openImportHub;
 window.closeImportHub = closeImportHub;
+window.exportSingleModule = exportSingleModule;
 window.exportSpiritsOnly = exportSpiritsOnly;
 window.exportShopsOnly = exportShopsOnly;
 window.exportTreasuresOnly = exportTreasuresOnly;
 window.exportGameRulesOnly = exportGameRulesOnly;
 window.initExportHubEvents = initExportHubEvents;
 window.initImportHubEvents = initImportHubEvents;
+window._analyzeImportPackage = _analyzeImportPackage;
 function _formatModalText(msg) {
   if (!msg) return "";
   if (msg.includes("<div") || msg.includes("<strong") || msg.includes("<span") || msg.includes("<br")) {

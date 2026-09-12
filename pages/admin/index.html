@@ -339,10 +339,6 @@
       gap: 12px;
       margin-bottom: 16px;
     }
-    @media (max-width: 640px) {
-      .cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .panel { padding: 14px; border-radius: var(--radius); }
-    }
     .card {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -1047,10 +1043,6 @@
       grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
       gap: 10px;
     }
-    @media (max-width: 640px) {
-      .grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .toolbar { gap: 6px; }
-    }
     
     .fcard {
       background: var(--panel2);
@@ -1267,20 +1259,69 @@
       contain-intrinsic-size: auto 44px;
     }
 
-    @media (max-width: 768px) {
+    /* 默认按钮文案适配 */
+    .hdr-btn-full { display: inline; }
+    .hdr-btn-short { display: none; }
+
+    /* ==========================================================================
+       1. 平板端优化适配 (iPad Mini / Air / Pro, Android 平板: 641px ~ 1024px)
+       ========================================================================== */
+    @media (min-width: 641px) and (max-width: 1024px) {
+      .wrap {
+        padding: 12px 14px calc(32px + env(safe-area-inset-bottom, 0px));
+      }
+
+      header {
+        padding: 12px 18px;
+        margin-bottom: 12px;
+      }
+
+      /* 平板 6 大核心指标卡排布为完美的 3 列整齐网格 (3x2) */
+      #analyticsKpiGrid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 10px !important;
+      }
+
+      .cards {
+        grid-template-columns: repeat(3, 1fr) !important;
+      }
+
+      /* 平板端工具栏：允许自然换行，按钮居中呼吸感良好 */
+      .toolbar {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+      }
+
+      .grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+      }
+
+      /* 模态框在平板上居中适中，不局促也不过宽 */
+      .m3-modal-box {
+        width: min(580px, 90vw) !important;
+        max-height: 86vh !important;
+      }
+    }
+
+    /* ==========================================================================
+       2. 手机移动端深度适配 (iOS / Android / 竖屏窗口: <= 640px)
+       ========================================================================== */
+    @media (max-width: 640px) {
       .wrap {
         padding: 8px 8px calc(24px + env(safe-area-inset-bottom, 0px));
       }
 
+      /* 顶栏紧凑折叠，彻底解决小屏换行错位 */
       header {
         padding: 8px 12px;
         margin-bottom: 8px;
         top: env(safe-area-inset-top, 6px);
         border-radius: 12px;
+        gap: 8px;
       }
 
       .brand h1 {
-        font-size: 15px;
+        font-size: 14.5px;
       }
 
       .brand .ver {
@@ -1288,33 +1329,55 @@
         padding: 1px 6px;
       }
 
+      /* 手机端按钮文案自动切换为紧凑文字 */
+      .hdr-btn-full { display: none !important; }
+      .hdr-btn-short { display: inline !important; }
+
+      .header-ctrl {
+        gap: 6px;
+      }
+
+      .header-ctrl button {
+        padding: 5px 10px !important;
+        font-size: 12px !important;
+      }
+
+      .iconBtn {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+      }
+
+      /* 药丸 Tabs：触控滑动优先，隐藏左右两端挤压空间的物理箭头按钮 */
       .tab-nav-btn {
         display: none !important;
       }
 
       .tabs-wrapper {
-        padding: 2px;
-        border-radius: 10px;
+        padding: 3px 4px;
+        border-radius: var(--radius-full);
         margin-bottom: 8px;
         gap: 0;
       }
 
       .tabs {
         padding: 2px;
-        gap: 2px;
+        gap: 4px;
         scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
       }
 
       .tabs button {
-        padding: 6px 9px;
-        font-size: 11.5px;
+        padding: 6px 11px;
+        font-size: 12px;
         min-height: 32px;
         scroll-snap-align: center;
       }
 
+      /* 面板内边距微调 */
       .panel {
-        padding: 12px;
-        border-radius: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
         margin-bottom: 10px;
       }
 
@@ -1323,54 +1386,55 @@
         margin-bottom: 8px;
       }
 
-      /* 大屏 6 大指标卡在手机端 2 列对齐 */
-      #analyticsKpiGrid {
+      /* 核心指标卡在手机端 2 列对齐，大额数字自动弹性折行防撑爆 */
+      #analyticsKpiGrid, .cards {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 6px !important;
       }
 
-      #analyticsKpiGrid .card {
-        padding: 8px 10px !important;
+      #analyticsKpiGrid .card, .cards .card {
+        padding: 10px 12px !important;
+        border-radius: 12px !important;
       }
 
       #analyticsKpiGrid .card div:nth-child(2) {
         font-size: 16px !important;
+        word-break: break-all;
       }
 
-      /* 商城与图鉴单列排布 */
-      .responsive-shop-grid {
-        grid-template-columns: 1fr !important;
-        gap: 10px !important;
-      }
-
-      /* 快捷必要配置 */
-      .ov-req {
-        grid-template-columns: 1fr !important;
-        gap: 8px !important;
-      }
-
-      /* 工具栏流式排版 */
+      /* 工具栏：流式弹性排布，杜绝丑陋的全宽垂直长条堆叠 */
       .toolbar {
-        flex-direction: column !important;
-        align-items: stretch !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
         gap: 6px !important;
+      }
+
+      .toolbar h2 {
+        width: 100% !important;
+        font-size: 14px !important;
+        margin-bottom: 2px !important;
       }
 
       .toolbar > div {
         width: 100% !important;
-        justify-content: flex-start !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
         margin-left: 0 !important;
+        justify-content: flex-start !important;
       }
 
       .toolbar button, .toolbar select {
-        flex: 1 1 auto;
-        min-height: 32px;
-        justify-content: center;
+        flex: 0 1 auto !important;
+        min-height: 32px !important;
+        padding: 5px 12px !important;
+        font-size: 12px !important;
       }
 
       /* 搜索框全宽通透 */
       .search {
-        padding: 7px 10px;
+        padding: 6px 12px;
         margin-bottom: 8px;
       }
 
@@ -1378,7 +1442,23 @@
         font-size: 13px !important;
       }
 
-      /* 商城/图鉴编辑行：手机平板单列全宽，输入框不溢出 */
+      /* 商城与图鉴单列排布与网格 */
+      .responsive-shop-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+      }
+
+      .grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+      }
+
+      .ov-req {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+      }
+
+      /* 商城/图鉴编辑行：手机单列全宽，输入框不溢出 */
       .s-fields {
         flex-direction: column !important;
         align-items: stretch !important;
@@ -1411,18 +1491,18 @@
         row-gap: 4px !important;
       }
 
-      /* 表格水平滑动手势与内边距 */
+      /* 表格内边距与横向滚动 */
       .table-wrap {
-        border-radius: 8px;
+        border-radius: 10px;
         margin-top: 6px;
       }
 
       th, td {
-        padding: 6px 8px;
-        font-size: 11px;
+        padding: 7px 10px;
+        font-size: 11.5px;
       }
 
-      /* 模态弹窗手机端自适应 */
+      /* 通用指令与弹窗自适应 */
       .cmd-modal-box {
         width: 95vw !important;
         max-height: 90vh !important;
@@ -1442,6 +1522,7 @@
       .cmd-modal-footer {
         padding: 10px 14px !important;
         flex-wrap: wrap !important;
+        gap: 6px !important;
       }
 
       .cmd-modal-footer button {
@@ -1454,13 +1535,95 @@
       }
 
       #appModal .cmd-modal-box {
-        width: 92vw !important;
+        width: 94vw !important;
         padding: 16px !important;
-        border-radius: 14px !important;
+        border-radius: 16px !important;
+      }
+
+      /* Android 15 / Material 3 导出与导入中心专用移动端适配 */
+      .m3-modal-box {
+        width: 95vw !important;
+        max-height: 90vh !important;
+        border-radius: 18px !important;
+      }
+
+      .m3-modal-header {
+        padding: 12px 14px 10px !important;
+      }
+
+      .m3-modal-header h2 {
+        font-size: 14.5px !important;
+      }
+
+      .m3-icon-circle {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 15px !important;
+      }
+
+      .m3-modal-body {
+        padding: 10px 14px !important;
+      }
+
+      .m3-modal-footer {
+        padding: 10px 14px 12px !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+      }
+
+      .m3-modal-footer button {
+        flex: 1 1 120px !important;
+        min-height: 36px !important;
+      }
+
+      .hub-mod-card {
+        padding: 10px 12px !important;
+        border-radius: 12px !important;
+      }
+
+      .hub-mod-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 6px !important;
+      }
+
+      .hub-checkbox-label {
+        font-size: 12.5px !important;
+      }
+
+      .hub-checkbox-label input[type=checkbox] {
+        width: 16px !important;
+        height: 16px !important;
+      }
+
+      .hub-solo-btn {
+        font-size: 10.5px !important;
+        padding: 2px 8px !important;
+        flex-shrink: 0 !important;
+      }
+
+      .hub-mod-desc {
+        padding-left: 24px !important;
+        font-size: 11px !important;
+        margin-top: 3px !important;
+      }
+
+      .preset-pills {
+        gap: 4px !important;
+      }
+
+      .preset-pill {
+        padding: 4px 9px !important;
+        font-size: 11px !important;
+      }
+
+      .m3-summary-banner {
+        padding: 10px 12px !important;
+        margin-top: 10px !important;
       }
     }
-
-    /* 插件运行日志终端样式 */
+/* 插件运行日志终端样式 */
     .log-terminal {
       background: #0d1117;
       border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1693,8 +1856,8 @@
         </div>
       </div>
       <div class="header-ctrl">
-        <button id="btnOpenExportHub" class="btn sm" style="background:var(--primary-container);color:var(--on-primary-container);border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px" title="打开模块化数据与预设导出中心">📦 导出/预设中心</button>
-        <button id="btnOpenImportHub" class="ghost sm" style="display:inline-flex;align-items:center;gap:5px" title="智能选择性导入文件">📤 智能导入</button>
+        <button id="btnOpenExportHub" class="btn sm" style="background:var(--primary-container);color:var(--on-primary-container);border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px" title="打开模块化数据与预设导出中心"><span class="hdr-btn-full">📦 导出/预设中心</span><span class="hdr-btn-short">📦 导出</span></button>
+        <button id="btnOpenImportHub" class="ghost sm" style="display:inline-flex;align-items:center;gap:5px" title="智能选择性导入文件"><span class="hdr-btn-full">📤 智能导入</span><span class="hdr-btn-short">📤 导入</span></button>
         <button class="iconBtn" id="themeBtn" title="切换深浅主题">☀</button>
       </div>
     </header>
