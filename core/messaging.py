@@ -357,9 +357,8 @@ async def _do_platform(marker, event, slave_mod=None):
                         except Exception:
                             continue
                     if str(target) not in _ids:
-                        if extra_text:
-                            return extra_text + "（非好友点赞失败，请先加为好友）"
-                        return "非好友点赞失败，请先加为好友"
+                        # 非好友直回失败注记：不带成功前缀，否则先报成功再报失败自相矛盾
+                        return "（非好友点赞失败，请先加为好友）"
             except Exception:
                 pass
             try:
@@ -375,8 +374,11 @@ async def _do_platform(marker, event, slave_mod=None):
                 if extra_text:
                     return extra_text + "（名片实赞未成功：需互为好友或对方设置限制）"
                 return f"名片点赞失败：{e1}"
-            base = f"名片实赞{times}次"
-            return (extra_text + "\r\n" + base) if extra_text else base
+            base = f"成功点赞{times}次"
+            # 成功文案与虚拟计数同文时只发一条，防“成功点赞5次\r\n成功点赞5次”复读
+            if extra_text and extra_text != base:
+                return extra_text + "\r\n" + base
+            return base
         if act == "mute":
             try:
                 await _call("set_group_ban", group_id=int(gid), user_id=int(target), duration=dur)

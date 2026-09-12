@@ -367,7 +367,7 @@ def cmd_like(gid, qq):
     cur_like = a.int("like_count")
     a.set("like_count", str(cur_like + n))
     ST.acct_save(gid, qq)
-    text = f"成功赞了{n}个"
+    text = f"成功点赞{n}次"
     # 真实名片赞走平台动作（mute/kick 同机制）；失败/无适配器时降级只保留虚拟计数
     try:
         return "__XB_PLATFORM__|like|%s|%d__TEXT__%s" % (qq, n, text)
