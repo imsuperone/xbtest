@@ -6,7 +6,7 @@
   <title>管理控制台</title>
   <style>
     :root {
-      /* Google Material 3 / Android 15 Dynamic Color & Elevation System */
+      /* Google Material 3 / Android 16 Dynamic Color Tokens */
       --md-sys-color-primary: #0B57D0;
       --md-sys-color-on-primary: #FFFFFF;
       --md-sys-color-primary-container: #D3E3FD;
@@ -48,15 +48,15 @@
       --purple: #6750A4;
       --purpleSoft: #EADDFF;
 
-      --shadow-xs: 0 1px 3px 1px rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.08);
-      --shadow-sm: 0 2px 6px 2px rgba(0, 0, 0, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.10);
-      --shadow-md: 0 4px 12px 3px rgba(0, 0, 0, 0.08), 0 1px 3px 0 rgba(0, 0, 0, 0.12);
-      --shadow-lg: 0 8px 24px 6px rgba(0, 0, 0, 0.12), 0 2px 6px 0 rgba(0, 0, 0, 0.15);
+      --shadow-xs: 0 1px 3px 1px rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      --shadow-sm: 0 3px 8px 2px rgba(0, 0, 0, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 6px 16px 3px rgba(0, 0, 0, 0.07), 0 2px 5px 0 rgba(0, 0, 0, 0.10);
+      --shadow-lg: 0 12px 36px 6px rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.12);
 
       --radius-xl: 30px;
       --radius: 22px;
-      --radius-sm: 14px;
-      --radius-xs: 8px;
+      --radius-sm: 16px;
+      --radius-xs: 10px;
       --radius-full: 9999px;
     }
 
@@ -81,8 +81,8 @@
       --text-secondary: #C3C6CF;
       --muted: #8D9199;
       --muted-soft: #43474E;
-      --line: rgba(255, 255, 255, 0.10);
-      --line-subtle: rgba(255, 255, 255, 0.05);
+      --line: rgba(255, 255, 255, 0.12);
+      --line-subtle: rgba(255, 255, 255, 0.06);
 
       --acc: var(--md-sys-color-primary);
       --acc-hover: #C2E7FF;
@@ -103,14 +103,14 @@
       --purpleSoft: rgba(208, 188, 255, 0.18);
 
       --shadow-xs: 0 1px 3px 1px rgba(0, 0, 0, 0.3);
-      --shadow-sm: 0 2px 6px 2px rgba(0, 0, 0, 0.4);
-      --shadow-md: 0 4px 12px 3px rgba(0, 0, 0, 0.5);
-      --shadow-lg: 0 8px 24px 6px rgba(0, 0, 0, 0.7);
+      --shadow-sm: 0 3px 8px 2px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 6px 16px 3px rgba(0, 0, 0, 0.5);
+      --shadow-lg: 0 12px 36px 6px rgba(0, 0, 0, 0.7);
     }
 
     * { box-sizing: border-box; }
 
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--muted-soft); border-radius: var(--radius-full); }
     ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
@@ -136,25 +136,26 @@
     .wrap {
       max-width: 1260px;
       margin: 0 auto;
-      padding: 14px 14px 64px;
+      padding: 14px 16px 64px;
     }
 
-    /* Android 15 Material 3 Top App Bar */
+    /* Top App Bar */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 14px;
-      padding: 14px 22px;
+      margin-bottom: 16px;
+      padding: 14px 24px;
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-xs);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-sm);
       position: sticky;
       top: 10px;
       z-index: 40;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
     }
     .brand {
       display: flex;
@@ -163,10 +164,10 @@
       flex-wrap: wrap;
     }
     .brand h1 {
-      font-size: 17px;
+      font-size: 18px;
       margin: 0;
-      font-weight: 600;
-      letter-spacing: -0.01em;
+      font-weight: 750;
+      letter-spacing: -0.02em;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -175,7 +176,7 @@
     .brand .sub {
       color: var(--muted);
       font-size: 12px;
-      font-weight: 400;
+      font-weight: 500;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -184,46 +185,23 @@
       background: var(--panel2);
       color: var(--text-secondary);
       font-size: 11.5px;
-      padding: 2px 10px;
+      padding: 3px 10px;
       border-radius: var(--radius-full);
       font-weight: 600;
       border: 1px solid var(--line);
+      letter-spacing: 0.2px;
     }
     .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
       font-size: 11.5px;
-      padding: 3px 10px;
+      padding: 4px 12px;
       border-radius: var(--radius-full);
       background: var(--okSoft);
       color: var(--ok);
       font-weight: 600;
-    }
-    
-    .brand-avatar {
-      width: 44px;
-      height: 44px;
-      border-radius: 16px;
-      background: var(--primary-container);
-      color: var(--on-primary-container);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      box-shadow: 0 4px 14px var(--accSoft);
-      flex-shrink: 0;
-      user-select: none;
-      transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .brand-avatar:hover {
-      transform: scale(1.06) rotate(-3deg);
-    }
-    .brand-subtitle {
-      color: var(--text-secondary);
-      font-size: 13px;
-      font-weight: 500;
-      margin-left: 2px;
+      letter-spacing: 0.2px;
     }
     .status-dot {
       width: 8px;
@@ -236,13 +214,6 @@
       0%, 100% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.4); opacity: 0.6; }
     }
-
-    .status-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--ok);
-    }
     .header-ctrl {
       display: flex;
       align-items: center;
@@ -253,15 +224,15 @@
       border: 1px solid var(--line);
       color: var(--text);
       border-radius: var(--radius-full);
-      width: 36px;
-      height: 36px;
+      width: 38px;
+      height: 38px;
       cursor: pointer;
       font-size: 14px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       padding: 0;
-      transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
     }
     .iconBtn:hover {
       background: var(--panel-hover);
@@ -270,7 +241,7 @@
     }
     .iconBtn:active { transform: scale(0.95); }
 
-    /* Material 3 Capsule Pills Tab Bar (Android 15) */
+    /* Segmented Capsule Tabs Dock */
     .tabs-wrapper {
       margin-bottom: 16px;
       background: var(--panel);
@@ -287,8 +258,8 @@
       transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
     }
     .tab-nav-btn {
-      width: 32px;
-      height: 32px;
+      width: 34px;
+      height: 34px;
       background: var(--panel2);
       border: 1px solid var(--line);
       color: var(--text-secondary);
@@ -298,12 +269,16 @@
       cursor: pointer;
       padding: 0;
       flex-shrink: 0;
-      transition: all 0.15s ease;
-      font-size: 16px;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+      font-size: 18px;
       line-height: 1;
       border-radius: var(--radius-full);
     }
-    .tab-nav-btn:hover { color: var(--acc); background: var(--panel3); }
+    .tab-nav-btn:hover {
+      color: var(--acc);
+      background: var(--panel3);
+      transform: scale(1.08);
+    }
     .tabs {
       display: flex;
       gap: 6px;
@@ -337,7 +312,7 @@
     }
     .tabs button:hover {
       color: var(--text);
-      background: var(--panel3);
+      background: var(--panel2);
       transform: translateY(-1px);
     }
     .tabs button.on {
@@ -352,7 +327,7 @@
     .tab { display: none; }
     .tab.on { display: block; }
 
-    /* Material 3 Expressive Panels & Cards */
+    /* Surface Panels */
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -363,28 +338,28 @@
       transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
     }
     .panel h2 {
-      font-size: 15.5px;
-      margin: 0 0 12px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
+      font-size: 16.5px;
+      margin: 0 0 14px;
+      font-weight: 750;
+      letter-spacing: -0.02em;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       color: var(--text);
     }
     .panel h3 {
-      font-size: 13.5px;
+      font-size: 14px;
       margin: 0;
       color: var(--text);
-      font-weight: 600;
+      font-weight: 700;
     }
 
-    /* Dashboard Stats Cards */
-    .cards {
+    /* Dashboard Stats KPI Cards */
+    .kpi-grid, .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
-      margin-bottom: 16px;
+      margin: 8px 0 16px;
     }
     .card {
       background: var(--panel);
@@ -398,48 +373,48 @@
     }
     .card:hover {
       border-color: var(--accBorder);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-sm);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
     }
     .card .num {
-      font-size: 24px;
-      font-weight: 700;
+      font-size: 26px;
+      font-weight: 800;
       color: var(--text);
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
       font-variant-numeric: tabular-nums;
       line-height: 1.2;
     }
     .card .lab {
       color: var(--muted);
-      font-size: 11.5px;
+      font-size: 12px;
       margin-top: 4px;
-      font-weight: 500;
+      font-weight: 600;
     }
     .card .ic {
       font-size: 22px;
       position: absolute;
-      right: 14px;
-      top: 14px;
+      right: 16px;
+      top: 16px;
       line-height: 1;
       opacity: 0.85;
     }
 
-    /* Material 3 Buttons */
+    /* Buttons */
     button, .btn {
       background: var(--acc);
       color: #FFFFFF;
       border: 1px solid transparent;
       border-radius: var(--radius-full);
-      padding: 7px 18px;
-      font-size: 12.5px;
+      padding: 8px 20px;
+      font-size: 13px;
       cursor: pointer;
-      font-weight: 500;
+      font-weight: 600;
       letter-spacing: 0.1px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
-      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
       line-height: 1.35;
       user-select: none;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -450,12 +425,12 @@
     }
     button:hover, .btn:hover {
       background: var(--acc-hover);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
       transform: translateY(-1px);
     }
     button:active, .btn:active {
       background: var(--acc-active);
-      transform: scale(0.98);
+      transform: scale(0.97);
       box-shadow: none;
     }
     button.ghost, .btn.ghost {
@@ -466,17 +441,17 @@
     }
     button.ghost:hover, .btn.ghost:hover {
       background: var(--panel-hover);
-      border-color: var(--muted-soft);
+      border-color: var(--accBorder);
       color: var(--acc);
     }
     button.sm, .btn.sm {
-      padding: 4px 12px;
-      font-size: 11.5px;
+      padding: 5px 14px;
+      font-size: 12px;
       border-radius: var(--radius-full);
     }
     button.ghost.del, .btn.ghost.del {
       color: var(--bad);
-      border-color: rgba(186, 26, 26, 0.2);
+      border-color: rgba(186, 26, 26, 0.25);
       background: transparent;
     }
     button.ghost.del:hover, .btn.ghost.del:hover {
@@ -485,7 +460,7 @@
       border-color: var(--bad);
     }
 
-    /* Search & Form Inputs (Material 3 Field Styling) */
+    /* Form Fields & Search */
     input[type=text],
     input[type=number],
     input[type=password],
@@ -506,42 +481,43 @@
     }
     input:hover, select:hover, textarea:hover {
       border-color: var(--muted);
-      background: var(--panel);
+      background: var(--panel2);
     }
     input:focus, select:focus, textarea:focus {
       border-color: var(--acc);
       background: var(--panel);
-      box-shadow: 0 0 0 3px var(--accSoft2);
+      box-shadow: 0 0 0 4px var(--accSoft2);
     }
     input::placeholder, textarea::placeholder {
       color: var(--muted);
-      opacity: 0.7;
-      font-size: 12px;
+      opacity: 0.75;
+      font-size: 12.5px;
     }
     select {
       padding-right: 32px !important;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2373777f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 12px center;
+      background-position: right 14px center;
       background-size: 12px;
       cursor: pointer;
     }
     textarea {
-      border-radius: 14px;
+      border-radius: 16px;
       line-height: 1.55;
       resize: vertical;
-      padding: 10px 14px;
+      padding: 10px 16px;
     }
     .search {
       display: flex;
       align-items: center;
       gap: 10px;
       background: var(--panel2);
-      border: 1px solid var(--line);
+      border: 1.5px solid var(--line);
       border-radius: var(--radius-full);
-      padding: 8px 16px;
-      margin-bottom: 12px;
-      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+      padding: 0 18px;
+      height: 44px;
+      margin-bottom: 14px;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
     }
     .search:hover {
       background: var(--panel);
@@ -551,14 +527,14 @@
     .search:focus-within {
       border-color: var(--acc);
       background: var(--panel);
-      box-shadow: 0 0 0 3px var(--accSoft2);
+      box-shadow: 0 0 0 4px var(--accSoft2);
     }
     .search input {
       border: 0 !important;
       background: transparent !important;
       outline: none !important;
       color: var(--text) !important;
-      font-size: 13px !important;
+      font-size: 13.5px !important;
       font-weight: 400;
       width: 100% !important;
       font-family: inherit;
@@ -573,7 +549,7 @@
       overflow-x: auto;
       border: 1px solid var(--line);
       border-radius: 22px;
-      margin-top: 10px;
+      margin-top: 12px;
       background: var(--panel);
       box-shadow: var(--shadow-xs);
       -webkit-overflow-scrolling: touch;
@@ -581,42 +557,102 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12.5px;
+      font-size: 13px;
       text-align: left;
     }
     th {
       background: var(--panel2);
-      padding: 10px 14px;
+      padding: 13px 18px;
       color: var(--text-secondary);
-      font-weight: 600;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.2px;
       border-bottom: 1px solid var(--line);
       white-space: nowrap;
       user-select: none;
     }
     td {
-      padding: 9px 14px;
+      padding: 12px 18px;
       border-bottom: 1px solid var(--line-subtle);
       color: var(--text);
       vertical-align: middle;
     }
     tr:last-child td { border-bottom: 0; }
-    tbody tr:hover { background: var(--panel-hover); }
+    tbody tr:hover { background: var(--accSoft); }
+    td button, td .btn {
+      border-radius: var(--radius-full) !important;
+      padding: 4px 14px !important;
+      font-size: 12px !important;
+      height: 30px !important;
+    }
+    td input, td select {
+      border-radius: 12px !important;
+      padding: 4px 8px !important;
+      font-size: 12.5px !important;
+      height: 30px !important;
+    }
 
-    
-    /* Android 16 Material You 动态调色盘浮层 */
+    /* Toolbars across pages */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .toolbar h2 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 750;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+    .toolbar > div {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .toolbar button, .toolbar .btn {
+      border-radius: var(--radius-full) !important;
+      height: 36px;
+      padding: 0 16px;
+      font-size: 12.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .toolbar select, .toolbar input[type="text"] {
+      border-radius: var(--radius-full) !important;
+      height: 36px;
+      padding: 0 32px 0 16px;
+      font-size: 12.5px;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    /* Monet Palette Popover */
     .monet-popover {
       position: absolute;
       top: calc(100% + 10px);
       right: 0;
-      width: 280px;
+      width: 290px;
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 22px;
+      border-radius: 24px;
       box-shadow: var(--shadow-lg);
-      padding: 14px 16px;
+      padding: 16px 18px;
       z-index: 95;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       animation: monetPopIn 0.2s cubic-bezier(0.2, 0, 0, 1);
     }
     @keyframes monetPopIn {
@@ -627,25 +663,25 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .monet-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .monet-item {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 5px;
-      padding: 8px 4px;
+      gap: 6px;
+      padding: 10px 6px;
       background: var(--panel2);
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 16px;
       cursor: pointer;
-      transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
       user-select: none;
     }
     .monet-item:hover {
@@ -660,7 +696,7 @@
     }
     .monet-item.on span {
       color: var(--on-primary-container) !important;
-      font-weight: 600;
+      font-weight: 700;
     }
     .monet-swatch {
       width: 26px;
@@ -669,19 +705,17 @@
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
       border: 2px solid #FFFFFF;
     }
-    [data-theme="dark"] .monet-swatch {
-      border-color: rgba(255, 255, 255, 0.2);
-    }
+    [data-theme="dark"] .monet-swatch { border-color: rgba(255, 255, 255, 0.2); }
     .monet-item span {
-      font-size: 11px;
+      font-size: 11.5px;
       color: var(--text-secondary);
-      font-weight: 500;
+      font-weight: 600;
     }
     .monet-custom-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding-top: 10px;
+      padding-top: 12px;
       border-top: 1px solid var(--line-subtle);
     }
 
@@ -689,11 +723,12 @@
     .badge {
       display: inline-flex;
       align-items: center;
-      padding: 2px 8px;
+      padding: 3px 10px;
       border-radius: var(--radius-full);
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 11.5px;
+      font-weight: 650;
       line-height: 1.35;
+      letter-spacing: 0.2px;
     }
     .badge-primary { background: var(--accSoft); color: var(--acc); }
     .badge-success { background: var(--okSoft); color: var(--ok); }
@@ -701,7 +736,7 @@
     .badge-bad, .badge-danger { background: var(--badSoft); color: var(--bad); }
     .badge-purple { background: var(--purpleSoft); color: var(--purple); }
 
-    /* Material 3 Toggle Switch (Android 15) */
+    /* Android 16 Expressive Switch */
     .switch {
       position: relative;
       display: inline-block;
@@ -733,14 +768,8 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     }
     input:checked + .slider-toggle {
-      position: absolute;
-      cursor: pointer;
-      inset: 0;
-      background: var(--panel3);
-      border: 2px solid var(--muted-soft);
-      border-radius: var(--radius-full);
-      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-      box-sizing: border-box;
+      background: var(--acc);
+      border-color: var(--acc);
     }
     input:checked + .slider-toggle:before {
       transform: translateX(20px);
@@ -751,23 +780,15 @@
       bottom: 2px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
-    [data-theme="dark"] input:checked + .slider-toggle:before {
-      transform: translateX(20px);
-      background: #FFFFFF;
-      width: 24px;
-      height: 24px;
-      left: 2px;
-      bottom: 2px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    }
+    [data-theme="dark"] input:checked + .slider-toggle:before { background: #041E49; }
 
-    /* Configuration List View */
+    /* Configuration Settings Flow */
     .cfg-sec {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 26px;
-      padding: 20px 24px;
-      margin-bottom: 16px;
+      padding: 22px 26px;
+      margin-bottom: 18px;
       box-shadow: var(--shadow-xs);
       transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
     }
@@ -777,7 +798,7 @@
     }
     .cfg-sec h3 {
       font-size: 15px;
-      font-weight: 700;
+      font-weight: 750;
       color: var(--text);
       padding-bottom: 12px;
       border-bottom: 1px solid var(--line-subtle);
@@ -790,7 +811,7 @@
       background: var(--panel2);
       border: 1px solid var(--line-subtle);
       border-radius: 18px;
-      padding: 14px 18px;
+      padding: 14px 20px;
       margin-bottom: 10px;
       display: flex;
       flex-direction: column;
@@ -804,53 +825,60 @@
     }
     .cfg-row:last-child { margin-bottom: 0; }
     .cfg-row > label {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 13.5px;
+      font-weight: 650;
       color: var(--text);
     }
     .cfg-row small {
       color: var(--muted);
-      font-size: 11.5px;
+      font-size: 12px;
+      line-height: 1.45;
     }
     .cfg-row.has-checkbox {
       flex-direction: row;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
+      gap: 12px;
     }
     .cfg-row.has-checkbox small {
       width: 100%;
       margin-top: 2px;
     }
-
-
-    /* Cat pills */
     .cfg-cat {
       display: flex;
-      gap: 6px;
+      gap: 8px;
       overflow-x: auto;
-      padding-bottom: 6px;
-      margin-bottom: 12px;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
       scrollbar-width: none;
     }
     .cfg-cat::-webkit-scrollbar { display: none; }
     .cfg-cat button {
       background: var(--panel2);
       border: 1px solid var(--line);
-      color: var(--muted);
+      color: var(--text-secondary);
       border-radius: var(--radius-full);
-      padding: 4px 12px;
-      font-size: 11.5px;
-      font-weight: 500;
+      padding: 7px 18px;
+      font-size: 12.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .cfg-cat button:hover {
+      background: var(--panel3);
+      color: var(--text);
+      transform: translateY(-1px);
     }
     .cfg-cat button.on {
-      background: var(--acc);
-      color: #FFFFFF;
-      border-color: var(--acc);
-      font-weight: 600;
+      background: var(--primary-container) !important;
+      color: var(--on-primary-container) !important;
+      border-color: transparent !important;
+      font-weight: 700;
+      box-shadow: 0 2px 6px var(--accSoft);
     }
 
-    /* Overview Required Quick Config */
+    /* Overview Quick Config & Guide */
     .ov-req {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -859,217 +887,304 @@
     .ov-field {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
+      background: var(--panel2);
+      padding: 12px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--line-subtle);
     }
     .ov-field label {
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 650;
       color: var(--text-secondary);
     }
-    .ov-field small {
-      font-size: 11px;
-      color: var(--muted);
-    }
+    .ov-field small { font-size: 11px; color: var(--muted); }
 
     /* Command Details & Tree */
     .cmd-block {
       border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      margin-bottom: 8px;
+      border-radius: 22px;
+      margin-bottom: 12px;
       overflow: hidden;
       background: var(--panel2);
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
     }
     .cmd-block > summary {
-      padding: 10px 14px;
+      padding: 14px 20px;
       cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
+      font-weight: 650;
+      font-size: 14px;
       user-select: none;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      transition: background 0.15s ease;
     }
     .cmd-block > summary:hover { background: var(--panel-hover); }
+    .cmd-block[open] { border-color: var(--accBorder); }
     .cmd-block[open] > summary {
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px solid var(--line-subtle);
       background: var(--panel);
     }
     .cmd-tag {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: var(--radius-xs);
-      padding: 4px 9px;
+      border-radius: var(--radius-full);
+      padding: 5px 14px;
       margin: 3px 4px 3px 0;
       font-size: 12px;
+      font-weight: 550;
       text-decoration: none;
       color: var(--text);
       cursor: pointer;
-      transition: border-color 0.12s ease, color 0.12s ease;
+      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
       box-shadow: var(--shadow-xs);
     }
     .cmd-tag:hover {
-      border-color: var(--acc);
-      color: var(--acc);
-      background: var(--accSoft);
+      border-color: transparent;
+      color: var(--on-primary-container);
+      background: var(--primary-container);
+      transform: translateY(-1px);
     }
-    .cmd-tag.off {
-      opacity: .45;
-      text-decoration: line-through;
-      background: var(--panel2);
-    }
-    .cmd-tag.custom {
-      border-style: dashed;
-      color: var(--acc);
-      border-color: var(--acc);
-    }
+    .cmd-tag.off { opacity: .45; text-decoration: line-through; background: var(--panel2); }
+    .cmd-tag.custom { border-style: dashed; color: var(--acc); border-color: var(--acc); }
     .cmd-wake {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin: 8px 14px 6px;
-      padding: 8px 12px;
+      margin: 10px 16px 8px;
+      padding: 10px 16px;
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
+      border-radius: 16px;
       flex-wrap: wrap;
     }
-    .cmd-wake-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .cmd-wake-item label {
-      color: var(--text-secondary);
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .cmd-wake-item input[type=text], .cmd-wake input {
-      flex: 1;
-      min-width: 150px;
-    }
-    .cmd-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      padding: 8px 14px 12px;
-    }
+    .cmd-wake-item { display: flex; align-items: center; gap: 6px; }
+    .cmd-wake-item label { color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+    .cmd-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 18px 14px; }
     .cmd-dflt {
       color: var(--muted);
-      font-size: 11px;
+      font-size: 11.5px;
       margin-top: 4px;
-      padding: 5px 10px;
-      background: var(--panel2);
-      border-radius: var(--radius-xs);
+      padding: 8px 12px;
+      background: var(--panel);
+      border-radius: 12px;
       border: 1px dashed var(--line);
-      line-height: 1.4;
+      line-height: 1.45;
     }
 
-    
-    /* Apple Vision Group Cards & Callouts */
-    .apple-card {
-      background: var(--panel2);
+    /* Shops & Pools */
+    .responsive-shop-grid details.panel {
+      border-radius: 24px;
+      padding: 18px 22px;
+      margin-bottom: 14px;
+      background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      box-shadow: var(--shadow-xs);
     }
-    .apple-card-row {
+    .s-fields {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      background: var(--panel2);
+      border: 1px solid var(--line-subtle);
+      border-radius: 18px;
+      padding: 12px 16px;
+      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .s-fields:hover {
+      background: var(--panel-hover);
+      border-color: var(--line);
+    }
+    .s-row { display: flex; flex-direction: column; gap: 4px; flex: 0 1 90px; }
+    .s-row small { color: var(--muted); font-size: 11px; font-weight: 600; }
+    .s-row input { width: 100%; padding: 6px 10px; font-size: 12px; border-radius: 12px; }
+    .s-del {
+      background: var(--badSoft);
+      color: var(--bad);
+      border: 1px solid transparent;
+      border-radius: var(--radius-full);
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-left: auto;
+      transition: all 0.15s ease;
+    }
+    .s-del:hover { background: var(--bad); color: #FFFFFF; }
+
+    /* Spirits & Atlas */
+    .s-mapcard {
+      border-radius: 20px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-xs);
+      padding: 16px 18px;
+      margin-bottom: 12px;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .s-mapcard:hover { border-color: var(--accBorder); transform: translateY(-2px); }
+    .s-maphead {
+      font-size: 14.5px;
+      font-weight: 750;
+      color: var(--text);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      margin-bottom: 10px;
     }
-    .apple-card-divider {
-      height: 1px;
-      background: var(--line);
-      margin: 2px 0;
-    }
-    .apple-card-field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .apple-card-field > label {
-      font-size: 12px;
-      color: var(--text-secondary);
-      font-weight: 600;
-    }
-    .apple-card-field input, .apple-card-field textarea {
-      width: 100%;
-      background: var(--panel);
+    .s-mapdrop {
+      border-radius: var(--radius-full);
+      background: var(--panel2);
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 7px 10px;
-      font-size: 12.5px;
-      color: var(--text);
-    }
-    .apple-card-field input:focus, .apple-card-field textarea:focus {
-      border-color: var(--acc);
-      box-shadow: 0 0 0 3px var(--accSoft);
-    }
-    .cmd-reply-preview {
-      margin-top: 4px;
-      padding: 10px 12px;
-      background: var(--panel);
-      border-left: 3px solid var(--acc);
-      border-radius: 8px;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-    .cmd-reply-preview-label {
-      font-weight: 600;
+      padding: 3px 10px;
       font-size: 11.5px;
-      color: var(--acc);
-      margin-bottom: 3px;
+      font-weight: 550;
     }
-    .cmd-reply-preview-content {
-      color: var(--text-secondary);
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-    .var-tag {
-      cursor: pointer;
-      background: var(--panel);
+    .sp-card {
+      border-radius: 18px;
+      background: var(--panel2);
       border: 1px solid var(--line);
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 11px;
-      color: var(--acc);
+      padding: 12px 14px;
       transition: all 0.15s ease;
-      user-select: none;
-    }
-    .var-tag:hover {
-      background: var(--acc);
-      color: #fff;
-      border-color: var(--acc);
     }
 
-    /* Apple Modal Dialogs - 质感浮层适配 */
-    #cmdModal, #appModal {
+    /* Backups List */
+    .bk-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .bk-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      background: var(--panel2);
+      border: 1px solid var(--line-subtle);
+      border-radius: 20px;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+      cursor: pointer;
+    }
+    .bk-item:hover {
+      background: var(--panel-hover);
+      border-color: var(--accBorder);
+      transform: translateY(-1px);
+    }
+    .bk-item.selected {
+      border-color: var(--acc) !important;
+      background: var(--primary-container) !important;
+    }
+    .bk-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: var(--panel);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .bk-info { display: flex; flex-direction: column; gap: 3px; flex: 1; margin: 0 14px; }
+    .bk-name { font-size: 13.5px; font-weight: 650; color: var(--text); }
+    .bk-meta { font-size: 12px; color: var(--muted); }
+
+    /* File Manager & Gallery */
+    .fcard {
+      border-radius: 20px;
+      background: var(--panel2);
+      border: 1px solid var(--line-subtle);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .fcard:hover {
+      background: var(--panel-hover);
+      border-color: var(--accBorder);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-sm);
+    }
+    .fcard.selected {
+      border-color: var(--acc) !important;
+      background: var(--primary-container) !important;
+      box-shadow: 0 0 0 2px var(--acc);
+    }
+    .fcard.selected .fn { color: var(--on-primary-container) !important; font-weight: 700; }
+    .fi {
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+    .fn { font-size: 12.5px; font-weight: 600; color: var(--text); margin-top: 8px; word-break: break-all; }
+    .crumbs {
+      background: var(--panel2);
+      padding: 7px 16px;
+      border-radius: var(--radius-full);
+      font-weight: 500;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line);
+    }
+
+    /* Logs Console */
+    .log-terminal {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 16px 20px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      max-height: 65vh;
+      overflow-y: auto;
+    }
+    .log-line {
+      padding: 5px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.55;
+      transition: background 0.1s ease;
+    }
+    .log-line:hover { background: var(--panel); }
+    .log-ts { color: var(--muted); margin-right: 8px; font-size: 11px; }
+
+    /* Unified Android 16 Expressive Modal System */
+    #cmdModal, #appModal, .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(0, 0, 0, 0.45);
       display: none;
       align-items: center;
       justify-content: center;
       z-index: 80;
       padding: 16px;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
     }
     #cmdModal.show, #appModal.show { display: flex; }
-    .cmd-modal-box {
+    .cmd-modal-box, .m3-modal-box {
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 34px;
+      border-radius: 34px !important;
       padding: 0;
       width: min(580px, 94vw);
-      max-height: 85vh;
+      max-height: 86vh;
       display: flex;
       flex-direction: column;
       box-shadow: var(--shadow-lg);
@@ -1080,100 +1195,164 @@
       from { opacity: 0; transform: scale(0.92); }
       to { opacity: 1; transform: scale(1); }
     }
-    /* appModal 内容区可滚动：高弹窗（智能平衡等）在小屏不再顶掉底部按钮 */
-    #appModal .cmd-modal-box #appModalContent {
-      overflow-y: auto;
-      min-height: 0;
-      flex-shrink: 1;
-    }
-    .cmd-modal-header {
-      padding: 16px 20px 12px;
-      border-bottom: 1px solid var(--line);
+    .cmd-modal-header, .m3-modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--line-subtle);
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
-    .cmd-modal-header h3 { margin: 0; font-size: 15px; font-weight: 600; }
-    .cmd-modal-body {
-      padding: 16px 20px;
+    .cmd-modal-header h3, .m3-modal-header h2 {
+      margin: 0;
+      font-size: 16.5px;
+      font-weight: 750;
+      color: var(--text);
+    }
+    .cmd-modal-body, .m3-modal-body {
+      padding: 20px 24px;
       overflow-y: auto;
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
     }
-    .cmd-modal-footer {
-      padding: 12px 20px;
-      border-top: 1px solid var(--line);
+    .cmd-modal-footer, .m3-modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--line-subtle);
       background: var(--panel2);
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      gap: 8px;
+      gap: 10px;
     }
-    .cmd-modal-sys {
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .cmd-modal-field { display: flex; flex-direction: column; gap: 4px; }
-    .cmd-modal-field > label {
-      font-size: 12px;
-      color: var(--text-secondary);
+    .cmd-modal-footer button, .m3-modal-footer button {
+      border-radius: var(--radius-full);
+      height: 40px;
+      padding: 0 22px;
       font-weight: 600;
+      font-size: 13px;
     }
-    .cmd-modal-field input, .cmd-modal-field textarea { width: 100%; }
+    .m3-icon-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .apple-card, .m3-card {
+      background: var(--panel2);
+      border: 1px solid var(--line-subtle);
+      border-radius: 20px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .apple-card-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .apple-card-divider { height: 1px; background: var(--line-subtle); margin: 2px 0; }
+    .apple-card-field { display: flex; flex-direction: column; gap: 5px; }
+    .apple-card-field > label { font-size: 12px; color: var(--text-secondary); font-weight: 650; }
+    .apple-card-field input, .apple-card-field textarea {
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .cmd-reply-preview {
+      margin-top: 6px;
+      padding: 12px 16px;
+      background: var(--panel);
+      border: 1px solid var(--accBorder);
+      border-radius: 16px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .cmd-reply-preview-label { font-weight: 700; font-size: 12px; color: var(--acc); margin-bottom: 4px; }
+    .cmd-reply-preview-content { color: var(--text-secondary); white-space: pre-wrap; word-break: break-all; }
+    .var-tag {
+      cursor: pointer;
+      background: var(--panel);
+      border: 1px solid var(--accBorder);
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-size: 11.5px;
+      color: var(--acc);
+      font-weight: 600;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .var-tag:hover { background: var(--acc); color: #FFFFFF; }
     .cmd-nums {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 6px;
-      margin-top: 4px;
+      gap: 8px;
+      margin-top: 6px;
     }
     .cmd-nums label.cnum {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 6px;
-      font-size: 11.5px;
+      font-size: 12px;
       color: var(--text-secondary);
-      background: var(--panel2);
+      background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: var(--radius-xs);
-      padding: 5px 8px;
-    }
-    .cmd-nums label.cnum span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-weight: 500;
+      border-radius: 14px;
+      padding: 7px 12px;
     }
     .cmd-nums input {
       width: 75px;
-      padding: 3px 6px;
-      font-size: 11.5px;
-      text-align: right;
-    }
-
-    .hint {
-      color: var(--muted);
+      padding: 4px 8px;
       font-size: 12px;
-      margin: 5px 0;
-      line-height: 1.4;
+      text-align: right;
+      border-radius: 10px;
     }
-    .msg {
-      margin-left: 8px;
-      font-size: 12.5px;
-      font-weight: 600;
+    .hub-mod-card {
+      background: var(--panel2);
+      border: 1px solid var(--line-subtle);
+      border-radius: 20px;
+      padding: 16px 18px;
+      margin-bottom: 12px;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
     }
-    .ok { color: var(--ok); }
-    .bad { color: var(--bad); }
-    #footErr {
-      color: var(--bad);
+    .hub-mod-card:hover {
+      background: var(--panel-hover);
+      border-color: var(--accBorder);
+      transform: translateY(-2px);
+    }
+    .hub-mod-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .hub-mod-desc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
+    .m3-summary-banner {
       margin-top: 14px;
-      font-size: 12.5px;
-      font-weight: 500;
+      padding: 14px 18px;
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      border-radius: 18px;
+      font-weight: 600;
+      font-size: 13px;
     }
 
-    /* Apple Toast */
+    /* Toast Notification */
     #toast {
       position: fixed;
       left: 50%;
@@ -1185,7 +1364,7 @@
       border: 1px solid var(--line);
       border-radius: var(--radius-full);
       font-size: 13.5px;
-      font-weight: 600;
+      font-weight: 650;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1);
@@ -1197,924 +1376,40 @@
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
     }
-    [data-theme="dark"] #toast {
-      position: fixed;
-      left: 50%;
-      bottom: 26px;
-      transform: translateX(-50%) translateY(16px);
-      background: var(--panel);
-      color: var(--text);
-      padding: 12px 26px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-full);
-      font-size: 13.5px;
-      font-weight: 600;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1);
-      box-shadow: var(--shadow-lg);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-    }
-    #toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-    #toast.okk { background: rgba(52, 199, 89, 0.95); }
-    #toast.badk { background: rgba(255, 59, 48, 0.95); }
-
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-    .toolbar h2 { margin: 0; flex: 0 0 auto; }
-
-    /* Gallery & Files */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: 10px;
-    }
-    
-    .fcard {
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      padding: 12px 10px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.12s ease;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100px;
-    }
-    .fcard:hover {
-      border-color: var(--acc);
-      color: var(--acc);
-      background: var(--accSoft);
-    }
-    .fcard .fi { font-size: 28px; line-height: 1; margin-bottom: 4px; }
-    .fcard .fn {
-      font-size: 11.5px;
-      margin-top: 2px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 100%;
-      font-weight: 500;
-    }
-    .fcard.selected, .icard.selected {
-      border-color: var(--acc) !important;
-      box-shadow: 0 0 0 2px var(--acc) !important;
-      background: var(--accSoft) !important;
-    }
-
-    .icard {
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-      cursor: pointer;
-      background: var(--panel2);
-      transition: border-color 0.12s ease;
-    }
-    .icard:hover { border-color: var(--acc); }
-    .icard img {
-      width: 100%;
-      height: 105px;
-      object-fit: cover;
-      display: block;
-      background: var(--panel);
-    }
-    .icard .nm {
-      font-size: 11.5px;
-      padding: 5px 8px;
-      color: var(--text-secondary);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-weight: 500;
-    }
-
-    /* Backups List */
-    .bk-list { display: flex; flex-direction: column; gap: 6px; }
-    .bk-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      cursor: pointer;
-      transition: border-color 0.12s ease;
-    }
-    .bk-item:hover {
-      border-color: var(--acc);
-      background: var(--accSoft);
-    }
-    .bk-item.selected {
-      border-color: var(--acc) !important;
-      background: var(--accSoft) !important;
-      box-shadow: 0 0 0 2px var(--acc) !important;
-    }
-    .bk-icon { font-size: 20px; flex: 0 0 auto; }
-    .bk-info { flex: 1; min-width: 0; }
-    .bk-name {
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--text);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .bk-meta { color: var(--muted); font-size: 11.5px; margin-top: 2px; display: flex; gap: 12px; }
-
-    /* Spirits Map Cards */
-    .s-mapcard {
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      background: var(--panel2);
-      margin-bottom: 10px;
-      overflow: hidden;
-    }
-    .s-maphead {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      cursor: pointer;
-      user-select: none;
-    }
-    .s-maphead:hover { background: var(--panel-hover); }
-    .s-mapname { font-weight: 600; font-size: 13.5px; }
-    .s-maplv {
-      color: var(--acc);
-      font-size: 11px;
-      background: var(--accSoft);
-      padding: 2px 8px;
-      border-radius: var(--radius-full);
-      font-weight: 600;
-      border: 1px solid var(--accBorder);
-    }
-    .s-mapdrop {
-      color: var(--muted);
-      font-size: 12px;
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .s-arr { color: var(--muted); font-size: 12px; }
-    .s-mapbody { display: none; padding: 12px 14px; border-top: 1px solid var(--line); background: var(--panel); }
-    .s-mapcard.open .s-mapbody { display: block; }
-    .sp-spirits { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-    .sp-card {
-      border: 1px solid var(--line);
-      border-radius: var(--radius-xs);
-      background: var(--panel2);
-      padding: 8px 10px;
-    }
-    .sp-card .sp-name { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
-    .s-fields {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-xs);
-      padding: 10px 12px;
-    }
-    .s-row { display: flex; flex-direction: column; gap: 3px; flex: 0 1 90px; }
-    .s-row small { color: var(--muted); font-size: 11px; font-weight: 500; }
-    .s-row input { width: 100%; padding: 4px 7px; font-size: 12px; }
-    .s-del {
-      background: var(--bad);
-      color: #FFFFFF;
-      border: 0;
-      border-radius: var(--radius-xs);
-      padding: 5px 10px;
-      font-size: 11.5px;
-      cursor: pointer;
-      margin-left: auto;
-    }
-    .s-del:hover { background: #E0261C; }
-
-    .crumbs a { color: var(--acc); cursor: pointer; margin-right: 4px; text-decoration: none; font-weight: 500; }
-    .crumbs a:hover { text-decoration: underline; }
-    
-    #lightbox {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.85);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 90;
-      cursor: zoom-out;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-    }
-    #lightbox img { max-width: 90vw; max-height: 86vh; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
-    #lightbox.show { display: flex; }
-    #lightbox .cap { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: #FFFFFF; font-size: 13px; font-weight: 500; }
-  
-    /* ==========================================================================
-       全面移动端 UI 深度适配 (iOS / Android / 微信 / QQ 内置浏览器)
-       ========================================================================== */
-    html {
-      -webkit-text-size-adjust: 100%;
-      -webkit-tap-highlight-color: transparent;
-      overflow-x: hidden;
-    }
-    
-    body {
-      overflow-x: hidden;
-      width: 100%;
-      max-width: 100vw;
-    }
-
-    .responsive-shop-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-      margin-top: 10px;
-    }
-
-    /* 长列表滚动优化：视口外跳过渲染（滚动更顺滑；自动回退高度防跳动） */
-    .log-line, [data-pool-item], .sp-card, .s-mapcard,
-    #userBody tr, #slaveBody tr, #spiritUsersBody tr,
-    .bk-item, .icard, .fcard {
-      content-visibility: auto;
-      contain-intrinsic-size: auto 44px;
-    }
-
-    /* 默认按钮文案适配 */
-    .hdr-btn-full { display: inline; }
-    .hdr-btn-short { display: none; }
-
-    /* ==========================================================================
-       1. 平板端优化适配 (iPad Mini / Air / Pro, Android 平板: 641px ~ 1024px)
-       ========================================================================== */
-    @media (min-width: 641px) and (max-width: 1024px) {
-      .wrap {
-        padding: 12px 14px calc(32px + env(safe-area-inset-bottom, 0px));
-      }
-
-      header {
-        padding: 12px 18px;
-        margin-bottom: 12px;
-      }
-
-      /* 平板 6 大核心指标卡排布为完美的 3 列整齐网格 (3x2) */
-      #analyticsKpiGrid {
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 10px !important;
-      }
-
-      .cards {
-        grid-template-columns: repeat(3, 1fr) !important;
-      }
-
-      /* 平板端工具栏：允许自然换行，按钮居中呼吸感良好 */
-      .toolbar {
-        flex-wrap: wrap !important;
-        gap: 8px !important;
-      }
-
-      .grid {
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
-      }
-
-      /* 模态框在平板上居中适中，不局促也不过宽 */
-      .m3-modal-box {
-        width: min(580px, 90vw) !important;
-        max-height: 86vh !important;
-      }
-    }
-
-    /* ==========================================================================
-       2. 手机移动端深度适配 (iOS / Android / 竖屏窗口: <= 640px)
-       ========================================================================== */
-    @media (max-width: 640px) {
-      .wrap {
-        padding: 8px 8px calc(24px + env(safe-area-inset-bottom, 0px));
-      }
-
-      /* 顶栏紧凑折叠，彻底解决小屏换行错位 */
-      header {
-        padding: 8px 12px;
-        margin-bottom: 8px;
-        top: env(safe-area-inset-top, 6px);
-        border-radius: 12px;
-        gap: 8px;
-      }
-
-      .brand h1 {
-        font-size: 14.5px;
-      }
-
-      .brand .ver {
-        font-size: 10px;
-        padding: 1px 6px;
-      }
-
-      /* 手机端按钮文案自动切换为紧凑文字 */
-      .hdr-btn-full { display: none !important; }
-      .hdr-btn-short { display: inline !important; }
-
-      .header-ctrl {
-        gap: 6px;
-      }
-
-      .header-ctrl button {
-        padding: 5px 10px !important;
-        font-size: 12px !important;
-      }
-
-      .iconBtn {
-        width: 32px;
-        height: 32px;
-        font-size: 13px;
-      }
-
-      /* 药丸 Tabs：触控滑动优先，隐藏左右两端挤压空间的物理箭头按钮 */
-      .tab-nav-btn {
-        display: none !important;
-      }
-
-      .tabs-wrapper {
-      margin-bottom: 16px;
-      background: var(--panel);
-      padding: 6px 10px;
-      border-radius: var(--radius-full);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow-sm);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      position: relative;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
-    }
-
-      .tabs {
-        padding: 2px;
-        gap: 4px;
-        scroll-snap-type: x proximity;
-        -webkit-overflow-scrolling: touch;
-      }
-
-      .tabs button {
-      background: transparent;
-      border: 1px solid transparent;
-      padding: 8px 18px;
-      font-size: 13px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      white-space: nowrap;
-      font-weight: 600;
-      border-radius: var(--radius-full);
-      transition: all 0.22s cubic-bezier(0.2, 0, 0, 1);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      flex-shrink: 0;
-      line-height: 1.25;
-      user-select: none;
-    }
-
-      /* 面板内边距微调 */
-      .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-xl);
-      padding: 22px 26px;
-      margin-bottom: 16px;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
-    }
-
-      .panel h2 {
-        font-size: 13.5px;
-        margin-bottom: 8px;
-      }
-
-      /* 核心指标卡在手机端 2 列对齐，大额数字自动弹性折行防撑爆 */
-      #analyticsKpiGrid, .cards {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 6px !important;
-      }
-
-      #analyticsKpiGrid .card, .cards .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      padding: 18px 20px;
-      box-shadow: var(--shadow-xs);
-      position: relative;
-      overflow: hidden;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-
-      #analyticsKpiGrid .card div:nth-child(2) {
-        font-size: 16px !important;
-        word-break: break-all;
-      }
-
-      /* 工具栏：流式弹性排布，杜绝丑陋的全宽垂直长条堆叠 */
-      .toolbar {
-        flex-direction: row !important;
-        flex-wrap: wrap !important;
-        align-items: center !important;
-        gap: 6px !important;
-      }
-
-      .toolbar h2 {
-        width: 100% !important;
-        font-size: 14px !important;
-        margin-bottom: 2px !important;
-      }
-
-      .toolbar > div {
-        width: 100% !important;
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 6px !important;
-        margin-left: 0 !important;
-        justify-content: flex-start !important;
-      }
-
-      .toolbar button, .toolbar select {
-        flex: 0 1 auto !important;
-        min-height: 32px !important;
-        padding: 5px 12px !important;
-        font-size: 12px !important;
-      }
-
-      /* 搜索框全宽通透 */
-      .search {
-        padding: 6px 12px;
-        margin-bottom: 8px;
-      }
-
-      .search input {
-        font-size: 13px !important;
-      }
-
-      /* 商城与图鉴单列排布与网格 */
-      .responsive-shop-grid {
-        grid-template-columns: 1fr !important;
-        gap: 10px !important;
-      }
-
-      .grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
-      }
-
-      .ov-req {
-        grid-template-columns: 1fr !important;
-        gap: 8px !important;
-      }
-
-      /* 商城/图鉴编辑行：手机单列全宽，输入框不溢出 */
-      .s-fields {
-        flex-direction: column !important;
-        align-items: stretch !important;
-      }
-
-      .s-fields .s-row {
-        flex: 1 1 100% !important;
-        min-width: 0 !important;
-      }
-
-      .s-fields .s-row input,
-      .s-fields .s-row select,
-      .s-fields .s-row textarea {
-        width: 100% !important;
-        min-width: 0 !important;
-        font-size: 13px !important;
-      }
-
-      .s-fields > div:last-child {
-        width: 100% !important;
-        flex-wrap: wrap !important;
-      }
-
-      .sp-card {
-        padding: 8px !important;
-      }
-
-      .s-mapcard .s-maphead {
-        flex-wrap: wrap !important;
-        row-gap: 4px !important;
-      }
-
-      /* 表格内边距与横向滚动 */
-      .table-wrap {
-      overflow-x: auto;
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      margin-top: 10px;
-      background: var(--panel);
-      box-shadow: var(--shadow-xs);
-      -webkit-overflow-scrolling: touch;
-    }
-
-      th, td {
-        padding: 7px 10px;
-        font-size: 11.5px;
-      }
-
-      /* 通用指令与弹窗自适应 */
-      .cmd-modal-box {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 34px;
-      padding: 0;
-      width: min(580px, 94vw);
-      max-height: 85vh;
-      display: flex;
-      flex-direction: column;
-      box-shadow: var(--shadow-lg);
-      overflow: hidden;
-      animation: m3DialogPop 0.22s cubic-bezier(0.2, 0, 0, 1);
-    }
-    @keyframes m3DialogPop {
-      from { opacity: 0; transform: scale(0.92); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
-      .cmd-modal-header {
-        padding: 12px 14px !important;
-      }
-
-      .cmd-modal-body {
-        padding: 12px 14px !important;
-        max-height: calc(90vh - 110px) !important;
-        gap: 10px !important;
-      }
-
-      .cmd-modal-footer {
-        padding: 10px 14px !important;
-        flex-wrap: wrap !important;
-        gap: 6px !important;
-      }
-
-      .cmd-modal-footer button {
-        flex: 1 1 auto;
-        min-height: 34px;
-      }
-
-      .cmd-nums {
-        grid-template-columns: 1fr !important;
-      }
-
-      #appModal .cmd-modal-box {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 34px;
-      padding: 0;
-      width: min(580px, 94vw);
-      max-height: 85vh;
-      display: flex;
-      flex-direction: column;
-      box-shadow: var(--shadow-lg);
-      overflow: hidden;
-      animation: m3DialogPop 0.22s cubic-bezier(0.2, 0, 0, 1);
-    }
-    @keyframes m3DialogPop {
-      from { opacity: 0; transform: scale(0.92); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
-      /* Android 15 / Material 3 导出与导入中心专用移动端适配 */
-      .m3-modal-box {
-        width: 95vw !important;
-        max-height: 90vh !important;
-        border-radius: 18px !important;
-      }
-
-      .m3-modal-header {
-        padding: 12px 14px 10px !important;
-      }
-
-      .m3-modal-header h2 {
-        font-size: 14.5px !important;
-      }
-
-      .m3-icon-circle {
-        width: 32px !important;
-        height: 32px !important;
-        font-size: 15px !important;
-      }
-
-      .m3-modal-body {
-        padding: 10px 14px !important;
-      }
-
-      .m3-modal-footer {
-        padding: 10px 14px 12px !important;
-        flex-wrap: wrap !important;
-        gap: 6px !important;
-      }
-
-      .m3-modal-footer button {
-        flex: 1 1 120px !important;
-        min-height: 36px !important;
-      }
-
-      .hub-mod-card {
-        padding: 10px 12px !important;
-        border-radius: 12px !important;
-      }
-
-      .hub-mod-header {
-        display: flex !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        gap: 6px !important;
-      }
-
-      .hub-checkbox-label {
-        font-size: 12.5px !important;
-      }
-
-      .hub-checkbox-label input[type=checkbox] {
-        width: 16px !important;
-        height: 16px !important;
-      }
-
-      .hub-solo-btn {
-        font-size: 10.5px !important;
-        padding: 2px 8px !important;
-        flex-shrink: 0 !important;
-      }
-
-      .hub-mod-desc {
-        padding-left: 24px !important;
-        font-size: 11px !important;
-        margin-top: 3px !important;
-      }
-
-      .preset-pills {
-        gap: 4px !important;
-      }
-
-      .preset-pill {
-        padding: 4px 9px !important;
-        font-size: 11px !important;
-      }
-
-      .m3-summary-banner {
-        padding: 10px 12px !important;
-        margin-top: 10px !important;
-      }
-    }
-/* 插件运行日志终端样式 */
-    .log-terminal {
-      background: #0d1117;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px;
-      padding: 14px 16px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 12px;
-      line-height: 1.65;
-      height: 60vh;
-      min-height: 380px;
-      overflow-y: auto;
-      color: #c9d1d9;
-      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
-      scroll-behavior: smooth;
-    }
-    .log-terminal-inner {
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-    .log-line {
-      display: flex;
-      gap: 8px;
-      padding: 2px 4px;
-      border-radius: 4px;
-      transition: background 0.15s ease;
-    }
-    .log-line:hover {
-      background: rgba(255, 255, 255, 0.05);
-    }
-    .log-ts {
-      color: #8b949e;
-      flex-shrink: 0;
-      user-select: none;
-    }
-    .log-badge {
-      display: inline-block;
-      font-size: 10px;
-      font-weight: 700;
-      padding: 0 6px;
-      border-radius: 4px;
-      flex-shrink: 0;
-      line-height: 1.6;
-    }
-    .log-badge.info {
-      background: rgba(56, 189, 248, 0.15);
-      color: #38bdf8;
-      border: 1px solid rgba(56, 189, 248, 0.3);
-    }
-    .log-badge.warn {
-      background: rgba(251, 191, 36, 0.15);
-      color: #fbbf24;
-      border: 1px solid rgba(251, 191, 36, 0.3);
-    }
-    .log-badge.error {
-      background: rgba(248, 113, 113, 0.2);
-      color: #f87171;
-      border: 1px solid rgba(248, 113, 113, 0.4);
-    }
-    .log-msg {
-      color: #e6edf3;
-      flex-grow: 1;
-    }
-    .log-empty {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      color: #8b949e;
-      font-style: italic;
-      padding: 40px 0;
-    }
-  
-    /* Material 3 Export & Import Hub Styles */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      background: rgba(0, 0, 0, 0.45);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .modal-overlay.show {
-      opacity: 1;
-      pointer-events: auto;
-      display: flex !important;
-    }
-    .m3-modal-box {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-lg);
-      width: min(640px, 94vw);
-      max-height: 88vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      transform: scale(0.96);
-      transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .modal-overlay.show .m3-modal-box {
-      transform: scale(1);
-    }
-    .m3-modal-header {
-      padding: 18px 24px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--line-subtle);
-    }
-    .m3-modal-body {
-      padding: 16px 24px;
-      overflow-y: auto;
-      flex: 1;
-    }
-    .m3-modal-footer {
-      padding: 14px 24px 18px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      border-top: 1px solid var(--line-subtle);
-    }
-    .m3-icon-circle {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: var(--primary-container);
-      color: var(--on-primary-container);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-    .preset-pill {
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-full);
-      padding: 5px 14px;
-      font-size: 12px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-    .preset-pill:hover {
-      background: var(--primary-container);
-      color: var(--on-primary-container);
-      border-color: transparent;
-    }
-    .hub-mod-card {
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 14px 16px;
-      transition: all 0.15s ease;
-    }
-    .hub-mod-card:hover {
-      border-color: var(--accBorder);
-      background: var(--panel-hover);
-    }
-    .hub-mod-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .hub-checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      font-size: 13.5px;
-      font-weight: 600;
-      color: var(--text);
-      user-select: none;
-    }
-    .hub-checkbox-label input[type=checkbox] {
-      width: 18px;
-      height: 18px;
-      accent-color: var(--acc);
-      cursor: pointer;
-    }
-    .hub-solo-btn {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      color: var(--acc);
-      font-size: 11px;
-      font-weight: 600;
-      padding: 3px 12px;
-      border-radius: var(--radius-full);
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-    .hub-solo-btn:hover {
-      background: var(--acc);
-      color: #FFF;
-      border-color: var(--acc);
-    }
-    .hub-mod-desc {
-      font-size: 11.5px;
-      color: var(--muted);
-      margin-top: 4px;
-      padding-left: 26px;
-      line-height: 1.45;
-    }
-    .m3-summary-banner {
-      margin-top: 14px;
-      padding: 12px 16px;
-      background: var(--primary-container);
-      color: var(--on-primary-container);
-      border-radius: 14px;
-    }
-  </style>
+    .hint { color: var(--muted); font-size: 12px; margin: 6px 0; line-height: 1.5; }
+    .msg { margin-left: 8px; font-size: 12.5px; font-weight: 600; }
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+    #footErr { color: var(--bad); margin-top: 14px; font-size: 12.5px; font-weight: 500; }
+
+    /* Responsive Mobile and Tablet Rules */
+    @media (max-width: 860px) {
+      .wrap { padding: 10px 10px 48px; }
+      header { padding: 12px 16px; border-radius: 22px; }
+      .panel { padding: 16px 18px; border-radius: 22px; }
+      .cfg-sec { padding: 16px 18px; border-radius: 22px; }
+      .cfg-row { padding: 12px 16px; border-radius: 16px; }
+      .cmd-modal-box, .m3-modal-box { border-radius: 26px !important; }
+      .cmd-modal-header, .m3-modal-header { padding: 16px 18px; }
+      .cmd-modal-body, .m3-modal-body { padding: 16px 18px; }
+      .cmd-modal-footer, .m3-modal-footer { padding: 14px 18px; }
+      .kpi-grid, .cards { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 540px) {
+      .kpi-grid, .cards { grid-template-columns: 1fr; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .toolbar > div { justify-content: flex-start; }
+    }
+</style>
 
 </head>
 <body>
   <div class="wrap">
     <header>
       <div class="brand">
-        <div class="brand-avatar">🤖</div>
-        <div>
-          <h1>小白机器人 <span class="brand-subtitle">管理控制台</span> <span class="ver">v2026w0912p</span></h1>
-          <div class="sub" style="margin-top:3px">
-            <span class="status-badge"><span class="status-dot"></span> 运行正常 (Android 16 Expressive)</span>
-          </div>
+        <h1>管理控制台 <span class="ver">v2026w0912p</span></h1>
+        <div class="sub">
+          <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
         </div>
       </div>
       <div class="header-ctrl" style="position:relative">
@@ -2678,7 +1973,7 @@
 
   <!-- 指令编辑模态 -->
   <div id="cmdModal">
-    <div class="cmd-modal-box" style="width:min(580px,94vw);border-radius:20px">
+    <div class="cmd-modal-box" style="width:min(600px,94vw)">
       <div class="cmd-modal-header" style="padding:16px 20px">
         <div style="display:flex;align-items:center;gap:10px">
           <h3 id="cmdModalTitle" style="font-size:16px;font-weight:600;margin:0">编辑指令</h3>
@@ -2771,21 +2066,23 @@
 
   <!-- 全局统一高质感模态弹窗 -->
   <div id="appModal">
-    <div class="cmd-modal-box" style="width:min(440px,92vw);padding:24px;border-radius:18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span id="appModalIcon" style="font-size:22px;line-height:1">ℹ️</span>
-          <h3 id="appModalTitle" style="margin:0;font-size:16px;font-weight:600">系统提示</h3>
+    <div class="cmd-modal-box" style="width:min(520px,94vw)">
+      <div class="cmd-modal-header">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="m3-icon-circle" id="appModalIcon" style="font-size:22px">ℹ️</div>
+          <h3 id="appModalTitle" style="margin:0;font-size:16.5px;font-weight:700">系统提示</h3>
         </div>
-        <button id="appModalClose" class="ghost" style="border:none;background:transparent;padding:4px 8px;font-size:16px;line-height:1;cursor:pointer;color:var(--muted);border-radius:8px" title="关闭">✕</button>
+        <button id="appModalClose" class="iconBtn" style="width:34px;height:34px;font-size:16px;border-radius:50%" title="关闭">✕</button>
       </div>
-      <div id="appModalContent" style="color:var(--text-secondary);font-size:13px;line-height:1.55;margin-bottom:16px"></div>
-      <div id="appModalInputWrap" style="margin-bottom:16px;display:none">
-        <input id="appModalInput" style="width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--text);font-size:13px;outline:none">
+      <div class="cmd-modal-body" style="padding:22px 26px">
+        <div id="appModalContent" style="color:var(--text);font-size:13.5px;line-height:1.6"></div>
+        <div id="appModalInputWrap" style="margin-top:14px;display:none">
+          <input id="appModalInput" style="width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--panel2);color:var(--text);font-size:13.5px;outline:none">
+        </div>
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button id="appModalCancel" class="ghost" style="padding:6px 16px">取消</button>
-        <button id="appModalOk" style="padding:6px 20px">确定</button>
+      <div class="cmd-modal-footer">
+        <button id="appModalCancel" class="ghost">取消</button>
+        <button id="appModalOk">确定</button>
       </div>
     </div>
   </div>
