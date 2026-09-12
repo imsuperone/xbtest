@@ -6,85 +6,111 @@
   <title>管理控制台</title>
   <style>
     :root {
-      /* Apple Design System (Smooth 60fps & SF Pro Typography) */
-      --bg: #F2F2F7;
-      --panel: #FFFFFF;
-      --panel-hover: #F8F8FA;
-      --panel2: #F2F2F7;
-      --panel3: #E5E5EA;
-      --text: #1D1D1F;
-      --text-secondary: #48484A;
-      --muted: #86868B;
-      --muted-soft: #C7C7CC;
-      --line: rgba(60, 60, 67, 0.12);
-      --line-subtle: rgba(60, 60, 67, 0.06);
-      
-      --acc: #0071E3;
-      --acc-hover: #0077ED;
-      --acc-active: #0058B0;
-      --accSoft: rgba(0, 113, 227, 0.08);
-      --accSoft2: rgba(0, 113, 227, 0.16);
-      --accBorder: rgba(0, 113, 227, 0.24);
-      
-      --ok: #34C759;
-      --okSoft: rgba(52, 199, 89, 0.12);
-      --warn: #FF9500;
-      --warnSoft: rgba(255, 149, 0, 0.12);
-      --bad: #FF3B30;
-      --badSoft: rgba(255, 59, 48, 0.12);
-      --purple: #5856D6;
-      --purpleSoft: rgba(88, 86, 214, 0.12);
+      /* Google Material 3 / Android 15 Dynamic Color & Elevation System */
+      --md-sys-color-primary: #0B57D0;
+      --md-sys-color-on-primary: #FFFFFF;
+      --md-sys-color-primary-container: #D3E3FD;
+      --md-sys-color-on-primary-container: #041E49;
+      --md-sys-color-surface: #F8F9FE;
+      --md-sys-color-surface-container: #FFFFFF;
+      --md-sys-color-surface-container-high: #F0F4F9;
+      --md-sys-color-surface-container-highest: #E9EEF6;
+      --md-sys-color-outline: #74777F;
+      --md-sys-color-outline-variant: #C4C7C5;
 
-      --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
-      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
-      --shadow-lg: 0 20px 48px -8px rgba(0, 0, 0, 0.16);
-      
-      --radius-xl: 20px;
-      --radius: 16px;
-      --radius-sm: 10px;
-      --radius-xs: 6px;
+      --bg: var(--md-sys-color-surface);
+      --panel: var(--md-sys-color-surface-container);
+      --panel-hover: #F2F5FB;
+      --panel2: var(--md-sys-color-surface-container-high);
+      --panel3: var(--md-sys-color-surface-container-highest);
+      --text: #191C20;
+      --text-secondary: #43474E;
+      --muted: #73777F;
+      --muted-soft: #C3C6CF;
+      --line: rgba(115, 119, 127, 0.15);
+      --line-subtle: rgba(115, 119, 127, 0.08);
+
+      --acc: var(--md-sys-color-primary);
+      --acc-hover: #0842A0;
+      --acc-active: #042B6A;
+      --accSoft: rgba(11, 87, 208, 0.10);
+      --accSoft2: rgba(11, 87, 208, 0.20);
+      --accBorder: rgba(11, 87, 208, 0.35);
+      --primary-container: var(--md-sys-color-primary-container);
+      --on-primary-container: var(--md-sys-color-on-primary-container);
+
+      --ok: #146C2E;
+      --okSoft: #C4EED0;
+      --warn: #B35C00;
+      --warnSoft: #FFE2B7;
+      --bad: #BA1A1A;
+      --badSoft: #FFDAD6;
+      --purple: #6750A4;
+      --purpleSoft: #EADDFF;
+
+      --shadow-xs: 0 1px 3px 1px rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.08);
+      --shadow-sm: 0 2px 6px 2px rgba(0, 0, 0, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.10);
+      --shadow-md: 0 4px 12px 3px rgba(0, 0, 0, 0.08), 0 1px 3px 0 rgba(0, 0, 0, 0.12);
+      --shadow-lg: 0 8px 24px 6px rgba(0, 0, 0, 0.12), 0 2px 6px 0 rgba(0, 0, 0, 0.15);
+
+      --radius-xl: 28px;
+      --radius: 20px;
+      --radius-sm: 14px;
+      --radius-xs: 8px;
       --radius-full: 9999px;
     }
 
     [data-theme="dark"] {
-      --bg: #000000;
-      --panel: #1C1C1E;
-      --panel-hover: #2C2C2E;
-      --panel2: #2C2C2E;
-      --panel3: #3A3A3C;
-      --text: #F5F5F7;
-      --text-secondary: #D1D1D6;
-      --muted: #8E8E93;
-      --muted-soft: #636366;
-      --line: rgba(255, 255, 255, 0.12);
-      --line-subtle: rgba(255, 255, 255, 0.06);
-      
-      --acc: #0A84FF;
-      --acc-hover: #409CFF;
-      --acc-active: #0071E3;
-      --accSoft: rgba(10, 132, 255, 0.16);
-      --accSoft2: rgba(10, 132, 255, 0.28);
-      --accBorder: rgba(10, 132, 255, 0.35);
-      
-      --ok: #30D158;
-      --okSoft: rgba(48, 209, 88, 0.16);
-      --warn: #FF9F0A;
-      --warnSoft: rgba(255, 159, 10, 0.16);
-      --bad: #FF453A;
-      --badSoft: rgba(255, 69, 58, 0.16);
-      --purple: #5E5CE6;
-      --purpleSoft: rgba(94, 92, 230, 0.16);
+      --md-sys-color-primary: #A8C7FA;
+      --md-sys-color-on-primary: #041E49;
+      --md-sys-color-primary-container: #0842A0;
+      --md-sys-color-on-primary-container: #D3E3FD;
+      --md-sys-color-surface: #111318;
+      --md-sys-color-surface-container: #1E1F25;
+      --md-sys-color-surface-container-high: #24262E;
+      --md-sys-color-surface-container-highest: #2B2D34;
+      --md-sys-color-outline: #8D9199;
+      --md-sys-color-outline-variant: #43474E;
 
-      --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
-      --shadow-lg: 0 20px 48px -8px rgba(0, 0, 0, 0.75);
+      --bg: var(--md-sys-color-surface);
+      --panel: var(--md-sys-color-surface-container);
+      --panel-hover: #262830;
+      --panel2: var(--md-sys-color-surface-container-high);
+      --panel3: var(--md-sys-color-surface-container-highest);
+      --text: #E2E2E9;
+      --text-secondary: #C3C6CF;
+      --muted: #8D9199;
+      --muted-soft: #43474E;
+      --line: rgba(255, 255, 255, 0.10);
+      --line-subtle: rgba(255, 255, 255, 0.05);
+
+      --acc: var(--md-sys-color-primary);
+      --acc-hover: #C2E7FF;
+      --acc-active: #7FACFA;
+      --accSoft: rgba(168, 199, 250, 0.16);
+      --accSoft2: rgba(168, 199, 250, 0.28);
+      --accBorder: rgba(168, 199, 250, 0.38);
+      --primary-container: var(--md-sys-color-primary-container);
+      --on-primary-container: var(--md-sys-color-on-primary-container);
+
+      --ok: #6DD58C;
+      --okSoft: rgba(109, 213, 140, 0.18);
+      --warn: #FFB951;
+      --warnSoft: rgba(255, 185, 81, 0.18);
+      --bad: #FFB4AB;
+      --badSoft: rgba(255, 180, 171, 0.18);
+      --purple: #D0BCFF;
+      --purpleSoft: rgba(208, 188, 255, 0.18);
+
+      --shadow-xs: 0 1px 3px 1px rgba(0, 0, 0, 0.3);
+      --shadow-sm: 0 2px 6px 2px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 4px 12px 3px rgba(0, 0, 0, 0.5);
+      --shadow-lg: 0 8px 24px 6px rgba(0, 0, 0, 0.7);
     }
 
     * { box-sizing: border-box; }
-    
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--muted-soft); border-radius: var(--radius-full); }
     ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
@@ -93,51 +119,53 @@
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+      font-family: "Google Sans", "Google Sans Text", Roboto, -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
       font-size: 13px;
       line-height: 1.5;
-      letter-spacing: -0.01em;
+      letter-spacing: 0.1px;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      transition: background 0.15s ease, color 0.15s ease;
+      transition: background 0.2s cubic-bezier(0.2, 0, 0, 1), color 0.2s cubic-bezier(0.2, 0, 0, 1);
       min-height: 100vh;
     }
 
     .wrap {
       max-width: 1260px;
       margin: 0 auto;
-      padding: 14px 14px 56px;
+      padding: 14px 14px 64px;
     }
 
-    /* Apple Header */
+    /* Android 15 Material 3 Top App Bar */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
-      padding: 12px 18px;
+      margin-bottom: 14px;
+      padding: 14px 22px;
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-xs);
       position: sticky;
       top: 10px;
       z-index: 40;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       flex-wrap: wrap;
     }
     .brand h1 {
-      font-size: 16px;
+      font-size: 17px;
       margin: 0;
       font-weight: 600;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.01em;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       color: var(--text);
     }
     .brand .sub {
@@ -151,8 +179,8 @@
     .ver {
       background: var(--panel2);
       color: var(--text-secondary);
-      font-size: 11px;
-      padding: 2px 8px;
+      font-size: 11.5px;
+      padding: 2px 10px;
       border-radius: var(--radius-full);
       font-weight: 600;
       border: 1px solid var(--line);
@@ -160,135 +188,135 @@
     .status-badge {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      font-size: 11px;
-      padding: 2px 9px;
+      gap: 6px;
+      font-size: 11.5px;
+      padding: 3px 10px;
       border-radius: var(--radius-full);
       background: var(--okSoft);
       color: var(--ok);
       font-weight: 600;
     }
     .status-dot {
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: var(--ok);
     }
     .header-ctrl {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
     .iconBtn {
       background: var(--panel2);
       border: 1px solid var(--line);
       color: var(--text);
-      border-radius: var(--radius-sm);
-      width: 32px;
-      height: 32px;
+      border-radius: var(--radius-full);
+      width: 36px;
+      height: 36px;
       cursor: pointer;
       font-size: 14px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       padding: 0;
-      transition: background 0.12s ease, transform 0.12s ease;
+      transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
     }
     .iconBtn:hover {
       background: var(--panel-hover);
       border-color: var(--accBorder);
-      transform: scale(1.04);
+      transform: scale(1.05);
     }
-    .iconBtn:active { transform: scale(0.96); }
+    .iconBtn:active { transform: scale(0.95); }
 
-    /* Apple Segmented Tabs */
+    /* Material 3 Capsule Pills Tab Bar (Android 15) */
     .tabs-wrapper {
       margin-bottom: 14px;
       background: var(--panel);
-      padding: 4px;
-      border-radius: var(--radius);
+      padding: 6px 8px;
+      border-radius: var(--radius-full);
       border: 1px solid var(--line);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-xs);
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
       position: relative;
     }
     .tab-nav-btn {
-      width: 24px;
-      height: 28px;
-      background: transparent;
-      border: 0;
-      color: var(--muted);
+      width: 32px;
+      height: 32px;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      color: var(--text-secondary);
       display: inline-flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       padding: 0;
       flex-shrink: 0;
-      transition: color 0.12s ease;
+      transition: all 0.15s ease;
       font-size: 16px;
       line-height: 1;
-      border-radius: var(--radius-xs);
+      border-radius: var(--radius-full);
     }
-    .tab-nav-btn:hover { color: var(--acc); background: var(--panel2); }
+    .tab-nav-btn:hover { color: var(--acc); background: var(--panel3); }
     .tabs {
       display: flex;
-      gap: 3px;
+      gap: 6px;
       overflow-x: auto;
       scrollbar-width: none;
       scroll-behavior: smooth;
       flex: 1;
       padding: 2px;
       -webkit-overflow-scrolling: touch;
-      background: rgba(118, 118, 128, 0.08);
-      border-radius: var(--radius-sm);
+      background: transparent;
+      border-radius: var(--radius-full);
     }
     .tabs::-webkit-scrollbar { display: none; }
     .tabs button {
-      background: transparent;
-      border: 0;
-      padding: 6px 12px;
-      font-size: 12px;
-      color: var(--muted);
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      padding: 7px 16px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
       cursor: pointer;
       white-space: nowrap;
       font-weight: 500;
-      border-radius: var(--radius-xs);
-      transition: background 0.12s ease, color 0.12s ease;
+      border-radius: var(--radius-full);
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
       flex-shrink: 0;
-      line-height: 1.2;
+      line-height: 1.25;
     }
-    .tabs button:hover { color: var(--text); }
-    .tabs button.on {
+    .tabs button:hover {
       color: var(--text);
-      background: var(--panel);
-      font-weight: 600;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    }
-    [data-theme="dark"] .tabs button.on {
       background: var(--panel3);
-      color: #FFFFFF;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+      transform: translateY(-1px);
+    }
+    .tabs button.on {
+      color: var(--on-primary-container) !important;
+      background: var(--primary-container) !important;
+      font-weight: 600;
+      border-color: transparent !important;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10);
     }
 
     .tab { display: none; }
     .tab.on { display: block; }
 
-    /* Panels & Cards */
+    /* Material 3 Expressive Panels & Cards */
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 18px 20px;
+      border-radius: var(--radius-xl);
+      padding: 20px 24px;
       margin-bottom: 14px;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-xs);
     }
     .panel h2 {
-      font-size: 15px;
+      font-size: 15.5px;
       margin: 0 0 12px;
       font-weight: 600;
       letter-spacing: -0.01em;
@@ -298,7 +326,7 @@
       color: var(--text);
     }
     .panel h3 {
-      font-size: 13px;
+      font-size: 13.5px;
       margin: 0;
       color: var(--text);
       font-weight: 600;
@@ -313,24 +341,25 @@
     }
     @media (max-width: 640px) {
       .cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .panel { padding: 14px; border-radius: var(--radius-sm); }
+      .panel { padding: 14px; border-radius: var(--radius); }
     }
     .card {
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      padding: 14px 16px;
+      border-radius: var(--radius);
+      padding: 16px 18px;
       box-shadow: var(--shadow-xs);
       position: relative;
       overflow: hidden;
-      transition: transform 0.12s ease, border-color 0.12s ease;
+      transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
     }
     .card:hover {
       border-color: var(--accBorder);
       transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
     }
     .card .num {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 700;
       color: var(--text);
       letter-spacing: -0.02em;
@@ -344,7 +373,7 @@
       font-weight: 500;
     }
     .card .ic {
-      font-size: 20px;
+      font-size: 22px;
       position: absolute;
       right: 14px;
       top: 14px;
@@ -352,44 +381,60 @@
       opacity: 0.85;
     }
 
-    /* Buttons */
+    /* Material 3 Buttons */
     button, .btn {
       background: var(--acc);
       color: #FFFFFF;
       border: 1px solid transparent;
-      border-radius: var(--radius-sm);
-      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      padding: 7px 18px;
       font-size: 12.5px;
       cursor: pointer;
       font-weight: 500;
-      letter-spacing: -0.01em;
+      letter-spacing: 0.1px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 5px;
-      transition: background 0.12s ease, transform 0.08s ease;
+      gap: 6px;
+      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
       line-height: 1.35;
       user-select: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
-    button:hover, .btn:hover { background: var(--acc-hover); }
-    button:active, .btn:active { background: var(--acc-active); transform: scale(0.97); }
+    [data-theme="dark"] button:not(.ghost):not(.del),
+    [data-theme="dark"] .btn:not(.ghost):not(.del) {
+      color: #041E49;
+    }
+    button:hover, .btn:hover {
+      background: var(--acc-hover);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+      transform: translateY(-1px);
+    }
+    button:active, .btn:active {
+      background: var(--acc-active);
+      transform: scale(0.98);
+      box-shadow: none;
+    }
     button.ghost, .btn.ghost {
       background: var(--panel2);
       border: 1px solid var(--line);
       color: var(--text);
+      box-shadow: none;
     }
     button.ghost:hover, .btn.ghost:hover {
       background: var(--panel-hover);
       border-color: var(--muted-soft);
+      color: var(--acc);
     }
     button.sm, .btn.sm {
-      padding: 4px 10px;
+      padding: 4px 12px;
       font-size: 11.5px;
-      border-radius: var(--radius-xs);
+      border-radius: var(--radius-full);
     }
     button.ghost.del, .btn.ghost.del {
       color: var(--bad);
-      border-color: rgba(255, 59, 48, 0.2);
+      border-color: rgba(186, 26, 26, 0.2);
+      background: transparent;
     }
     button.ghost.del:hover, .btn.ghost.del:hover {
       background: var(--bad);
@@ -397,7 +442,7 @@
       border-color: var(--bad);
     }
 
-    /* Search & Form Inputs (Apple Vision / HIG Styling) */
+    /* Search & Form Inputs (Material 3 Field Styling) */
     input[type=text],
     input[type=number],
     input[type=password],
@@ -408,107 +453,62 @@
       background: var(--panel2);
       border: 1px solid var(--line);
       color: var(--text);
-      border-radius: 10px;
-      padding: 8px 12px;
+      border-radius: 12px;
+      padding: 8px 14px;
       font-size: 13px;
       font-family: inherit;
       outline: none;
-      transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
-      -webkit-appearance: none;
-      appearance: none;
+      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
       box-sizing: border-box;
     }
-
-    input[type=text]:hover,
-    input[type=number]:hover,
-    input[type=password]:hover,
-    input[type=search]:hover,
-    select:hover,
-    textarea:hover {
-      border-color: var(--muted-soft);
+    input:hover, select:hover, textarea:hover {
+      border-color: var(--muted);
       background: var(--panel);
     }
-
-    input[type=text]:focus,
-    input[type=number]:focus,
-    input[type=password]:focus,
-    input[type=search]:focus,
-    select:focus,
-    textarea:focus {
+    input:focus, select:focus, textarea:focus {
       border-color: var(--acc);
       background: var(--panel);
-      box-shadow: 0 0 0 3.5px var(--accSoft2), inset 0 1px 2px rgba(0, 0, 0, 0.02);
+      box-shadow: 0 0 0 3px var(--accSoft2);
     }
-
-    input::placeholder,
-    textarea::placeholder {
+    input::placeholder, textarea::placeholder {
       color: var(--muted);
-      opacity: 0.65;
+      opacity: 0.7;
       font-size: 12px;
     }
-
-    /* Custom Apple Select with subtle Chevron */
     select {
       padding-right: 32px !important;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2373777f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 10px center;
+      background-position: right 12px center;
       background-size: 12px;
       cursor: pointer;
     }
-
-    /* Textarea Typography & Line-height */
     textarea {
-      border-radius: 12px;
+      border-radius: 14px;
       line-height: 1.55;
       resize: vertical;
-      padding: 10px 12px;
+      padding: 10px 14px;
     }
-
-    /* Number Input Clean-up */
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button {
-      opacity: 0.35;
-      cursor: pointer;
-    }
-    input[type=number]:hover::-webkit-inner-spin-button {
-      opacity: 0.8;
-    }
-
-    /* Search Bar with Apple Vision Spotlight effect */
     .search {
       display: flex;
       align-items: center;
       gap: 10px;
       background: var(--panel2);
       border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 9px 14px;
+      border-radius: var(--radius-full);
+      padding: 8px 16px;
       margin-bottom: 12px;
-      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
-      position: relative;
+      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
     }
     .search:hover {
       background: var(--panel);
-      border-color: var(--muted-soft);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      border-color: var(--muted);
+      box-shadow: var(--shadow-xs);
     }
     .search:focus-within {
       border-color: var(--acc);
-      box-shadow: 0 0 0 3.5px var(--accSoft2), 0 2px 10px rgba(0, 113, 227, 0.08);
       background: var(--panel);
-    }
-    .search span, .search .search-icon {
-      font-size: 14px;
-      line-height: 1;
-      opacity: 0.75;
-      user-select: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
+      box-shadow: 0 0 0 3px var(--accSoft2);
     }
     .search input {
       border: 0 !important;
@@ -524,39 +524,12 @@
       border-radius: 0 !important;
       line-height: 1.4;
     }
-    .search input::placeholder {
-      color: var(--muted);
-      opacity: 0.65;
-      font-size: 12.5px;
-    }
-
-    /* Table Editable Input Cells */
-    table input[type=text],
-    table input[type=number] {
-      background: rgba(118, 118, 128, 0.06);
-      border: 1px solid transparent;
-      border-radius: 8px;
-      padding: 5px 8px;
-      font-size: 12px;
-      transition: all 0.12s ease;
-    }
-    table input[type=text]:hover,
-    table input[type=number]:hover {
-      background: var(--panel2);
-      border-color: var(--line);
-    }
-    table input[type=text]:focus,
-    table input[type=number]:focus {
-      background: var(--panel);
-      border-color: var(--acc);
-      box-shadow: 0 0 0 2.5px var(--accSoft2);
-    }
 
     /* Tables */
     .table-wrap {
       overflow-x: auto;
       border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius);
       margin-top: 10px;
       background: var(--panel);
       -webkit-overflow-scrolling: touch;
@@ -564,20 +537,20 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
+      font-size: 12.5px;
       text-align: left;
     }
     th {
       background: var(--panel2);
-      padding: 9px 11px;
-      color: var(--muted);
+      padding: 10px 14px;
+      color: var(--text-secondary);
       font-weight: 600;
       border-bottom: 1px solid var(--line);
       white-space: nowrap;
       user-select: none;
     }
     td {
-      padding: 8px 11px;
+      padding: 9px 14px;
       border-bottom: 1px solid var(--line-subtle);
       color: var(--text);
       vertical-align: middle;
@@ -589,11 +562,11 @@
     .badge {
       display: inline-flex;
       align-items: center;
-      padding: 2px 7px;
+      padding: 2px 8px;
       border-radius: var(--radius-full);
       font-size: 11px;
       font-weight: 600;
-      line-height: 1.3;
+      line-height: 1.35;
     }
     .badge-primary { background: var(--accSoft); color: var(--acc); }
     .badge-success { background: var(--okSoft); color: var(--ok); }
@@ -601,12 +574,12 @@
     .badge-bad, .badge-danger { background: var(--badSoft); color: var(--bad); }
     .badge-purple { background: var(--purpleSoft); color: var(--purple); }
 
-    /* iOS Switches */
+    /* Material 3 Toggle Switch (Android 15) */
     .switch {
       position: relative;
       display: inline-block;
-      width: 40px;
-      height: 22px;
+      width: 48px;
+      height: 28px;
       flex-shrink: 0;
     }
     .switch input { opacity: 0; width: 0; height: 0; }
@@ -614,49 +587,62 @@
       position: absolute;
       cursor: pointer;
       inset: 0;
-      background: #E5E5EA;
-      border-radius: 34px;
-      transition: background 0.2s ease;
+      background: var(--panel3);
+      border: 2px solid var(--muted);
+      border-radius: var(--radius-full);
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+      box-sizing: border-box;
     }
-    [data-theme="dark"] .slider-toggle { background: #39393D; }
     .slider-toggle:before {
       position: absolute;
       content: "";
-      height: 18px;
-      width: 18px;
-      left: 2px;
-      bottom: 2px;
-      background: #FFFFFF;
+      height: 16px;
+      width: 16px;
+      left: 4px;
+      bottom: 4px;
+      background: var(--muted);
       border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-      transition: transform 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
     }
-    input:checked + .slider-toggle { background: var(--ok); }
-    input:checked + .slider-toggle:before { transform: translateX(18px); }
+    input:checked + .slider-toggle {
+      background: var(--acc);
+      border-color: var(--acc);
+    }
+    input:checked + .slider-toggle:before {
+      transform: translateX(20px);
+      background: #FFFFFF;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      bottom: 3px;
+    }
+    [data-theme="dark"] input:checked + .slider-toggle:before {
+      background: #041E49;
+    }
 
     /* Configuration List View */
     .cfg-sec {
       background: var(--panel2);
       border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      padding: 14px 16px;
+      border-radius: var(--radius);
+      padding: 16px 18px;
       margin-bottom: 12px;
     }
     .cfg-row {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
       margin-bottom: 12px;
     }
     .cfg-row:last-child { margin-bottom: 0; }
     .cfg-row > label {
-      font-size: 12.5px;
+      font-size: 13px;
       font-weight: 600;
       color: var(--text);
     }
     .cfg-row small {
       color: var(--muted);
-      font-size: 11px;
+      font-size: 11.5px;
     }
     .cfg-row.has-checkbox {
       flex-direction: row;
@@ -668,6 +654,7 @@
       width: 100%;
       margin-top: 2px;
     }
+
 
     /* Cat pills */
     .cfg-cat {
@@ -1545,18 +1532,169 @@
       font-style: italic;
       padding: 40px 0;
     }
+  
+    /* Material 3 Export & Import Hub Styles */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .modal-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+      display: flex !important;
+    }
+    .m3-modal-box {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      width: min(640px, 94vw);
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: scale(0.96);
+      transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .modal-overlay.show .m3-modal-box {
+      transform: scale(1);
+    }
+    .m3-modal-header {
+      padding: 18px 24px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line-subtle);
+    }
+    .m3-modal-body {
+      padding: 16px 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .m3-modal-footer {
+      padding: 14px 24px 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      border-top: 1px solid var(--line-subtle);
+    }
+    .m3-icon-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .preset-pill {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-full);
+      padding: 5px 14px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .preset-pill:hover {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      border-color: transparent;
+    }
+    .hub-mod-card {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px 16px;
+      transition: all 0.15s ease;
+    }
+    .hub-mod-card:hover {
+      border-color: var(--accBorder);
+      background: var(--panel-hover);
+    }
+    .hub-mod-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .hub-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+      user-select: none;
+    }
+    .hub-checkbox-label input[type=checkbox] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--acc);
+      cursor: pointer;
+    }
+    .hub-solo-btn {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      color: var(--acc);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 12px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .hub-solo-btn:hover {
+      background: var(--acc);
+      color: #FFF;
+      border-color: var(--acc);
+    }
+    .hub-mod-desc {
+      font-size: 11.5px;
+      color: var(--muted);
+      margin-top: 4px;
+      padding-left: 26px;
+      line-height: 1.45;
+    }
+    .m3-summary-banner {
+      margin-top: 14px;
+      padding: 12px 16px;
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      border-radius: 14px;
+    }
   </style>
+
 </head>
 <body>
   <div class="wrap">
     <header>
       <div class="brand">
-        <h1>管理控制台 <span class="ver">v2026w0912o</span></h1>
+        <h1>管理控制台 <span class="ver">v2026w0912p</span></h1>
         <div class="sub">
           <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
         </div>
       </div>
       <div class="header-ctrl">
+        <button id="btnOpenExportHub" class="btn sm" style="background:var(--primary-container);color:var(--on-primary-container);border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px" title="打开模块化数据与预设导出中心">📦 导出/预设中心</button>
+        <button id="btnOpenImportHub" class="ghost sm" style="display:inline-flex;align-items:center;gap:5px" title="智能选择性导入文件">📤 智能导入</button>
         <button class="iconBtn" id="themeBtn" title="切换深浅主题">☀</button>
       </div>
     </header>
@@ -2055,8 +2193,8 @@
           <div>👤 作者：<b>Light</b></div>
           <div>📦 插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
           <div>🔗 仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
-          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w0912o</b></div>
-          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w0912o</b></div>
+          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w0912p</b></div>
+          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w0912p</b></div>
         </div>
       </div>
     </div>
@@ -2186,6 +2324,153 @@
   <!-- 回到顶部：划过半屏出现，全页签通用 -->
   <button id="backTop" title="回到顶部" style="position:fixed;right:14px;bottom:16px;z-index:60;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:16px;line-height:1;cursor:pointer;display:none;box-shadow:0 2px 10px rgba(0,0,0,0.18)">↑</button>
 
-  <script src="./admin.js?v=2026w0912o"></script>
+  <script src="./admin.js?v=2026w0912p"></script>
+
+  <!-- Android 15 / Material 3 模块化数据与预设导出中心 -->
+  <div id="exportHubModal" class="modal-overlay" style="display:none">
+    <div class="m3-modal-box">
+      <div class="m3-modal-header">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="m3-icon-circle">📦</div>
+          <div>
+            <h2 style="margin:0;font-size:16.5px;font-weight:600">模块化数据与预设导出中心</h2>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px">按项目精准勾选，绝不多导无关内容，绝不少导关联数据</div>
+          </div>
+        </div>
+        <button id="exportHubClose" class="iconBtn" style="border:none;background:transparent;font-size:16px" title="关闭">✕</button>
+      </div>
+
+      <div class="m3-modal-body">
+        <!-- 快捷场景 Pills -->
+        <div style="margin-bottom:14px">
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">⚡ 常用预设快捷选择：</div>
+          <div class="preset-pills" style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" class="preset-pill" data-preset="atlas_gear">🎯 纯图鉴与装备包</button>
+            <button type="button" class="preset-pill" data-preset="game_rules">⚙️ 纯玩法规则与指令</button>
+            <button type="button" class="preset-pill" data-preset="users_only">👤 纯玩家数据与经济</button>
+            <button type="button" class="preset-pill" data-preset="full_all">⚡ 全系统完整综合包</button>
+            <button type="button" class="preset-pill ghost" data-preset="reset_none">🔄 清空勾选</button>
+          </div>
+        </div>
+
+        <!-- 5 大独立业务项目卡片 -->
+        <div class="hub-modules-grid" style="display:flex;flex-direction:column;gap:10px">
+          <!-- 模块 1: 精灵图鉴 -->
+          <div class="hub-mod-card" data-mod="atlas">
+            <div class="hub-mod-header">
+              <label class="hub-checkbox-label">
+                <input type="checkbox" id="chkExpAtlas" checked>
+                <span class="hub-mod-title">📖 精灵与地图图鉴 (Atlas & Spirits)</span>
+              </label>
+              <button type="button" class="hub-solo-btn" id="btnSoloExportAtlas" title="只导出精灵图鉴，不带任何其他系统数据">仅导出本项</button>
+            </div>
+            <div class="hub-mod-desc">包含精灵属性数值、地图探索配置、掉落概率、精灵专属道具与商城。</div>
+          </div>
+
+          <!-- 模块 2: 商城与坐骑 -->
+          <div class="hub-mod-card" data-mod="shops">
+            <div class="hub-mod-header">
+              <label class="hub-checkbox-label">
+                <input type="checkbox" id="chkExpShops" checked>
+                <span class="hub-mod-title">🛒 坐骑商城与武器库 (Shop & Equipment)</span>
+              </label>
+              <button type="button" class="hub-solo-btn" id="btnSoloExportShops" title="只导出商城坐骑与武器属性，不含图鉴与玩家数据">仅导出本项</button>
+            </div>
+            <div class="hub-mod-desc">包含商城坐骑上架列表、抽奖武器属性加成、武器展示顺序（不包含大图二进制）。</div>
+          </div>
+
+          <!-- 模块 3: 宝物效果库 -->
+          <div class="hub-mod-card" data-mod="treasures">
+            <div class="hub-mod-header">
+              <label class="hub-checkbox-label">
+                <input type="checkbox" id="chkExpTreasures" checked>
+                <span class="hub-mod-title">🔮 宝物专有效果库 (Treasures & Effects)</span>
+              </label>
+              <button type="button" class="hub-solo-btn" id="btnSoloExportTreasures" title="只导出宝物卡片与自定义效果数值">仅导出本项</button>
+            </div>
+            <div class="hub-mod-desc">包含宝物清单、加成效果类型（攻击/护盾/免罪/打工/身价）及自定义生效文案。</div>
+          </div>
+
+          <!-- 模块 4: 玩法规则与指令 -->
+          <div class="hub-mod-card" data-mod="gamerules">
+            <div class="hub-mod-header">
+              <label class="hub-checkbox-label">
+                <input type="checkbox" id="chkExpGameRules">
+                <span class="hub-mod-title">⚙️ 玩法规则与自定义指令 (Rules & Commands)</span>
+              </label>
+              <button type="button" class="hub-solo-btn" id="btnSoloExportRules" title="只导出28大系统玩法参数和指令回复，零玩家数据">仅导出本项</button>
+            </div>
+            <div class="hub-mod-desc">包含奴隶身价、打劫倍率、银行与娱乐28节数值配置，以及自定义指令别名、回复词与权限（零用户私人数据）。</div>
+          </div>
+
+          <!-- 模块 5: 玩家数据与经济 -->
+          <div class="hub-mod-card" data-mod="users">
+            <div class="hub-mod-header">
+              <label class="hub-checkbox-label">
+                <input type="checkbox" id="chkExpUsers">
+                <span class="hub-mod-title">👤 玩家资产与经济账本 (Users & Accounts)</span>
+              </label>
+              <button type="button" class="hub-solo-btn" id="btnSoloExportUsers" title="只导出玩家经济资产与档案">仅导出本项</button>
+            </div>
+            <div class="hub-mod-desc">包含全群玩家金币钱包、奴隶买卖关系、背包资产与用户档案（仅在做用户数据迁移时勾选）。</div>
+          </div>
+        </div>
+
+        <!-- 实时汇总与安全保证横幅 -->
+        <div id="exportHubSummary" class="m3-summary-banner">
+          <div style="font-weight:600;display:flex;align-items:center;gap:6px">
+            <span>📊</span> <span id="exportHubSummaryText">已选择：3 个模块</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-secondary);margin-top:3px">
+            🛡️ <strong>安全承诺</strong>：未勾选的模块绝对不会出现在导出包中，绝不多导任何无关数据！
+          </div>
+        </div>
+      </div>
+
+      <div class="m3-modal-footer">
+        <button id="exportHubCancel" class="ghost">取消</button>
+        <button id="exportHubDoExport" class="btn" style="padding:8px 24px">⬇️ 打包导出所选项目</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Android 15 / Material 3 智能选择性导入检查中心 -->
+  <div id="importHubModal" class="modal-overlay" style="display:none">
+    <div class="m3-modal-box">
+      <div class="m3-modal-header">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="m3-icon-circle">📥</div>
+          <div>
+            <h2 style="margin:0;font-size:16.5px;font-weight:600">智能选择性导入与检查</h2>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px">自动识别文件内包含的项目，自由勾选要导入的部分</div>
+          </div>
+        </div>
+        <button id="importHubClose" class="iconBtn" style="border:none;background:transparent;font-size:16px" title="关闭">✕</button>
+      </div>
+
+      <div class="m3-modal-body">
+        <div id="importHubMeta" style="margin-bottom:12px;padding:12px 14px;background:var(--panel2);border-radius:14px;border:1px solid var(--line);font-size:12.5px">
+          <div id="importHubFileName" style="font-weight:600;color:var(--text)">📄 文件名</div>
+          <div id="importHubFileInfo" style="color:var(--muted);font-size:11.5px;margin-top:2px">包版本与时间检测中…</div>
+        </div>
+
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px">请勾选需要导入应用的项目：</div>
+        <div id="importHubModulesList" style="display:flex;flex-direction:column;gap:8px">
+          <!-- 动态渲染检测到的模块列表 -->
+        </div>
+
+        <div style="margin-top:14px;padding:10px 14px;background:var(--okSoft);color:var(--ok);border-radius:12px;font-size:12px;display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="importHubSnapshotChk" checked style="width:16px;height:16px">
+          <label for="importHubSnapshotChk" style="cursor:pointer;font-weight:600">🛡️ 导入前自动创建当前配置快照（若不满意可随时一键回滚）</label>
+        </div>
+      </div>
+
+      <div class="m3-modal-footer">
+        <button id="importHubCancel" class="ghost">取消</button>
+        <button id="importHubDoImport" class="btn" style="padding:8px 24px">✅ 确认导入所选项目</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

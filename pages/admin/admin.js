@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0912o";
+const FRONTEND_VER = "2026w0912p";
 
 let _WORKING_API_PREFIX = null;
 
@@ -449,6 +449,665 @@ function downloadBase64File(base64Data, filename) {
   }
 }
 
+
+
+// ============================================================================
+// Android 15 / Material 3 模块化数据与预设导出/导入中心 (Modular Export & Import Hub)
+// 解决问题：分类清晰独立、按项目精准选择、绝不多导无关数据、绝不少导关联数据
+// ============================================================================
+
+// 提取当前干净的宝物数据
+function _gatherTreasuresData(curConfig) {
+  const shopSec = (curConfig && curConfig["商城图鉴"]) || {};
+  const setSec = (curConfig && curConfig["设置"]) || {};
+  let tlist = "";
+  if (window._TREAS_DIRTY && Array.isArray(window._TREAS_LIST)) {
+    tlist = window._TREAS_LIST.filter(Boolean).join("|");
+  } else {
+    tlist = String(setSec["宝物"] || "");
+  }
+
+  const _normT = (o) => {
+    const out = {};
+    try {
+      Object.entries(o || {}).forEach(([k, v]) => {
+        if (v && typeof v === "object" && !Array.isArray(v)) {
+          out[k] = {
+            effect: String(v.effect || v.desc || ""),
+            type: (typeof _treasureTypeOk === "function" && _treasureTypeOk(String(v.type || ""))) ? String(v.type) : "",
+            value: Math.max(0, Number(v.value) || 0)
+          };
+        } else if (v && String(v).trim()) {
+          out[k] = { effect: String(v).trim(), type: "", value: 0 };
+        }
+      });
+    } catch (e) {}
+    return out;
+  };
+
+  let titems = {};
+  let teff = {};
+  const _tn = shopSec["treasures"];
+  if (_tn && typeof _tn === "object" && !Array.isArray(_tn) && Object.keys(_tn).length) {
+    titems = _normT(_tn);
+    Object.entries(titems).forEach(([k, v]) => { if (v.effect) teff[k] = v.effect; });
+  } else {
+    const _te = shopSec["treasure_effects"];
+    if (_te && typeof _te === "object" && !Array.isArray(_te)) teff = _te;
+    else if (typeof _te === "string" && _te.trim()) { try { teff = JSON.parse(_te); } catch (e) { teff = {}; } }
+    titems = _normT(teff);
+  }
+  if (window._TREAS_EFF && typeof window._TREAS_EFF === "object") {
+    const _m = _normT(window._TREAS_EFF);
+    teff = Object.assign({}, teff, window._TREAS_EFF);
+    titems = Object.assign({}, titems, _m);
+  }
+  return { list: tlist, eff: teff, items: titems };
+}
+
+// 提取当前干净的商城数据 (坐骑与武器属性)
+function _gatherShopsData(curConfig) {
+  const shopSec = (curConfig && curConfig["商城图鉴"]) || {};
+  const pool = [];
+  try {
+    ["SSR", "SR", "R"].forEach((rar) => {
+      ((window.POOL_WEAPONS && window.POOL_WEAPONS[rar]) || []).forEach((it) => {
+        pool.push({
+          rar,
+          name: it.name,
+          attrs: (window.POOL_ATTRS && window.POOL_ATTRS[it.name]) || { atk: 0, desc: "" }
+        });
+      });
+    });
+  } catch (e) {}
+
+  return {
+    ride_shop: shopSec["ride_shop"] || "",
+    weapon_attrs: shopSec["weapon_attrs"] || "",
+    weapon_order: shopSec["weapon_order"] || "",
+    pool: pool
+  };
+}
+
+// 提取当前干净的图鉴数据
+async function _gatherAtlasData() {
+  let sp = null;
+  try { sp = (typeof SPIRIT !== "undefined" && SPIRIT) ? SPIRIT : null; } catch (e) { sp = null; }
+  if (!sp || (!sp.maps && !sp.spirits && !sp.shop && !sp._raw)) {
+    try { sp = await apiTimeout(getBridge().apiGet("spirits"), 20000, "spirits"); } catch (e) { sp = null; }
+  }
+  const out = {};
+  if (sp && typeof sp === "object") {
+    const _hasMeta = sp._raw && sp._meta;
+    ["spirits", "maps", "shop"].forEach((k) => {
+      const v = _hasMeta ? sp._raw[k] : sp[k];
+      if (v && typeof v === "object" && !Array.isArray(v)) out[k] = v;
+    });
+  }
+  return out;
+}
+
+// 提取当前玩法数值与规则配置 (排除密码密钥等敏感私密项)
+function _gatherGameRulesData(curConfig) {
+  const EXCLUDE = new Set(["备份配置", "webdav_secret"]);
+  const clean = {};
+  Object.keys(curConfig || {}).forEach((sec) => {
+    if (!EXCLUDE.has(sec) && sec !== "商城图鉴") {
+      clean[sec] = curConfig[sec];
+    }
+  });
+  return clean;
+}
+
+// 单项纯净导出：仅导出精灵图鉴
+async function exportSpiritsOnly() {
+  try {
+    toast("正在读取精灵图鉴数据…", "");
+    const atlas = await _gatherAtlasData();
+    const payload = {
+      app: typeof PLUGIN_ID !== "undefined" ? PLUGIN_ID : "astrbot_plugin_xbbot_beta",
+      kind: "spirits",
+      version: 1,
+      exported_at: new Date().toISOString(),
+      spirits: atlas.spirits || {},
+      maps: atlas.maps || {},
+      shop: atlas.shop || {}
+    };
+    triggerExportResult({
+      filename: `xbbot_spirits_${Date.now()}.json`,
+      mime: "application/json;charset=utf-8",
+      rawText: JSON.stringify(payload, null, 2)
+    });
+    toast("精灵图鉴纯净包已导出", "ok");
+  } catch (e) {
+    toast("导出精灵图鉴失败: " + (e.message || e), "bad");
+  }
+}
+
+// 单项纯净导出：仅导出商城与武器
+async function exportShopsOnly() {
+  try {
+    toast("正在读取商城与武器配置…", "");
+    const cur = await getBridge().apiGet("config/get");
+    const shops = _gatherShopsData(cur);
+    const payload = {
+      app: typeof PLUGIN_ID !== "undefined" ? PLUGIN_ID : "astrbot_plugin_xbbot_beta",
+      kind: "shops",
+      version: 1,
+      exported_at: new Date().toISOString(),
+      ...shops
+    };
+    triggerExportResult({
+      filename: `xbbot_shops_${Date.now()}.json`,
+      mime: "application/json;charset=utf-8",
+      rawText: JSON.stringify(payload, null, 2)
+    });
+    toast("商城与武器纯净包已导出", "ok");
+  } catch (e) {
+    toast("导出商城失败: " + (e.message || e), "bad");
+  }
+}
+
+// 单项纯净导出：仅导出宝物效果库
+async function exportTreasuresOnly() {
+  try {
+    toast("正在读取宝物库…", "");
+    const cur = await getBridge().apiGet("config/get");
+    const treasures = _gatherTreasuresData(cur);
+    const payload = {
+      app: typeof PLUGIN_ID !== "undefined" ? PLUGIN_ID : "astrbot_plugin_xbbot_beta",
+      kind: "treasures",
+      version: 1,
+      exported_at: new Date().toISOString(),
+      treasures: treasures
+    };
+    triggerExportResult({
+      filename: `xbbot_treasures_${Date.now()}.json`,
+      mime: "application/json;charset=utf-8",
+      rawText: JSON.stringify(payload, null, 2)
+    });
+    toast("宝物效果库已导出", "ok");
+  } catch (e) {
+    toast("导出宝物失败: " + (e.message || e), "bad");
+  }
+}
+
+// 单项纯净导出：仅导出玩法规则与数值
+async function exportGameRulesOnly() {
+  try {
+    toast("正在读取28大系统玩法配置…", "");
+    const cur = await getBridge().apiGet("config/get");
+    const rules = _gatherGameRulesData(cur);
+    const payload = {
+      app: typeof PLUGIN_ID !== "undefined" ? PLUGIN_ID : "astrbot_plugin_xbbot_beta",
+      kind: "gamerules",
+      version: 1,
+      exported_at: new Date().toISOString(),
+      rules: rules
+    };
+    triggerExportResult({
+      filename: `xbbot_gamerules_${Date.now()}.json`,
+      mime: "application/json;charset=utf-8",
+      rawText: JSON.stringify(payload, null, 2)
+    });
+    toast("玩法规则纯净包已导出", "ok");
+  } catch (e) {
+    toast("导出玩法规则失败: " + (e.message || e), "bad");
+  }
+}
+
+// 更新导出中心勾选计数与实时摘要
+function updateExportHubSummary() {
+  const chkAtlas = document.getElementById("chkExpAtlas")?.checked;
+  const chkShops = document.getElementById("chkExpShops")?.checked;
+  const chkTreasures = document.getElementById("chkExpTreasures")?.checked;
+  const chkRules = document.getElementById("chkExpGameRules")?.checked;
+  const chkUsers = document.getElementById("chkExpUsers")?.checked;
+
+  const names = [];
+  if (chkAtlas) names.push("精灵图鉴");
+  if (chkShops) names.push("商城坐骑武器");
+  if (chkTreasures) names.push("宝物效果");
+  if (chkRules) names.push("玩法规则数值");
+  if (chkUsers) names.push("玩家数据资产");
+
+  const sumTxt = document.getElementById("exportHubSummaryText");
+  const doBtn = document.getElementById("exportHubDoExport");
+  if (sumTxt) {
+    if (names.length === 0) {
+      sumTxt.innerHTML = `<span style="color:var(--bad)">未勾选任何项目（请至少选择 1 项导出）</span>`;
+      if (doBtn) doBtn.disabled = true;
+    } else {
+      sumTxt.innerHTML = `已选择 <strong>${names.length}</strong> 个项目：[${names.join(" · ")}]`;
+      if (doBtn) doBtn.disabled = false;
+    }
+  }
+}
+
+// 打开 Android 15 风格模块化导出中心
+function openExportHub(presetKey = "") {
+  const modal = document.getElementById("exportHubModal");
+  if (!modal) return;
+
+  // 根据传入的预设初始化勾选状态
+  const chkAtlas = document.getElementById("chkExpAtlas");
+  const chkShops = document.getElementById("chkExpShops");
+  const chkTreasures = document.getElementById("chkExpTreasures");
+  const chkRules = document.getElementById("chkExpGameRules");
+  const chkUsers = document.getElementById("chkExpUsers");
+
+  if (presetKey === "atlas_gear" || presetKey === "atlas") {
+    if (chkAtlas) chkAtlas.checked = true;
+    if (chkShops) chkShops.checked = true;
+    if (chkTreasures) chkTreasures.checked = true;
+    if (chkRules) chkRules.checked = false;
+    if (chkUsers) chkUsers.checked = false;
+  } else if (presetKey === "game_rules") {
+    if (chkAtlas) chkAtlas.checked = false;
+    if (chkShops) chkShops.checked = false;
+    if (chkTreasures) chkTreasures.checked = false;
+    if (chkRules) chkRules.checked = true;
+    if (chkUsers) chkUsers.checked = false;
+  } else if (presetKey === "users_only") {
+    if (chkAtlas) chkAtlas.checked = false;
+    if (chkShops) chkShops.checked = false;
+    if (chkTreasures) chkTreasures.checked = false;
+    if (chkRules) chkRules.checked = false;
+    if (chkUsers) chkUsers.checked = true;
+  } else if (presetKey === "full_all") {
+    if (chkAtlas) chkAtlas.checked = true;
+    if (chkShops) chkShops.checked = true;
+    if (chkTreasures) chkTreasures.checked = true;
+    if (chkRules) chkRules.checked = true;
+    if (chkUsers) chkUsers.checked = true;
+  } else if (presetKey === "reset_none") {
+    if (chkAtlas) chkAtlas.checked = false;
+    if (chkShops) chkShops.checked = false;
+    if (chkTreasures) chkTreasures.checked = false;
+    if (chkRules) chkRules.checked = false;
+    if (chkUsers) chkUsers.checked = false;
+  }
+
+  updateExportHubSummary();
+  modal.style.display = "flex";
+  modal.classList.add("show");
+}
+
+function closeExportHub() {
+  const modal = document.getElementById("exportHubModal");
+  if (modal) {
+    modal.classList.remove("show");
+    modal.style.display = "none";
+  }
+}
+
+// 绑定导出中心事件（仅绑定一次）
+function initExportHubEvents() {
+  if (window._EXPORT_HUB_INITIALIZED) return;
+  window._EXPORT_HUB_INITIALIZED = true;
+
+  // 顶栏与各处打开按钮
+  document.getElementById("btnOpenExportHub")?.addEventListener("click", () => openExportHub("atlas_gear"));
+  document.getElementById("exportHubClose")?.addEventListener("click", closeExportHub);
+  document.getElementById("exportHubCancel")?.addEventListener("click", closeExportHub);
+
+  // 预设 Chips 快捷勾选
+  document.querySelectorAll(".preset-pill[data-preset]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openExportHub(btn.dataset.preset);
+    });
+  });
+
+  // 勾选框监听
+  ["chkExpAtlas", "chkExpShops", "chkExpTreasures", "chkExpGameRules", "chkExpUsers"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", updateExportHubSummary);
+  });
+
+  // 单独导出按钮
+  document.getElementById("btnSoloExportAtlas")?.addEventListener("click", (e) => { e.stopPropagation(); exportSpiritsOnly(); });
+  document.getElementById("btnSoloExportShops")?.addEventListener("click", (e) => { e.stopPropagation(); exportShopsOnly(); });
+  document.getElementById("btnSoloExportTreasures")?.addEventListener("click", (e) => { e.stopPropagation(); exportTreasuresOnly(); });
+  document.getElementById("btnSoloExportRules")?.addEventListener("click", (e) => { e.stopPropagation(); exportGameRulesOnly(); });
+  document.getElementById("btnSoloExportUsers")?.addEventListener("click", (e) => { e.stopPropagation(); exportAllUsers(); });
+
+  // 执行组合打包导出
+  document.getElementById("exportHubDoExport")?.addEventListener("click", async () => {
+    const chkAtlas = document.getElementById("chkExpAtlas")?.checked;
+    const chkShops = document.getElementById("chkExpShops")?.checked;
+    const chkTreasures = document.getElementById("chkExpTreasures")?.checked;
+    const chkRules = document.getElementById("chkExpGameRules")?.checked;
+    const chkUsers = document.getElementById("chkExpUsers")?.checked;
+
+    if (!chkAtlas && !chkShops && !chkTreasures && !chkRules && !chkUsers) {
+      toast("请至少选择一项需要导出的内容", "warn");
+      return;
+    }
+
+    try {
+      toast("正在收集所选模块数据…", "");
+      let cur = null;
+      if (chkShops || chkTreasures || chkRules) {
+        cur = await apiTimeout(getBridge().apiGet("config/get"), 20000, "config/get");
+      }
+
+      const parts = {};
+      const summaryNames = [];
+
+      if (chkAtlas) {
+        parts.atlas = await _gatherAtlasData();
+        summaryNames.push("atlas");
+      }
+      if (chkShops) {
+        parts.shops = _gatherShopsData(cur);
+        summaryNames.push("shops");
+      }
+      if (chkTreasures) {
+        parts.treasures = _gatherTreasuresData(cur);
+        summaryNames.push("treasures");
+      }
+      if (chkRules) {
+        parts.rules = _gatherGameRulesData(cur);
+        summaryNames.push("rules");
+      }
+      if (chkUsers) {
+        try {
+          const ures = await callApi("users/export", {}, "GET");
+          if (ures && (ures.users || (ures.result && ures.result.users))) {
+            parts.users = ures.users || ures.result.users;
+            summaryNames.push("users");
+          }
+        } catch (_ue) {}
+      }
+
+      const payload = {
+        app: typeof PLUGIN_ID !== "undefined" ? PLUGIN_ID : "astrbot_plugin_xbbot_beta",
+        kind: "modular_preset",
+        version: 4,
+        exported_at: new Date().toISOString(),
+        from_version: (typeof FRONTEND_VER !== "undefined" ? FRONTEND_VER : ""),
+        parts: parts
+      };
+
+      const fn = `xbbot_custom_preset_${Date.now()}.json`;
+      triggerExportResult({
+        filename: fn,
+        mime: "application/json;charset=utf-8",
+        rawText: JSON.stringify(payload, null, 2)
+      });
+      toast(`已成功打包 ${summaryNames.length} 个独立模块`, "ok");
+      closeExportHub();
+    } catch (err) {
+      toast("打包导出失败: " + (err.message || err), "bad");
+    }
+  });
+}
+
+// ============================================================================
+// Android 15 / Material 3 智能选择性导入中心 (Smart Selective Importer)
+// ============================================================================
+
+let _PARSED_IMPORT_PACKAGE = null;
+
+// 智能分析导入文件包含的模块
+function _analyzeImportPackage(data) {
+  const modules = [];
+
+  // 1. 精灵图鉴
+  if (data.kind === "spirits" || (data.spirits && typeof data.spirits === "object") || (data.parts && data.parts.atlas)) {
+    const spCount = Object.keys((data.parts ? data.parts.atlas?.spirits : data.spirits) || {}).length;
+    modules.push({
+      key: "atlas",
+      title: "📖 精灵与地图图鉴",
+      desc: `包含约 ${spCount} 只精灵及捕捉地图配置`,
+      checked: true,
+      data: data.parts ? data.parts.atlas : (data.spirits ? { spirits: data.spirits, maps: data.maps, shop: data.shop } : null)
+    });
+  }
+
+  // 2. 商城与坐骑
+  if (data.kind === "shops" || (data.parts && data.parts.shops) || data.ride_shop !== undefined) {
+    modules.push({
+      key: "shops",
+      title: "🛒 坐骑商城与武器库",
+      desc: "包含坐骑上架列表与抽奖武器属性顺序",
+      checked: true,
+      data: data.parts ? data.parts.shops : { ride_shop: data.ride_shop, weapon_attrs: data.weapon_attrs, weapon_order: data.weapon_order, pool: data.pool }
+    });
+  }
+
+  // 3. 宝物专有效果库
+  if (data.kind === "treasures" || (data.parts && data.parts.treasures) || (data.parts && data.parts.treasure) || data.treasures) {
+    const tData = (data.parts && data.parts.treasures) || (data.parts && data.parts.treasure) || data.treasures;
+    modules.push({
+      key: "treasures",
+      title: "🔮 宝物专属效果库",
+      desc: "包含宝物效果加成与自定义属性文案",
+      checked: true,
+      data: tData
+    });
+  }
+
+  // 4. 玩法规则与数值
+  if (data.kind === "gamerules" || (data.parts && data.parts.rules) || data.rules) {
+    const rData = (data.parts && data.parts.rules) || data.rules;
+    modules.push({
+      key: "rules",
+      title: "⚙️ 玩法规则与数值参数",
+      desc: `包含 ${Object.keys(rData || {}).length} 节玩法系统核心规则`,
+      checked: true,
+      data: rData
+    });
+  }
+
+  // 5. 玩家数据
+  if (data.users || (data.parts && data.parts.users)) {
+    const uList = data.users || (data.parts && data.parts.users) || [];
+    modules.push({
+      key: "users",
+      title: "👤 玩家资产与经济账本",
+      desc: `包含 ${uList.length} 名玩家数据与钱包记录`,
+      checked: false, // 玩家数据默认不主动覆盖，由用户手动勾选确认
+      data: uList
+    });
+  }
+
+  return modules;
+}
+
+// 打开智能导入检查抽屉/弹窗
+function showImportInspectModal(filename, parsedData) {
+  const modal = document.getElementById("importHubModal");
+  if (!modal) return;
+
+  _PARSED_IMPORT_PACKAGE = { filename, data: parsedData };
+  const modules = _analyzeImportPackage(parsedData);
+
+  const fnEl = document.getElementById("importHubFileName");
+  const infoEl = document.getElementById("importHubFileInfo");
+  if (fnEl) fnEl.textContent = `📄 文件：${filename}`;
+  if (infoEl) {
+    const ver = parsedData.from_version || parsedData.version || "未知";
+    const time = parsedData.exported_at ? new Date(parsedData.exported_at).toLocaleString() : "未知";
+    infoEl.textContent = `版本来源: ${ver} ｜ 导出时间: ${time} ｜ 识别到 ${modules.length} 个独立模块`;
+  }
+
+  const listEl = document.getElementById("importHubModulesList");
+  if (listEl) {
+    if (modules.length === 0) {
+      listEl.innerHTML = `<div style="padding:16px;text-align:center;color:var(--bad);background:var(--badSoft);border-radius:10px">⚠️ 无法在当前文件中识别出有效的插件模块，请确认文件格式是否正确。</div>`;
+    } else {
+      listEl.innerHTML = modules.map((m, idx) => `
+        <div class="hub-mod-card" style="padding:12px 14px">
+          <label class="hub-checkbox-label" style="display:flex;align-items:flex-start;gap:10px">
+            <input type="checkbox" data-import-key="${esc(m.key)}" ${m.checked ? "checked" : ""} style="margin-top:2px">
+            <div>
+              <div class="hub-mod-title" style="font-size:13px">${esc(m.title)}</div>
+              <div class="hub-mod-desc" style="font-size:11.5px">${esc(m.desc)}</div>
+            </div>
+          </label>
+        </div>
+      `).join("");
+    }
+  }
+
+  modal.style.display = "flex";
+  modal.classList.add("show");
+}
+
+function closeImportHub() {
+  const modal = document.getElementById("importHubModal");
+  if (modal) {
+    modal.classList.remove("show");
+    modal.style.display = "none";
+  }
+}
+
+// 统一智能导入入口
+function openImportHub(file = null) {
+  if (file) {
+    _handleImportFile(file);
+    return;
+  }
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = ".json,application/json";
+  inp.onchange = (e) => {
+    const f = e.target.files[0];
+    if (f) _handleImportFile(f);
+  };
+  inp.click();
+}
+
+async function _handleImportFile(file) {
+  try {
+    toast("正在解析导入文件…", "");
+    const txt = (await file.text()).replace(/^\uFEFF/, "");
+    const data = JSON.parse(txt);
+    if (!data || typeof data !== "object") throw new Error("文件内容不是合法的 JSON 对象");
+    showImportInspectModal(file.name, data);
+  } catch (err) {
+    toast("解析导入文件失败: " + (err.message || err), "bad");
+  }
+}
+
+// 绑定导入中心操作事件
+function initImportHubEvents() {
+  if (window._IMPORT_HUB_INITIALIZED) return;
+  window._IMPORT_HUB_INITIALIZED = true;
+
+  document.getElementById("btnOpenImportHub")?.addEventListener("click", () => openImportHub());
+  document.getElementById("importHubClose")?.addEventListener("click", closeImportHub);
+  document.getElementById("importHubCancel")?.addEventListener("click", closeImportHub);
+
+  document.getElementById("importHubDoImport")?.addEventListener("click", async () => {
+    if (!_PARSED_IMPORT_PACKAGE) return;
+    const { data } = _PARSED_IMPORT_PACKAGE;
+    const modules = _analyzeImportPackage(data);
+
+    // 检查哪些被勾选
+    const checkedKeys = new Set();
+    document.querySelectorAll("#importHubModulesList input[data-import-key]:checked").forEach((inp) => {
+      checkedKeys.add(inp.dataset.importKey);
+    });
+
+    if (checkedKeys.size === 0) {
+      toast("请至少选择一项需要导入应用的模块", "warn");
+      return;
+    }
+
+    const doSnapshot = document.getElementById("importHubSnapshotChk")?.checked;
+    const btn = document.getElementById("importHubDoImport");
+    if (btn) { btn.disabled = true; btn.textContent = "正在应用中…"; }
+
+    try {
+      // 1. 自动快照保护
+      if (doSnapshot) {
+        try {
+          await getBridge().apiPost("config/snapshot/save", { note: `智能导入前自动快照_${Date.now()}` }).catch(() => null);
+        } catch (_se) {}
+      }
+
+      const applied = [];
+
+      // 2. 导入精灵图鉴
+      if (checkedKeys.has("atlas")) {
+        const m = modules.find((x) => x.key === "atlas");
+        if (m && m.data) {
+          await getBridge().apiPost("spirits/save", m.data);
+          applied.push("精灵图鉴");
+          try { await loadSpirits(true); } catch (_e) {}
+        }
+      }
+
+      // 3. 导入商城与坐骑
+      if (checkedKeys.has("shops")) {
+        const m = modules.find((x) => x.key === "shops");
+        if (m && m.data) {
+          const p = {};
+          if (m.data.ride_shop !== undefined) p.ride_shop = m.data.ride_shop;
+          if (m.data.weapon_attrs !== undefined) p.weapon_attrs = m.data.weapon_attrs;
+          if (m.data.weapon_order !== undefined) p.weapon_order = m.data.weapon_order;
+          await getBridge().apiPost("config/save", { "商城图鉴": p });
+          applied.push("商城与武器");
+          try { await loadShops(); } catch (_e) {}
+        }
+      }
+
+      // 4. 导入宝物库
+      if (checkedKeys.has("treasures")) {
+        const m = modules.find((x) => x.key === "treasures");
+        if (m && m.data) {
+          const p = {};
+          if (m.data.list) p["宝物"] = m.data.list;
+          const shopP = {};
+          if (m.data.items) shopP["treasures"] = m.data.items;
+          if (m.data.eff) shopP["treasure_effects"] = m.data.eff;
+          await getBridge().apiPost("config/save", { "设置": p, "商城图鉴": shopP });
+          applied.push("宝物库");
+        }
+      }
+
+      // 5. 导入玩法规则
+      if (checkedKeys.has("rules")) {
+        const m = modules.find((x) => x.key === "rules");
+        if (m && m.data && typeof m.data === "object") {
+          await getBridge().apiPost("config/save", m.data);
+          applied.push("玩法规则配置");
+          try { await loadConfig(); } catch (_e) {}
+        }
+      }
+
+      // 6. 导入用户数据
+      if (checkedKeys.has("users")) {
+        const m = modules.find((x) => x.key === "users");
+        if (m && m.data && Array.isArray(m.data)) {
+          await callApi("users/import", { users: m.data }, "POST");
+          applied.push("玩家数据");
+          try { await loadUsers(); } catch (_e) {}
+        }
+      }
+
+      toast(`已成功安全导入：${applied.join("、")}`, "ok");
+      closeImportHub();
+    } catch (err) {
+      toast("导入失败: " + (err.message || err), "bad");
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "✅ 确认导入所选项目"; }
+    }
+  });
+}
+
+// 暴露到全局，各页面入口均可直接唤起
+window.openExportHub = openExportHub;
+window.closeExportHub = closeExportHub;
+window.openImportHub = openImportHub;
+window.closeImportHub = closeImportHub;
+window.exportSpiritsOnly = exportSpiritsOnly;
+window.exportShopsOnly = exportShopsOnly;
+window.exportTreasuresOnly = exportTreasuresOnly;
+window.exportGameRulesOnly = exportGameRulesOnly;
+window.initExportHubEvents = initExportHubEvents;
+window.initImportHubEvents = initImportHubEvents;
 function _formatModalText(msg) {
   if (!msg) return "";
   if (msg.includes("<div") || msg.includes("<strong") || msg.includes("<span") || msg.includes("<br")) {
@@ -814,6 +1473,8 @@ async function main() {
   bindTabs();
   try { initBackTop(); } catch (e) {}
   try { bindShopOrderOnce(); } catch (e) {}
+  try { if (typeof initExportHubEvents === "function") initExportHubEvents(); } catch (e) {}
+  try { if (typeof initImportHubEvents === "function") initImportHubEvents(); } catch (e) {}
   const _b = getBridge();
   try {
     if (_b && typeof _b.ready === "function") {
@@ -1738,7 +2399,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0912o"
+        version: res.version || "2026w0912p"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
