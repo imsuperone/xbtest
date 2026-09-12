@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0912c";
+const FRONTEND_VER = "2026w0912d";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1719,7 +1719,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0912c"
+        version: res.version || "2026w0912d"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -2473,10 +2473,12 @@ async function renderAtlas(curCfg){
       `<button class="ghost sm" data-atlas-tab="${k}" ${ATLAS_CUR === k ? 'disabled style="opacity:.45"' : ""}>${label} (${n})</button>`
     ).join("") + `</div><div style="display:flex;flex-direction:column;gap:8px">`;
     const _effOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); return String(e || ""); } catch (e) { return ""; } };
+    const _treOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; return null; } catch (e) { return null; } };
+    const _typeTag = (n) => { try { const o = _treOf(n) || {}; const t = String(o.type || ""); const v = Number(o.value) || 0; if (t === "atk" && v > 0) return "·攻" + v; if (t === "shield") return "·盾"; if (t === "pardon") return "·免"; return ""; } catch (e) { return ""; } };
     if (ATLAS_CUR === "treasure") {
       let h = `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)"><div style="font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">奴隶系统-宝物 (${Treas.length}) <span style="margin-left:auto;display:inline-flex;gap:4px;flex-wrap:wrap"><button class="ghost sm" id="btnAtlasSaveTreasure">💾 保存宝物</button><button class="ghost sm" id="btnAtlasResetTreasure">↩️ 恢复默认</button><button class="ghost sm" id="btnAtlasAddTreasure">＋ 添加</button></span></div><div style="display:flex;flex-wrap:wrap;gap:5px">`;
       if (!Treas.length) h += `<span style="color:var(--muted)">暂无</span>`;
-      else h += Treas.map(n => { const e = _effOf(n); return `<span class="badge badge-primary" style="font-size:11.5px;display:inline-flex;align-items:center;gap:5px;padding:3px 8px" title="${esc(e || "无自定义效果")}">🎁 ${esc(n)}${e ? "·" + esc(e.slice(0, 12)) : ""}<span style="cursor:pointer" data-atlas-edit-treasure="${esc(n)}" title="修改效果">✎</span><span style="cursor:pointer;font-weight:bold" data-atlas-del="奴隶系统-宝物|${esc(n)}" title="删除">×</span></span>`; }).join("");
+      else h += Treas.map(n => { const e = _effOf(n); return `<span class="badge badge-primary" style="font-size:11.5px;display:inline-flex;align-items:center;gap:5px;padding:3px 8px" title="${esc(e || "无自定义效果")}">🎁 ${esc(n)}${e ? "·" + esc(e.slice(0, 12)) : ""}${_typeTag(n)}<span style="cursor:pointer" data-atlas-edit-treasure="${esc(n)}" title="修改效果">✎</span><span style="cursor:pointer;font-weight:bold" data-atlas-del="奴隶系统-宝物|${esc(n)}" title="删除">×</span></span>`; }).join("");
       h += `</div><div class="hint" style="margin-top:6px">✎ 可改宝物效果（不止名字），× 删除；改动即时保存</div></div>`;
       html += h;
     }
@@ -2518,16 +2520,26 @@ async function renderAtlas(curCfg){
       ATLAS_CUR = b.dataset.atlasTab;
       renderAtlas();
     }));
-    const persistTreasure = async () => {
-      // 宝物名+效果即时持久化（图鉴页内闭环，不碰商城）
-      const cleanEff = {};
+    const persistTreasure = async (delNames) => {
+      // 宝物名+结构效果即时持久化（图鉴页内闭环，不碰商城；单一家 treasures，老 treasure_effects 只读兼容不再写）
+      // delNames: 已删宝物名数组，显式 null 清 sidecar（merge 语义缺键≠删除，不传即复活）
+      const items = {};
       Object.entries(window._TREAS_EFF || {}).forEach(([k, v]) => {
-        const s = (v && typeof v === "object") ? String(v.effect || "") : String(v || "");
-        if (s.trim()) cleanEff[k] = s.trim();
+        if (v && typeof v === "object") {
+          const _t = String(v.type || "");
+          let _v = Number(v.value) || 0;
+          if (_v < 0) _v = 0;
+          items[k] = { type: (["atk", "shield", "pardon"].includes(_t) ? _t : ""), value: _v, desc: String(v.effect || "") };
+        } else if (v && String(v).trim()) {
+          items[k] = { type: "", value: 0, desc: String(v).trim() };
+        }
       });
+      try {
+        (delNames || []).forEach((k) => { if (k) items[String(k)] = null; });
+      } catch (e) {}
       const r = await getBridge().apiPost("config/save", {
         "设置": { "宝物": (window._TREAS_LIST || Treas).filter(Boolean).join("|") },
-        "商城图鉴": { "treasure_effects": JSON.stringify(cleanEff) }
+        "商城图鉴": { "treasures": items }
       });
       if (r && r.error) throw new Error(r.error);
       window._TREAS_DIRTY = false;
@@ -2540,7 +2552,7 @@ async function renderAtlas(curCfg){
         if (sys.includes("宝物")) {
           window._TREAS_LIST = (window._TREAS_LIST || Treas).filter(x => x !== name);
           try { if (window._TREAS_EFF) delete window._TREAS_EFF[name]; } catch (e) {}
-          await persistTreasure();
+          await persistTreasure([name]);
           toast("已删除并保存", "ok");
           renderAtlas();
         }
@@ -2551,16 +2563,7 @@ async function renderAtlas(curCfg){
       bindSpiritMapCards(box);
     } catch (e) {}
     box.querySelectorAll("[data-atlas-edit-treasure]").forEach(el => el.addEventListener("click", async () => {
-      const n = el.dataset.atlasEditTreasure;
-      const cur = (() => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); return String(e || ""); } catch (e) { return ""; } })();
-      const v = await uiPrompt(`宝物「${n}」效果（留空用内置/通用）：`, cur, "修改宝物效果");
-      if (v === null || v === undefined) return;
-      window._TREAS_EFF = window._TREAS_EFF || {};
-      if (String(v).trim()) window._TREAS_EFF[n] = String(v).trim();
-      else delete window._TREAS_EFF[n];
-      try { await persistTreasure(); toast("已保存", "ok"); }
-      catch (e) { toast("保存失败: " + e.message, "bad"); }
-      renderAtlas();
+      openTreasureEditModal(el.dataset.atlasEditTreasure);
     }));
     document.getElementById("btnAtlasSaveMaps")?.addEventListener("click", () => saveSpiritKind("all"));
     document.getElementById("btnAtlasResetMaps")?.addEventListener("click", () => resetSpiritKind("all"));
@@ -2592,9 +2595,10 @@ async function renderAtlas(curCfg){
     document.getElementById("btnAtlasResetTreasure")?.addEventListener("click", async () => {
       if (!(await uiConfirm("直接恢复宝物为内置（酒神葫芦|四象护符）并清空自定义效果？旧数据不保留。", "恢复默认"))) return;
       try {
+        const _old = [...(window._TREAS_LIST || []), ...Object.keys(window._TREAS_EFF || {})];
         window._TREAS_LIST = ["酒神葫芦", "四象护符"];
         window._TREAS_EFF = {};
-        await persistTreasure();
+        await persistTreasure(_old);
         toast("已恢复默认", "ok");
       } catch (e) { toast("恢复失败: " + e.message, "bad"); }
       renderAtlas();
@@ -2605,13 +2609,58 @@ async function renderAtlas(curCfg){
       const _tl = window._TREAS_DIRTY ? (window._TREAS_LIST || []) : Treas;
       if (_tl.includes(n)) { toast("已存在", "bad"); return; }
       window._TREAS_LIST = [..._tl, n];
-      const eff = await uiPrompt(`宝物「${n}」效果（可选，留空用通用）：`, "", "宝物效果");
-      if (eff && String(eff).trim()) { window._TREAS_EFF = window._TREAS_EFF || {}; window._TREAS_EFF[n] = String(eff).trim(); }
+      const eff = await uiPrompt(`宝物「${n}」效果文案（可选，留空用通用，类型数值可在✎里改）：`, "", "宝物效果");
+      if (eff && String(eff).trim()) { window._TREAS_EFF = window._TREAS_EFF || {}; window._TREAS_EFF[n] = { effect: String(eff).trim(), type: "", value: 0 }; }
       try { await persistTreasure(); toast("已添加并保存", "ok"); }
       catch (e) { window._TREAS_DIRTY = true; toast("保存失败: " + e.message, "bad"); }
       renderAtlas();
     });
   } catch (e) { box.innerHTML = `<span style="color:var(--muted)">图鉴加载失败: ${esc(e.message)}</span>`; }
+}
+
+const TREASURE_TYPES = [["", "无（纯收藏）"], ["atk", "攻击加成"], ["shield", "护盾（免被偷）"], ["pardon", "免罪（造反免罚）"]];
+function openTreasureEditModal(name) {
+  const modal = document.getElementById("appModal");
+  if (!modal) return;
+  const cur = (() => { try { const e = (window._TREAS_EFF || {})[name]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; return { effect: "", type: "", value: 0 }; } catch (e) { return { effect: "", type: "", value: 0 }; } })();
+  const icon = document.getElementById("appModalIcon");
+  const title = document.getElementById("appModalTitle");
+  const content = document.getElementById("appModalContent");
+  const inputWrap = document.getElementById("appModalInputWrap");
+  const cancelBtn = document.getElementById("appModalCancel");
+  const okBtn = document.getElementById("appModalOk");
+  if (icon) icon.textContent = "🎁";
+  if (title) title.textContent = "编辑宝物「" + name + "」";
+  if (inputWrap) inputWrap.style.display = "none";
+  content.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">效果文案（留空用内置/通用）：</label>
+        <input id="treEditDesc" value="${esc(cur.effect || "")}" style="width:100%;padding:6px 10px;border-radius:8px"></div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1"><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">实效类型：</label>
+          <select id="treEditType" style="width:100%;padding:6px 10px;border-radius:8px">${TREASURE_TYPES.map(([v, l]) => `<option value="${v}"${String(cur.type || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select></div>
+        <div style="flex:1"><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">数值（攻击加成才用）：</label>
+          <input id="treEditValue" type="number" min="0" value="${Number(cur.value) || 0}" style="width:100%;padding:6px 10px;border-radius:8px"></div>
+      </div>
+      <div class="hint">攻击加成直接计入主人战力；护盾防打架被偷；免罪防造反被罚。保存后即时生效。</div>
+    </div>`;
+  if (cancelBtn) { cancelBtn.style.display = ""; cancelBtn.textContent = "取消"; cancelBtn.onclick = () => { modal.className = ""; }; }
+  if (okBtn) {
+    okBtn.textContent = "保存宝物"; okBtn.style.background = "var(--acc)"; okBtn.style.borderColor = "transparent";
+    okBtn.onclick = async () => {
+      const desc = (document.getElementById("treEditDesc")?.value || "").trim();
+      const type = document.getElementById("treEditType")?.value || "";
+      const value = Math.max(0, Number(document.getElementById("treEditValue")?.value) || 0);
+      window._TREAS_EFF = window._TREAS_EFF || {};
+      if (!desc && !type) delete window._TREAS_EFF[name];
+      else window._TREAS_EFF[name] = { effect: desc, type: (type === "atk" || type === "shield" || type === "pardon") ? type : "", value };
+      try { await persistTreasure(); toast("已保存", "ok"); }
+      catch (e) { toast("保存失败: " + e.message, "bad"); }
+      modal.className = "";
+      renderAtlas();
+    };
+  }
+  modal.className = "show";
 }
 
 function refreshSpiritViews() {
@@ -3242,21 +3291,48 @@ async function exportPreset() {
     const setSec = (cur && cur["设置"]) || {};
     let tlist = "";
     let teff = {};
+    // v3 结构宝物优先（treasures 新家），老 treasure_effects 只读兼容
+    const _normT = (o) => {
+      const out = {};
+      try {
+        Object.entries(o || {}).forEach(([k, v]) => {
+          if (v && typeof v === "object" && !Array.isArray(v)) {
+            out[k] = { effect: String(v.effect || v.desc || ""), type: (["atk", "shield", "pardon"].includes(String(v.type || "")) ? String(v.type) : ""), value: Math.max(0, Number(v.value) || 0) };
+          } else if (v && String(v).trim()) {
+            out[k] = { effect: String(v).trim(), type: "", value: 0 };
+          }
+        });
+      } catch (e) {}
+      return out;
+    };
+    let _titems = {};
     try {
       if (window._TREAS_DIRTY && Array.isArray(window._TREAS_LIST)) tlist = window._TREAS_LIST.filter(Boolean).join("|");
       else tlist = String(setSec["宝物"] || "");
-      const _te = shopSec["treasure_effects"];
-      if (_te && typeof _te === "object" && !Array.isArray(_te)) teff = _te;
-      else if (typeof _te === "string" && _te.trim()) { try { teff = JSON.parse(_te); } catch (e) { teff = {}; } }
-      if (window._TREAS_EFF && typeof window._TREAS_EFF === "object") teff = Object.assign({}, teff, window._TREAS_EFF);
+      const _tn = shopSec["treasures"];
+      if (_tn && typeof _tn === "object" && !Array.isArray(_tn) && Object.keys(_tn).length) {
+        _titems = _normT(_tn);
+        teff = {};
+        Object.entries(_titems).forEach(([k, v]) => { if (v.effect) teff[k] = v.effect; });
+      } else {
+        const _te = shopSec["treasure_effects"];
+        if (_te && typeof _te === "object" && !Array.isArray(_te)) teff = _te;
+        else if (typeof _te === "string" && _te.trim()) { try { teff = JSON.parse(_te); } catch (e) { teff = {}; } }
+        _titems = _normT(teff);
+      }
+      if (window._TREAS_EFF && typeof window._TREAS_EFF === "object") {
+        const _m = _normT(window._TREAS_EFF);
+        teff = Object.assign({}, teff, window._TREAS_EFF);
+        _titems = Object.assign({}, _titems, _m);
+      }
     } catch (e) {}
     const shops = {};
     ["ride_shop", "weapon_attrs", "weapon_order"].forEach((k) => { if (shopSec[k] !== undefined) shops[k] = shopSec[k]; });
     const payload = {
-      app: "astrbot_plugin_xbbot_beta", kind: "preset", version: 2,
+      app: "astrbot_plugin_xbbot_beta", kind: "preset", version: 3,
       exported_at: new Date().toISOString(),
       from_version: (typeof FRONTEND_VER !== "undefined" ? FRONTEND_VER : ""),
-      parts: { atlas: _presetAtlasPart(sp), treasure: { list: tlist, eff: teff }, shops }
+      parts: { atlas: _presetAtlasPart(sp), treasure: { list: tlist, eff: teff, items: _titems }, shops }
     };
     triggerExportResult({ filename: "xbbot_preset_" + Date.now() + ".json", mime: "application/json;charset=utf-8", rawText: JSON.stringify(payload, null, 2) });
     toast("预设已打包", "ok");
@@ -3280,7 +3356,7 @@ async function importPreset() {
         if (bits.length) cnt.push("图鉴(" + bits.join("/") + ")");
       }
       if (parts.treasure && typeof parts.treasure === "object"
-        && (parts.treasure.list || _n(parts.treasure.eff)))
+        && (parts.treasure.list || _n(parts.treasure.eff) || _n(parts.treasure.items)))
         cnt.push("宝物" + String(parts.treasure.list || "").split("|").filter(Boolean).length + "件");
       if (parts.shops && typeof parts.shops === "object") {
         const bits = ["ride_shop", "weapon_attrs", "weapon_order"].filter((k) => parts.shops[k] !== undefined);
@@ -3306,12 +3382,35 @@ async function importPreset() {
       try {
         const cfgPayload = {};
         if (parts.treasure && typeof parts.treasure === "object"
-          && (parts.treasure.list !== undefined || parts.treasure.eff !== undefined)) {
+          && (parts.treasure.list !== undefined || parts.treasure.eff !== undefined || parts.treasure.items !== undefined)) {
           cfgPayload["设置"] = {};
           if (parts.treasure.list !== undefined) cfgPayload["设置"]["宝物"] = String(parts.treasure.list || "");
           cfgPayload["商城图鉴"] = {};
-          const _eff = parts.treasure.eff;
-          cfgPayload["商城图鉴"]["treasure_effects"] = (typeof _eff === "string") ? _eff : JSON.stringify(_eff || {});
+          // v3 结构优先；v2 老包按 eff 换算
+          const _items = (parts.treasure.items && typeof parts.treasure.items === "object") ? parts.treasure.items : null;
+          if (_items) {
+            const _clean = {};
+            Object.entries(_items).forEach(([k, v]) => {
+              if (v && typeof v === "object" && !Array.isArray(v)) {
+                const _t = String(v.type || "");
+                _clean[k] = { type: (["atk", "shield", "pardon"].includes(_t) ? _t : ""), value: Math.max(0, Number(v.value) || 0), desc: String(v.effect || v.desc || "") };
+              } else if (v && String(v).trim()) {
+                _clean[k] = { type: "", value: 0, desc: String(v).trim() };
+              }
+            });
+            cfgPayload["商城图鉴"]["treasures"] = _clean;
+          } else {
+            const _eff = parts.treasure.eff;
+            const _norm = {};
+            const _src = (typeof _eff === "string") ? (() => { try { return JSON.parse(_eff); } catch (e) { return {}; } })() : (_eff || {});
+            Object.entries(_src).forEach(([k, v]) => {
+              if (v && typeof v === "object" && !Array.isArray(v)) _norm[k] = { type: "", value: 0, desc: String(v.effect || v.desc || "") };
+              else if (v && String(v).trim()) _norm[k] = { type: "", value: 0, desc: String(v).trim() };
+            });
+            cfgPayload["商城图鉴"]["treasures"] = _norm;
+          }
+          // 老 treasure_effects 整键清理（已换算进 treasures，双源不再并存）
+          cfgPayload["商城图鉴"]["treasure_effects"] = null;
         }
         if (parts.shops && typeof parts.shops === "object") {
           cfgPayload["商城图鉴"] = cfgPayload["商城图鉴"] || {};
@@ -4274,10 +4373,30 @@ async function loadShops(skipAtlas = false) {
       else if (typeof _te === "string" && _te.trim()) { try { const d = JSON.parse(_te); if (d && typeof d === "object") _POOL_ORDER = d; } catch (e) {} }
     } catch (e) {}
     try {
-      const _te = sec["treasure_effects"];
-      if (_te && typeof _te === "object" && !Array.isArray(_te)) window._TREAS_EFF = { ..._te };
-      else if (typeof _te === "string" && _te.trim()) { try { const d = JSON.parse(_te); if (d && typeof d === "object") window._TREAS_EFF = d; else window._TREAS_EFF = {}; } catch (e) { window._TREAS_EFF = {}; } }
-      else window._TREAS_EFF = window._TREAS_EFF || {};
+      // 宝物新家优先（treasures 结构表），老 treasure_effects 只读兼容
+      const _tn = sec["treasures"];
+      const _norm1 = (o) => {
+        const out = {};
+        try {
+          Object.entries(o || {}).forEach(([k, v]) => {
+            if (v && typeof v === "object" && !Array.isArray(v)) {
+              const _t = String(v.type || "");
+              out[k] = { effect: String(v.effect || v.desc || ""), type: (["atk", "shield", "pardon"].includes(_t) ? _t : ""), value: Math.max(0, Number(v.value) || 0) };
+            } else if (v && String(v).trim()) {
+              out[k] = { effect: String(v).trim(), type: "", value: 0 };
+            }
+          });
+        } catch (e) {}
+        return out;
+      };
+      const _newEff = _norm1((_tn && typeof _tn === "object" && !Array.isArray(_tn)) ? _tn : null);
+      if (Object.keys(_newEff).length) { window._TREAS_EFF = _newEff; }
+      else {
+        const _te = sec["treasure_effects"];
+        if (_te && typeof _te === "object" && !Array.isArray(_te)) window._TREAS_EFF = _norm1(_te);
+        else if (typeof _te === "string" && _te.trim()) { try { const d = JSON.parse(_te); if (d && typeof d === "object") window._TREAS_EFF = _norm1(d); else window._TREAS_EFF = {}; } catch (e) { window._TREAS_EFF = {}; } }
+        else window._TREAS_EFF = window._TREAS_EFF || {};
+      }
     } catch (e) { window._TREAS_EFF = window._TREAS_EFF || {}; }
     SHOP_DIRTY = false;
     syncShopRaw();

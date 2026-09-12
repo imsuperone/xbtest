@@ -21,7 +21,7 @@ except ImportError:
                                     REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
                                     TREASURE_GOURD_NAME)
 from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgi, cn_fmt, cn_parse, coins_add, coins_get, slaves_of, treasures_of, uget, uset
-from .combat import _treasure_names, battle_power
+from .combat import _has_treasure_type, _treasure_names, battle_power
 from .nick import uname
 from .profile import coin_name
 def cmd_flatter(gid, qq, st):
@@ -260,8 +260,8 @@ def cmd_revolt(gid, qq, st):
     sn = uget(u, "name") or (str(qq))
     loot = min(coins_get(gid, owner), _random.randint(REVOLT_LOOT_LO, REVOLT_LOOT_HI))
 
-    i_have_gourd = TREASURE_GOURD_NAME in treasures_of(u)
-    master_has_gourd = TREASURE_GOURD_NAME in treasures_of(U(st, owner))
+    i_have_gourd = _has_treasure_type(treasures_of(u), "pardon", (TREASURE_GOURD_NAME,))
+    master_has_gourd = _has_treasure_type(treasures_of(U(st, owner)), "pardon", (TREASURE_GOURD_NAME,))
 
     if i_have_gourd:
         uset(u, "owner", "")

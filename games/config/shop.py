@@ -3,6 +3,10 @@
 这里只放结构性常量（顺序/白名单/内置售价），改完重载即生效。抽奖券价格已在
 slave_state._GACHA_COST_DEF 单源，不搬（消费方 slave/gacha.py 经 _S. 取用）。"""
 
+# 宝物实效类型（商城图鉴.treasures {名: {type, value, desc}}；老 treasure_effects 只读兼容）
+# atk=攻击加成计入主人战力；shield=打架护盾；pardon=造反免罪；空=纯收藏
+TREASURE_TYPES = ("", "atk", "shield", "pardon")
+
 # 稀有度陈列顺序（武器池页签/校验共用）
 POOL_RARS = ("SSR", "SR", "R")
 

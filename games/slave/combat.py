@@ -42,12 +42,86 @@ def _treasure_effects_raw():
     return store.cfg_dict("商城图鉴", "treasure_effects")
 
 
+def _treasure_items():
+    """宝物结构表：商城图鉴.treasures（新家 {名: {type, value, desc}}）合并老 treasure_effects，新优先。
+    老串/老{effect}统一成 {desc} 形；内置酒神/四象无条目时靠回退名单生效（见 _has_treasure_type）。"""
+    out = {}
+    try:
+        raw = store.cfg_dict("商城图鉴", "treasures") or {}
+        if isinstance(raw, dict):
+            for k, v in raw.items():
+                if isinstance(v, dict):
+                    out[str(k)] = v
+                elif v is not None and str(v).strip() != "":
+                    out[str(k)] = {"desc": str(v)}
+    except Exception:
+        pass
+    try:
+        old = _treasure_effects_raw() or {}
+        if isinstance(old, dict):
+            for k, v in old.items():
+                if str(k) not in out:
+                    if isinstance(v, dict):
+                        out[str(k)] = v
+                    elif v is not None and str(v).strip() != "":
+                        out[str(k)] = {"desc": str(v)}
+    except Exception:
+        pass
+    return out
+
+
+def _treasure_desc(tname):
+    try:
+        v = _treasure_items().get(str(tname or ""), None)
+        if isinstance(v, dict):
+            return str(v.get("desc", "") or "").strip()
+        return str(v or "").strip()
+    except Exception:
+        return ""
+
+
+def _has_treasure_type(owned, ttype, fallbacks=()):
+    """持有清单里是否有某型宝物；fallbacks 为内置名单（未自定义时保底生效）"""
+    try:
+        items = _treasure_items()
+        for t in (owned or []):
+            t = str(t)
+            if t in (fallbacks or ()):
+                return True
+            v = items.get(t)
+            if isinstance(v, dict) and str(v.get("type", "") or "") == str(ttype or ""):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def _treasure_atk_total(owned):
+    """持有宝物攻击加成之和（战斗力外挂项）"""
+    s = 0
+    try:
+        items = _treasure_items()
+        for t in (owned or []):
+            v = items.get(str(t))
+            if isinstance(v, dict) and str(v.get("type", "") or "") == "atk":
+                try:
+                    s += max(0, int(float(v.get("value", 0) or 0)))
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return s
+
+
 
 
 def _treasure_effect(tname):
-    """宝物效果文案统一口径：自定义效果 > 酒神/四象专属 > 通用收藏（获取/升阶/详情三处共用）"""
+    """宝物效果文案统一口径：结构表 desc > 老自定义效果 > 酒神/四象专属 > 通用收藏（获取/升阶/详情三处共用）"""
     try:
         t = str(tname or "")
+        _d = _treasure_desc(t)
+        if _d:
+            return _d
         try:
             _custom = _treasure_effects_raw().get(t, "")
             if isinstance(_custom, dict):
@@ -130,12 +204,12 @@ def atk_of(st, qq):
 
 
 def battle_power(st, qq):
-    """战斗力 = 主人奴隶身价之和 + 武器攻击力"""
+    """战斗力 = 主人奴隶身价之和 + 武器攻击力 + 宝物攻击加成"""
     u = U(st, qq)
     p = int(uget(u, "price") or 0)
     for s in slaves_of(st, qq):
         p += int(uget(U(st, s), "price") or 0)
-    return p + atk_of(st, qq)
+    return p + atk_of(st, qq) + _treasure_atk_total(treasures_of(u))
 
 
 
@@ -201,7 +275,7 @@ def cmd_fight(gid, qq, target, st):
     win = _random.random() < pwin
 
     def _shield(owner_q):
-        return SHIELD_TREASURE in treasures_of(U(st, owner_q))
+        return _has_treasure_type(treasures_of(U(st, owner_q)), "shield", (SHIELD_TREASURE,))
 
     if win:
         lines.append(_S.T.FIGHT_WIN)
