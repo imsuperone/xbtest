@@ -225,15 +225,15 @@ function applyMonetTheme(hex) {
   const root = document.documentElement;
 
   if (!isDark) {
-    const bgL = `hsl(${h}, ${Math.min(s * 0.18, 14)}%, 97%)`;
-    const panelL = `hsl(${h}, ${Math.min(s * 0.12, 10)}%, 99.5%)`;
+    const bgL = `hsl(${h}, ${Math.min(s * 0.16, 12)}%, 97.5%)`;
+    const panelL = "#FFFFFF";
     const panelHoverL = `hsl(${h}, ${Math.min(s * 0.18, 14)}%, 95%)`;
     const panel2L = `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 93%)`;
     const panel3L = `hsl(${h}, ${Math.min(s * 0.22, 18)}%, 89%)`;
-    const lineL = `hsla(${h}, ${Math.min(s * 0.25, 20)}%, 30%, 0.12)`;
-    const lineSubtleL = `hsla(${h}, ${Math.min(s * 0.25, 20)}%, 30%, 0.06)`;
-    const priContL = `hsl(${h}, ${Math.max(30, Math.min(80, s * 0.7))}%, 88%)`;
-    const onPriContL = `hsl(${h}, ${Math.max(40, s)}%, 16%)`;
+    const lineL = `hsla(${h}, ${Math.min(s * 0.20, 18)}%, 30%, 0.08)`;
+    const lineSubtleL = `hsla(${h}, ${Math.min(s * 0.20, 18)}%, 30%, 0.04)`;
+    const priContL = `hsl(${h}, ${Math.max(40, Math.min(85, s * 0.75))}%, 90%)`;
+    const onPriContL = `hsl(${h}, ${Math.max(45, s)}%, 15%)`;
 
     root.style.setProperty("--md-sys-color-primary", hex);
     root.style.setProperty("--md-sys-color-on-primary", "#FFFFFF");
@@ -255,22 +255,22 @@ function applyMonetTheme(hex) {
     root.style.setProperty("--acc", hex);
     root.style.setProperty("--acc-hover", `hsl(${h}, ${s}%, ${Math.max(15, l * 0.85)}%)`);
     root.style.setProperty("--acc-active", `hsl(${h}, ${s}%, ${Math.max(10, l * 0.70)}%)`);
-    root.style.setProperty("--accSoft", `rgba(${r}, ${g}, ${b}, 0.10)`);
-    root.style.setProperty("--accSoft2", `rgba(${r}, ${g}, ${b}, 0.20)`);
-    root.style.setProperty("--accBorder", `rgba(${r}, ${g}, ${b}, 0.35)`);
+    root.style.setProperty("--accSoft", `rgba(${r}, ${g}, ${b}, 0.08)`);
+    root.style.setProperty("--accSoft2", `rgba(${r}, ${g}, ${b}, 0.16)`);
+    root.style.setProperty("--accBorder", `rgba(${r}, ${g}, ${b}, 0.30)`);
     root.style.setProperty("--primary-container", priContL);
     root.style.setProperty("--on-primary-container", onPriContL);
   } else {
-    const darkPrimary = `hsl(${h}, ${Math.max(40, Math.min(90, s * 0.85))}%, 78%)`;
-    const bgD = `hsl(${h}, ${Math.min(s * 0.22, 18)}%, 8%)`;
-    const panelD = `hsl(${h}, ${Math.min(s * 0.18, 14)}%, 13%)`;
-    const panelHoverD = `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 18%)`;
-    const panel2D = `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 17%)`;
-    const panel3D = `hsl(${h}, ${Math.min(s * 0.22, 18)}%, 22%)`;
-    const lineD = `hsla(${h}, ${Math.min(s * 0.25, 20)}%, 70%, 0.14)`;
-    const lineSubtleD = `hsla(${h}, ${Math.min(s * 0.25, 20)}%, 70%, 0.07)`;
-    const priContD = `hsl(${h}, ${Math.max(35, s * 0.8)}%, 28%)`;
-    const onPriContD = `hsl(${h}, ${Math.max(35, s * 0.75)}%, 92%)`;
+    const darkPrimary = `hsl(${h}, ${Math.max(45, Math.min(90, s * 0.85))}%, 78%)`;
+    const bgD = `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 6.5%)`;
+    const panelD = `hsl(${h}, ${Math.min(s * 0.18, 14)}%, 10%)`;
+    const panelHoverD = `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 15%)`;
+    const panel2D = `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 14%)`;
+    const panel3D = `hsl(${h}, ${Math.min(s * 0.22, 18)}%, 19%)`;
+    const lineD = `hsla(${h}, ${Math.min(s * 0.20, 18)}%, 70%, 0.10)`;
+    const lineSubtleD = `hsla(${h}, ${Math.min(s * 0.20, 18)}%, 70%, 0.05)`;
+    const priContD = `hsl(${h}, ${Math.max(35, s * 0.8)}%, 24%)`;
+    const onPriContD = `hsl(${h}, ${Math.max(35, s * 0.75)}%, 94%)`;
 
     root.style.setProperty("--md-sys-color-primary", darkPrimary);
     root.style.setProperty("--md-sys-color-on-primary", `hsl(${h}, ${s}%, 15%)`);
@@ -292,9 +292,9 @@ function applyMonetTheme(hex) {
     root.style.setProperty("--acc", darkPrimary);
     root.style.setProperty("--acc-hover", `hsl(${h}, ${s}%, 86%)`);
     root.style.setProperty("--acc-active", `hsl(${h}, ${s}%, 70%)`);
-    root.style.setProperty("--accSoft", `rgba(${r}, ${g}, ${b}, 0.18)`);
-    root.style.setProperty("--accSoft2", `rgba(${r}, ${g}, ${b}, 0.30)`);
-    root.style.setProperty("--accBorder", `rgba(${r}, ${g}, ${b}, 0.40)`);
+    root.style.setProperty("--accSoft", `rgba(${r}, ${g}, ${b}, 0.16)`);
+    root.style.setProperty("--accSoft2", `rgba(${r}, ${g}, ${b}, 0.26)`);
+    root.style.setProperty("--accBorder", `rgba(${r}, ${g}, ${b}, 0.36)`);
     root.style.setProperty("--primary-container", priContD);
     root.style.setProperty("--on-primary-container", onPriContD);
   }

@@ -1,1407 +1,1001 @@
-﻿<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>管理控制台</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>管理控制台 - 小白机器人</title>
   <style>
-    :root {
-      /* Google Material 3 / Android 16 Dynamic Color Tokens */
-      --md-sys-color-primary: #0B57D0;
-      --md-sys-color-on-primary: #FFFFFF;
-      --md-sys-color-primary-container: #D3E3FD;
-      --md-sys-color-on-primary-container: #041E49;
-      --md-sys-color-surface: #F8F9FE;
-      --md-sys-color-surface-container: #FFFFFF;
-      --md-sys-color-surface-container-high: #F0F4F9;
-      --md-sys-color-surface-container-highest: #E9EEF6;
-      --md-sys-color-outline: #74777F;
-      --md-sys-color-outline-variant: #C4C7C5;
+:root {
+  /* Google Material 3 Expressive / Android 16 Tokens */
+  --md-sys-color-primary: #0B57D0;
+  --md-sys-color-on-primary: #FFFFFF;
+  --md-sys-color-primary-container: #D3E3FD;
+  --md-sys-color-on-primary-container: #041E49;
+  --md-sys-color-surface: #F8F9FA;
+  --md-sys-color-surface-container-low: #F3F4F9;
+  --md-sys-color-surface-container: #FFFFFF;
+  --md-sys-color-surface-container-high: #EEF1F6;
+  --md-sys-color-surface-container-highest: #E5E9F0;
+  --md-sys-color-outline: #74777F;
+  --md-sys-color-outline-variant: #C4C7D0;
 
-      --bg: var(--md-sys-color-surface);
-      --panel: var(--md-sys-color-surface-container);
-      --panel-hover: #F2F5FB;
-      --panel2: var(--md-sys-color-surface-container-high);
-      --panel3: var(--md-sys-color-surface-container-highest);
-      --text: #191C20;
-      --text-secondary: #43474E;
-      --muted: #73777F;
-      --muted-soft: #C3C6CF;
-      --line: rgba(115, 119, 127, 0.15);
-      --line-subtle: rgba(115, 119, 127, 0.08);
+  --bg: var(--md-sys-color-surface);
+  --panel: var(--md-sys-color-surface-container);
+  --panel-hover: #F2F5FB;
+  --panel2: var(--md-sys-color-surface-container-high);
+  --panel3: var(--md-sys-color-surface-container-highest);
+  --text: #191C20;
+  --text-secondary: #44474E;
+  --muted: #74777F;
+  --muted-soft: #C4C7D0;
+  --line: rgba(116, 119, 127, 0.12);
+  --line-subtle: rgba(116, 119, 127, 0.06);
 
-      --acc: var(--md-sys-color-primary);
-      --acc-hover: #0842A0;
-      --acc-active: #042B6A;
-      --accSoft: rgba(11, 87, 208, 0.10);
-      --accSoft2: rgba(11, 87, 208, 0.20);
-      --accBorder: rgba(11, 87, 208, 0.35);
-      --primary-container: var(--md-sys-color-primary-container);
-      --on-primary-container: var(--md-sys-color-on-primary-container);
+  --acc: var(--md-sys-color-primary);
+  --acc-hover: #0842A0;
+  --acc-active: #042B6A;
+  --accSoft: rgba(11, 87, 208, 0.08);
+  --accSoft2: rgba(11, 87, 208, 0.16);
+  --accBorder: rgba(11, 87, 208, 0.30);
+  --primary-container: var(--md-sys-color-primary-container);
+  --on-primary-container: var(--md-sys-color-on-primary-container);
 
-      --ok: #146C2E;
-      --okSoft: #C4EED0;
-      --warn: #B35C00;
-      --warnSoft: #FFE2B7;
-      --bad: #BA1A1A;
-      --badSoft: #FFDAD6;
-      --purple: #6750A4;
-      --purpleSoft: #EADDFF;
+  --ok: #146C2E;
+  --okSoft: #C4EED0;
+  --warn: #A25800;
+  --warnSoft: #FFE2BA;
+  --bad: #BA1A1A;
+  --badSoft: #FFDAD6;
+  --purple: #6750A4;
+  --purpleSoft: #EADDFF;
 
-      --shadow-xs: 0 1px 3px 1px rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-      --shadow-sm: 0 3px 8px 2px rgba(0, 0, 0, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.08);
-      --shadow-md: 0 6px 16px 3px rgba(0, 0, 0, 0.07), 0 2px 5px 0 rgba(0, 0, 0, 0.10);
-      --shadow-lg: 0 12px 36px 6px rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.12);
+  --radius-xs: 8px;
+  --radius-sm: 14px;
+  --radius-md: 20px;
+  --radius-lg: 26px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
 
-      --radius-xl: 30px;
-      --radius: 22px;
-      --radius-sm: 16px;
-      --radius-xs: 10px;
-      --radius-full: 9999px;
-    }
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
 
-    [data-theme="dark"] {
-      --md-sys-color-primary: #A8C7FA;
-      --md-sys-color-on-primary: #041E49;
-      --md-sys-color-primary-container: #0842A0;
-      --md-sys-color-on-primary-container: #D3E3FD;
-      --md-sys-color-surface: #111318;
-      --md-sys-color-surface-container: #1E1F25;
-      --md-sys-color-surface-container-high: #24262E;
-      --md-sys-color-surface-container-highest: #2B2D34;
-      --md-sys-color-outline: #8D9199;
-      --md-sys-color-outline-variant: #43474E;
+[data-theme="dark"] {
+  --md-sys-color-primary: #A8C7FA;
+  --md-sys-color-on-primary: #041E49;
+  --md-sys-color-primary-container: #0842A0;
+  --md-sys-color-on-primary-container: #D3E3FD;
+  --md-sys-color-surface: #0E1015;
+  --md-sys-color-surface-container-low: #13161D;
+  --md-sys-color-surface-container: #181B23;
+  --md-sys-color-surface-container-high: #212530;
+  --md-sys-color-surface-container-highest: #2B303E;
+  --md-sys-color-outline: #8D9199;
+  --md-sys-color-outline-variant: #43474E;
 
-      --bg: var(--md-sys-color-surface);
-      --panel: var(--md-sys-color-surface-container);
-      --panel-hover: #262830;
-      --panel2: var(--md-sys-color-surface-container-high);
-      --panel3: var(--md-sys-color-surface-container-highest);
-      --text: #E2E2E9;
-      --text-secondary: #C3C6CF;
-      --muted: #8D9199;
-      --muted-soft: #43474E;
-      --line: rgba(255, 255, 255, 0.12);
-      --line-subtle: rgba(255, 255, 255, 0.06);
+  --bg: var(--md-sys-color-surface);
+  --panel: var(--md-sys-color-surface-container);
+  --panel-hover: #222632;
+  --panel2: var(--md-sys-color-surface-container-high);
+  --panel3: var(--md-sys-color-surface-container-highest);
+  --text: #E3E2E6;
+  --text-secondary: #C4C7D0;
+  --muted: #8D9199;
+  --muted-soft: #43474E;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-subtle: rgba(255, 255, 255, 0.04);
 
-      --acc: var(--md-sys-color-primary);
-      --acc-hover: #C2E7FF;
-      --acc-active: #7FACFA;
-      --accSoft: rgba(168, 199, 250, 0.16);
-      --accSoft2: rgba(168, 199, 250, 0.28);
-      --accBorder: rgba(168, 199, 250, 0.38);
-      --primary-container: var(--md-sys-color-primary-container);
-      --on-primary-container: var(--md-sys-color-on-primary-container);
+  --acc: var(--md-sys-color-primary);
+  --acc-hover: #C2E7FF;
+  --acc-active: #7FACFA;
+  --accSoft: rgba(168, 199, 250, 0.12);
+  --accSoft2: rgba(168, 199, 250, 0.22);
+  --accBorder: rgba(168, 199, 250, 0.32);
+  --primary-container: var(--md-sys-color-primary-container);
+  --on-primary-container: var(--md-sys-color-on-primary-container);
 
-      --ok: #6DD58C;
-      --okSoft: rgba(109, 213, 140, 0.18);
-      --warn: #FFB951;
-      --warnSoft: rgba(255, 185, 81, 0.18);
-      --bad: #FFB4AB;
-      --badSoft: rgba(255, 180, 171, 0.18);
-      --purple: #D0BCFF;
-      --purpleSoft: rgba(208, 188, 255, 0.18);
+  --ok: #6DD58C;
+  --okSoft: rgba(109, 213, 140, 0.16);
+  --warn: #FFB951;
+  --warnSoft: rgba(255, 185, 81, 0.16);
+  --bad: #FFB4AB;
+  --badSoft: rgba(255, 180, 171, 0.16);
+  --purple: #D0BCFF;
+  --purpleSoft: rgba(208, 188, 255, 0.16);
 
-      --shadow-xs: 0 1px 3px 1px rgba(0, 0, 0, 0.3);
-      --shadow-sm: 0 3px 8px 2px rgba(0, 0, 0, 0.4);
-      --shadow-md: 0 6px 16px 3px rgba(0, 0, 0, 0.5);
-      --shadow-lg: 0 12px 36px 6px rgba(0, 0, 0, 0.7);
-    }
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
 
-    * { box-sizing: border-box; }
+* { box-sizing: border-box; }
 
-    ::-webkit-scrollbar { width: 7px; height: 7px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--muted-soft); border-radius: var(--radius-full); }
-    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: "Google Sans", "Google Sans Text", Roboto, -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-size: 13.5px;
+  line-height: 1.55;
+  letter-spacing: 0.1px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s cubic-bezier(0.2, 0, 0, 1), color 0.3s cubic-bezier(0.2, 0, 0, 1);
+  min-height: 100vh;
+}
 
-    body {
-      margin: 0;
-      background-color: var(--bg);
-      background-image: 
-        radial-gradient(at 4% 0%, var(--accSoft) 0px, transparent 42%),
-        radial-gradient(at 96% 100%, var(--primary-container) 0px, transparent 45%);
-      background-attachment: fixed;
-      color: var(--text);
-      font-family: "Google Sans", "Google Sans Text", Roboto, -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-      font-size: 13.5px;
-      line-height: 1.55;
-      letter-spacing: 0.1px;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      transition: background-color 0.35s cubic-bezier(0.2, 0, 0, 1), color 0.3s cubic-bezier(0.2, 0, 0, 1);
-      min-height: 100vh;
-    }
+a { color: var(--acc); text-decoration: none; font-weight: 500; transition: opacity 0.2s ease; }
+a:hover { opacity: 0.85; text-decoration: underline; }
 
-    .wrap {
-      max-width: 1260px;
-      margin: 0 auto;
-      padding: 14px 16px 64px;
-    }
+.wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 16px 20px 48px;
+}
 
-    /* Top App Bar */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-      padding: 14px 24px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-sm);
-      position: sticky;
-      top: 10px;
-      z-index: 40;
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .brand h1 {
-      font-size: 18px;
-      margin: 0;
-      font-weight: 750;
-      letter-spacing: -0.02em;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text);
-    }
-    .brand .sub {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .ver {
-      background: var(--panel2);
-      color: var(--text-secondary);
-      font-size: 11.5px;
-      padding: 3px 10px;
-      border-radius: var(--radius-full);
-      font-weight: 600;
-      border: 1px solid var(--line);
-      letter-spacing: 0.2px;
-    }
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11.5px;
-      padding: 4px 12px;
-      border-radius: var(--radius-full);
-      background: var(--okSoft);
-      color: var(--ok);
-      font-weight: 600;
-      letter-spacing: 0.2px;
-    }
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--ok);
-      animation: pulseDot 2.2s infinite ease-in-out;
-    }
-    @keyframes pulseDot {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.4); opacity: 0.6; }
-    }
-    .header-ctrl {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .iconBtn {
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      color: var(--text);
-      border-radius: var(--radius-full);
-      width: 38px;
-      height: 38px;
-      cursor: pointer;
-      font-size: 14px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .iconBtn:hover {
-      background: var(--panel-hover);
-      border-color: var(--accBorder);
-      transform: scale(1.05);
-    }
-    .iconBtn:active { transform: scale(0.95); }
+/* === Header & Top Bar === */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 4px 4px 8px;
+  flex-wrap: wrap;
+}
 
-    /* Segmented Capsule Tabs Dock */
-    .tabs-wrapper {
-      margin-bottom: 16px;
-      background: var(--panel);
-      padding: 6px 10px;
-      border-radius: var(--radius-full);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow-sm);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      position: relative;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .tab-nav-btn {
-      width: 34px;
-      height: 34px;
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      color: var(--text-secondary);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      padding: 0;
-      flex-shrink: 0;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-      font-size: 18px;
-      line-height: 1;
-      border-radius: var(--radius-full);
-    }
-    .tab-nav-btn:hover {
-      color: var(--acc);
-      background: var(--panel3);
-      transform: scale(1.08);
-    }
-    .tabs {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      scrollbar-width: none;
-      scroll-behavior: smooth;
-      flex: 1;
-      padding: 2px;
-      -webkit-overflow-scrolling: touch;
-      background: transparent;
-      border-radius: var(--radius-full);
-    }
-    .tabs::-webkit-scrollbar { display: none; }
-    .tabs button {
-      background: transparent;
-      border: 1px solid transparent;
-      padding: 8px 18px;
-      font-size: 13px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      white-space: nowrap;
-      font-weight: 600;
-      border-radius: var(--radius-full);
-      transition: all 0.22s cubic-bezier(0.2, 0, 0, 1);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      flex-shrink: 0;
-      line-height: 1.25;
-      user-select: none;
-    }
-    .tabs button:hover {
-      color: var(--text);
-      background: var(--panel2);
-      transform: translateY(-1px);
-    }
-    .tabs button.on {
-      color: var(--on-primary-container) !important;
-      background: var(--primary-container) !important;
-      font-weight: 700;
-      border-color: transparent !important;
-      box-shadow: 0 2px 8px var(--accSoft);
-      transform: scale(1.02);
-    }
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
 
-    .tab { display: none; }
-    .tab.on { display: block; }
+.brand h1 {
+  font-size: 20px;
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-    /* Surface Panels */
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-xl);
-      padding: 22px 26px;
-      margin-bottom: 16px;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .panel h2 {
-      font-size: 16.5px;
-      margin: 0 0 14px;
-      font-weight: 750;
-      letter-spacing: -0.02em;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--text);
-    }
-    .panel h3 {
-      font-size: 14px;
-      margin: 0;
-      color: var(--text);
-      font-weight: 700;
-    }
+.brand .ver {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.02em;
+}
 
-    /* Dashboard Stats KPI Cards */
-    .kpi-grid, .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin: 8px 0 16px;
-    }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      padding: 18px 20px;
-      box-shadow: var(--shadow-xs);
-      position: relative;
-      overflow: hidden;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .card:hover {
-      border-color: var(--accBorder);
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-md);
-    }
-    .card .num {
-      font-size: 26px;
-      font-weight: 800;
-      color: var(--text);
-      letter-spacing: -0.03em;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.2;
-    }
-    .card .lab {
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 4px;
-      font-weight: 600;
-    }
-    .card .ic {
-      font-size: 22px;
-      position: absolute;
-      right: 16px;
-      top: 16px;
-      line-height: 1;
-      opacity: 0.85;
-    }
+.brand .sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
 
-    /* Buttons */
-    button, .btn {
-      background: var(--acc);
-      color: #FFFFFF;
-      border: 1px solid transparent;
-      border-radius: var(--radius-full);
-      padding: 8px 20px;
-      font-size: 13px;
-      cursor: pointer;
-      font-weight: 600;
-      letter-spacing: 0.1px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-      line-height: 1.35;
-      user-select: none;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    }
-    [data-theme="dark"] button:not(.ghost):not(.del),
-    [data-theme="dark"] .btn:not(.ghost):not(.del) {
-      color: #041E49;
-    }
-    button:hover, .btn:hover {
-      background: var(--acc-hover);
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-      transform: translateY(-1px);
-    }
-    button:active, .btn:active {
-      background: var(--acc-active);
-      transform: scale(0.97);
-      box-shadow: none;
-    }
-    button.ghost, .btn.ghost {
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      color: var(--text);
-      box-shadow: none;
-    }
-    button.ghost:hover, .btn.ghost:hover {
-      background: var(--panel-hover);
-      border-color: var(--accBorder);
-      color: var(--acc);
-    }
-    button.sm, .btn.sm {
-      padding: 5px 14px;
-      font-size: 12px;
-      border-radius: var(--radius-full);
-    }
-    button.ghost.del, .btn.ghost.del {
-      color: var(--bad);
-      border-color: rgba(186, 26, 26, 0.25);
-      background: transparent;
-    }
-    button.ghost.del:hover, .btn.ghost.del:hover {
-      background: var(--bad);
-      color: #FFFFFF;
-      border-color: var(--bad);
-    }
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel2);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border: 1px solid var(--line);
+}
 
-    /* Form Fields & Search */
-    input[type=text],
-    input[type=number],
-    input[type=password],
-    input[type=search],
-    input[type=email],
-    select,
-    textarea {
-      background: var(--panel);
-      border: 1.5px solid var(--line);
-      color: var(--text);
-      border-radius: 16px;
-      padding: 9px 16px;
-      font-size: 13.5px;
-      font-family: inherit;
-      outline: none;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-      box-sizing: border-box;
-    }
-    input:hover, select:hover, textarea:hover {
-      border-color: var(--muted);
-      background: var(--panel2);
-    }
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--acc);
-      background: var(--panel);
-      box-shadow: 0 0 0 4px var(--accSoft2);
-    }
-    input::placeholder, textarea::placeholder {
-      color: var(--muted);
-      opacity: 0.75;
-      font-size: 12.5px;
-    }
-    select {
-      padding-right: 32px !important;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2373777f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      background-size: 12px;
-      cursor: pointer;
-    }
-    textarea {
-      border-radius: 16px;
-      line-height: 1.55;
-      resize: vertical;
-      padding: 10px 16px;
-    }
-    .search {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--panel2);
-      border: 1.5px solid var(--line);
-      border-radius: var(--radius-full);
-      padding: 0 18px;
-      height: 44px;
-      margin-bottom: 14px;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .search:hover {
-      background: var(--panel);
-      border-color: var(--muted);
-      box-shadow: var(--shadow-xs);
-    }
-    .search:focus-within {
-      border-color: var(--acc);
-      background: var(--panel);
-      box-shadow: 0 0 0 4px var(--accSoft2);
-    }
-    .search input {
-      border: 0 !important;
-      background: transparent !important;
-      outline: none !important;
-      color: var(--text) !important;
-      font-size: 13.5px !important;
-      font-weight: 400;
-      width: 100% !important;
-      font-family: inherit;
-      padding: 0 !important;
-      box-shadow: none !important;
-      border-radius: 0 !important;
-      line-height: 1.4;
-    }
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
+}
 
-    /* Tables */
-    .table-wrap {
-      overflow-x: auto;
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      margin-top: 12px;
-      background: var(--panel);
-      box-shadow: var(--shadow-xs);
-      -webkit-overflow-scrolling: touch;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-      text-align: left;
-    }
-    th {
-      background: var(--panel2);
-      padding: 13px 18px;
-      color: var(--text-secondary);
-      font-weight: 700;
-      font-size: 12px;
-      letter-spacing: 0.2px;
-      border-bottom: 1px solid var(--line);
-      white-space: nowrap;
-      user-select: none;
-    }
-    td {
-      padding: 12px 18px;
-      border-bottom: 1px solid var(--line-subtle);
-      color: var(--text);
-      vertical-align: middle;
-    }
-    tr:last-child td { border-bottom: 0; }
-    tbody tr:hover { background: var(--accSoft); }
-    td button, td .btn {
-      border-radius: var(--radius-full) !important;
-      padding: 4px 14px !important;
-      font-size: 12px !important;
-      height: 30px !important;
-    }
-    td input, td select {
-      border-radius: 12px !important;
-      padding: 4px 8px !important;
-      font-size: 12.5px !important;
-      height: 30px !important;
-    }
+.header-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
-    /* Toolbars across pages */
-    .toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-    .toolbar h2 {
-      margin: 0;
-      font-size: 17px;
-      font-weight: 750;
-      color: var(--text);
-      letter-spacing: -0.02em;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 0 0 auto;
-    }
-    .toolbar > div {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .toolbar button, .toolbar .btn {
-      border-radius: var(--radius-full) !important;
-      height: 36px;
-      padding: 0 16px;
-      font-size: 12.5px;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-    .toolbar select, .toolbar input[type="text"] {
-      border-radius: var(--radius-full) !important;
-      height: 36px;
-      padding: 0 32px 0 16px;
-      font-size: 12.5px;
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      color: var(--text);
-    }
+/* === Tabs Navigation === */
+.tabs-wrapper {
+  margin-bottom: 18px;
+  background: var(--panel);
+  padding: 6px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
 
-    /* Monet Palette Popover */
-    .monet-popover {
-      position: absolute;
-      top: calc(100% + 10px);
-      right: 0;
-      width: 290px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      box-shadow: var(--shadow-lg);
-      padding: 16px 18px;
-      z-index: 95;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      animation: monetPopIn 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    @keyframes monetPopIn {
-      from { opacity: 0; transform: scale(0.94) translateY(-6px); }
-      to { opacity: 1; transform: scale(1) translateY(0); }
-    }
-    .monet-pop-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-    }
-    .monet-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-    .monet-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      padding: 10px 6px;
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      cursor: pointer;
-      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
-      user-select: none;
-    }
-    .monet-item:hover {
-      background: var(--panel-hover);
-      transform: translateY(-2px);
-      border-color: var(--accBorder);
-    }
-    .monet-item.on {
-      border-color: var(--acc) !important;
-      background: var(--primary-container) !important;
-      box-shadow: 0 0 0 2px var(--acc);
-    }
-    .monet-item.on span {
-      color: var(--on-primary-container) !important;
-      font-weight: 700;
-    }
-    .monet-swatch {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
-      border: 2px solid #FFFFFF;
-    }
-    [data-theme="dark"] .monet-swatch { border-color: rgba(255, 255, 255, 0.2); }
-    .monet-item span {
-      font-size: 11.5px;
-      color: var(--text-secondary);
-      font-weight: 600;
-    }
-    .monet-custom-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-top: 12px;
-      border-top: 1px solid var(--line-subtle);
-    }
+.tab-nav-btn {
+  width: 32px;
+  height: 32px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  font-size: 16px;
+  border-radius: var(--radius-full);
+}
 
-    /* Badges */
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 3px 10px;
-      border-radius: var(--radius-full);
-      font-size: 11.5px;
-      font-weight: 650;
-      line-height: 1.35;
-      letter-spacing: 0.2px;
-    }
-    .badge-primary { background: var(--accSoft); color: var(--acc); }
-    .badge-success { background: var(--okSoft); color: var(--ok); }
-    .badge-warn { background: var(--warnSoft); color: var(--warn); }
-    .badge-bad, .badge-danger { background: var(--badSoft); color: var(--bad); }
-    .badge-purple { background: var(--purpleSoft); color: var(--purple); }
+.tab-nav-btn:hover {
+  color: var(--acc);
+  background: var(--panel3);
+  transform: scale(1.05);
+}
 
-    /* Android 16 Expressive Switch */
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 52px;
-      height: 32px;
-      flex-shrink: 0;
-    }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider-toggle {
-      position: absolute;
-      cursor: pointer;
-      inset: 0;
-      background: var(--panel3);
-      border: 2px solid var(--muted-soft);
-      border-radius: var(--radius-full);
-      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-      box-sizing: border-box;
-    }
-    .slider-toggle:before {
-      position: absolute;
-      content: "";
-      height: 16px;
-      width: 16px;
-      left: 6px;
-      bottom: 6px;
-      background: var(--muted);
-      border-radius: 50%;
-      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-    }
-    input:checked + .slider-toggle {
-      background: var(--acc);
-      border-color: var(--acc);
-    }
-    input:checked + .slider-toggle:before {
-      transform: translateX(20px);
-      background: #FFFFFF;
-      width: 24px;
-      height: 24px;
-      left: 2px;
-      bottom: 2px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    }
-    [data-theme="dark"] input:checked + .slider-toggle:before { background: #041E49; }
+.tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+  flex: 1;
+  padding: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+.tabs::-webkit-scrollbar { display: none; }
 
-    /* Configuration Settings Flow */
-    .cfg-sec {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 26px;
-      padding: 22px 26px;
-      margin-bottom: 18px;
-      box-shadow: var(--shadow-xs);
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .cfg-sec:hover {
-      box-shadow: var(--shadow-sm);
-      border-color: var(--accBorder);
-    }
-    .cfg-sec h3 {
-      font-size: 15px;
-      font-weight: 750;
-      color: var(--text);
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--line-subtle);
-      margin: 0 0 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .cfg-row {
-      background: var(--panel2);
-      border: 1px solid var(--line-subtle);
-      border-radius: 18px;
-      padding: 14px 20px;
-      margin-bottom: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .cfg-row:hover {
-      background: var(--panel-hover);
-      border-color: var(--line);
-      transform: translateY(-1px);
-    }
-    .cfg-row:last-child { margin-bottom: 0; }
-    .cfg-row > label {
-      font-size: 13.5px;
-      font-weight: 650;
-      color: var(--text);
-    }
-    .cfg-row small {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-    .cfg-row.has-checkbox {
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .cfg-row.has-checkbox small {
-      width: 100%;
-      margin-top: 2px;
-    }
-    .cfg-cat {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding-bottom: 8px;
-      margin-bottom: 16px;
-      scrollbar-width: none;
-    }
-    .cfg-cat::-webkit-scrollbar { display: none; }
-    .cfg-cat button {
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      color: var(--text-secondary);
-      border-radius: var(--radius-full);
-      padding: 7px 18px;
-      font-size: 12.5px;
-      font-weight: 600;
-      white-space: nowrap;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .cfg-cat button:hover {
-      background: var(--panel3);
-      color: var(--text);
-      transform: translateY(-1px);
-    }
-    .cfg-cat button.on {
-      background: var(--primary-container) !important;
-      color: var(--on-primary-container) !important;
-      border-color: transparent !important;
-      font-weight: 700;
-      box-shadow: 0 2px 6px var(--accSoft);
-    }
+.tabs button {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 8px 18px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  line-height: 1.25;
+  user-select: none;
+}
 
-    /* Overview Quick Config & Guide */
-    .ov-req {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-    }
-    .ov-field {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      background: var(--panel2);
-      padding: 12px 16px;
-      border-radius: 16px;
-      border: 1px solid var(--line-subtle);
-    }
-    .ov-field label {
-      font-size: 12px;
-      font-weight: 650;
-      color: var(--text-secondary);
-    }
-    .ov-field small { font-size: 11px; color: var(--muted); }
+.tabs button:hover {
+  color: var(--text);
+  background: var(--panel2);
+}
 
-    /* Command Details & Tree */
-    .cmd-block {
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      margin-bottom: 12px;
-      overflow: hidden;
-      background: var(--panel2);
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .cmd-block > summary {
-      padding: 14px 20px;
-      cursor: pointer;
-      font-weight: 650;
-      font-size: 14px;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      transition: background 0.15s ease;
-    }
-    .cmd-block > summary:hover { background: var(--panel-hover); }
-    .cmd-block[open] { border-color: var(--accBorder); }
-    .cmd-block[open] > summary {
-      border-bottom: 1px solid var(--line-subtle);
-      background: var(--panel);
-    }
-    .cmd-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-full);
-      padding: 5px 14px;
-      margin: 3px 4px 3px 0;
-      font-size: 12px;
-      font-weight: 550;
-      text-decoration: none;
-      color: var(--text);
-      cursor: pointer;
-      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
-      box-shadow: var(--shadow-xs);
-    }
-    .cmd-tag:hover {
-      border-color: transparent;
-      color: var(--on-primary-container);
-      background: var(--primary-container);
-      transform: translateY(-1px);
-    }
-    .cmd-tag.off { opacity: .45; text-decoration: line-through; background: var(--panel2); }
-    .cmd-tag.custom { border-style: dashed; color: var(--acc); border-color: var(--acc); }
-    .cmd-wake {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin: 10px 16px 8px;
-      padding: 10px 16px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      flex-wrap: wrap;
-    }
-    .cmd-wake-item { display: flex; align-items: center; gap: 6px; }
-    .cmd-wake-item label { color: var(--text-secondary); font-size: 12px; font-weight: 600; }
-    .cmd-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 18px 14px; }
-    .cmd-dflt {
-      color: var(--muted);
-      font-size: 11.5px;
-      margin-top: 4px;
-      padding: 8px 12px;
-      background: var(--panel);
-      border-radius: 12px;
-      border: 1px dashed var(--line);
-      line-height: 1.45;
-    }
+.tabs button.on {
+  color: var(--on-primary-container) !important;
+  background: var(--primary-container) !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px var(--accSoft);
+}
 
-    /* Shops & Pools */
-    .responsive-shop-grid details.panel {
-      border-radius: 24px;
-      padding: 18px 22px;
-      margin-bottom: 14px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow-xs);
-    }
-    .s-fields {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      background: var(--panel2);
-      border: 1px solid var(--line-subtle);
-      border-radius: 18px;
-      padding: 12px 16px;
-      transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .s-fields:hover {
-      background: var(--panel-hover);
-      border-color: var(--line);
-    }
-    .s-row { display: flex; flex-direction: column; gap: 4px; flex: 0 1 90px; }
-    .s-row small { color: var(--muted); font-size: 11px; font-weight: 600; }
-    .s-row input { width: 100%; padding: 6px 10px; font-size: 12px; border-radius: 12px; }
-    .s-del {
-      background: var(--badSoft);
-      color: var(--bad);
-      border: 1px solid transparent;
-      border-radius: var(--radius-full);
-      padding: 6px 14px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-left: auto;
-      transition: all 0.15s ease;
-    }
-    .s-del:hover { background: var(--bad); color: #FFFFFF; }
+.tab { display: none; }
+.tab.on { display: block; }
 
-    /* Spirits & Atlas */
-    .s-mapcard {
-      border-radius: 20px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow-xs);
-      padding: 16px 18px;
-      margin-bottom: 12px;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .s-mapcard:hover { border-color: var(--accBorder); transform: translateY(-2px); }
-    .s-maphead {
-      font-size: 14.5px;
-      font-weight: 750;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-    .s-mapdrop {
-      border-radius: var(--radius-full);
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      padding: 3px 10px;
-      font-size: 11.5px;
-      font-weight: 550;
-    }
-    .sp-card {
-      border-radius: 18px;
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      padding: 12px 14px;
-      transition: all 0.15s ease;
-    }
+/* === Panels & Cards === */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: 24px 28px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-sm);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
 
-    /* Backups List */
-    .bk-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .bk-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 18px;
-      background: var(--panel2);
-      border: 1px solid var(--line-subtle);
-      border-radius: 20px;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-      cursor: pointer;
-    }
-    .bk-item:hover {
-      background: var(--panel-hover);
-      border-color: var(--accBorder);
-      transform: translateY(-1px);
-    }
-    .bk-item.selected {
-      border-color: var(--acc) !important;
-      background: var(--primary-container) !important;
-    }
-    .bk-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 14px;
-      background: var(--panel);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-    .bk-info { display: flex; flex-direction: column; gap: 3px; flex: 1; margin: 0 14px; }
-    .bk-name { font-size: 13.5px; font-weight: 650; color: var(--text); }
-    .bk-meta { font-size: 12px; color: var(--muted); }
+/* === Page Headers & Layout === */
+.m3-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
 
-    /* File Manager & Gallery */
-    .fcard {
-      border-radius: 20px;
-      background: var(--panel2);
-      border: 1px solid var(--line-subtle);
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .fcard:hover {
-      background: var(--panel-hover);
-      border-color: var(--accBorder);
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-sm);
-    }
-    .fcard.selected {
-      border-color: var(--acc) !important;
-      background: var(--primary-container) !important;
-      box-shadow: 0 0 0 2px var(--acc);
-    }
-    .fcard.selected .fn { color: var(--on-primary-container) !important; font-weight: 700; }
-    .fi {
-      width: 58px;
-      height: 58px;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 30px;
-      overflow: hidden;
-      background: var(--panel);
-    }
-    .fn { font-size: 12.5px; font-weight: 600; color: var(--text); margin-top: 8px; word-break: break-all; }
-    .crumbs {
-      background: var(--panel2);
-      padding: 7px 16px;
-      border-radius: var(--radius-full);
-      font-weight: 500;
-      font-size: 12px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border: 1px solid var(--line);
-    }
+.m3-page-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 
-    /* Logs Console */
-    .log-terminal {
-      background: var(--panel2);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      padding: 16px 20px;
-      font-family: "JetBrains Mono", Consolas, monospace;
-      max-height: 65vh;
-      overflow-y: auto;
-    }
-    .log-line {
-      padding: 5px 8px;
-      border-radius: 8px;
-      font-size: 12px;
-      line-height: 1.55;
-      transition: background 0.1s ease;
-    }
-    .log-line:hover { background: var(--panel); }
-    .log-ts { color: var(--muted); margin-right: 8px; font-size: 11px; }
+.m3-page-header-info h2 {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-    /* Unified Android 16 Expressive Modal System */
-    #cmdModal, #appModal, .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 80;
-      padding: 16px;
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-    }
-    #cmdModal.show, #appModal.show { display: flex; }
-    .cmd-modal-box, .m3-modal-box {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 34px !important;
-      padding: 0;
-      width: min(580px, 94vw);
-      max-height: 86vh;
-      display: flex;
-      flex-direction: column;
-      box-shadow: var(--shadow-lg);
-      overflow: hidden;
-      animation: m3DialogPop 0.22s cubic-bezier(0.2, 0, 0, 1);
-    }
-    @keyframes m3DialogPop {
-      from { opacity: 0; transform: scale(0.92); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    .cmd-modal-header, .m3-modal-header {
-      padding: 20px 24px 16px;
-      border-bottom: 1px solid var(--line-subtle);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .cmd-modal-header h3, .m3-modal-header h2 {
-      margin: 0;
-      font-size: 16.5px;
-      font-weight: 750;
-      color: var(--text);
-    }
-    .cmd-modal-body, .m3-modal-body {
-      padding: 20px 24px;
-      overflow-y: auto;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .cmd-modal-footer, .m3-modal-footer {
-      padding: 16px 24px;
-      border-top: 1px solid var(--line-subtle);
-      background: var(--panel2);
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 10px;
-    }
-    .cmd-modal-footer button, .m3-modal-footer button {
-      border-radius: var(--radius-full);
-      height: 40px;
-      padding: 0 22px;
-      font-weight: 600;
-      font-size: 13px;
-    }
-    .m3-icon-circle {
-      width: 44px;
-      height: 44px;
-      border-radius: 16px;
-      background: var(--primary-container);
-      color: var(--on-primary-container);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      flex-shrink: 0;
-    }
-    .apple-card, .m3-card {
-      background: var(--panel2);
-      border: 1px solid var(--line-subtle);
-      border-radius: 20px;
-      padding: 16px 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .apple-card-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .apple-card-divider { height: 1px; background: var(--line-subtle); margin: 2px 0; }
-    .apple-card-field { display: flex; flex-direction: column; gap: 5px; }
-    .apple-card-field > label { font-size: 12px; color: var(--text-secondary); font-weight: 650; }
-    .apple-card-field input, .apple-card-field textarea {
-      width: 100%;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 8px 12px;
-      font-size: 13px;
-      color: var(--text);
-    }
-    .cmd-reply-preview {
-      margin-top: 6px;
-      padding: 12px 16px;
-      background: var(--panel);
-      border: 1px solid var(--accBorder);
-      border-radius: 16px;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-    .cmd-reply-preview-label { font-weight: 700; font-size: 12px; color: var(--acc); margin-bottom: 4px; }
-    .cmd-reply-preview-content { color: var(--text-secondary); white-space: pre-wrap; word-break: break-all; }
-    .var-tag {
-      cursor: pointer;
-      background: var(--panel);
-      border: 1px solid var(--accBorder);
-      padding: 4px 10px;
-      border-radius: var(--radius-full);
-      font-size: 11.5px;
-      color: var(--acc);
-      font-weight: 600;
-      transition: all 0.15s ease;
-      user-select: none;
-    }
-    .var-tag:hover { background: var(--acc); color: #FFFFFF; }
-    .cmd-nums {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 8px;
-      margin-top: 6px;
-    }
-    .cmd-nums label.cnum {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--text-secondary);
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 7px 12px;
-    }
-    .cmd-nums input {
-      width: 75px;
-      padding: 4px 8px;
-      font-size: 12px;
-      text-align: right;
-      border-radius: 10px;
-    }
-    .hub-mod-card {
-      background: var(--panel2);
-      border: 1px solid var(--line-subtle);
-      border-radius: 20px;
-      padding: 16px 18px;
-      margin-bottom: 12px;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .hub-mod-card:hover {
-      background: var(--panel-hover);
-      border-color: var(--accBorder);
-      transform: translateY(-2px);
-    }
-    .hub-mod-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .hub-mod-desc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
-    .m3-summary-banner {
-      margin-top: 14px;
-      padding: 14px 18px;
-      background: var(--primary-container);
-      color: var(--on-primary-container);
-      border-radius: 18px;
-      font-weight: 600;
-      font-size: 13px;
-    }
+.m3-page-header-info .m3-subtitle {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 500;
+  line-height: 1.4;
+}
 
-    /* Toast Notification */
-    #toast {
-      position: fixed;
-      left: 50%;
-      bottom: 26px;
-      transform: translateX(-50%) translateY(16px);
-      background: var(--panel);
-      color: var(--text);
-      padding: 12px 26px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-full);
-      font-size: 13.5px;
-      font-weight: 650;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1);
-      box-shadow: var(--shadow-lg);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-    }
-    .hint { color: var(--muted); font-size: 12px; margin: 6px 0; line-height: 1.5; }
-    .msg { margin-left: 8px; font-size: 12.5px; font-weight: 600; }
-    .ok { color: var(--ok); }
-    .bad { color: var(--bad); }
-    #footErr { color: var(--bad); margin-top: 14px; font-size: 12.5px; font-weight: 500; }
+.m3-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
-    /* Responsive Mobile and Tablet Rules */
-    @media (max-width: 860px) {
-      .wrap { padding: 10px 10px 48px; }
-      header { padding: 12px 16px; border-radius: 22px; }
-      .panel { padding: 16px 18px; border-radius: 22px; }
-      .cfg-sec { padding: 16px 18px; border-radius: 22px; }
-      .cfg-row { padding: 12px 16px; border-radius: 16px; }
-      .cmd-modal-box, .m3-modal-box { border-radius: 26px !important; }
-      .cmd-modal-header, .m3-modal-header { padding: 16px 18px; }
-      .cmd-modal-body, .m3-modal-body { padding: 16px 18px; }
-      .cmd-modal-footer, .m3-modal-footer { padding: 14px 18px; }
-      .kpi-grid, .cards { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 540px) {
-      .kpi-grid, .cards { grid-template-columns: 1fr; }
-      .toolbar { flex-direction: column; align-items: stretch; }
-      .toolbar > div { justify-content: flex-start; }
-    }
-</style>
+/* === Filter Dock === */
+.m3-filter-dock {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  padding: 4px 6px 4px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  transition: all 0.2s ease;
+}
 
+.m3-filter-dock:focus-within {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--accSoft);
+  background: var(--panel);
+}
+
+.m3-filter-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.m3-filter-search span {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.m3-filter-search input {
+  border: none !important;
+  background: transparent !important;
+  color: var(--text) !important;
+  font-size: 13px !important;
+  outline: none !important;
+  width: 100% !important;
+  padding: 7px 0 !important;
+  box-shadow: none !important;
+  height: auto !important;
+}
+
+.m3-filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.m3-filter-chips select {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  height: 32px;
+}
+
+.m3-filter-chips select:hover {
+  border-color: var(--accBorder);
+  background: var(--panel-hover);
+}
+
+/* Backwards compatibility for search & toolbar classes */
+.search {
+  display: flex;
+  align-items: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  padding: 0 16px;
+  height: 38px;
+  margin-bottom: 14px;
+  gap: 8px;
+}
+.search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--text);
+  font-size: 13px;
+  flex: 1;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.toolbar h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 750;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+/* === Info Banners & Hints === */
+.m3-info-banner, .hint {
+  background: var(--panel2);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint strong { color: var(--text); }
+
+/* === KPI Cards === */
+.cards, .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 8px 0 18px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-xs);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.card:hover {
+  border-color: var(--accBorder);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.card .num {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.card .lab {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.card .ic {
+  font-size: 18px;
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--accSoft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* === Buttons === */
+button, .btn {
+  border-radius: var(--radius-full);
+  height: 36px;
+  padding: 0 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  border: none;
+  outline: none;
+  background: var(--acc);
+  color: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+button:hover, .btn:hover {
+  background: var(--acc-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+button:active, .btn:active {
+  transform: translateY(0);
+  background: var(--acc-active);
+}
+
+button.ghost, .btn.ghost {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  box-shadow: none;
+}
+
+button.ghost:hover, .btn.ghost:hover {
+  background: var(--panel-hover);
+  border-color: var(--accBorder);
+  color: var(--acc);
+}
+
+button.del, .btn.del, button.ghost.del {
+  background: var(--badSoft) !important;
+  color: var(--bad) !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+
+button.del:hover, .btn.del:hover, button.ghost.del:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+button.tonal, .btn.tonal {
+  background: var(--primary-container) !important;
+  color: var(--on-primary-container) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+button.tonal:hover, .btn.tonal:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+button.sm, .btn.sm {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 11.5px;
+}
+
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: all 0.2s ease;
+}
+
+.iconBtn:hover {
+  background: var(--panel-hover);
+  border-color: var(--accBorder);
+  color: var(--acc);
+  transform: scale(1.06);
+}
+
+/* Dark mode button text color */
+[data-theme="dark"] button:not(.ghost):not(.del):not(.tonal),
+[data-theme="dark"] .btn:not(.ghost):not(.del):not(.tonal) {
+  color: #041E49;
+}
+
+/* === Form Controls === */
+input[type="text"], input[type="password"], input[type="number"], select, textarea {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--accSoft);
+  background: var(--panel);
+}
+
+/* === Tables === */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  margin-top: 12px;
+  background: var(--panel);
+  box-shadow: var(--shadow-xs);
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+th {
+  background: var(--panel2);
+  color: var(--text-secondary);
+  font-weight: 700;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line-subtle);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accSoft); }
+
+/* === Badges === */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11.5px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+.badge-primary { background: var(--accSoft); color: var(--acc); }
+.badge-success { background: var(--okSoft); color: var(--ok); }
+.badge-warn { background: var(--warnSoft); color: var(--warn); }
+.badge-bad { background: var(--badSoft); color: var(--bad); }
+.badge-purple { background: var(--purpleSoft); color: var(--purple); }
+
+/* === Switch Toggle (M3 Pill) === */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+  flex-shrink: 0;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider-toggle {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--panel3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+.slider-toggle:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+input:checked + .slider-toggle {
+  background: var(--acc);
+  border-color: var(--acc);
+}
+input:checked + .slider-toggle:before {
+  transform: translateX(20px);
+  background: #FFFFFF;
+}
+
+/* === Pager === */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+/* === Command Blocks === */
+.cmd-block {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  margin-bottom: 12px;
+  overflow: hidden;
+  background: var(--panel2);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.cmd-block > summary {
+  padding: 14px 20px;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 14px;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text);
+}
+.cmd-block > summary:hover { background: var(--panel-hover); }
+
+/* === Shop Responsive Grid === */
+.responsive-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+/* === File Browser & Backup Cards === */
+.fcard {
+  border-radius: var(--radius-md);
+  background: var(--panel2);
+  border: 1px solid var(--line-subtle);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.fcard:hover {
+  background: var(--panel-hover);
+  border-color: var(--accBorder);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+.fcard.selected {
+  border-color: var(--acc) !important;
+  background: var(--primary-container) !important;
+  box-shadow: 0 0 0 2px var(--acc);
+}
+
+.bk-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--panel2);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.bk-item:hover {
+  background: var(--panel-hover);
+  border-color: var(--accBorder);
+  transform: translateY(-1px);
+}
+.bk-item.selected {
+  border-color: var(--acc) !important;
+  background: var(--primary-container) !important;
+}
+
+/* === Modals (M3 Squircle Dialogs) === */
+#appModal, .modal-overlay, #cmdModal, #exportHubModal, #importHubModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+  padding: 16px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+#appModal.show, #cmdModal.show, #exportHubModal.show, #importHubModal.show {
+  display: flex;
+}
+
+.modal-box, .cmd-modal-card, .m3-dialog-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 620px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  overflow: hidden;
+  animation: m3DialogIn 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes m3DialogIn {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-head, .cmd-modal-header, .m3-dialog-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-head h3, .cmd-modal-header h3, .m3-dialog-header h3 {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 750;
+  color: var(--text);
+}
+
+.modal-body, .cmd-modal-body, .m3-dialog-body {
+  padding: 22px 26px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-foot, .cmd-modal-footer, .m3-dialog-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--line-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background: var(--panel2);
+}
+
+/* === Monet Palette Card === */
+.monet-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 18px;
+  z-index: 100;
+  width: 310px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  animation: m3DialogIn 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.monet-pop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.monet-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.monet-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+.monet-item:hover {
+  background: var(--panel2);
+  transform: translateY(-2px);
+}
+.monet-item.on {
+  background: var(--primary-container);
+  border-color: var(--acc);
+}
+.monet-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+.monet-item.on .monet-swatch {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5px var(--acc);
+}
+.monet-item span {
+  font-size: 11.5px;
+  color: var(--text);
+  font-weight: 600;
+}
+.monet-custom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-subtle);
+}
+
+/* === Responsive Adjustments === */
+@media (max-width: 768px) {
+  .wrap { padding: 12px 14px 40px; }
+  .panel { padding: 18px 16px; border-radius: var(--radius-lg); }
+  .m3-page-header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .m3-action-bar { width: 100%; }
+  .m3-filter-dock { flex-direction: column; align-items: stretch; border-radius: var(--radius-lg); padding: 10px 14px; }
+  .m3-filter-chips { width: 100%; justify-content: flex-start; }
+  .cards { grid-template-columns: repeat(2, 1fr); }
+  .hdr-btn-full { display: none !important; }
+  .hdr-btn-short { display: inline !important; }
+}
+@media (min-width: 769px) {
+  .hdr-btn-short { display: none !important; }
+}
+@media (max-width: 480px) {
+  .cards { grid-template-columns: 1fr; }
+}
+
+  </style>
 </head>
 <body>
   <div class="wrap">
@@ -1413,8 +1007,8 @@
         </div>
       </div>
       <div class="header-ctrl" style="position:relative">
-        <button id="btnOpenExportHub" class="btn sm" style="background:var(--primary-container);color:var(--on-primary-container);border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px" title="打开模块化数据与预设导出中心"><span class="hdr-btn-full">📦 导出/预设中心</span><span class="hdr-btn-short">📦 导出</span></button>
-        <button id="btnOpenImportHub" class="ghost sm" style="display:inline-flex;align-items:center;gap:5px" title="智能选择性导入文件"><span class="hdr-btn-full">📤 智能导入</span><span class="hdr-btn-short">📤 导入</span></button>
+        <button id="btnOpenExportHub" class="btn sm tonal" title="打开模块化数据与预设导出中心"><span class="hdr-btn-full">📦 导出/预设中心</span><span class="hdr-btn-short">📦 导出</span></button>
+        <button id="btnOpenImportHub" class="ghost sm" title="智能选择性导入文件"><span class="hdr-btn-full">📤 智能导入</span><span class="hdr-btn-short">📤 导入</span></button>
         <button class="iconBtn" id="themePaletteBtn" title="动态调色盘 (Material You / Android 16)">🎨</button>
         <button class="iconBtn" id="themeBtn" title="切换深浅主题">☀</button>
 
@@ -1483,114 +1077,184 @@
         <button data-tab="spirits">📖 图鉴</button>
         <button data-tab="backups">💾 备份管理</button>
         <button data-tab="imgs">📁 根目录浏览</button>
-        <button data-tab="logs">📜 运行日志</button>
+        <button data-tab="logs">📜 日志</button>
         <button data-tab="about">ℹ️ 关于</button>
       </div>
       <button class="tab-nav-btn" id="tabNavNext" title="向后滚动">›</button>
     </div>
 
-    <!-- 总览 -->
-    <!-- 📊 全群数据总览 -->
+
+    <!-- 1. 总览 Tab -->
     <div class="tab on" id="tab-overview">
-      <div class="panel" style="margin-bottom:12px">
-        <div class="toolbar" style="margin-bottom:8px">
-          <h2>📊 全群数据总览</h2>
-          <div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;align-items:center">
+      <div class="panel">
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>📊 全群数据总览</h2>
+            <div class="m3-subtitle">实时呈现全群资金体量、资产沉淀与核心系统运行指标</div>
+          </div>
+          <div class="m3-action-bar">
             <button id="btnDbDoctorOv" class="ghost" style="color:var(--ok);border-color:var(--okSoft);font-weight:600">🩺 数据库体检与整理</button>
           </div>
         </div>
 
-        <!-- 统一 6 大核心指标卡片 (纯净无冗余) -->
-        <div class="kpi-grid" id="analyticsKpiGrid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;margin:8px 0 14px">
+        <div class="kpi-grid" id="analyticsKpiGrid">
           <div class="card">
-            <div style="font-size:11.5px;color:var(--muted)">👥 玩家与群聊规模</div>
-            <div id="anaTotalUsers" style="font-size:20px;font-weight:700;color:var(--text);margin-top:3px">-</div>
-            <div id="anaTotalGroups" style="font-size:11px;color:var(--acc);margin-top:2px">开通群聊: -</div>
+            <div class="ic">👥</div>
+            <div class="lab">已收录总用户</div>
+            <div class="num" id="anaTotalUsers">-</div>
+            <div id="anaTotalGroups" style="font-size:11.5px;color:var(--acc);margin-top:4px;font-weight:600">开通群聊: -</div>
           </div>
           <div class="card">
-            <div style="font-size:11.5px;color:var(--muted)">💰 全服流通货币池</div>
-            <div id="anaTotalEconomy" style="font-size:20px;font-weight:700;color:var(--text);margin-top:3px">-</div>
-            <div id="anaAvgMoney" style="font-size:11px;color:var(--acc);margin-top:2px">人均: -</div>
+            <div class="ic">💰</div>
+            <div class="lab">全群总资金流通</div>
+            <div class="num" id="anaTotalEconomy">-</div>
+            <div id="anaAvgMoney" style="font-size:11.5px;color:var(--acc);margin-top:4px;font-weight:600">人均: -</div>
           </div>
           <div class="card">
-            <div style="font-size:11.5px;color:var(--muted)">🏦 银行总储蓄池</div>
-            <div id="anaBankDeposit" style="font-size:20px;font-weight:700;color:var(--ok);margin-top:3px">-</div>
-            <div id="anaBankUsers" style="font-size:11px;color:var(--muted);margin-top:2px">储蓄玩家: -</div>
+            <div class="ic">🏦</div>
+            <div class="lab">银行总存款</div>
+            <div class="num" id="anaBankDeposit" style="color:var(--ok)">-</div>
+            <div id="anaBankUsers" style="font-size:11.5px;color:var(--muted);margin-top:4px;font-weight:600">储蓄玩家: -</div>
           </div>
           <div class="card">
-            <div style="font-size:11.5px;color:var(--muted)">⛓️ 奴隶生态与总身价</div>
-            <div id="anaSlaveWorth" style="font-size:20px;font-weight:700;color:#F59E0B;margin-top:3px">-</div>
-            <div id="anaSlaveCount" style="font-size:11px;color:var(--muted);margin-top:2px">奴隶/奴隶主: -</div>
+            <div class="ic">⛓</div>
+            <div class="lab">奴隶总身价</div>
+            <div class="num" id="anaSlaveWorth" style="color:var(--warn)">-</div>
+            <div id="anaSlaveCount" style="font-size:11.5px;color:var(--muted);margin-top:4px;font-weight:600">奴隶/奴隶主: -</div>
           </div>
           <div class="card">
-            <div style="font-size:11.5px;color:var(--muted)">📅 累计签到人次</div>
-            <div id="anaSignCount" style="font-size:20px;font-weight:700;color:var(--text);margin-top:3px">-</div>
+            <div class="ic">📅</div>
+            <div class="lab">全群签到累计</div>
+            <div class="num" id="anaSignCount">-</div>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:4px;font-weight:600">活跃打卡统计</div>
           </div>
         </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px">
+        <div class="panel" style="margin-bottom:0">
+          <div class="m3-page-header">
+            <div class="m3-page-header-info">
+              <h2>⚡ 必要核心配置（快捷编辑）</h2>
+              <div class="m3-subtitle">展示运行最核心必须填写的项，更多细节请到「配置」Tab</div>
+            </div>
+          </div>
+          <div id="ovReq" class="ov-req"></div>
+        </div>
+
+        <div class="panel" style="margin-bottom:0">
+          <div class="m3-page-header">
+            <div class="m3-page-header-info">
+              <h2>💡 快速指引</h2>
+              <div class="m3-subtitle">三大模块体系架构与玩法指引</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="m3-info-banner" style="margin-bottom:0">· <strong>总览</strong>：实时呈现全群资金规模、银行存款与奴隶总身价。</div>
+            <div class="m3-info-banner" style="margin-bottom:0">· <strong>智能平衡</strong>：内置休闲高福利/标准/硬核三大模式，一键统筹全28大系统玩法与冷却时间。</div>
+            <div class="m3-info-banner" style="margin-bottom:0">· <strong>图鉴</strong>：宝物/精灵统一管理，改动按各自范围保存，互不干扰；武器坐骑请到商城管理。</div>
+          </div>
+        </div>
+      </div>
     </div>
 
-            <div class="panel">
-        <h2>⚡ 必要核心配置（快捷编辑）</h2>
-        <div id="ovReq" class="ov-req"></div>
-      </div>
+
+    <!-- 2. 排行榜 Tab -->
+    <div class="tab" id="tab-rank">
       <div class="panel">
-        <h2>💡 快速指引</h2>
-        <div class="hint">· <strong>总览</strong>：实时呈现全群资金规模、银行存款与奴隶总身价。</div>
-        <div class="hint">· <strong>智能平衡</strong>：内置休闲高福利/标准/硬核三大模式，一键统筹全28大系统玩法与冷却时间。</div>
-        <div class="hint">· <strong>图鉴</strong>：宝物/精灵统一管理，改动按各自范围保存，互不干扰；武器坐骑请到商城管理。</div>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>🏆 全服荣誉排行榜</h2>
+            <div class="m3-subtitle">多维度实时天梯排位、身价财富榜单</div>
+          </div>
+          <div class="m3-action-bar">
+            <button id="btnRank" class="ghost">🔄 刷新数据</button>
+          </div>
+        </div>
+
+        <div class="m3-filter-dock">
+          <div class="m3-filter-search">
+            <span>🏆</span>
+            <span style="font-size:12.5px;font-weight:600;color:var(--text-secondary)">排行维度：</span>
+          </div>
+          <div class="m3-filter-chips">
+            <select id="rankType" style="min-width:140px">
+              <option value="money">💰 个人财富</option>
+              <option value="sign">📅 签到次数</option>
+              <option value="stamina">⚡ 体力数值</option>
+              <option value="charm">💄 魅力指数</option>
+              <option value="deposit">🏦 银行存款</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>排名</th><th>QQ</th><th>昵称</th><th>数值</th></tr></thead>
+            <tbody id="rankBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- 用户 -->
+
+    <!-- 3. 用户管理 Tab -->
     <div class="tab" id="tab-users">
       <div class="panel">
-        <div class="toolbar">
-          <h2>用户 · 数据编辑</h2>
-          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-            <label style="color:var(--muted);font-size:12px;font-weight:500">群号：</label>
-            <select id="userGidFilter" style="padding:3px 6px;font-size:11.5px;min-width:120px;max-width:170px">
-              <option value="">全部群</option>
-            </select>
-            <label style="color:var(--muted);font-size:12px;font-weight:500;margin-left:4px">排序：</label>
-            <select id="userSort" style="padding:3px 6px;font-size:11.5px;min-width:100px">
-              <option value="money_desc">货币 ↓ (从多到少)</option>
-              <option value="money_asc">货币 ↑ (从少到多)</option>
-              <option value="deposit_desc">存款 ↓ (从多到少)</option>
-              <option value="deposit_asc">存款 ↑ (从少到多)</option>
-              <option value="stamina_desc">体力 ↓ (从多到少)</option>
-              <option value="stamina_asc">体力 ↑ (从少到多)</option>
-              <option value="charm_desc">魅力 ↓ (从多到少)</option>
-              <option value="charm_asc">魅力 ↑ (从少到多)</option>
-              <option value="sign_desc">签到次数 ↓</option>
-              <option value="sign_asc">签到次数 ↑</option>
-              <option value="qq_asc">QQ 顺序 (正序)</option>
-              <option value="qq_desc">QQ 倒序</option>
-            </select>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>👤 用户资产与名录</h2>
+            <div class="m3-subtitle">全群成员资产数据微调、多维检索与生命周期治理</div>
           </div>
-          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
-            <button id="btnUsers" class="ghost">🔄 刷新</button>
-            <button id="btnUsersExport" class="ghost">📥 导出</button>
-            <button id="btnUsersImport" class="ghost">📤 导入</button>
-            <button id="btnUsersAirdrop" class="ghost" style="color:var(--acc);border-color:var(--accSoft2)">🎁 批量空投福利</button>
-            <button id="btnUsersCleanLeft" class="ghost del">🧹 清理退群人员</button>
-            <button id="btnUserClearManual" class="ghost del" title="输入指定 QQ 彻底清空单用户全部数据（含奴隶、精灵与重领礼包资格）">🗑️ 清除单用户</button>
+          <div class="m3-action-bar">
+            <button id="btnUsersAirdrop" class="btn sm tonal">🎁 批量空投福利</button>
+            <button id="btnUsers" class="ghost sm">🔄 刷新</button>
+            <button id="btnUsersExport" class="ghost sm">📥 导出</button>
+            <button id="btnUsersImport" class="ghost sm">📤 导入</button>
+            <button id="btnUsersCleanLeft" class="ghost sm del">🧹 清理退群人员</button>
+            <button id="btnUserClearManual" class="ghost sm del" title="输入指定 QQ 彻底清空单用户全部数据（含奴隶、精灵与重领礼包资格）">🗑️ 清除单用户</button>
           </div>
         </div>
-        <div class="search"><span>🔍</span><input id="userSearch" placeholder="搜索 QQ / 昵称 / 群号…" /></div>
+
+        <div class="m3-filter-dock">
+          <div class="m3-filter-search">
+            <span>🔍</span>
+            <input id="userSearch" placeholder="搜索 QQ / 昵称 / 群号…" />
+          </div>
+          <div class="m3-filter-chips">
+            <select id="userGidFilter">
+              <option value="">全部群</option>
+            </select>
+            <select id="userSort">
+              <option value="money_desc">💰 货币 ↓ (从多到少)</option>
+              <option value="money_asc">💰 货币 ↑ (从少到多)</option>
+              <option value="deposit_desc">🏦 存款 ↓ (从多到少)</option>
+              <option value="deposit_asc">🏦 存款 ↑ (从少到多)</option>
+              <option value="stamina_desc">⚡ 体力 ↓ (从多到少)</option>
+              <option value="stamina_asc">⚡ 体力 ↑ (从少到多)</option>
+              <option value="charm_desc">💄 魅力 ↓ (从多到少)</option>
+              <option value="charm_asc">💄 魅力 ↑ (从少到多)</option>
+              <option value="sign_desc">📅 签到次数 ↓</option>
+              <option value="sign_asc">📅 签到次数 ↑</option>
+              <option value="qq_asc">🔢 QQ 顺序 (正序)</option>
+              <option value="qq_desc">🔢 QQ 倒序</option>
+            </select>
+          </div>
+        </div>
+
         <div class="hint" id="userHint">直接改动数值后点右侧「保存」生效；点击表头可快捷切换升降序。</div>
+
         <div class="table-wrap">
           <table>
             <thead><tr>
               <th data-sort="qq" style="cursor:pointer;min-width:105px" title="点击按 QQ 排序">QQ ⇕</th>
               <th style="min-width:90px">昵称</th>
-              <th data-sort="gid" style="cursor:pointer;min-width:95px" title="点击按群号排序">群号 ⇕</th>
-              <th data-sort="money" style="min-width:145px;cursor:pointer" title="点击按货币排序">货币 ⇕</th>
-              <th data-sort="stamina" style="cursor:pointer;min-width:70px" title="点击按体力排序">体力 ⇕</th>
-              <th data-sort="charm" style="cursor:pointer;min-width:70px" title="点击按魅力排序">魅力 ⇕</th>
-              <th style="min-width:70px">奖券</th>
-              <th data-sort="deposit" style="min-width:155px;cursor:pointer" title="点击按存款排序">存款 ⇕</th>
-              <th data-sort="sign" style="cursor:pointer;min-width:75px" title="点击按签到排序">签到 ⇕</th>
-              <th style="min-width:150px">操作</th>
+              <th data-sort="money" style="cursor:pointer" title="点击按货币排序">货币 ⇕</th>
+              <th data-sort="deposit" style="cursor:pointer" title="点击按存款排序">存款 ⇕</th>
+              <th data-sort="stamina" style="cursor:pointer" title="点击按体力排序">体力 ⇕</th>
+              <th data-sort="charm" style="cursor:pointer" title="点击按魅力排序">魅力 ⇕</th>
+              <th data-sort="sign" style="cursor:pointer" title="点击按签到排序">签到 ⇕</th>
+              <th style="min-width:140px">操作</th>
             </tr></thead>
             <tbody id="userBody"></tbody>
           </table>
@@ -1598,40 +1262,50 @@
       </div>
     </div>
 
-    <!-- 奴隶 -->
+
+    <!-- 4. 奴隶用户 Tab -->
     <div class="tab" id="tab-slave">
       <div class="panel">
-        <div class="toolbar">
-          <h2>奴隶用户</h2>
-          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-            
-            <label style="color:var(--muted);font-size:12px;font-weight:500;margin-left:4px">排序：</label>
-            <select id="slaveSort" style="padding:3px 6px;font-size:11.5px;min-width:100px">
-              <option value="price_desc">身价 ↓ (从高到低)</option>
-              <option value="price_asc">身价 ↑ (从低到高)</option>
-              <option value="slaves_desc">奴隶数 ↓ (从多到少)</option>
-              <option value="slaves_asc">奴隶数 ↑ (从少到多)</option>
-              <option value="qq_asc">QQ 顺序</option>
-            </select>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>⛓ 奴隶用户与身价体系</h2>
+            <div class="m3-subtitle">实时展示各群用户身价、主人关系与武装状态；点击表头可快捷排序</div>
           </div>
-          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
-            <button id="btnSlaveCalibrate" class="ghost" style="color:var(--acc);border-color:var(--accSoft2)">⚖️ 一键校准全员身价</button>
-            <button id="btnSlaveRefresh" class="ghost">🔄 刷新</button>
+          <div class="m3-action-bar">
+            <button id="btnSlaveCalibrate" class="btn sm tonal">⚖️ 一键校准全员身价</button>
+            <button id="btnSlaveRefresh" class="ghost sm">🔄 刷新</button>
           </div>
         </div>
-        <div class="search"><span>🔍</span><input id="slaveSearch" placeholder="搜索 QQ / 昵称 / 主人…" /></div>
+
+        <div class="m3-filter-dock">
+          <div class="m3-filter-search">
+            <span>🔍</span>
+            <input id="slaveSearch" placeholder="搜索 QQ / 昵称 / 主人…" />
+          </div>
+          <div class="m3-filter-chips">
+            <select id="slaveSort">
+              <option value="price_desc">💎 身价 ↓ (从高到低)</option>
+              <option value="price_asc">💎 身价 ↑ (从低到高)</option>
+              <option value="slaves_desc">⛓ 奴隶数 ↓ (从多到少)</option>
+              <option value="slaves_asc">⛓ 奴隶数 ↑ (从少到多)</option>
+              <option value="qq_asc">🔢 QQ 顺序</option>
+            </select>
+          </div>
+        </div>
+
         <div class="hint" id="slaveHint">实时展示各群用户身价、主人关系与武装状态；点击表头可快捷排序。</div>
+
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>群号</th>
-              <th>QQ</th>
+              <th data-slavesort="qq" style="cursor:pointer" title="点击按 QQ 排序">QQ ⇕</th>
               <th>昵称</th>
-              <th>主人</th>
               <th data-slavesort="price" style="cursor:pointer" title="点击按身价排序">身价 ⇕</th>
+              <th>主人 QQ / 昵称</th>
               <th data-slavesort="slaves" style="cursor:pointer" title="点击按奴隶数排序">奴隶数 ⇕</th>
-              <th>保护状态</th>
-              <th>佩戴武器</th>
+              <th>已装备武器</th>
+              <th>已装备坐骑</th>
+              <th style="min-width:120px">操作</th>
             </tr></thead>
             <tbody id="slaveBody"></tbody>
           </table>
@@ -1639,35 +1313,43 @@
       </div>
     </div>
 
-    <!-- 精灵用户 -->
+
+    <!-- 5. 精灵用户 Tab -->
     <div class="tab" id="tab-spirit_users">
       <div class="panel">
-        <div class="toolbar">
-          <h2>精灵系统 · 用户情况</h2>
-          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-            
-            <label style="color:var(--muted);font-size:12px;font-weight:500;margin-left:4px">排序：</label>
-            <select id="spiritUserSort" style="padding:3px 6px;font-size:11.5px;min-width:100px">
-              <option value="power_desc">总战力 ↓ (从强到弱)</option>
-              <option value="power_asc">总战力 ↑ (从弱到强)</option>
-              <option value="level_desc">最高 Lv ↓</option>
-              <option value="count_desc">精灵数 ↓</option>
-              <option value="qq_asc">QQ 顺序</option>
-            </select>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>🐾 精灵系统 · 用户情况</h2>
+            <div class="m3-subtitle">实时展示各群精灵训练师、出战宝可梦与综合战力统计</div>
           </div>
-          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
-            <button id="btnSpiritUsersRefresh" class="ghost">🔄 刷新</button>
+          <div class="m3-action-bar">
+            <button id="btnSpiritUsersRefresh" class="ghost sm">🔄 刷新数据</button>
           </div>
         </div>
-        <div class="search"><span>🔍</span><input id="spiritUserSearch" placeholder="搜索 QQ / 昵称 / 精灵…" /></div>
+
+        <div class="m3-filter-dock">
+          <div class="m3-filter-search">
+            <span>🔍</span>
+            <input id="spiritUserSearch" placeholder="搜索 QQ / 昵称 / 精灵…" />
+          </div>
+          <div class="m3-filter-chips">
+            <select id="spiritUserSort">
+              <option value="power_desc">⚡ 总战力 ↓ (从强到弱)</option>
+              <option value="power_asc">⚡ 总战力 ↑ (从弱到强)</option>
+              <option value="level_desc">⭐ 最高 Lv ↓</option>
+              <option value="count_desc">🐾 精灵数 ↓</option>
+              <option value="qq_asc">🔢 QQ 顺序</option>
+            </select>
+          </div>
+        </div>
+
         <div class="hint" id="spiritUsersHint">实时展示各群精灵训练师、出战宝可梦与综合战力统计。</div>
+
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>群号</th>
-              <th>QQ</th>
+              <th data-spiritsort="qq" style="cursor:pointer" title="点击按 QQ 排序">QQ ⇕</th>
               <th>昵称</th>
-              <th data-spiritsort="count" style="cursor:pointer" title="点击按精灵数排序">精灵数 ⇕</th>
               <th>出战精灵</th>
               <th>最强精灵</th>
               <th data-spiritsort="level" style="cursor:pointer" title="点击按等级排序">最高 Lv ⇕</th>
@@ -1680,82 +1362,122 @@
       </div>
     </div>
 
-    <!-- 配置（必要配置） -->
-    <div class="tab" id="tab-config">
-      <div class="panel">
-        <h2>⚙️ 必要核心配置</h2>
-        <div class="hint">展示系统网络、私聊、维护与备份等核心配置项，玩法数值请到「指令与玩法」Tab 调整。</div>
-        <div class="search"><span>🔍</span><input id="cfgSearch" placeholder="搜索配置项名称 / 作用说明…" /></div>
-        <div id="cfgForm"></div>
-        <div class="toolbar" style="margin-top:12px">
-          <button id="btnSave">💾 保存配置</button>
-          <button id="btnAutoBalance2" class="ghost" style="color:var(--warn);border-color:var(--warnSoft)">🎯 数值智能平衡</button>
-          <span id="activeBalanceBadge1" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:600;background:rgba(134,134,139,0.15);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">⚪ 读取中…</span>
-          <button id="btnReset" class="ghost">↩️ 恢复默认值</button>
-          <button id="btnResetAll" class="ghost del">🧹 全部设置恢复默认</button>
-          <button id="btnClearAll" class="ghost del" style="margin-left:auto" title="清空所有数据需三重确认">⚠️ 清空所有数据</button>
-          <span class="msg" id="saveMsg"></span>
-        </div>
-      </div>
-    </div>
 
-    <!-- 排行 -->
-    <div class="tab" id="tab-rank">
+    <!-- 6. 群聊开关 Tab -->
+    <div class="tab" id="tab-groups">
       <div class="panel">
-        <h2>🏆 排行榜</h2>
-        <div class="toolbar">
-          <label style="color:var(--muted);font-size:12px;font-weight:500">排行维度：</label>
-          <select id="rankType" style="min-width:110px;padding:3px 6px">
-            <option value="money">💰 个人财富</option>
-            <option value="sign">📅 签到次数</option>
-            <option value="stamina">⚡ 体力数值</option>
-            <option value="charm">💄 魅力指数</option>
-            <option value="deposit">🏦 银行存款</option>
-          </select>
-          <button id="btnRank" class="ghost">🔄 刷新</button>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>👥 群聊开关与授权收录</h2>
+            <div class="m3-subtitle">关闭单个群聊后，该群内 Bot 不响应任何指令（包括超管），其他群不受影响</div>
+          </div>
+          <div class="m3-action-bar">
+            <div style="display:flex;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-full);padding:2px 4px 2px 14px;gap:6px">
+              <input id="groupsAddGid" placeholder="输入群号添加…" style="width:130px;border:0;background:transparent;outline:none;font-size:12.5px;padding:4px 0">
+              <button id="btnGroupsAdd" class="sm" style="padding:4px 14px">➕ 添加</button>
+            </div>
+            <button id="btnGroupsRefresh" class="ghost sm">🔄 刷新</button>
+          </div>
         </div>
+
+        <div class="hint">群聊在首次收到消息后自动收录。点击开关可实时启用或禁用指定群聊。</div>
+
+        <div class="m3-filter-dock">
+          <div class="m3-filter-search">
+            <span>🔍</span>
+            <input id="groupsSearch" placeholder="搜索群号 / 状态…" />
+          </div>
+        </div>
+
         <div class="table-wrap">
           <table>
-            <thead><tr><th style="width:45px"># 排名</th><th>昵称</th><th>QQ</th><th>数值</th></tr></thead>
-            <tbody id="rankBody"></tbody>
+            <thead><tr><th>群号</th><th>首次收录时间</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody id="groupsBody"></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- 指令（玩法设置） -->
-    <div class="tab" id="tab-cmds">
+
+    <!-- 7. 必要核心配置 Tab -->
+    <div class="tab" id="tab-config">
       <div class="panel">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
-          <h2 style="margin:0">🎮 指令与玩法设置</h2>
-          <div style="display:flex;align-items:center;gap:6px">
-            <button class="ghost sm" id="btnCmdExpandAll" type="button">全部展开</button>
-            <button class="ghost sm" id="btnCmdCollapseAll" type="button">全部收起</button>
-            <button class="sm" id="btnAutoBalance" type="button" style="background:linear-gradient(135deg, #FF9500, #FF2D55);color:#fff;font-weight:600;border:none;box-shadow:0 2px 8px rgba(255,149,0,0.3)">🎯 数值智能平衡</button>
-            <span id="activeBalanceBadge2" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:600;background:rgba(134,134,139,0.15);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">⚪ 读取中…</span>
-            <button class="sm" id="btnCmdAddCustomTop" type="button">＋ 自定义指令</button>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>⚙️ 必要核心配置</h2>
+            <div class="m3-subtitle">展示系统网络、私聊、维护与备份等核心配置项，玩法数值请到「指令与玩法」Tab 调整</div>
+          </div>
+          <div class="m3-action-bar">
+            <button id="btnSave" class="btn sm">💾 保存配置</button>
+            <button id="btnAutoBalance2" class="ghost sm tonal">🎯 数值智能平衡</button>
+            <span id="activeBalanceBadge1" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel2);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
+            <button id="btnReset" class="ghost sm">↩️ 恢复默认值</button>
+            <button id="btnResetAll" class="ghost sm del">🧹 全部设置恢复默认</button>
+            <button id="btnClearAll" class="ghost sm del" title="清空所有数据需三重确认">⚠️ 清空所有数据</button>
+            <span class="msg" id="saveMsg" style="font-size:12px;color:var(--ok)"></span>
           </div>
         </div>
-        <div class="hint" style="margin-bottom:8px">按系统展开可查看全部指令；点击任意指令标签即可打开编辑弹窗，自由修改【触发词/别名】、【自定义回复文案】以及关联玩法数值。</div>
-        <div class="search"><span>🔍</span><input id="cmdSearch" placeholder="搜索指令名称 / 关联玩法数值…" /></div>
+
+        <div class="m3-filter-dock">
+          <div class="m3-filter-search">
+            <span>🔍</span>
+            <input id="cfgSearch" placeholder="搜索配置项名称 / 作用说明…" />
+          </div>
+        </div>
+
+        <div id="cfgForm"></div>
+      </div>
+    </div>
+
+
+    <!-- 8. 指令与玩法设置 Tab -->
+    <div class="tab" id="tab-cmds">
+      <div class="panel">
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>🎮 指令与玩法设置</h2>
+            <div class="m3-subtitle">统筹管理28大系统触发词、冷却限制、收益系数与自定义指令</div>
+          </div>
+          <div class="m3-action-bar">
+            <button class="ghost sm" id="btnCmdExpandAll" type="button">全部展开</button>
+            <button class="ghost sm" id="btnCmdCollapseAll" type="button">全部收起</button>
+            <button class="sm tonal" id="btnAutoBalance" type="button">🎯 数值智能平衡</button>
+            <span id="activeBalanceBadge2" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel2);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
+            <button class="btn sm" id="btnCmdAddCustomTop" type="button">＋ 自定义指令</button>
+          </div>
+        </div>
+
+        <div class="m3-filter-dock">
+          <div class="m3-filter-search">
+            <span>🔍</span>
+            <input id="cmdSearch" placeholder="搜索指令名称 / 关联玩法数值…" />
+          </div>
+        </div>
+
         <div id="cmdList"></div>
       </div>
     </div>
 
-    <!-- 商城：坐骑 / 武器 / 精灵道具 -->
+
+    <!-- 9. 商城 Tab -->
     <div class="tab" id="tab-shops">
       <div class="panel">
-        <div class="toolbar">
-          <h2>🛒 商城</h2>
-          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
-            <button id="btnShopLoad" class="ghost">🔄 加载</button>
-            <button id="btnShopExport" class="ghost">📥 导出</button>
-            <button id="btnShopImport" class="ghost">📤 导入</button>
-            <button id="btnShopSave" title="保存当前商城页的改动（坐骑/武器属性/精灵道具，各存各的）">💾 全部保存</button>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>🛒 综合商业广场</h2>
+            <div class="m3-subtitle">坐骑商城、抽奖武器池与精灵道具配置，各存各的互不干扰</div>
           </div>
-          <span class="msg" id="shopMsg"></span>
+          <div class="m3-action-bar">
+            <button id="btnShopSave" class="btn sm" title="保存当前商城页的改动（坐骑/武器属性/精灵道具，各存各的）">💾 全部保存</button>
+            <button id="btnShopLoad" class="ghost sm">🔄 加载</button>
+            <button id="btnShopExport" class="ghost sm">📥 导出</button>
+            <button id="btnShopImport" class="ghost sm">📤 导入</button>
+            <span class="msg" id="shopMsg" style="font-size:12px;color:var(--ok)"></span>
+          </div>
         </div>
+
         <div class="hint">坐骑商城（改价/增删/绑图，点保存坐骑）/ 抽奖武器池（改名/稀有度/删/传即时生效，属性点保存）/ 精灵道具（点保存道具）；各存各的，互不干扰；顶部全部保存可一键存三栏。</div>
+
         <div class="responsive-shop-grid">
           <div>
             <div id="shopRideBox"></div>
@@ -1766,197 +1488,217 @@
       </div>
     </div>
 
-    <!-- 图鉴：精灵图鉴 + 宝物总览 -->
+
+    <!-- 10. 图鉴 Tab -->
     <div class="tab" id="tab-spirits">
       <div class="panel">
-        <div class="toolbar">
-          <h2>📖 图鉴</h2>
-          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
-            <button id="btnSpiritExport" class="ghost">📥 导出</button>
-            <button id="btnSpiritImport" class="ghost">📤 导入</button>
-            <button id="btnPresetExport" class="ghost" title="图鉴＋宝物＋商城打成一个预设包">📦 预设打包</button>
-            <button id="btnPresetImport" class="ghost" title="恢复预设包（先自动快照，可回滚）">📥 预设恢复</button>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>📖 精灵与藏宝图鉴</h2>
+            <div class="m3-subtitle">管理全服精灵物种、藏宝图及全量图鉴预设包打包与恢复</div>
           </div>
-          <span class="msg" id="spiritMsg"></span>
+          <div class="m3-action-bar">
+            <button id="btnPresetExport" class="btn sm tonal" title="图鉴＋宝物＋商城打成一个预设包">📦 预设打包</button>
+            <button id="btnPresetImport" class="ghost sm" title="恢复预设包（先自动快照，可回滚）">📥 预设恢复</button>
+            <button id="btnSpiritExport" class="ghost sm">📥 导出</button>
+            <button id="btnSpiritImport" class="ghost sm">📤 导入</button>
+            <span class="msg" id="spiritMsg" style="font-size:12px;color:var(--ok)"></span>
+          </div>
         </div>
-        <div class="hint">导出的文件可直接导入。</div>
-        <h3 style="margin:14px 0 8px;font-size:13px">📖 总览（宝物/精灵地图）</h3>
-        <div id="atlasBox" style="max-height:600px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px"></div>
+
+        <div class="hint">导出的文件可直接导入；预设包打包包含图鉴、藏宝与商城全量数据。</div>
+        <h3 style="margin:16px 0 10px;font-size:14px;font-weight:700">📖 总览（宝物/精灵地图）</h3>
+        <div id="atlasBox" style="max-height:600px;overflow:auto;border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px;background:var(--panel2)"></div>
       </div>
     </div>
 
-    <!-- 备份 -->
+
+    <!-- 11. 备份管理 Tab -->
     <div class="tab" id="tab-backups">
       <div class="panel">
-        <div class="toolbar">
-          <h2>💾 自动备份管理</h2>
-          <div style="display:flex;gap:5px;flex-wrap:wrap">
-            <button id="btnDbDoctor" class="ghost" style="color:var(--ok);border-color:var(--okSoft);font-weight:600">🩺 数据库体检与整理</button>
-            <button id="btnBackupNow" class="ghost">⚡ 立即备份</button>
-            <button id="btnBackupRefresh" class="ghost">🔄 刷新</button>
-            <button id="btnBackupRestore" class="ghost">🔄 恢复选中</button>
-            <button id="btnBackupExportSel" class="ghost">📥 导出</button>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>💾 数据库备份与容灾</h2>
+            <div class="m3-subtitle">本地增量快照、历史备份版本归档与快捷恢复</div>
           </div>
-          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
-            <button id="btnBackupDelete" class="ghost del">🗑️ 删除选中</button>
+          <div class="m3-action-bar">
+            <button id="btnBackupNow" class="btn sm">⚡ 立即备份</button>
+            <button id="btnDbDoctor" class="ghost sm" style="color:var(--ok);border-color:var(--okSoft);font-weight:600">🩺 数据库体检与整理</button>
+            <button id="btnBackupRefresh" class="ghost sm">🔄 刷新</button>
+            <button id="btnBackupRestore" class="ghost sm">🔄 恢复选中</button>
+            <button id="btnBackupExportSel" class="ghost sm">📥 导出</button>
+            <button id="btnBackupDelete" class="ghost sm del">🗑️ 删除选中</button>
           </div>
         </div>
-        
-        <div class="hint crumbs" id="backupCrumbs" style="margin:5px 0 8px"></div>
-        <div class="search"><span>🔍</span><input id="backupSearch" placeholder="搜索日期目录 / 备份文件名…" /></div>
+
+        <div class="hint crumbs" id="backupCrumbs" style="margin:5px 0 10px"></div>
+        <div class="m3-filter-dock">
+          <div class="m3-filter-search">
+            <span>🔍</span>
+            <input id="backupSearch" placeholder="搜索日期目录 / 备份文件名…" />
+          </div>
+        </div>
         <div id="backupBrowser"></div>
       </div>
-      <div class="panel" style="margin-top:10px">
-        <h2>☁️ WebDAV 与自动备份配置</h2>
+
+      <div class="panel">
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>☁️ WebDAV 与自动备份配置</h2>
+            <div class="m3-subtitle">支持坚果云、Alist、NAS 等多协议全自动云归档与异地容灾</div>
+          </div>
+        </div>
         <div class="hint">WebDAV 地址与账号只在此处填写保存（坚果云请用应用密码）。地址/账号/密码存独立文件，不进备份与快照；密码框留空=保持不变。</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel2);padding:10px 14px;border-radius:10px;border:1px solid var(--line)">
+        
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel2);padding:12px 16px;border-radius:var(--radius-md);border:1px solid var(--line)">
             <span style="font-size:12.5px;font-weight:600">WebDAV备份开关</span>
             <label class="switch"><input type="checkbox" id="wdSwitch"><span class="slider-toggle"></span></label>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel2);padding:10px 14px;border-radius:10px;border:1px solid var(--line)">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel2);padding:12px 16px;border-radius:var(--radius-md);border:1px solid var(--line)">
             <span style="font-size:12.5px;font-weight:600">自动备份开关</span>
             <label class="switch"><input type="checkbox" id="autoSwitch"><span class="slider-toggle"></span></label>
           </div>
-          <label style="font-size:12.5px">服务器地址<input id="wdUrl" type="text" placeholder="https://dav.jianguoyun.com/dav/" style="width:100%;margin-top:4px"></label>
-          <label style="font-size:12.5px">用户名<input id="wdUser" type="text" placeholder="账号/邮箱" style="width:100%;margin-top:4px"></label>
-          <label style="font-size:12.5px">应用密码<input id="wdPwd" type="password" placeholder="留空保持不变" style="width:100%;margin-top:4px"></label>
-          <label style="font-size:12.5px">远端目录<input id="wdDir" type="text" placeholder="/xbbot_backup/" style="width:100%;margin-top:4px"></label>
-          <label style="font-size:12.5px">备份间隔小时<input id="autoHours" type="number" min="1" style="width:100%;margin-top:4px"></label>
-          <label style="font-size:12.5px">保留备份数量<input id="autoKeep" type="number" min="1" style="width:100%;margin-top:4px"></label>
         </div>
-        <div class="toolbar" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button id="btnBackupCfgSave">💾 保存备份配置</button>
-          <button id="btnWebDAVTest" class="ghost" style="color:var(--acc);border-color:var(--accSoft);font-weight:600">☁️ 测试 WebDAV</button>
-          <button id="btnWebDAVBackupNow" class="ghost">☁️ 立即上传云端</button>
-          <span class="msg" id="backupCfgMsg"></span>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px">
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">WebDAV 地址<input id="wdUrl" placeholder="https://dav.jianguoyun.com/dav/" style="width:100%;margin-top:4px"></label>
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">账号/邮箱<input id="wdUser" placeholder="xxx@qq.com" style="width:100%;margin-top:4px"></label>
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">应用密码<input id="wdPwd" type="password" placeholder="留空保持不变" style="width:100%;margin-top:4px"></label>
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">远程子目录<input id="wdDir" placeholder="留空默认 /xbbot_backups" style="width:100%;margin-top:4px"></label>
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">备份间隔小时<input id="autoHours" type="number" min="1" style="width:100%;margin-top:4px"></label>
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">保留备份数量<input id="autoKeep" type="number" min="1" style="width:100%;margin-top:4px"></label>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap">
+          <button id="btnBackupCfgSave" class="btn sm">💾 保存备份配置</button>
+          <button id="btnWebDAVTest" class="ghost sm" style="color:var(--acc);border-color:var(--accSoft);font-weight:600">☁️ 测试 WebDAV 连接</button>
+          <button id="btnWebDAVBackupNow" class="ghost sm">☁️ 立即上传云端</button>
+          <span class="msg" id="backupCfgMsg" style="font-size:12px"></span>
         </div>
       </div>
-      <div class="panel" style="margin-top:10px" id="panelWebDAVFiles">
-        <div class="toolbar" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
-          <div>
+
+      <div class="panel" id="panelWebDAVFiles">
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
             <h2>☁️ WebDAV 云端备份归档与快捷恢复</h2>
-            <div class="hint">实时读取 WebDAV 远端备份目录，支持查看云端归档、一键快捷热恢复与下载到本地。</div>
+            <div class="m3-subtitle">查看云端已归档历史冷备，支持一键下载或直接恢复</div>
           </div>
-          <div style="display:flex;gap:8px">
-            <button id="btnWebDAVRefreshFiles" class="ghost">🔄 刷新远端列表</button>
+          <div class="m3-action-bar">
+            <button id="btnWebDAVRefreshFiles" class="ghost sm">🔄 刷新远端列表</button>
           </div>
         </div>
+        <div class="hint">点击文件项可快速恢复或单独导出。</div>
         <div id="webdavFilesBox" style="margin-top:10px">
-          <div id="webdavFilesList" style="min-height:48px">
-            <div class="hint" style="padding:16px;text-align:center;background:var(--panel2);border-radius:8px">点击上方「刷新远端列表」或在保存 WebDAV 配置后自动读取云端备份归档。</div>
-          </div>
+          <div id="webdavFilesList" style="min-height:48px"></div>
         </div>
       </div>
-      <div class="panel" style="margin-top:10px">
-        <h2>📦 旧库数据导入（兼容新旧格式）</h2>
-        <div class="hint">支持上传 <code>.ini</code>（GBK/UTF8 奴隶/小白群员信息）、<code>.db</code>（xb.db）或 <code>.json</code> 导出包，系统自动识别并执行幂等导入。</div>
-        <div class="toolbar">
-          <button id="btnLegacyPick" class="ghost">📤 导入旧库文件</button>
-          <span class="hint" id="legacyMsg"></span>
+
+      <div class="panel">
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>📦 旧库数据导入（兼容新旧格式）</h2>
+            <div class="m3-subtitle">从旧版数据库文件平滑迁移数据</div>
+          </div>
+          <div class="m3-action-bar">
+            <button id="btnLegacyPick" class="ghost sm">📤 导入旧库文件</button>
+            <span class="hint" id="legacyMsg" style="margin-bottom:0;padding:4px 10px"></span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 根目录 -->
+
+    <!-- 12. 根目录文件浏览器 Tab -->
     <div class="tab" id="tab-imgs">
       <div class="panel">
-        <div class="toolbar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <h2>📁 根目录文件浏览器</h2>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-            <button id="btnImgBack" class="ghost">⬆️ 返回上级</button>
-            <button id="btnImgNewFolder" class="ghost">📁 新建文件夹</button>
-            <button id="btnImgUp">📤 上传文件</button>
-            <button id="btnImgImport" class="ghost">📤 导入</button>
-            <button id="btnImgExport" class="ghost">📥 导出</button>
-            <button id="btnImgCopy" class="ghost">📋 复制</button>
-            <button id="btnImgPaste" class="ghost">📥 粘贴</button>
-            <button id="btnImgRename" class="ghost">✏️ 重命名</button>
-            <button id="btnImgDelete" class="ghost del" title="删除当前选中的文件或文件夹">🗑️ 删除选中</button>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>📁 根目录文件浏览器</h2>
+            <div class="m3-subtitle">安全查看与管理插件数据目录中的资源、图片与素材</div>
+          </div>
+          <div class="m3-action-bar">
+            <button id="btnImgUp" class="btn sm">📤 上传文件</button>
+            <button id="btnImgBack" class="ghost sm">⬆️ 返回上级</button>
+            <button id="btnImgNewFolder" class="ghost sm">📁 新建文件夹</button>
+            <button id="btnImgExport" class="ghost sm">📥 导出</button>
+            <button id="btnImgImport" class="ghost sm">📤 导入</button>
+            <button id="btnImgCopy" class="ghost sm">📋 复制</button>
+            <button id="btnImgPaste" class="ghost sm">📥 粘贴</button>
+            <button id="btnImgRename" class="ghost sm">✏️ 重命名</button>
+            <button id="btnImgDelete" class="ghost sm del" title="删除当前选中的文件或文件夹">🗑️ 删除选中</button>
           </div>
         </div>
-        <div class="hint crumbs" id="imgCrumbs" style="margin:5px 0 8px"></div>
-        <div class="search"><span>🔍</span><input id="imgSearch" placeholder="搜索文件或文件夹名称…" /></div>
+
+        <div class="hint crumbs" id="imgCrumbs" style="margin:5px 0 10px"></div>
+        <div class="m3-filter-dock">
+          <div class="m3-filter-search">
+            <span>🔍</span>
+            <input id="imgSearch" placeholder="搜索文件或文件夹名称…" />
+          </div>
+        </div>
         <div id="imgBrowser"></div>
       </div>
     </div>
 
-    <!-- 群聊开关 -->
-    <div class="tab" id="tab-groups">
-      <div class="panel">
-        <div class="toolbar">
-          <h2>👥 群聊开关</h2>
-          <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:2px 4px 2px 10px;gap:6px">
-              <input id="groupsAddGid" placeholder="输入群号添加…" style="width:130px;border:0;background:transparent;outline:none;font-size:12.5px;padding:4px 0">
-              <button id="btnGroupsAdd" class="sm" style="padding:4px 12px;border-radius:7px">➕ 添加</button>
-            </div>
-            <button id="btnGroupsRefresh" class="ghost">🔄 刷新</button>
-          </div>
-        </div>
-        <div class="hint">关闭单个群聊后，该群内 Bot 不响应任何指令（包括超管），其他群不受影响。群聊在首次收到消息后自动收录。</div>
-        <div class="search" style="margin-top:10px"><span class="search-icon">🔍</span><input id="groupsSearch" placeholder="搜索群号 / 状态…" /></div>
-        <div class="table-wrap" style="margin-top:8px">
-          <table>
-              <thead><tr><th>群号</th><th>成员数</th><th>状态</th><th>维修</th><th>维护开关</th><th>群聊开关</th></tr></thead>
-            <tbody id="groupsBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
 
-    <!-- 运行日志 -->
+    <!-- 13. 日志 Tab -->
     <div class="tab" id="tab-logs">
       <div class="panel">
-        <div class="toolbar" style="flex-wrap:wrap;gap:8px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <h2>📜 插件运行日志</h2>
-            <span class="status-badge" id="logsLiveBadge"><span class="status-dot"></span> 实时监听</span>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <div style="display:flex;align-items:center;gap:10px">
+              <h2>📜 插件运行日志</h2>
+              <span class="status-badge" id="logsLiveBadge"><span class="status-dot"></span> 实时监听</span>
+            </div>
+            <div class="m3-subtitle">实时监控插件运行状态与排错排查</div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap">
+          <div class="m3-action-bar">
             <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);cursor:pointer">
               <input type="checkbox" id="logsAutoRefresh" checked style="cursor:pointer"> 自动刷新(3s)
             </label>
             <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);cursor:pointer">
-              <input type="checkbox" id="logsAutoScroll" checked style="cursor:pointer"> 滚至底部
+              <input type="checkbox" id="logsAutoScroll" checked style="cursor:pointer"> 滚动到底部
             </label>
-            <select id="logsLevelFilter" style="padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:12px">
-              <option value="">全部级别</option>
+            <select id="logsLevelFilter" style="height:32px;font-size:11.5px;padding:4px 10px">
+              <option value="ALL">全部等级</option>
+              <option value="DEBUG">DEBUG</option>
               <option value="INFO">INFO</option>
-              <option value="WARN">WARN</option>
+              <option value="WARNING">WARNING</option>
               <option value="ERROR">ERROR</option>
             </select>
-            <div class="search" style="margin:0;width:180px">
-              <span class="search-icon" style="font-size:12px">🔍</span>
-              <input id="logsSearch" placeholder="搜索关键词…" style="padding:4px 6px 4px 26px;font-size:12px" />
-            </div>
-            <button id="btnLogsRefresh" class="ghost" style="padding:4px 10px;font-size:12px">🔄 刷新</button>
-            <button id="btnLogsCopy" class="ghost" style="padding:4px 10px;font-size:12px">📋 复制</button>
-            <button id="btnLogsExport" class="ghost" style="padding:4px 10px;font-size:12px">📥 导出</button>
-            <button id="btnLogsClear" class="ghost del" style="padding:4px 10px;font-size:12px">🗑️ 清空</button>
+            <button id="btnLogsRefresh" class="ghost sm">🔄 刷新</button>
+            <button id="btnLogsCopy" class="ghost sm">📋 复制</button>
+            <button id="btnLogsExport" class="ghost sm">📥 导出</button>
+            <button id="btnLogsClear" class="ghost sm del">🗑️ 清空</button>
           </div>
         </div>
-        
-        <div class="hint" style="display:flex;justify-content:space-between;align-items:center;margin:6px 0 10px;flex-wrap:wrap;gap:6px">
-          <span>记录插件运行、事件分发、系统调度与异常排查日志。单文件严格限制 2MB，单次展示最新 1000 条以内。</span>
-          <span id="logsMetaInfo" style="font-size:11.5px;color:var(--muted)">行数: 0 | 大小: 0 KB</span>
+
+        <div class="m3-filter-dock">
+          <div class="m3-filter-search">
+            <span>🔍</span>
+            <input id="logsSearch" placeholder="搜索关键词…" />
+          </div>
+          <span id="logsMetaInfo" style="font-size:11.5px;color:var(--muted);margin-right:8px">行数: 0 | 大小: 0 KB</span>
         </div>
 
         <div class="log-terminal" id="logTerminal">
-          <div id="logTerminalContent" class="log-terminal-inner">
-            <div class="log-empty">正在拉取日志数据…</div>
-          </div>
+          <div id="logTerminalContent" class="log-terminal-inner"></div>
         </div>
       </div>
     </div>
 
-    <!-- 关于 -->
+
+    <!-- 14. 关于 Tab -->
     <div class="tab" id="tab-about">
       <div class="panel">
-        <div class="toolbar">
-          <h2>ℹ️ 关于小白机器人</h2>
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>ℹ️ 关于小白机器人</h2>
+            <div class="m3-subtitle">版本与环境配置概览</div>
+          </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:10px;font-size:13.5px;line-height:1.8">
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.8">
           <div>👤 作者：<b>Light</b></div>
           <div>📦 插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
           <div>🔗 仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
@@ -1968,8 +1710,9 @@
 
     <div id="footErr"></div>
   </div>
-  
-  <div id="lightbox"></div>
+
+
+<div id="lightbox"></div>
 
   <!-- 指令编辑模态 -->
   <div id="cmdModal">
@@ -2241,5 +1984,6 @@
     </div>
   </div>
 
+  <script src="admin.js?v=2026w0912p"></script>
 </body>
 </html>
