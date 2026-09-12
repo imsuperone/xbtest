@@ -56,7 +56,8 @@ def coins_add(gid, qq, delta):
 
 
 def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
-    """原子事务：钱包 delta + 账户 kv 批量更新，同持 _LOCK 一次提交"""
+    """原子事务：钱包 delta + 账户 kv 批量更新，同持 _LOCK 一次提交。
+    成功返新余额，失败返 None（调用方禁当成功用，否则静默假成功）。"""
     _ensure_db()
     if acct_updates is None:
         acct_updates = {}
@@ -77,6 +78,7 @@ def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
                 "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
                 (int(gid), int(qq), newv))
             # 账户
+            _touched = None
             if acct_updates:
                 a = _S._ACC_CACHE.get((str(gid), str(qq)))
                 if a is None:
@@ -96,12 +98,22 @@ def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
                     "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
                     "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
                     (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
-                a.dirty = False
-            _safe_commit()
+                _touched = a
+            # 先验 commit 再清脏：吞错式提交失败时缓存与 DB 分叉，脏保留下轮重刷
+            try:
+                _S._DB.commit()
+            except Exception:
+                _safe_rollback()
+                return None
+            if _touched is not None:
+                try:
+                    _touched.dirty = False
+                except Exception:
+                    pass
             return newv
         except Exception:
             _safe_rollback()
-            return 0
+            return None
 
 
 # ---- 原子转账 ----

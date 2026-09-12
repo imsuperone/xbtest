@@ -75,10 +75,10 @@ if not (_maybe_dict and _normalize_cfg and _build_chain):
 # core.dispatch 导入（分发流水线单文件，纯逻辑无 astrbot 依赖）
 try:
     from . import dispatch as _dispatch_all
-    _dispatch_name_sync = _dispatch_test_menu = _dispatch_probes = _dispatch_admins = _dispatch_reply = _dispatch_all
+    _dispatch_name_sync = _dispatch_test_menu = _dispatch_admins = _dispatch_reply = _dispatch_all
 except ImportError:
     from core import dispatch as _dispatch_all  # type: ignore
-    _dispatch_name_sync = _dispatch_test_menu = _dispatch_probes = _dispatch_admins = _dispatch_reply = _dispatch_all
+    _dispatch_name_sync = _dispatch_test_menu = _dispatch_admins = _dispatch_reply = _dispatch_all
 
 
 try:
@@ -141,11 +141,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "2026w0912h"
+            return "2026w0912i"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "2026w0912h"
+    PLUGIN_VERSION = "2026w0912i"
 
 # 消息处理定长线程池：突发千群不再打爆默认无限池，与 ST._LOCK 串行叠加可控
 # import 期不建池（工具链 import 零线程）：首个 XbBot 实例化/首消息时懒建，全局单例，永不 shutdown

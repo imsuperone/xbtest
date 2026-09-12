@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """games/bank·core（原 bank.py 切分，语义不变）。"""
 import datetime as dt
+import json
 import random
 import time
 try:
@@ -27,7 +28,8 @@ def cmd_deposit(gid, qq, amount):
     cap = cfgi("银行配置", "利息上限", 100000)
     interest = _settle_interest(a, rate, cap)
     old = a.int("deposit")
-    ST.txn_coins_acct(gid, qq, -amount, {"stamina": str(a.int("stamina") - cs), "deposit": str(old + amount + interest), "withdraw_timestamp": str(int(time.time()))})
+    if ST.txn_coins_acct(gid, qq, -amount, {"stamina": str(a.int("stamina") - cs), "deposit": str(old + amount + interest), "withdraw_timestamp": str(int(time.time()))}) is None:
+        return "亲，银行系统繁忙，存款未成功，请稍后重试！"
     total = old + amount + interest
     return (f"存款成功！消耗{cs}点体力，共存入：{amount}，\r\n"
             f"上期结息：{interest}，当前总存款：{total}，"
@@ -89,7 +91,8 @@ def cmd_withdraw(gid, qq, amount):
         interest_note = ""
     # 取款仅扣除本次取出的存款本金，利息为银行派发的收益额外计入钱包
     new_dep = dep - amount
-    ST.txn_coins_acct(gid, qq, amount + interest, {"deposit": str(new_dep), "withdraw_timestamp": str(int(time.time()))})
+    if ST.txn_coins_acct(gid, qq, amount + interest, {"deposit": str(new_dep), "withdraw_timestamp": str(int(time.time()))}) is None:
+        return "亲，银行系统繁忙，取款未成功，请稍后重试！"
     base = (f"取款成功！获得利息：{interest}，本次取款：{amount}，\r\n"
             f"还剩存款：{new_dep}，剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
     if 'interest_note' in locals() and interest_note:
@@ -110,9 +113,8 @@ def cmd_force_withdraw(gid, qq, amount):
     if dep < amount:
         return f"存款不足！当前存款：{dep}"
     # 原子：钱包 + 存款同事务，避免半成功（中文文案不变）
-    try:
-        ST.txn_coins_acct(gid, qq, amount, {"deposit": str(dep - amount)})
-    except Exception:
+    # txn 失败返 None（内部已回滚）：走原子单项降级，而非当成功
+    if ST.txn_coins_acct(gid, qq, amount, {"deposit": str(dep - amount)}) is None:
         ST.acct_add(gid, qq, "deposit", -amount)
         ST.coins_add(gid, qq, amount)
         ST.acct_save(gid, qq)
@@ -161,7 +163,7 @@ def cmd_transfer(gid, qq, target, amount):
                 # 扣体力
                 a = ST.acct(gid, qq)
                 a.set("stamina", str(cur_st - cs))
-                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a.kv, ensure_ascii=False)))
+                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
                 # 钱包转账（P1: 接收方达上限截断时差额不得销毁，按实际credit扣减）
                 row2 = ST._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(target))).fetchone()
                 dst_cur = int(row2[0]) if row2 else 0
@@ -173,19 +175,29 @@ def cmd_transfer(gid, qq, target, amount):
                 new_dst = dst_cur + credit
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_src))
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(target), new_dst))
-                ST._safe_commit()
+                # 先验 commit 再清脏：提交失败抛给降级，不吞错报成功
+                try:
+                    ST._DB.commit()
+                except Exception:
+                    ST._safe_rollback()
+                    raise
                 a.dirty = False
         else:
             # 降级：原逻辑
-            ST.acct_add(gid, qq, "stamina", -cs)
-            if hasattr(ST, "txn_two_wallets") and not ST.txn_two_wallets(gid, qq, target, amount):
-                # 回滚体力
-                ST.acct_add(gid, qq, "stamina", cs)
-                return "亲，您的账户余额不足，转账失败！"
+                ST.acct_add(gid, qq, "stamina", -cs)
+                if hasattr(ST, "txn_two_wallets") and not ST.txn_two_wallets(gid, qq, target, amount):
+                    # 回滚体力
+                    ST.acct_add(gid, qq, "stamina", cs)
+                    return "亲，您的账户余额不足，转账失败！"
     except Exception:
-        # 主路径半截写入必须先回滚，否则降级双 coins_add 即销/印钱
+        # 主路径半截必须回滚＋逐缓存，否则降级读到 linger/脏缓存即双扣
         try:
             ST._safe_rollback()
+        except Exception:
+            pass
+        try:
+            if ST._DB is not None:
+                ST._ACC_CACHE.pop((str(gid), str(qq)), None)
         except Exception:
             pass
         try:
@@ -249,10 +261,18 @@ def cmd_gamble(gid, qq, amount):
                 # 成功：-amount +gain
                 new_money = cur - amount + gain
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_money))
-                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
+                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
+                # 先验 commit 再清脏＋计数：提交失败抛给降级；计数失败只丢一次（优于降级双重收费）
+                try:
+                    ST._DB.commit()
+                except Exception:
+                    ST._safe_rollback()
+                    raise
                 a2.dirty = False
-                ST._safe_commit()
-                ST.recall_set("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), str(cnt + 1))
+                try:
+                    ST.recall_set("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), str(cnt + 1))
+                except Exception:
+                    pass
                 return f"赌博成功！你获得了{gain}{ST.coin_name()}，净赚{gain - amount}！"
             else:
                 # 失败：-amount 魅力 -meli
@@ -260,16 +280,23 @@ def cmd_gamble(gid, qq, amount):
                 cur_mei = a2.int("charm")
                 a2.set("charm", str(cur_mei - meli))
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_money))
-                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
-                a2.dirty = False
+                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
                 jail = random.random() < 0.5
                 if jail:
                     a2.set("jail", "1")
-                    a2.set("jail_start", __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-                    a2.set("release_timestamp", str(int(__import__("time").time()) + int(jail_mins) * 60))
-                    ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
-                ST._safe_commit()
-                ST.recall_set("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), str(cnt + 1))
+                    a2.set("jail_start", dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                    a2.set("release_timestamp", str(int(time.time()) + int(jail_mins) * 60))
+                    ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
+                try:
+                    ST._DB.commit()
+                except Exception:
+                    ST._safe_rollback()
+                    raise
+                a2.dirty = False
+                try:
+                    ST.recall_set("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), str(cnt + 1))
+                except Exception:
+                    pass
                 if jail:
                     return (f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli}！\r\n"
                             f"赌博时被抓了！被关监狱{jail_mins}分钟！")
@@ -278,6 +305,16 @@ def cmd_gamble(gid, qq, amount):
         # 主路径半截写入必须先回滚，否则降级重试即双重收费（redpack 同模式已修）
         try:
             ST._safe_rollback()
+        except Exception:
+            pass
+        # 半截缓存污染：主路径 a2.set 已改缓存，逐出后降级从回滚后 DB 重载，防体力/魅力双扣
+        try:
+            if ST._DB is not None:
+                ST._ACC_CACHE.pop((str(gid), str(qq)), None)
+        except Exception:
+            pass
+        try:
+            a = ST.acct(gid, qq)
         except Exception:
             pass
     # 降级
@@ -428,17 +465,25 @@ def cmd_sell_slave(gid, qq, target):
                 victim_money = ST.coins_get(gid, target)
                 loot = min(victim_money, random.randint(lo, hi))
                 if loot <= 0:
-                    ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
+                    ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
+                    try:
+                        ST._DB.commit()
+                    except Exception:
+                        ST._safe_rollback()
+                        raise
                     a2.dirty = False
-                    ST._safe_commit()
                     return "对方是个穷光蛋，无法对他实施打劫！"
                 src_cur = cur_money
                 dst_cur = victim_money
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), src_cur + loot))
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(target), max(0, dst_cur - loot)))
-                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
+                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
+                try:
+                    ST._DB.commit()
+                except Exception:
+                    ST._safe_rollback()
+                    raise
                 a2.dirty = False
-                ST._safe_commit()
                 tn = _disp_name(target, gid)
                 return f"打劫成功！你从 {tn} 处劫走{loot}{ST.coin_name()}！"
             else:
@@ -449,15 +494,32 @@ def cmd_sell_slave(gid, qq, target):
                 a2.set("charm", str(max(0, cur_mei - meli)))
                 a2.set("jail", "1")
                 a2.set("jail_start", _now_s())
-                a2.set("release_timestamp", str(int(__import__("time").time()) + int(jail_mins) * 60))
+                a2.set("release_timestamp", str(int(time.time()) + int(jail_mins) * 60))
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_money))
-                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
+                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
+                try:
+                    ST._DB.commit()
+                except Exception:
+                    ST._safe_rollback()
+                    raise
                 a2.dirty = False
-                ST._safe_commit()
                 return (f"打劫失败！实施打劫时被抓！被关监狱{jail_mins}分钟，\r\n"
                         f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
     except Exception:
-        pass
+        # 主路径半截必须回滚（同连接 linger 对降级可见）＋逐缓存，防双扣双付
+        try:
+            ST._safe_rollback()
+        except Exception:
+            pass
+        try:
+            if ST._DB is not None:
+                ST._ACC_CACHE.pop((str(gid), str(qq)), None)
+        except Exception:
+            pass
+        try:
+            a = ST.acct(gid, qq)
+        except Exception:
+            pass
     ST.acct_add(gid, qq, "stamina", -cs)
     a.set("rob_time", _now_s())
     if random.random() * 100 < prob:

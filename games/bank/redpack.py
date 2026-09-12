@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """games/bank·redpack（原 bank.py 切分，语义不变）。"""
+import json
 import random
 import string
 import time
@@ -56,17 +57,31 @@ def cmd_redpack(gid, qq, amount, pwd=None):
             a2 = ST.acct(gid, qq)
             a2.set("stamina", str(a2.int("stamina") - cost_tili))
             a2.set("redpack_send_time", str(int(time.time())))
-            ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
-            a2.dirty = False
+            ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
             ST._DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
             ST._DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
             ST._DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
                            (int(gid), int(qq), pwd, amount, int(time.time())))
-            ST._safe_commit()
+            try:
+                ST._DB.commit()
+            except Exception:
+                ST._safe_rollback()
+                raise
+            a2.dirty = False
     except Exception:
         # 先回滚 try 内未提交的半截写入，再走降级重试，避免重复扣钱
         try:
             ST._safe_rollback()
+        except Exception:
+            pass
+        # 半截缓存污染：逐出后降级重载，a 重绑新鲜对象（否则体力双扣/send_time 丢）
+        try:
+            if ST._DB is not None:
+                ST._ACC_CACHE.pop((str(gid), str(qq)), None)
+        except Exception:
+            pass
+        try:
+            a = ST.acct(gid, qq)
         except Exception:
             pass
         ST.coins_add(gid, qq, -amount)
@@ -79,9 +94,19 @@ def cmd_redpack(gid, qq, amount, pwd=None):
                 ST._DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
                 ST._DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
                                (int(gid), int(qq), pwd, amount, int(time.time())))
-                ST._safe_commit()
+                try:
+                    ST._DB.commit()
+                except Exception:
+                    ST._safe_rollback()
+                    raise
         except Exception:
-            pass
+            # 包没建成：钱已扣，退款后明确报错，不报假成功
+            try:
+                ST.coins_add(gid, qq, amount)
+                ST.acct_add(gid, qq, "stamina", cost_tili)
+            except Exception:
+                return "红包创建失败，扣款异常请联系超管查账！"
+            return f"红包创建失败，已退回{amount}{ST.coin_name()}，请稍后重试！"
     return (f"发红包啦！发了{amount}{ST.coin_name()}点，大家快抢吧！\r\n"
             f"红包口令为：{pwd}\r\n"
             f"发送【抢红包 {pwd}】即可瓜分！")
@@ -126,8 +151,7 @@ def cmd_recv_red(gid, qq, pwd):
             a.set("stamina", str(a.int("stamina") - cost_tili))
             a.set("charm", str(a.int("charm") + gain_meili + base_meili))
             a.set("redpack_code", pwd)
-            ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a.kv, ensure_ascii=False)))
-            a.dirty = False
+            ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
             # 钱包
             row_w = ST._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
             cur = int(row_w[0]) if row_w else 0
@@ -141,10 +165,25 @@ def cmd_recv_red(gid, qq, pwd):
                 ST._DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
             else:
                 ST._DB.execute("UPDATE redpacks SET amount=? WHERE gid=? AND pwd=?", (remain, int(gid), str(pwd)))
-            ST._safe_commit()
+            try:
+                ST._DB.commit()
+            except Exception:
+                ST._safe_rollback()
+                raise
+            a.dirty = False
             return f"恭喜！你抢到了 {got}{ST.coin_name()}，魅力+{gain_meili + base_meili}！（剩余{remain}）"
     except Exception:
-        pass
+        # 主路径半截写入先回滚，否则同连接 linger＋降级双付
+        try:
+            ST._safe_rollback()
+        except Exception:
+            pass
+        # 半截缓存污染：逐出，降级自带重载（158 行），防 redpack_code 误判已抢
+        try:
+            if ST._DB is not None:
+                ST._ACC_CACHE.pop((str(gid), str(qq)), None)
+        except Exception:
+            pass
     # 降级非原子路径（兼容，持锁读避免 database is locked）
     try:
         with ST._LOCK:

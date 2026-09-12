@@ -102,7 +102,12 @@ def acct_save(gid, qq):
                 "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
                 "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
                 (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
-            _safe_commit()
+            # 先验 commit 再清脏：提交失败脏保留，下轮重刷
+            try:
+                _S._DB.commit()
+            except Exception:
+                _safe_rollback()
+                return
             a.dirty = False
         except Exception:
             _safe_rollback()

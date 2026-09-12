@@ -185,6 +185,14 @@ def _batch_guard_map(gid, is_admin, store):
         hit = _GUARD_BATCH_CACHE.get(_bkey)
         if hit and now - hit[0] < _GUARD_BATCH_TTL:
             return hit[1]
+        # 顺手淘汰过期条目：无独立清理线程，写时摊销（key 量级=gid 数，防慢泄漏）
+        if len(_GUARD_BATCH_CACHE) > 5000:
+            try:
+                for _k, (_ts, _v) in list(_GUARD_BATCH_CACHE.items()):
+                    if now - _ts >= _GUARD_BATCH_TTL:
+                        _GUARD_BATCH_CACHE.pop(_k, None)
+            except Exception:
+                pass
     except Exception:
         hit = None
     res = {}

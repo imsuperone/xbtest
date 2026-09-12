@@ -114,19 +114,18 @@ def cmd_sign(gid, qq):
     cur_charm = int(float(a.get("charm", "0") or 0))
     cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
     # 单事务：钱包 delta + 账户批量字段（原5次提交→1次，持锁 1次）
-    try:
-        ST.txn_coins_acct(gid, qq, base + chain_bonus, {
-            "sign_count": str(total),
-            "total_sign_days": str(total),
-            "consecutive_days": str(chain),
-            "sign_date": today,
-            "last_sign_date": today,
-            "account_created": a.get("account_created") or dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "stamina": str(cur_stam + tili),
-            "charm": str(cur_charm + meili),
-            "lottery_tickets": str(cur_juan + juan),
-        })
-    except Exception:
+    # txn 失败返 None（内部已回滚）：走旧路径补，而非当成功
+    if ST.txn_coins_acct(gid, qq, base + chain_bonus, {
+        "sign_count": str(total),
+        "total_sign_days": str(total),
+        "consecutive_days": str(chain),
+        "sign_date": today,
+        "last_sign_date": today,
+        "account_created": a.get("account_created") or dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "stamina": str(cur_stam + tili),
+        "charm": str(cur_charm + meili),
+        "lottery_tickets": str(cur_juan + juan),
+    }) is None:
         # 回退旧路径（兼容）
         a.set("sign_count", str(total))
         a.set("total_sign_days", str(total))
@@ -324,16 +323,23 @@ def cmd_newbie(gid, qq):
     meili = cfgi("新手配置", "魅力", cfgi("新手配置", "新手魅力", cfgi("新手配置", "charm", 100)))
     jq = cfgi("新手配置", "奖券", cfgi("新手配置", "新手奖券", cfgi("新手配置", "lottery_tickets", 15)))
     # 单事务原子领取：钱包+账户同锁一次提交，避免签到并发时 database is locked
-    try:
-        cur_stam = int(float(a.get("stamina", "0") or 0))
-        cur_charm = int(float(a.get("charm", "0") or 0))
-        cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
-        ST.txn_coins_acct(gid, qq, money, {
-            "novice_gift": "1",
-            "stamina": str(cur_stam + tili),
-            "charm": str(cur_charm + meili),
-            "lottery_tickets": str(cur_juan + jq),
-        })
+    # txn 失败返 None（内部已回滚）：走单项补发，而非当成功
+    cur_stam = int(float(a.get("stamina", "0") or 0))
+    cur_charm = int(float(a.get("charm", "0") or 0))
+    cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
+    if ST.txn_coins_acct(gid, qq, money, {
+        "novice_gift": "1",
+        "stamina": str(cur_stam + tili),
+        "charm": str(cur_charm + meili),
+        "lottery_tickets": str(cur_juan + jq),
+    }) is None:
+        a.set("novice_gift", "1")
+        ST.coins_add(gid, qq, money)
+        ST.acct_add(gid, qq, "stamina", tili)
+        ST.acct_add(gid, qq, "charm", meili)
+        ST.acct_add(gid, qq, "lottery_tickets", jq)
+        ST.acct_save(gid, qq)
+    else:
         # txn 内已覆盖 novice 标记，刷新内存避免旧对象覆盖
         try:
             a.set("novice_gift", "1")
@@ -343,13 +349,6 @@ def cmd_newbie(gid, qq):
             a.dirty = False
         except Exception:
             pass
-    except Exception:
-        a.set("novice_gift", "1")
-        ST.coins_add(gid, qq, money)
-        ST.acct_add(gid, qq, "stamina", tili)
-        ST.acct_add(gid, qq, "charm", meili)
-        ST.acct_add(gid, qq, "lottery_tickets", jq)
-        ST.acct_save(gid, qq)
     return (f"恭喜您获得新手礼包一份！\r\n"
             f"{ST.coin_name()}+{money}\r\n体力+{tili}\r\n魅力+{meili}\r\n奖券+{jq}")
 
