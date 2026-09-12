@@ -218,6 +218,19 @@ class _BackupFileLock:
 
 
 
+def _valid_backup_file(fp):
+    """完好备份校验：存在＋够大＋SQLite 魔数（0 字节坏备份禁复用禁占配额）"""
+    try:
+        if not fp or not os.path.isfile(fp):
+            return False
+        if os.path.getsize(fp) < 100:
+            return False
+        with open(fp, "rb") as f:
+            return f.read(16) == b"SQLite format 3\x00"
+    except Exception:
+        return False
+
+
 def backup_user_data(force=False, auto_upload=True):
     now = time.time()
     # 5秒全局防抖保护：无论是否 force，若 5 秒内刚生成过完好备份，直接复用，杜绝重复创建双份备份
@@ -248,7 +261,7 @@ def backup_user_data(force=False, auto_upload=True):
                 _still = _S._BACKUP_IN_PROGRESS
                 _cur = _S._LAST_BACKUP_PATH
             if not _still:
-                if _cur and os.path.isfile(_cur):
+                if _cur and _valid_backup_file(_cur):
                     return _cur
                 break
     if not force and now - _S._LAST_BACKUP_CHECK < 60:
@@ -312,7 +325,7 @@ def backup_user_data(force=False, auto_upload=True):
     try:
         _mine, _reuse = _reserve_backup_slot()
         if not _mine:
-            if _reuse and os.path.isfile(_reuse):
+            if _reuse and _valid_backup_file(_reuse):
                 _S._LAST_BACKUP_TIME = time.time()
                 _S._LAST_BACKUP_PATH = _reuse
                 return _reuse
@@ -365,6 +378,18 @@ def backup_user_data(force=False, auto_upload=True):
                     _S._DB.backup(bck)
                 except Exception:
                     pass
+        # 落盘坏文件直接清掉并走失败路径：禁 0 字节钉住复用窗口＋占配额
+        if not _valid_backup_file(dst):
+            try:
+                bck.close()
+            except Exception:
+                pass
+            try:
+                if dst and os.path.isfile(dst):
+                    os.remove(dst)
+            except Exception:
+                pass
+            raise RuntimeError("backup file invalid")
         with _S._LOCK:
             _S._last_backup = now
             _S._LAST_BACKUP_TIME = now
@@ -409,6 +434,12 @@ def backup_user_data(force=False, auto_upload=True):
                 _S._BACKUP_IN_PROGRESS = None
         except Exception:
             pass
+        # 失败残留清掉：connect 预建的空文件禁留（占配额＋钉复用）
+        try:
+            if dst and os.path.isfile(dst) and not _valid_backup_file(dst):
+                os.remove(dst)
+        except Exception:
+            pass
         try:
             _clear_backup_busy()
         except Exception:
@@ -434,6 +465,13 @@ def clean_old_backups(max_keep=None):
             for fn in files:
                 if fn.endswith(".db"):
                     fp = os.path.join(root, fn)
+                    # 坏备份（0 字节/非 SQLite）直接清，不占配额
+                    if not _valid_backup_file(fp):
+                        try:
+                            os.remove(fp)
+                        except Exception:
+                            pass
+                        continue
                     try:
                         mt = os.path.getmtime(fp)
                         all_backups.append((mt, fp))

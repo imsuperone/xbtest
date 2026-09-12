@@ -67,6 +67,23 @@ def _in_data_roots(fp, base=""):
     return False
 
 
+def _in_data_strict(fp, base=""):
+    """严格内部：是 data/ 子项而非根自身（防删库/搬库级误操作）"""
+    try:
+        b = base or _img_base()
+        data_base = os.path.join(b, "data")
+        try:
+            pers_base = ST.get_persistent_data_dir(b) if hasattr(ST, "get_persistent_data_dir") else ""
+        except Exception:
+            pers_base = ""
+        for r in (data_base, pers_base):
+            if r and fp and str(fp) != r and str(fp).startswith(r + os.sep):
+                return True
+    except Exception:
+        pass
+    return False
+
+
 _IMG_UPLOAD_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico")
 
 
@@ -192,6 +209,9 @@ async def handle_images_upload(request, plugin_base=""):
                 data = bytes(data)
             except Exception:
                 data = b""
+    # 与 base64 直传对齐：multipart 同样 50M 上限（防大包堵 loop＋OOM）
+    if len(data or b"") > 50 * 1024 * 1024:
+        return _err("file too large (50M)", 400)
 
     def _work():
         try:
@@ -218,7 +238,7 @@ async def handle_images_delete(request, plugin_base=""):
     fp = _safe_path(rel, base)
     if not fp or not os.path.exists(fp):
         return _err("file not found", 404)
-    if _is_blocked(fp) or not _in_data_roots(fp, base):
+    if _is_blocked(fp) or not _in_data_strict(fp, base):
         return _err("path out of scope", 400)
 
     def _work():
@@ -245,7 +265,7 @@ async def handle_images_rename(request, plugin_base=""):
     fp = _safe_path(src, base)
     if not fp or not os.path.exists(fp):
         return _err("src not found", 404)
-    if _is_blocked(fp):
+    if _is_blocked(fp) or not _in_data_strict(fp, base):
         return _err("path out of scope", 400)
     # dst 可能是新文件名或新路径
     if "/" in dst or "\\" in dst:
@@ -279,7 +299,7 @@ async def handle_images_thumb(request, plugin_base=""):
     fp = _safe_path(rel, base)
     if not fp or not os.path.isfile(fp):
         return _err("file not found", 404)
-    if _is_blocked(fp):
+    if _is_blocked(fp) or not _in_data_strict(fp, base):
         return _err("path out of scope", 400)
 
     def _work():
@@ -334,7 +354,7 @@ async def handle_images_copy(request, plugin_base=""):
     dp = _safe_path(dst, base)
     if not sp or not dp or not os.path.exists(sp):
         return _err("src not found", 404)
-    if _is_blocked(sp) or _is_blocked(dp) or not _in_data_roots(dp, base):
+    if _is_blocked(sp) or _is_blocked(dp) or not _in_data_strict(sp, base) or not _in_data_roots(dp, base):
         return _err("path out of scope", 400)
 
     def _work():
@@ -366,9 +386,8 @@ async def handle_images_export(request, plugin_base=""):
     base = _img_base(plugin_base)
     fp = _safe_path(rel, base)
     if not fp or not os.path.exists(fp):
-        # 兜底：如果指定路径不存在，尝试 fallback 到根目录
-        fp = base
-        rel = ""
+        # 坏路径直接 404：禁 fallback 打包插件根（拼错即全仓源码 dump）
+        return _err("file not found", 404)
 
     def _work():
         if os.path.isdir(fp):

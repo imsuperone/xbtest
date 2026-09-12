@@ -323,10 +323,7 @@ def _play(gid, qq, text):
     # 若文本明显是其他系统的指令，则不拦截为答题答案，避免吞掉（需求14/15）
     def _is_cmd(txt):
         t = txt.strip()
-        for p in _CMD_PREFIXES:
-            if t.startswith(p):
-                return True
-        return False
+        return t.startswith(_CMD_PREFIXES)
 
     cur = _active_game(gid)
     if not cur:

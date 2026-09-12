@@ -66,15 +66,21 @@ def wd_secret_set(key, value):
             return False
         else:
             sec[key] = v
+        p = _wd_secret_path()
+        if not p:
+            _S._WD_SECRET = sec
+            _S._WD_SECRET_LOADED = True
+            return True
+        # 原子落盘成功才进内存：崩溃截断不再丢密钥，失败返 False 不谎报
+        try:
+            _t = p + ".tmp"
+            with open(_t, "w", encoding="utf-8") as f:
+                json.dump(sec, f, ensure_ascii=False, indent=2)
+            os.replace(_t, p)
+        except Exception:
+            return False
         _S._WD_SECRET = sec
         _S._WD_SECRET_LOADED = True
-        p = _wd_secret_path()
-        if p:
-            try:
-                with open(p, "w", encoding="utf-8") as f:
-                    json.dump(sec, f, ensure_ascii=False, indent=2)
-            except Exception:
-                pass
         return True
     except Exception:
         return False

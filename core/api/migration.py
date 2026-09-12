@@ -339,7 +339,7 @@ async def _read_raw_body(req):
 
 
 def _import_users_list(users, typ="json"):
-    """用户列表入库（线程池）：钱包差值+账户覆盖+群组覆盖"""
+    """用户列表入库（线程池）：钱包差值+账户覆盖+群组覆盖。返成功数（调用方包回执）。"""
     ok = 0
     for item in users or []:
         if not isinstance(item, dict):
@@ -368,7 +368,7 @@ def _import_users_list(users, typ="json"):
             ST.save_group(gid)
         ok += 1
     ST.flush_all()
-    return json_response({"imported": ok, "type": typ})
+    return ok
 
 
 async def handle_import_legacy(req, plugin_base=""):
@@ -481,7 +481,7 @@ async def handle_import_legacy(req, plugin_base=""):
     def _work():
         try:
             if users_payload is not None:
-                return _import_users_list(users_payload, "json")
+                return json_response({"imported": _import_users_list(users_payload, "json"), "type": "json"})
             return _import_file_data(filename, data)
         except Exception as e:
             import traceback
@@ -585,30 +585,11 @@ def _import_file_data(filename, data):
                                 pass
                         elif fl.endswith(".json"):
                             try:
-                                j = json.load(open(fp, encoding="utf-8"))
+                                with open(fp, encoding="utf-8") as _jf:
+                                    j = json.load(_jf)
+                                # 与单文件 json 同口径（三表），禁再手写双表分裂
                                 if isinstance(j, dict) and isinstance(j.get("users"), list):
-                                    for item in j["users"]:
-                                        if not isinstance(item, dict):
-                                            continue
-                                        gid = str(item.get("gid") or "").strip()
-                                        qq = str(item.get("qq") or "").strip()
-                                        if not gid or not qq:
-                                            continue
-                                        if "wallet" in item:
-                                            try:
-                                                tgt = int(item["wallet"])
-                                                cur = ST.coins_get(gid, qq)
-                                                ST.coins_add(gid, qq, tgt - cur)
-                                            except Exception:
-                                                pass
-                                        if "account" in item and isinstance(item["account"], dict):
-                                            a = ST.acct(gid, qq)
-                                            a.kv.clear()
-                                            a.dirty = True
-                                            for k, v in item["account"].items():
-                                                a.set(str(k), str(v))
-                                            ST.acct_save(gid, qq)
-                                        total += 1
+                                    total += _import_users_list(j["users"], "json")
                             except Exception:
                                 pass
                 try:

@@ -16,6 +16,18 @@ except ImportError:
         from games import slave
     except ImportError:
         import slave  # type: ignore
+def _to_int(v, default=0):
+    """脏数据安全 int：一条脏 price 禁掀翻整表（画像页 500 根因）"""
+    try:
+        return int(str(v or 0).strip() or 0)
+    except Exception:
+        pass
+    try:
+        return int(float(str(v or 0).strip() or 0))
+    except Exception:
+        return default
+
+
 def _slave_all_gids():
     """三表 DISTINCT gid 并集（slave 列表/校准共用，零语义差）"""
     gids = set()
@@ -69,7 +81,7 @@ async def handle_slave_users(request):    # 请求参数在事件循环上提取
                 for qq in _all_secs:
                     if not qq.isdigit(): continue
                     u = slave.U(st, qq)
-                    p = int(u.get("price", "0") or 0)
+                    p = _to_int(u.get("price", "0") or 0)
                     if p <= 0:
                         p = default_init_price
                         u["price"] = str(p)
@@ -95,7 +107,7 @@ async def handle_slave_users(request):    # 请求参数在事件循环上提取
                         w_qq = str(w_qq)
                         if (gid, w_qq) in seen: continue
                         u = slave.U(st, w_qq)
-                        p = int(u.get("price", "0") or 0) or default_init_price
+                        p = _to_int(u.get("price", "0") or 0) or default_init_price
                         seen.add((gid, w_qq))
                         out.append({
                             "gid": gid, "qq": w_qq,
@@ -118,7 +130,7 @@ async def handle_slave_users(request):    # 请求参数在事件循环上提取
                         for qq in _all_secs:
                             if not qq.isdigit(): continue
                             u = slave.U(st, qq)
-                            p = int(u.get("price", "0") or 0)
+                            p = _to_int(u.get("price", "0") or 0)
                             if p <= 0:
                                 p = default_init_price
                                 u["price"] = str(p)
@@ -160,7 +172,7 @@ async def handle_slave_calibrate(request):
 
     def _work():
         try:
-            init_price = int(data.get("price", 0) or 0)
+            init_price = _to_int(data.get("price", 0) or 0)
             if init_price <= 0:
                 init_price = ST.cfgi("费用配置", "初始身价", 500) if hasattr(ST, "cfgi") else 500
             if init_price <= 0:
@@ -174,7 +186,7 @@ async def handle_slave_calibrate(request):
                     for qq in list(st.sections()):
                         if not qq.isdigit(): continue
                         u = st[qq]
-                        p = int(u.get("price", "0") or 0)
+                        p = _to_int(u.get("price", "0") or 0)
                         if p <= 0:
                             u["price"] = str(init_price)
                             st.mark_dirty(qq)

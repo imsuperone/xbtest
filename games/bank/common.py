@@ -269,7 +269,8 @@ def _ensure_target_qq(target, gid=None):
         m2 = re.search(r"\b(\d{5,12})\b", s)
         if m2:
             return m2.group(1)
-    return s
+    # 解不出返 None（调用方均判空）：禁返原文，否则按 QQ 建幻影账户吞钱
+    return None
 
 
 

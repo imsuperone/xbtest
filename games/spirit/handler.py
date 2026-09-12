@@ -572,6 +572,11 @@ def cmd_evolve(gid, qq, name):
     if int(bag.get("进化液", 0)) <= 0:
         del bag["进化液"]
     it["name"] = evo
+    # 出战/骑乘按名引用：跟随改名，否则进化后旧名找不到（当前数据 evolve 全否，零行为差）
+    if sp.get("active") == name:
+        sp["active"] = evo
+    if sp.get("ride") == name:
+        sp["ride"] = evo
     evo_base = _SPIRITS().get(evo, {})
     if evo_base:
         it["type"] = evo_base.get("type", it.get("type", ""))

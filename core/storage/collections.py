@@ -50,8 +50,12 @@ def _coll_load(sec):
                     raw = json.load(f)
                 if isinstance(raw, dict):
                     d = raw
+                else:
+                    # 非字典坏文件：不缓存，下次重读（禁 {} 污染后被 merge 落盘放大）
+                    return {}
             except Exception:
-                d = {}
+                # 解析失败不缓存：下次重读，禁坏文件钉死缓存
+                return {}
         _S._COLL_CACHE[sec] = d
         return d
     except Exception:
@@ -64,6 +68,14 @@ def _coll_write(sec):
     try:
         p = _coll_path(sec)
         if not p:
+            return False
+        # 非空坏文件禁写：防 {} 回写吞待修旧档（空文件无物可护，照写）
+        try:
+            if os.path.isfile(p) and os.path.getsize(p) > 0:
+                with open(p, encoding="utf-8") as _bf:
+                    if not isinstance(json.load(_bf), dict):
+                        return False
+        except Exception:
             return False
         d = _S._COLL_CACHE.get(sec) if isinstance(_S._COLL_CACHE.get(sec), dict) else {}
         tmp = p + ".tmp"
