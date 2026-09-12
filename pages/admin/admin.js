@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0912e";
+const FRONTEND_VER = "2026w0912f";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1719,7 +1719,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0912e"
+        version: res.version || "2026w0912f"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -4406,6 +4406,22 @@ function openRideAddModal() {
 
 async function loadShops(skipAtlas = false) {
   const msg = document.getElementById("shopMsg");
+  // instant 骨架：内存/内置先画出来（零等待），后台拉取后重绘；盒子永不空白
+  try {
+    if (!SHOP_RIDE || !Object.keys(SHOP_RIDE).length) {
+      SHOP_RIDE = JSON.parse(JSON.stringify(DEFAULT_RIDE_SHOP));
+      SHOP_RIDE_CUSTOM = false;
+    }
+    renderShopRideBox();
+  } catch (e) {}
+  try { renderPoolBox(); } catch (e) {}
+  try { if (typeof renderShop === "function") renderShop(); } catch (e) {}
+  try {
+    const _pb = document.getElementById("poolWeaponBox");
+    if (_pb && !_pb.innerHTML.trim()) _pb.innerHTML = `<div style="text-align:center;padding:16px;color:var(--muted)">武器池加载中…</div>`;
+    const _rb = document.getElementById("shopRideBox");
+    if (_rb && !_rb.innerHTML.trim()) _rb.innerHTML = `<div style="text-align:center;padding:16px;color:var(--muted)">坐骑商城加载中…</div>`;
+  } catch (e) {}
   try {
     const [cur, spiritData] = await Promise.all([
       apiTimeout(getBridge().apiGet("config/get"), 20000, "config/get"),
@@ -4441,7 +4457,7 @@ async function loadShops(skipAtlas = false) {
           Object.entries(o || {}).forEach(([k, v]) => {
             if (v && typeof v === "object" && !Array.isArray(v)) {
               const _t = String(v.type || "");
-              out[k] = { effect: String(v.effect || v.desc || ""), type: (["atk", "shield", "pardon"].includes(_t) ? _t : ""), value: Math.max(0, Number(v.value) || 0) };
+              out[k] = { effect: String(v.effect || v.desc || ""), type: (["atk", "shield", "pardon", "work", "worth"].includes(_t) ? _t : ""), value: Math.max(0, Number(v.value) || 0) };
             } else if (v && String(v).trim()) {
               out[k] = { effect: String(v).trim(), type: "", value: 0 };
             }
@@ -4468,6 +4484,13 @@ async function loadShops(skipAtlas = false) {
     if (msg) { msg.textContent = ""; msg.classList.remove("ok", "bad"); }
   } catch (e) {
     if (msg) { msg.textContent = "加载失败: " + e.message; msg.classList.add("bad"); }
+    // 失败兜底：还停留在加载占位的盒子给可重试错误（骨架已画出时不受影响）
+    try {
+      ["poolWeaponBox", "shopRideBox"].forEach((id) => {
+        const _b = document.getElementById(id);
+        if (_b && /加载中/.test(_b.innerHTML || "")) _b.innerHTML = `<div style="text-align:center;padding:16px;color:var(--bad)">加载失败，可<button class="ghost sm" onclick="loadShops()">重试</button></div>`;
+      });
+    } catch (_e) {}
   }
 }
 let _SHOP_ORDER = null; // ["ride","pool","shop"] | null=默认顺序
