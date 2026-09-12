@@ -1,5 +1,12 @@
 # 更新日志
 
+## v2026w0912c
+- 🧹 **关于页再减负**：双通道行只剩版本号（有更新也不挂后缀）；有更新时状态行隐藏
+  （只亮按钮和徽标）；删检测更新下 hint。
+- 📦 **存储实证**：图鉴 `atlas.json`、商城 `shop.json` 落 AstrBot 持久化目录
+  （`data/plugin_data/astrbot_plugin_xbbot_beta/`，更新插件不丢）；自动备份只备 `.db`，
+  图鉴商城靠预设包/导出搬家（这正是预设包存在的原因）。
+
 ## v2026w0912b
 - 🧩 **拆分 users/backup**：`users.py` 拆出 `user_io.py`（导入导出）＋`airdrop.py`（空投）；
   `backup.py` 拆出 `snapshots.py`（快照）＋`backup_cloud.py`（WebDAV）；路由改指，端点不变；

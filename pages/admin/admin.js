@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0912b";
+const FRONTEND_VER = "2026w0912c";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1719,7 +1719,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0912b"
+        version: res.version || "2026w0912c"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -5420,7 +5420,7 @@ function _paintChannelRow(elId, res) {
     const el = document.getElementById(elId);
     if (!el) return;
     if (res && !res.detect_error && res.latest_version) {
-      el.textContent = res.has_update ? ("v" + res.latest_version + "（有更新）") : ("v" + res.latest_version);
+      el.textContent = "v" + res.latest_version;
     } else {
       el.textContent = "检测失败" + (res && res.detect_error ? "：" + res.detect_error : "");
     }
@@ -5468,12 +5468,9 @@ async function checkVersionUpdate(silent = false) {
         btn.style.background = "rgba(59,130,246,0.1)";
       }
       if (statusEl) {
-        statusEl.style.display = "inline-flex";
-        statusEl.style.color = "var(--acc)";
-        statusEl.style.background = "rgba(59,130,246,0.12)";
-        statusEl.style.border = "1px solid rgba(59,130,246,0.3)";
-        const _which = updB && updS ? "BETA/正式均" : (updB ? "BETA " : "正式 ");
-        statusEl.textContent = "🚀 " + _which + "发现新版本 v" + updVer + "（建议升级）";
+        // 有更新只亮按钮和徽标，状态行保持隐藏（版号到处贴太挤）
+        statusEl.style.display = "none";
+        statusEl.textContent = "";
       }
       if (badge) {
         badge.style.display = "inline-flex";
