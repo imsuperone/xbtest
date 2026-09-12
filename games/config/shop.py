@@ -4,8 +4,9 @@
 slave_state._GACHA_COST_DEF 单源，不搬（消费方 slave/gacha.py 经 _S. 取用）。"""
 
 # 宝物实效类型（商城图鉴.treasures {名: {type, value, desc}}；老 treasure_effects 只读兼容）
-# atk=攻击加成计入主人战力；shield=打架护盾；pardon=造反免罪；空=纯收藏
-TREASURE_TYPES = ("", "atk", "shield", "pardon")
+# atk=攻击加成计入主人战力；shield=打架护盾；pardon=造反免罪；
+# work=打工工资加成%；worth=身价加成%（战斗力身价部分）；空=纯收藏
+TREASURE_TYPES = ("", "atk", "shield", "pardon", "work", "worth")
 
 # 稀有度陈列顺序（武器池页签/校验共用）
 POOL_RARS = ("SSR", "SR", "R")

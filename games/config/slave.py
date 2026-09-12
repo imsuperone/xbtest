@@ -59,6 +59,8 @@ WORK_BASE_LO = 100          # 打工基础工资下限
 WORK_BASE_HI = 500          # 打工基础工资上限
 WORK_WORTH_DIV = 50         # 工资+=身价//N
 WORK_WAGE_FLOOR = 100       # 身价<N无工资
+WORK_PCT_CAP = 200          # 打工加成宝物总和钳位（超出按 cap 计，防印钱失控）
+WORTH_PCT_CAP = 100         # 身价加成宝物总和钳位（战斗力身价部分×(1+N/100)）
 STUDY_FEE_LO = 100          # 学费下限
 STUDY_FEE_HI = 800          # 学费上限
 STUDY_EXP_LO = 20           # 武器经验下限

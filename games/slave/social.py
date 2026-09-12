@@ -12,16 +12,18 @@ try:
     from ..config.slave import (STUDY_FEE_LO, STUDY_FEE_HI, STUDY_EXP_LO, STUDY_EXP_HI,
                                 PRAY_LOSE_CHANCE, PRAY_LOSE_LO, PRAY_LOSE_HI, PRAY_NINJA_CHANCE,
                                 WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WAGE_FLOOR,
+                                WORK_PCT_CAP,
                                 REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
                                 TREASURE_GOURD_NAME)
 except ImportError:
     from games.config.slave import (STUDY_FEE_LO, STUDY_FEE_HI, STUDY_EXP_LO, STUDY_EXP_HI,  # type: ignore
                                     PRAY_LOSE_CHANCE, PRAY_LOSE_LO, PRAY_LOSE_HI, PRAY_NINJA_CHANCE,
                                     WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WAGE_FLOOR,
+                                    WORK_PCT_CAP,
                                     REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
                                     TREASURE_GOURD_NAME)
 from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgi, cn_fmt, cn_parse, coins_add, coins_get, slaves_of, treasures_of, uget, uset
-from .combat import _has_treasure_type, _treasure_names, battle_power
+from .combat import _has_treasure_type, _treasure_names, _treasure_pct_total, battle_power
 from .nick import uname
 from .profile import coin_name
 def cmd_flatter(gid, qq, st):
@@ -206,6 +208,10 @@ def cmd_work_collect(gid, qq, st):
         return _S.T.WORK_WAIT.format(min=int(left / 60) + 1)
 
     ratio = cfgi("费用配置", "工资比例", 50)
+    try:
+        _work_bonus = _treasure_pct_total(treasures_of(u), "work", WORK_PCT_CAP)
+    except Exception:
+        _work_bonus = 0
     total = _safe_int(uget(u, "work_wage"), 0)
     lines = [_S.T.WORK_COLLECT.format(total=total)]
     wage_paid = 0
@@ -220,6 +226,8 @@ def cmd_work_collect(gid, qq, st):
             lines.append(f"[{uname(st,s)}]{_S.T.WORK_NO_WAGE}")
             continue
         got = wage * ratio // 100
+        if _work_bonus > 0:
+            got += got * _work_bonus // 100
         coins_add(gid, s, got)
         wage_paid += got
         lines.append(f"[{uname(st,s)}]{_S.T.WORK_GOT_WAGE.format(wage=got)}")

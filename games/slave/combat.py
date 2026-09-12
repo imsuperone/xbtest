@@ -12,11 +12,13 @@ from . import slave_state as _S
 try:
     from ..config.slave import (FIGHT_REFUSE_POWER, FIGHT_STAKE_PCT, FIGHT_STAKE_CAP,
                                 FIGHT_POOR_LIMIT, FIGHT_CRIT_PER_STAR, FIGHT_CRIT_MULT,
-                                SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS)
+                                SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS,
+                                WORTH_PCT_CAP)
 except ImportError:
     from games.config.slave import (FIGHT_REFUSE_POWER, FIGHT_STAKE_PCT, FIGHT_STAKE_CAP,  # type: ignore
                                     FIGHT_POOR_LIMIT, FIGHT_CRIT_PER_STAR, FIGHT_CRIT_MULT,
-                                    SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS)
+                                    SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS,
+                                    WORTH_PCT_CAP)
 from .base import U, _fmt, _safe_int, cd_check, cd_commit, cfg, cfgf, cfgi, cn_fmt, cn_parse, coins_add, coins_get, slaves_of, star_of, treasures_of, uget, uset, weapons_of
 from .nick import uname
 
@@ -96,8 +98,29 @@ def _has_treasure_type(owned, ttype, fallbacks=()):
     return False
 
 
+def _treasure_pct_total(owned, ttype, cap=100):
+    """持有宝物某百分比型加成之和（钳位 0..cap，默认 100）"""
+    s = 0
+    try:
+        items = _treasure_items()
+        for t in (owned or []):
+            v = items.get(str(t))
+            if isinstance(v, dict) and str(v.get("type", "") or "") == str(ttype or ""):
+                try:
+                    s += max(0, int(float(v.get("value", 0) or 0)))
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    try:
+        cap = max(0, int(cap))
+    except Exception:
+        cap = 100
+    return max(0, min(s, cap))
+
+
 def _treasure_atk_total(owned):
-    """持有宝物攻击加成之和（战斗力外挂项）"""
+    """持有宝物攻击加成之和（战斗力外挂项，不钳位）"""
     s = 0
     try:
         items = _treasure_items()
@@ -204,12 +227,16 @@ def atk_of(st, qq):
 
 
 def battle_power(st, qq):
-    """战斗力 = 主人奴隶身价之和 + 武器攻击力 + 宝物攻击加成"""
+    """战斗力 = 主人身价*(1+身价加成) + 武器攻击力 + 宝物攻击加成"""
     u = U(st, qq)
     p = int(uget(u, "price") or 0)
     for s in slaves_of(st, qq):
         p += int(uget(U(st, s), "price") or 0)
-    return p + atk_of(st, qq) + _treasure_atk_total(treasures_of(u))
+    try:
+        _wb = _treasure_pct_total(treasures_of(u), "worth", WORTH_PCT_CAP)
+    except Exception:
+        _wb = 0
+    return p + p * _wb // 100 + atk_of(st, qq) + _treasure_atk_total(treasures_of(u))
 
 
 

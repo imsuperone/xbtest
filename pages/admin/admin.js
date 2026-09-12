@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0912d";
+const FRONTEND_VER = "2026w0912e";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1719,7 +1719,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0912d"
+        version: res.version || "2026w0912e"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -2469,23 +2469,44 @@ async function renderAtlas(curCfg){
     } catch(e) { Treas = ["酒神葫芦", "四象护符"]; }
     const _spiritMaps = (() => { try { return Object.keys((SPIRIT && SPIRIT.maps) || {}); } catch (e) { return []; } })();
     const _tabs = [["treasure", "🎁 宝物", Treas.length], ["spirit", "✨ 精灵", _spiritMaps.length]];
-    let html = `<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">` + _tabs.map(([k, label, n]) =>
-      `<button class="ghost sm" data-atlas-tab="${k}" ${ATLAS_CUR === k ? 'disabled style="opacity:.45"' : ""}>${label} (${n})</button>`
-    ).join("") + `</div><div style="display:flex;flex-direction:column;gap:8px">`;
+    const _q = String((typeof window._ATLAS_Q !== "undefined" && window._ATLAS_Q) || "").trim();
+    const _ql = _q.toLowerCase();
+    let html = `<div style="position:sticky;top:0;z-index:5;background:var(--panel);padding:8px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">`
+      + `<div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">`
+      + _tabs.map(([k, label, n]) => `<button class="ghost sm" data-atlas-tab="${k}" style="${ATLAS_CUR === k ? "background:var(--acc);color:#fff;border-color:transparent" : "border-color:transparent"}" title="切换到${label}">${label} (${n})</button>`).join("")
+      + `</div>`
+      + `<input id="atlasSearch" placeholder="🔍 搜宝物 / 地图 / 精灵…" value="${esc(_q)}" style="flex:1;min-width:140px;padding:5px 10px;border-radius:8px">`
+      + `</div><div style="display:flex;flex-direction:column;gap:8px">`;
     const _effOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); return String(e || ""); } catch (e) { return ""; } };
     const _treOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; return null; } catch (e) { return null; } };
-    const _typeTag = (n) => { try { const o = _treOf(n) || {}; const t = String(o.type || ""); const v = Number(o.value) || 0; if (t === "atk" && v > 0) return "·攻" + v; if (t === "shield") return "·盾"; if (t === "pardon") return "·免"; return ""; } catch (e) { return ""; } };
+    const _typeTag = (n) => { try { const o = _treOf(n) || {}; const t = String(o.type || ""); const v = Number(o.value) || 0; if (t === "atk" && v > 0) return "攻" + v; if (t === "shield") return "盾"; if (t === "pardon") return "免"; if ((t === "work" || t === "worth") && v > 0) return (t === "work" ? "工" : "价") + v + "%"; return ""; } catch (e) { return ""; } };
     if (ATLAS_CUR === "treasure") {
-      let h = `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)"><div style="font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">奴隶系统-宝物 (${Treas.length}) <span style="margin-left:auto;display:inline-flex;gap:4px;flex-wrap:wrap"><button class="ghost sm" id="btnAtlasSaveTreasure">💾 保存宝物</button><button class="ghost sm" id="btnAtlasResetTreasure">↩️ 恢复默认</button><button class="ghost sm" id="btnAtlasAddTreasure">＋ 添加</button></span></div><div style="display:flex;flex-wrap:wrap;gap:5px">`;
-      if (!Treas.length) h += `<span style="color:var(--muted)">暂无</span>`;
-      else h += Treas.map(n => { const e = _effOf(n); return `<span class="badge badge-primary" style="font-size:11.5px;display:inline-flex;align-items:center;gap:5px;padding:3px 8px" title="${esc(e || "无自定义效果")}">🎁 ${esc(n)}${e ? "·" + esc(e.slice(0, 12)) : ""}${_typeTag(n)}<span style="cursor:pointer" data-atlas-edit-treasure="${esc(n)}" title="修改效果">✎</span><span style="cursor:pointer;font-weight:bold" data-atlas-del="奴隶系统-宝物|${esc(n)}" title="删除">×</span></span>`; }).join("");
-      h += `</div><div class="hint" style="margin-top:6px">✎ 可改宝物效果（不止名字），× 删除；改动即时保存</div></div>`;
+      let h = `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)"><div style="font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">奴隶系统-宝物 (${Treas.length}) <span style="margin-left:auto;display:inline-flex;gap:4px;flex-wrap:wrap"><button class="ghost sm" id="btnAtlasSaveTreasure">💾 保存宝物</button><button class="ghost sm" id="btnAtlasResetTreasure">↩️ 恢复默认</button><button class="ghost sm" id="btnAtlasAddTreasure">＋ 添加</button></span></div><div style="display:flex;flex-wrap:wrap;gap:8px">`;
+      const _ft = Treas.filter((n) => !_ql || String(n).toLowerCase().includes(_ql) || _effOf(n).toLowerCase().includes(_ql));
+      if (!_ft.length) h += `<span style="color:var(--muted)">${_q ? "无匹配宝物" : "暂无"}</span>`;
+      else h += _ft.map(n => {
+        const e = _effOf(n);
+        const _tag = _typeTag(n);
+        return `<div class="tre-card" data-treasure="${esc(n)}" style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel);min-width:190px;flex:1 1 200px">`
+          + `<div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px">🎁 ${esc(n)}${_tag ? `<span class="badge badge-primary" style="font-size:10.5px">${esc(_tag)}</span>` : ""}`
+          + `<span style="margin-left:auto;display:inline-flex;gap:2px"><button class="ghost sm" data-atlas-edit-treasure="${esc(n)}" title="编辑效果/类型/数值">✎</button><button class="s-del" data-atlas-del="奴隶系统-宝物|${esc(n)}" title="删除">×</button></span></div>`
+          + (e ? `<div style="font-size:11.5px;color:var(--muted);margin-top:4px">${esc(e.slice(0, 60))}</div>` : `<div style="font-size:11.5px;color:var(--muted);margin-top:4px">无自定义效果</div>`)
+          + `</div>`;
+      }).join("");
+      h += `</div><div class="hint" style="margin-top:6px">✎ 编辑效果类型与数值（攻击/护盾/免罪/打工/身价），× 删除；改动即时保存</div></div>`;
       html += h;
     }
     else if (ATLAS_CUR === "spirit") {
       const _maps = (() => { try { return (SPIRIT && SPIRIT.maps) || {}; } catch (e) { return {}; } })();
       const _spirits = (() => { try { return (SPIRIT && SPIRIT.spirits) || {}; } catch (e) { return {}; } })();
-      const _names = Object.keys(_maps);
+      const _mapHit = (m) => {
+        if (!_ql) return true;
+        try {
+          if (String(m).toLowerCase().includes(_ql)) return true;
+          return ((_maps[m] && _maps[m].drops) || []).map(String).join("、").toLowerCase().includes(_ql);
+        } catch (e) { return false; }
+      };
+      const _names = Object.keys(_maps).filter(_mapHit);
       try { window._spDlDone = false; } catch (e) {}
       let _orphans = [];
       try {
@@ -2496,6 +2517,8 @@ async function renderAtlas(curCfg){
       let h = `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)">`
         + `<div style="font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">精灵系统-精灵地图 (${_names.length})`
         + `<span style="margin-left:auto;display:inline-flex;gap:4px;flex-wrap:wrap">`
+        + `<button class="ghost sm" id="btnAtlasExpandAll" title="全部展开">▾ 展开</button>`
+        + `<button class="ghost sm" id="btnAtlasCollapseAll" title="全部收起">▸ 收起</button>`
         + `<button class="ghost sm" id="btnAtlasSaveMaps">💾 保存精灵</button>`
         + `<button class="ghost sm" id="btnAtlasResetMaps">↩️ 恢复默认</button>`
         + `<button class="ghost sm" id="btnAtlasClearMaps">🧹 清空地图</button>`
@@ -2507,19 +2530,55 @@ async function renderAtlas(curCfg){
         h += `<div id="atlasSpiritCards" style="display:flex;flex-direction:column;gap:8px">` + spiritMapCardsHTML(_names, _maps, _spirits, "") + `</div>`;
       }
       if (_orphans.length) {
-        h += `<div class="s-mapcard ${SPIRIT_OPEN["__orphans__"] ? "open" : ""}" data-map="__orphans__" style="margin-top:10px"><div class="s-maphead" data-map-toggle="__orphans__"><span class="s-mapname">🧩 未上架精灵 (${_orphans.length})</span><span class="s-maplv">不在任何地图掉落中</span><span class="s-arr">${SPIRIT_OPEN["__orphans__"] ? "▾" : "▸"}</span></div>${SPIRIT_OPEN["__orphans__"] ? `<div class="s-mapbody"><div class="hint" style="margin-bottom:6px">这些精灵不会在野外遭遇，可编辑后分配进图，或直接移除</div><div class="sp-spirits">${spiritAttrCards(_spirits, _orphans, _names)}</div></div>` : ``}</div>`;
+        const _or = _orphans.filter((n) => !_ql || String(n).toLowerCase().includes(_ql));
+        if (_or.length) {
+          h += `<div class="s-mapcard ${SPIRIT_OPEN["__orphans__"] ? "open" : ""}" data-map="__orphans__" style="margin-top:10px"><div class="s-maphead" data-map-toggle="__orphans__"><span class="s-mapname">🧩 未上架精灵 (${_or.length})</span><span class="s-maplv">不在任何地图掉落中</span><span class="s-arr">${SPIRIT_OPEN["__orphans__"] ? "▾" : "▸"}</span></div>${SPIRIT_OPEN["__orphans__"] ? `<div class="s-mapbody"><div class="hint" style="margin-bottom:6px">这些精灵不会在野外遭遇，可编辑后分配进图，或直接移除</div><div class="sp-spirits">${spiritAttrCards(_spirits, _or, _names)}</div></div>` : ``}</div>`;
+        }
       }
       h += `<div style="margin-top:8px"><button class="ghost sm" id="btnAtlasAddMap">＋ 添加地图</button></div>`;
       h += `<div class="hint" style="margin-top:6px">地图+属性一键保存/恢复，只动精灵范围</div></div>`;
       html += h;
     }
     else html += `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)"><div style="color:var(--muted)">未知分类</div></div>`;
-    html += `</div><div class="hint" style="margin-top:6px">宝物改动即时保存，只动各自范围；精灵卡改动点保存精灵；武器坐骑请到🛒商城管理</div>`;
+    html += `</div><div class="hint" style="margin-top:6px">顶栏可搜宝物/地图/精灵；宝物改动即时保存；精灵卡改动点保存精灵；武器坐骑请到🛒商城管理</div>`;
     box.innerHTML = html;
     box.querySelectorAll("[data-atlas-tab]").forEach((b) => b.addEventListener("click", () => {
       ATLAS_CUR = b.dataset.atlasTab;
       renderAtlas();
     }));
+    // 搜索框：防抖重绘 + 焦点恢复（重绘会换掉 input 节点）
+    try {
+      const _si = box.querySelector("#atlasSearch");
+      if (_si) {
+        let _t = null;
+        _si.addEventListener("input", () => {
+          if (_t) clearTimeout(_t);
+          _t = setTimeout(() => {
+            window._ATLAS_Q = _si.value;
+            const _pos = _si.selectionStart;
+            window._ATLAS_FOCUS = true;
+            renderAtlas();
+            try {
+              const _n = document.getElementById("atlasSearch");
+              if (_n) { _n.focus(); _n.setSelectionRange(_pos, _pos); }
+            } catch (e) {}
+            window._ATLAS_FOCUS = false;
+          }, 250);
+        });
+        if (window._ATLAS_FOCUS) { try { _si.focus(); } catch (e) {} }
+      }
+    } catch (e) {}
+    document.getElementById("btnAtlasExpandAll")?.addEventListener("click", () => {
+      try {
+        Object.keys((SPIRIT && SPIRIT.maps) || {}).forEach((m) => { SPIRIT_OPEN[m] = true; });
+        SPIRIT_OPEN["__orphans__"] = true;
+      } catch (e) {}
+      refreshSpiritViews();
+    });
+    document.getElementById("btnAtlasCollapseAll")?.addEventListener("click", () => {
+      SPIRIT_OPEN = {};
+      refreshSpiritViews();
+    });
     const persistTreasure = async (delNames) => {
       // 宝物名+结构效果即时持久化（图鉴页内闭环，不碰商城；单一家 treasures，老 treasure_effects 只读兼容不再写）
       // delNames: 已删宝物名数组，显式 null 清 sidecar（merge 语义缺键≠删除，不传即复活）
@@ -2529,7 +2588,7 @@ async function renderAtlas(curCfg){
           const _t = String(v.type || "");
           let _v = Number(v.value) || 0;
           if (_v < 0) _v = 0;
-          items[k] = { type: (["atk", "shield", "pardon"].includes(_t) ? _t : ""), value: _v, desc: String(v.effect || "") };
+          items[k] = { type: (_treasureTypeOk(_t) ? _t : ""), value: _v, desc: String(v.effect || "") };
         } else if (v && String(v).trim()) {
           items[k] = { type: "", value: 0, desc: String(v).trim() };
         }
@@ -2618,7 +2677,8 @@ async function renderAtlas(curCfg){
   } catch (e) { box.innerHTML = `<span style="color:var(--muted)">图鉴加载失败: ${esc(e.message)}</span>`; }
 }
 
-const TREASURE_TYPES = [["", "无（纯收藏）"], ["atk", "攻击加成"], ["shield", "护盾（免被偷）"], ["pardon", "免罪（造反免罚）"]];
+const TREASURE_TYPES = [["", "无（纯收藏）"], ["atk", "攻击加成"], ["shield", "护盾（免被偷）"], ["pardon", "免罪（造反免罚）"], ["work", "打工加成%"], ["worth", "身价加成%"]];
+function _treasureTypeOk(t) { return ["atk", "shield", "pardon", "work", "worth"].includes(String(t || "")); }
 function openTreasureEditModal(name) {
   const modal = document.getElementById("appModal");
   if (!modal) return;
@@ -2639,10 +2699,10 @@ function openTreasureEditModal(name) {
       <div style="display:flex;gap:8px">
         <div style="flex:1"><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">实效类型：</label>
           <select id="treEditType" style="width:100%;padding:6px 10px;border-radius:8px">${TREASURE_TYPES.map(([v, l]) => `<option value="${v}"${String(cur.type || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select></div>
-        <div style="flex:1"><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">数值（攻击加成才用）：</label>
+        <div style="flex:1"><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">数值（攻击/打工%/身价%用）：</label>
           <input id="treEditValue" type="number" min="0" value="${Number(cur.value) || 0}" style="width:100%;padding:6px 10px;border-radius:8px"></div>
       </div>
-      <div class="hint">攻击加成直接计入主人战力；护盾防打架被偷；免罪防造反被罚。保存后即时生效。</div>
+      <div class="hint">攻击计入主人战力；护盾防打架被偷；免罪防造反被罚；打工加成主人全队工资；身价加成战斗力身价部分。保存后即时生效。</div>
     </div>`;
   if (cancelBtn) { cancelBtn.style.display = ""; cancelBtn.textContent = "取消"; cancelBtn.onclick = () => { modal.className = ""; }; }
   if (okBtn) {
@@ -2653,7 +2713,7 @@ function openTreasureEditModal(name) {
       const value = Math.max(0, Number(document.getElementById("treEditValue")?.value) || 0);
       window._TREAS_EFF = window._TREAS_EFF || {};
       if (!desc && !type) delete window._TREAS_EFF[name];
-      else window._TREAS_EFF[name] = { effect: desc, type: (type === "atk" || type === "shield" || type === "pardon") ? type : "", value };
+      else window._TREAS_EFF[name] = { effect: desc, type: (_treasureTypeOk(type) ? type : ""), value };
       try { await persistTreasure(); toast("已保存", "ok"); }
       catch (e) { toast("保存失败: " + e.message, "bad"); }
       modal.className = "";
@@ -3297,7 +3357,7 @@ async function exportPreset() {
       try {
         Object.entries(o || {}).forEach(([k, v]) => {
           if (v && typeof v === "object" && !Array.isArray(v)) {
-            out[k] = { effect: String(v.effect || v.desc || ""), type: (["atk", "shield", "pardon"].includes(String(v.type || "")) ? String(v.type) : ""), value: Math.max(0, Number(v.value) || 0) };
+            out[k] = { effect: String(v.effect || v.desc || ""), type: (_treasureTypeOk(String(v.type || "")) ? String(v.type) : ""), value: Math.max(0, Number(v.value) || 0) };
           } else if (v && String(v).trim()) {
             out[k] = { effect: String(v).trim(), type: "", value: 0 };
           }
@@ -3393,7 +3453,7 @@ async function importPreset() {
             Object.entries(_items).forEach(([k, v]) => {
               if (v && typeof v === "object" && !Array.isArray(v)) {
                 const _t = String(v.type || "");
-                _clean[k] = { type: (["atk", "shield", "pardon"].includes(_t) ? _t : ""), value: Math.max(0, Number(v.value) || 0), desc: String(v.effect || v.desc || "") };
+                _clean[k] = { type: (_treasureTypeOk(_t) ? _t : ""), value: Math.max(0, Number(v.value) || 0), desc: String(v.effect || v.desc || "") };
               } else if (v && String(v).trim()) {
                 _clean[k] = { type: "", value: 0, desc: String(v).trim() };
               }
