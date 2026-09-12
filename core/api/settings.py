@@ -124,11 +124,11 @@ async def handle_cfg_save(request, plugin_base=""):
                 pass
             # 全量配置自动快照（去重，删改乱可一键恢复）
             try:
-                from .backup import auto_snapshot_if_changed as _auto_snap
+                from .snapshots import auto_snapshot_if_changed as _auto_snap
                 _auto_snap()
             except Exception:
                 try:
-                    from core.api.backup import auto_snapshot_if_changed as _auto_snap2
+                    from core.api.snapshots import auto_snapshot_if_changed as _auto_snap2
                     _auto_snap2()
                 except Exception:
                     pass
@@ -495,11 +495,11 @@ async def handle_config_auto_balance(request):
         # 1. 平衡前快照记账（kv 快操作：覆盖前抓拍旧值；慢速全库冷备挪后见 §4）
         pre_snapshot = ""
         try:
-            from .backup import auto_snapshot_if_changed as _auto_snap
+            from .snapshots import auto_snapshot_if_changed as _auto_snap
             _auto_snap()
         except Exception:
             try:
-                from core.api.backup import auto_snapshot_if_changed as _auto_snap2
+                from core.api.snapshots import auto_snapshot_if_changed as _auto_snap2
                 _auto_snap2()
             except Exception:
                 pass
@@ -518,10 +518,10 @@ async def handle_config_auto_balance(request):
                         _idx = []
                     _idx = [_new_name] + [x for x in _idx if x != _new_name]
                     try:
-                        from .backup import _snap_index_save as _sidx
+                        from .snapshots import _snap_index_save as _sidx
                     except Exception:
                         try:
-                            from core.api.backup import _snap_index_save as _sidx  # type: ignore
+                            from core.api.snapshots import _snap_index_save as _sidx  # type: ignore
                         except Exception:
                             _sidx = None
                     if _sidx is not None:

@@ -135,11 +135,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "2026w0912a"
+            return "2026w0912b"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "2026w0912a"
+    PLUGIN_VERSION = "2026w0912b"
 
 # 消息处理定长线程池：突发千群不再打爆默认无限池，与 ST._LOCK 串行叠加可控
 # import 期不建池（工具链 import 零线程）：首个 XbBot 实例化/首消息时懒建，全局单例，永不 shutdown
@@ -714,17 +714,17 @@ class XbBot(Star):
 
     async def page_user_export(self, request=None, *args, **kwargs):
         # _raw_file_response is_raw 保留关键字以兼容 test_fix 检测
-        return await self._call_api("core.api.users", "handle_user_export", "export", request, args)
+        return await self._call_api("core.api.user_io", "handle_user_export", "export", request, args)
 
     async def page_user_import(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.users", "handle_user_import", "import", request, args)
+        return await self._call_api("core.api.user_io", "handle_user_import", "import", request, args)
 
     async def page_users_export(self, request=None, *args, **kwargs):
         # is_raw _raw_file_response raw 关键字保留
-        return await self._call_api("core.api.users", "handle_users_export", "export", request, args)
+        return await self._call_api("core.api.user_io", "handle_users_export", "export", request, args)
 
     async def page_users_import(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.users", "handle_users_import", "import", request, args)
+        return await self._call_api("core.api.user_io", "handle_users_import", "import", request, args)
 
     async def page_users_clean_left(self, request=None, *args, **kwargs):
         return await self._call_api("core.api.users", "handle_users_clean_left", "clean left users", request, args, use_context=True)
@@ -746,7 +746,7 @@ class XbBot(Star):
         return await self._call_api("core.api.stats", "handle_analytics_overview", "analytics", request, args)
 
     async def page_users_airdrop(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.users", "handle_users_airdrop", "airdrop", request, args)
+        return await self._call_api("core.api.airdrop", "handle_users_airdrop", "airdrop", request, args)
 
     async def page_spirits_get(self, request=None, *args, **kwargs):
         return await self._call_api("core.api.atlas", "handle_spirits_get", "spirits get", request, args)
@@ -801,13 +801,13 @@ class XbBot(Star):
         return await self._call_api("core.api.backup", "handle_backups_delete", "delete", request, args, with_base=True)
 
     async def page_cfg_snapshots(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_cfg_snapshots", "snapshots", request, args, with_base=True)
+        return await self._call_api("core.api.snapshots", "handle_cfg_snapshots", "snapshots", request, args, with_base=True)
 
     async def page_cfg_snapshot_save(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_cfg_snapshot_save", "snapshot save", request, args, with_base=True)
+        return await self._call_api("core.api.snapshots", "handle_cfg_snapshot_save", "snapshot save", request, args, with_base=True)
 
     async def page_cfg_snapshot_restore(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_cfg_snapshot_restore", "snapshot restore", request, args, with_base=True)
+        return await self._call_api("core.api.snapshots", "handle_cfg_snapshot_restore", "snapshot restore", request, args, with_base=True)
 
     async def page_backups_export(self, request=None, *args, **kwargs):
         return await self._call_api("core.api.backup", "handle_backups_export", "export", request, args, with_base=True)
@@ -819,19 +819,19 @@ class XbBot(Star):
         return await self._call_api("core.api.backup", "handle_backups_prune", "prune", request, args, with_base=True)
 
     async def page_webdav_test(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_webdav_test", "webdav test", request, args, mode="req")
+        return await self._call_api("core.api.backup_cloud", "handle_webdav_test", "webdav test", request, args, mode="req")
 
     async def page_webdav_backup_now(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_webdav_backup_now", "webdav backup", request, args, mode="req")
+        return await self._call_api("core.api.backup_cloud", "handle_webdav_backup_now", "webdav backup", request, args, mode="req")
 
     async def page_webdav_files(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_webdav_files", "webdav files", request, args, mode="req")
+        return await self._call_api("core.api.backup_cloud", "handle_webdav_files", "webdav files", request, args, mode="req")
 
     async def page_webdav_restore(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_webdav_restore", "webdav restore", request, args, mode="req", with_base=True)
+        return await self._call_api("core.api.backup_cloud", "handle_webdav_restore", "webdav restore", request, args, mode="req", with_base=True)
 
     async def page_webdav_delete(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_webdav_delete", "webdav delete", request, args, mode="req", with_base=True)
+        return await self._call_api("core.api.backup_cloud", "handle_webdav_delete", "webdav delete", request, args, mode="req", with_base=True)
 
     async def page_version_check(self, request=None, *args, **kwargs):
         return await self._call_api("core.api.stats", "handle_version_check", "version check", request, args, mode="req", with_base=True)
