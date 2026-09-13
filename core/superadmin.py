@@ -492,7 +492,7 @@ def _version():
             return f"小白测试版版本：{_gv2()}"
         except Exception:
             pass
-    return "小白测试版版本：2026w0913e"
+    return "小白测试版版本：2026w0913f"
 
 
 

@@ -182,6 +182,8 @@ async def handle_logs_get(request=None):
         body = await get_req_json(request, {})
         limit_str = get_req_query(request, "limit", "") or (body.get("limit") if isinstance(body, dict) else "") or "200"
         level = get_req_query(request, "level", "") or (body.get("level") if isinstance(body, dict) else "") or ""
+        if str(level).strip().upper() == "ALL":
+            level = ""
         keyword = get_req_query(request, "keyword", "") or (body.get("keyword") if isinstance(body, dict) else "") or ""
 
         try:
@@ -496,7 +498,7 @@ def _get_local_version(plugin_base=""):
         return _gv(plugin_base)
     except Exception:
         pass
-    return "2026w0913e"
+    return "2026w0913f"
 
 
 def _parse_version_tuple(v_str):

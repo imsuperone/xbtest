@@ -154,7 +154,17 @@ def get_logs(limit=200, level="", keyword=""):
         pass
 
     level = (level or "").strip().upper()
+    if level == "ALL":
+        level = ""
     keyword = (keyword or "").strip().lower()
+
+    # 如果日志文件不存在，先写一条服务初始化日志
+    if not os.path.isfile(log_file):
+        info("小白测试版日志服务已就绪")
+        try:
+            file_size = os.path.getsize(log_file)
+        except Exception:
+            file_size = 0
 
     lines = []
     with _LOCK:
