@@ -312,18 +312,21 @@ def cmd_shop():
 
 
 def cmd_buy(gid, qq, name):
-    if name not in _SHOP():
+    shop = _SHOP()
+    if name not in shop:
         return "亲，商城中不存在该物品，发送【精灵商城】查看商城吧！"
-    d = _SHOP()[name]
+    d = shop[name]
     price = int(d.get("price", 0) or 0)
     if price > 0 and ST.coins_get(gid, qq) < price:
         return f"笑~你没有那么多{ST.coin_name()}（需要{price}）"
-    if price > 0:
-        ST.coins_add(gid, qq, -price)
     sp = _spirits(gid, qq)
     bag = sp.setdefault("bag", {})
     bag[name] = int(bag.get(name, 0)) + 1
-    _save(gid, qq, sp)
+    if price > 0:
+        if ST.txn_coins_acct(gid, qq, -price, {"spirits": json.dumps(sp, ensure_ascii=False)}, require_funds=True) is None:
+            return "精灵商城繁忙，购买未成功，请稍后重试！"
+    else:
+        _save(gid, qq, sp)
     return f"购买成功！获得「{name}」，已放入背包。"
 
 
@@ -424,8 +427,6 @@ def cmd_adventure(gid, qq, place):
     gold = random.randint(0, max(0, gold_hi))
     if act_it.get("level") < _cfgi("最大等级", 100):
         _add_exp(gid, qq, sp, act_it, exp)
-    if gold > 0:
-        ST.coins_add(gid, qq, gold)
     # H: 挑战扣除（fallback全0，没配行为不变；有配则扣钱扣体力并在文案明示）
     d_lo = _cfgi("挑战扣除_金钱下限", 0)
     d_hi = _cfgi("挑战扣除_金钱上限", 0)
@@ -440,8 +441,6 @@ def cmd_adventure(gid, qq, place):
             d_gold = random.randint(_dlo, _dhi)
             if d_gold > 0:
                 _real = min(d_gold, ST.coins_get(gid, qq))
-                if _real > 0:
-                    ST.coins_add(gid, qq, -_real)
                 d_gold = _real
     if d_tili > 0:
         try:
@@ -449,9 +448,13 @@ def cmd_adventure(gid, qq, place):
         except Exception:
             _cur_st = int(d_tili)
         d_stam = min(int(d_tili), max(0, _cur_st))
-        if d_stam > 0:
-            ST.acct_add(gid, qq, "stamina", -d_stam)
-    _save(gid, qq, sp)
+    cur_st = ST.acct(gid, qq).int("stamina")
+    updates = {
+        "spirits": json.dumps(sp, ensure_ascii=False),
+        "stamina": str(max(0, cur_st - d_stam)),
+    }
+    if ST.txn_coins_acct(gid, qq, gold - d_gold, updates) is None:
+        return "精灵冒险结算繁忙，本次奖励和扣除均未生效，请稍后重试！"
     _recall_set(key, str(time.time()))
     _deduct_msg = ""
     if d_gold or d_stam:
@@ -487,11 +490,15 @@ def cmd_catch(gid, qq, ball):
     lv = int(wild.get("level", 1))
     p = max(CATCH_MIN, min(CATCH_MAX, eff - (lv - 10) // CATCH_LV_STEP)) if eff < CATCH_MASTER_EFF else CATCH_MASTER_RATE
     sp.pop("wild", None)
-    if random.randint(1, 100) <= p:
+    # 预摇奖（纯随机）：失败路径不再重摇
+    _caught = random.randint(1, 100) <= p
+    if _caught:
         sp.setdefault("list", []).append(_mk_spr(wild["name"], lv))
-        _save(gid, qq, sp)
+    # 单事务原子结算：扣球+清遭遇+入队一次提交；失败则球未扣、精灵未变（禁半成功）
+    if ST.txn_coins_acct(gid, qq, 0, {"spirits": json.dumps(sp, ensure_ascii=False)}) is None:
+        return "精灵球系统繁忙，本次收服未结算（精灵球未消耗），请稍后重试！"
+    if _caught:
         return f"恭喜！成功收服 Lv.{lv}「{wild['name']}」！"
-    _save(gid, qq, sp)
     return "很遗憾，野生精灵挣脱了，飞走了……"
 
 
@@ -549,8 +556,16 @@ def cmd_discard(gid, qq, name):
             break
     sp["list"] = _lst
     red = _cfgi("魅力减少", 10)
-    ST.acct_add(gid, qq, "charm", -red)
-    _save(gid, qq, sp)
+    # 单事务原子结算：扣魅力+移除精灵一次提交；失败则精灵保留、魅力不扣（禁半成功）
+    try:
+        _cur_charm = ST.acct(gid, qq).int("charm")
+    except Exception:
+        _cur_charm = red
+    if ST.txn_coins_acct(gid, qq, 0, {
+        "charm": str(max(0, _cur_charm - red)),
+        "spirits": json.dumps(sp, ensure_ascii=False),
+    }) is None:
+        return "数据库繁忙，丢弃精灵未成功，请稍后重试。"
     return f"已丢弃精灵【{name}】，魅力 -{red}"
 
 
@@ -618,20 +633,24 @@ def cmd_pvp(gid, qq, target):
         stake = 200
     pwin = myp / (myp + tap) if (myp + tap) else 0.5
     win = random.random() < pwin
+    # 零和原子转账：一次提交，失败双方余额不变（禁先扣后发半成功）
     if win:
-        # 零和: 从对手实扣(对手余额不足时按其真实扣除额为准), 等额给赢家
-        before = ST.coins_get(gid, target)
-        ST.coins_add(gid, target, -stake)
-        after = ST.coins_get(gid, target)
-        real = before - after
-        ST.coins_add(gid, qq, real)
+        try:
+            _ok = ST.txn_two_wallets(gid, target, qq, stake)
+        except Exception:
+            _ok = None
+        if _ok is None:
+            return "精灵对战结算繁忙，本次结果未生效，请稍后重试！"
+        real = stake if _ok is True else 0
         return (f"⚔️ 精灵对战\r\n你(战力{myp}) vs {target}(战力{tap})\r\n"
                 f"【你赢！】获得 {real}{ST.coin_name()}！")
-    before = ST.coins_get(gid, qq)
-    ST.coins_add(gid, qq, -stake)
-    after = ST.coins_get(gid, qq)
-    real = before - after
-    ST.coins_add(gid, target, real)
+    try:
+        _ok = ST.txn_two_wallets(gid, qq, target, stake)
+    except Exception:
+        _ok = None
+    if _ok is None:
+        return "精灵对战结算繁忙，本次结果未生效，请稍后重试！"
+    real = stake if _ok is True else 0
     return (f"⚔️ 精灵对战\r\n你(战力{myp}) vs {target}(战力{tap})\r\n"
             f"【你输…】损失 {real}{ST.coin_name()}！")
 
@@ -784,5 +803,3 @@ def _handle_inner(gid, qq, raw):
     if m.startswith("精灵排行"):
         return cmd_rank(gid, m[4:].strip())
     return None
-
-

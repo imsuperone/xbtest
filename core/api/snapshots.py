@@ -61,7 +61,8 @@ def _snap_index_save(idx):
                         ST._DB.execute(
                             _sql,
                             ["cfgsnap__" + k for k in keep])
-                    ST._safe_commit()
+                    if not ST._safe_commit():
+                        raise RuntimeError("snapshot cleanup commit failed")
             try:
                 _latest = str(ST.recall_get("cfgsnap__latest", "") or "")
                 if _latest and _latest not in keep:
@@ -140,7 +141,8 @@ async def handle_cfg_snapshot_save(request, plugin_base=""):
                 if ST._DB is not None:
                     with ST._LOCK:
                         ST._DB.execute("DELETE FROM kv WHERE k=?", ("cfgsnap__" + old,))
-                        ST._safe_commit()
+                        if not ST._safe_commit():
+                            raise RuntimeError("snapshot delete commit failed")
             except Exception:
                 pass
         return json_response({"ok": True, "name": name})
@@ -199,5 +201,4 @@ async def handle_cfg_snapshot_restore(request, plugin_base=""):
         return json_response({"ok": True, "name": name})
     except Exception as e:
         return _err(f"snapshot restore failed: {e}", 500)
-
 

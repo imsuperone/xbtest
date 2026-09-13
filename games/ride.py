@@ -357,12 +357,15 @@ def cmd_buy(gid, qq, name):
     price = shop[name]
     if ST.coins_get(gid, qq) < price:
         return f"笑~你没有那么多{ST.coin_name()}（需要{price}）"
-    ST.coins_add(gid, qq, -price)
     r.setdefault("list", []).append(name)
     if not r.get("welcome"):
         r["welcome"] = name
         r["active"] = name
-    _save(gid, qq, r)
+    if price > 0:
+        if ST.txn_coins_acct(gid, qq, -price, {"rides": json.dumps(r, ensure_ascii=False)}, require_funds=True) is None:
+            return "坐骑商城繁忙，购买未成功，请稍后重试！"
+    else:
+        _save(gid, qq, r)
     return (f"购买到炫酷的坐骑「{name}」！\r\n发送【我的坐骑】查看你拥有的坐骑！", _ride_img_path(name))
 
 
@@ -499,7 +502,9 @@ def check_welcome(gid, qq):
             price = int(shop.get(w, 0) or 0)
             reward = max(10, min(500, price // 5000)) if price else 20
             if reward:
-                ST.coins_add(str(gid), str(qq), reward)
+                # 欢迎奖励增发：失败不展示奖励文案（禁冒领成功）
+                if ST.coins_add(str(gid), str(qq), reward) is None:
+                    reward = 0
         except Exception:
             reward = 0
         extra = f" 获得 {reward}{ST.coin_name()}奖励！" if reward else ""

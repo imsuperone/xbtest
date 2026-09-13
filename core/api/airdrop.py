@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """全员空投 API — 批量福利空投（由 users.py 独立拆出，端点不变）。"""
 import asyncio
-from astrbot.api.web import json_response
+try:
+    from ..adapters import json_response
+except ImportError:
+    from core.adapters import json_response
 
 from .web_utils import _err, get_req_json
 
@@ -17,11 +20,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "2026w0912a"
+            return "unknown"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "2026w0912a"
+    PLUGIN_VERSION = "unknown"
 
 
 async def handle_users_airdrop(request):
@@ -95,19 +98,24 @@ async def handle_users_airdrop(request):
             try:
                 return _airdrop_batch(_targets, add_money, add_stamina, add_tickets)
             except Exception:
-                # 批量失败降级为逐用户老路径，保证发放不中断
+                # 批量失败降级为逐用户老路径：逐项校验返回值，只计真实成功（禁假成功计数）
                 success_count = 0
                 for g, q in _targets:
                     try:
+                        _ok = True
                         if add_money > 0:
-                            ST.coins_add(g, q, add_money)
+                            if ST.coins_add(g, q, add_money) is None:
+                                _ok = False
                         if add_stamina > 0:
-                            ST.acct_add(g, q, "stamina", add_stamina)
+                            if ST.acct_add(g, q, "stamina", add_stamina) is None:
+                                _ok = False
                         if add_tickets > 0:
-                            ST.acct_add(g, q, "lottery_tickets", add_tickets)
+                            if ST.acct_add(g, q, "lottery_tickets", add_tickets) is None:
+                                _ok = False
                         if add_stamina > 0 or add_tickets > 0:
                             ST.acct_save(g, q)
-                        success_count += 1
+                        if _ok:
+                            success_count += 1
                     except Exception:
                         pass
                 return success_count
@@ -167,15 +175,20 @@ def _airdrop_batch(targets, add_money, add_stamina, add_tickets):
     done = 0
     for g, q in legacy:
         try:
+            _ok = True
             if add_money > 0:
-                ST.coins_add(g, q, add_money)
+                if ST.coins_add(g, q, add_money) is None:
+                    _ok = False
             if add_stamina > 0:
-                ST.acct_add(g, q, "stamina", add_stamina)
+                if ST.acct_add(g, q, "stamina", add_stamina) is None:
+                    _ok = False
             if add_tickets > 0:
-                ST.acct_add(g, q, "lottery_tickets", add_tickets)
+                if ST.acct_add(g, q, "lottery_tickets", add_tickets) is None:
+                    _ok = False
             if add_stamina > 0 or add_tickets > 0:
                 ST.acct_save(g, q)
-            done += 1
+            if _ok:
+                done += 1
         except Exception:
             pass
     if not batched:
@@ -211,7 +224,10 @@ def _airdrop_batch(targets, add_money, add_stamina, add_tickets):
                         "ELSE CAST(COALESCE(json_extract(data, '$.lottery_tickets'), '0') AS INTEGER) + ? END "
                         "AS TEXT)) WHERE gid = ? AND qq = ?",
                         [(add_tickets, add_tickets, g, q) for g, q in batched])
-            ST._DB.commit()
+            # commit 失败必须 rollback（_safe_commit 内已回滚），抛错触发逐用户补偿路径重发
+            # （批量已回滚，重发不双花；禁 commit 失败当成功）
+            if not ST._safe_commit():
+                raise RuntimeError("airdrop batch commit failed")
         except Exception:
             try:
                 ST._safe_rollback()

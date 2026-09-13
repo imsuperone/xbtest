@@ -5,7 +5,10 @@ import json
 import os as _os
 import re
 import shutil as _shutil
-from astrbot.api.web import json_response
+try:
+    from ..adapters import json_response
+except ImportError:
+    from core.adapters import json_response
 from .web_utils import _err, get_req_query, get_req_json, plugin_root, read_thumb_uri, read_upload_b64
 try:
     from .. import storage as ST

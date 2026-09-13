@@ -69,44 +69,18 @@ def cmd_redpack(gid, qq, amount, pwd=None):
                 raise
             a2.dirty = False
     except Exception:
-        # 先回滚 try 内未提交的半截写入，再走降级重试，避免重复扣钱
+        # 先回滚 try 内未提交的半截写入；禁止非原子降级，避免双扣/增发。
         try:
             ST._safe_rollback()
         except Exception:
             pass
-        # 半截缓存污染：逐出后降级重载，a 重绑新鲜对象（否则体力双扣/send_time 丢）
+        # 半截缓存污染：逐出，下一次读取从数据库重载。
         try:
             if ST._DB is not None:
                 ST._ACC_CACHE.pop((str(gid), str(qq)), None)
         except Exception:
             pass
-        try:
-            a = ST.acct(gid, qq)
-        except Exception:
-            pass
-        ST.coins_add(gid, qq, -amount)
-        ST.acct_add(gid, qq, "stamina", -cost_tili)
-        a.set("redpack_send_time", str(int(time.time())))
-        ST.acct_save(gid, qq)
-        try:
-            with ST._LOCK:
-                ST._DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
-                ST._DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
-                ST._DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
-                               (int(gid), int(qq), pwd, amount, int(time.time())))
-                try:
-                    ST._DB.commit()
-                except Exception:
-                    ST._safe_rollback()
-                    raise
-        except Exception:
-            # 包没建成：钱已扣，退款后明确报错，不报假成功
-            try:
-                ST.coins_add(gid, qq, amount)
-                ST.acct_add(gid, qq, "stamina", cost_tili)
-            except Exception:
-                return "红包创建失败，扣款异常请联系超管查账！"
-            return f"红包创建失败，已退回{amount}{ST.coin_name()}，请稍后重试！"
+        return "红包系统繁忙，红包未创建，未扣除余额和体力，请稍后重试！"
     return (f"发红包啦！发了{amount}{ST.coin_name()}点，大家快抢吧！\r\n"
             f"红包口令为：{pwd}\r\n"
             f"发送【抢红包 {pwd}】即可瓜分！")
@@ -184,61 +158,7 @@ def cmd_recv_red(gid, qq, pwd):
                 ST._ACC_CACHE.pop((str(gid), str(qq)), None)
         except Exception:
             pass
-    # 降级非原子路径（兼容，持锁读避免 database is locked）
-    try:
-        with ST._LOCK:
-            row = ST._DB.execute("SELECT qq, amount FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd))).fetchone() if ST._DB is not None else None
-    except Exception:
-        row = None
-    if not row:
-        return "口令错误或红包不存在！"
-    if int(row[0]) == int(qq):
-        return "自己不允许抢自己的红包！"
-    a = _acct(gid, qq)
-    if a.get("redpack_code") == pwd:
-        return "你已经抢过这个红包了！"
-    cost_tili = cfgi("银行配置", "红包_抢体力", 1)
-    gain_meili = cfgi("银行配置", "红包_抢魅力", 10)
-    base_meili = cfgi("银行配置", "红包_基本魅力", 1)
-    if a.int("stamina") < cost_tili:
-        return f"体力不足，抢红包需要{cost_tili}体力！"
-    ST.acct_add(gid, qq, "stamina", -cost_tili)
-    total = int(row[1])
-    # P0: 降级路径缺空包检查会凭空印钱
-    if total <= 0:
-        return "红包已被抢空！"
-    got = random.randint(max(1, total // REDPACK_MIN_DIV), max(1, total // REDPACK_MAX_DIV))
-    ST.coins_add(gid, qq, got)
-    ST.acct_add(gid, qq, "charm", gain_meili + base_meili)
-    a.set("redpack_code", pwd)
-    ST.acct_save(gid, qq)
-    # 降级同样扣减余量，防多人超发（与主路径同 SQL；失败仅记过，下次领取仍受余量检查约束）
-    # 并发双抢：最终扣减前重读现余量并钳制got，空包直接返回，防超发印钱
-    try:
-        with ST._LOCK:
-            try:
-                _row2 = ST._DB.execute("SELECT amount FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd))).fetchone() if ST._DB is not None else None
-                _cur_total = int(_row2[0]) if _row2 else 0
-            except Exception:
-                _cur_total = total
-            if _cur_total <= 0:
-                try:
-                    ST._DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
-                    ST._safe_commit()
-                except Exception:
-                    pass
-                return f"恭喜！你抢到了 {got}{ST.coin_name()}，魅力+{gain_meili + base_meili}！"
-            if got > _cur_total:
-                got = _cur_total
-            if _cur_total - got <= 0:
-                ST._DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
-            else:
-                ST._DB.execute("UPDATE redpacks SET amount=? WHERE gid=? AND pwd=?",
-                               (_cur_total - got, int(gid), str(pwd)))
-            ST._safe_commit()
-    except Exception:
-        pass
-    return f"恭喜！你抢到了 {got}{ST.coin_name()}，魅力+{gain_meili + base_meili}！"
+    return "红包系统繁忙，本次未领取成功，未扣除体力或发放奖励，请稍后重试！"
 
 
 

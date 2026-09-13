@@ -42,14 +42,21 @@ except Exception:
 _ACC_CACHE_MAX = 50000  # 千群千人 1M 账户时，仅热缓存 5 万，常冷数据走 DB，控内存 500MB→~25MB
 _GROUP_CACHE_MAX = 5000  # Group LRU：1000群×1000人 1M DirtyDict 常驻会 OOM，限 5000 群
 def _safe_commit():
-    if _DB is not None:
+    """提交当前事务并返回是否成功。
+
+    旧实现吞掉 commit 异常，调用方无法区分成功和回滚后的假成功。
+    """
+    if _DB is None:
+        return False
+    try:
+        _DB.commit()
+        return True
+    except Exception:
         try:
-            _DB.commit()
+            _DB.rollback()
         except Exception:
-            try:
-                _DB.rollback()
-            except Exception:
-                pass
+            pass
+        return False
 def _safe_rollback():
     if _DB is not None:
         try:
@@ -57,9 +64,9 @@ def _safe_rollback():
         except Exception:
             pass
 def _maybe_commit(force=False):
-    _safe_commit()
+    return _safe_commit()
 def _force_commit():
-    _safe_commit()
+    return _safe_commit()
 _WAKE_CACHE = {}
 _CONFIG_VER = 0
 def _bump_config_ver():
@@ -220,29 +227,48 @@ class Group:
         qq = str(qq)
         with _LOCK:
             if qq in self._users:
-                self._users.pop(qq, None)
+                removed = self._users.pop(qq, None)
                 self._dirty = True
                 self._dirty_qqs.add(qq)
-                if _DB is not None:
+                if _DB is None:
+                    self._users[qq] = removed
+                    return False
+                try:
+                    _DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(self._gid), int(qq)))
+                    if not _maybe_commit():
+                        raise RuntimeError("group delete commit failed")
+                except Exception:
+                    # 删除失败时恢复内存项，避免数据库旧值与内存状态分叉。
+                    if removed is not None:
+                        self._users[qq] = removed
+                    self._dirty = True
+                    self._dirty_qqs.add(qq)
                     try:
-                        _DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(self._gid), int(qq)))
-                        _maybe_commit()
+                        _safe_rollback()
                     except Exception:
-                        try:
-                            _safe_rollback()
-                        except Exception:
-                            pass
+                        pass
+                    return False
                 return True
             elif _DB is not None:
                 try:
                     _DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(self._gid), int(qq)))
-                    _maybe_commit()
+                    if not _maybe_commit():
+                        raise RuntimeError("group delete commit failed")
                 except Exception:
                     try:
                         _safe_rollback()
                     except Exception:
                         pass
         return False
+
+
+def set_last_backup(value):
+    """设置备份时钟；门面模块不能可靠拦截属性赋值。"""
+    global _last_backup
+    try:
+        _last_backup = float(value or 0)
+    except Exception:
+        _last_backup = 0.0
 _PERSISTENT_DATA_DIR = ""
 CONFIG_FILE = ""
 _COLL_FILES = {"商城图鉴": "shop.json", "精灵图鉴": "atlas.json"}

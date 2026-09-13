@@ -139,18 +139,20 @@ async def handle_webdav_restore(request, plugin_base=""):
     def _do_restore():
         cur_db = ST._DB
         with ST._LOCK:
-            try:
-                ST.flush_all()
-            except Exception:
-                pass
+            if hasattr(ST, "flush_all") and ST.flush_all() is False:
+                raise RuntimeError("flush before restore failed")
             try:
                 cur_db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
             except Exception:
                 pass
             cur_db.commit()
             src_conn = sqlite3.connect(dl_res)
-            src_conn.backup(cur_db)
-            src_conn.close()
+            try:
+                if hasattr(ST, "close_read_conn"):
+                    ST.close_read_conn()
+                src_conn.backup(cur_db)
+            finally:
+                src_conn.close()
             cur_db.commit()
             ST._ACC_CACHE.clear()
             ST._GROUP_CACHE.clear()
@@ -160,6 +162,10 @@ async def handle_webdav_restore(request, plugin_base=""):
                         ST._KV_CACHE.clear()
                 else:
                     ST._KV_CACHE.clear()
+            except Exception:
+                pass
+            try:
+                ST.reload_config_from_db()
             except Exception:
                 pass
         # 恢复后尝试将刚下载的云端备份放入今日备份目录，方便本地留痕
@@ -204,5 +210,3 @@ async def handle_webdav_delete(request, plugin_base=""):
         return json_response({"ok": True, "file": clean_name, "msg": msg or f"已成功从云端删除备份文件 [{clean_name}]"})
     except Exception as e:
         return _err(f"删除云端备份异常: {e}", 500)
-
-

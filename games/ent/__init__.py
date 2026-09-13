@@ -25,6 +25,6 @@ def __getattr__(name):
     for _m in _SUBMODS:
         try:
             return getattr(_m, name)
-        except Exception:
+        except AttributeError:
             continue
     raise AttributeError(f"facade has no attribute {name!r}")

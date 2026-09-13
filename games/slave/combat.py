@@ -325,8 +325,16 @@ def cmd_fight(gid, qq, target, st):
                 lines.append(_S.T.FIGHT_GET_SLAVE.format(slave="[" + uname(st, victim) + "]"))
         elif stealable:
             ransom = min(cdd, stake)
-            coins_add(gid, tid, -ransom)
-            coins_add(gid, qq, ransom)
+            if ransom > 0:
+                # 原子双钱包：失败如实告知，不改奴隶归属（禁半成功）
+                try:
+                    _ok = ST.txn_two_wallets(gid, tid, qq, ransom)
+                except Exception:
+                    _ok = None
+                if _ok is None:
+                    return "\r\n".join(lines) + "\r\n赎金结算繁忙，请稍后重试。"
+                if _ok is not True:
+                    ransom = 0
             lines.append(_S.T.FIGHT_SLOT_FULL.format(money=ransom))
     else:
         lines.append(_S.T.FIGHT_LOSE)
@@ -346,8 +354,16 @@ def cmd_fight(gid, qq, target, st):
                 lines.append(_S.T.FIGHT_LOSE_SLAVE.format(slave="[" + uname(st, victim) + "]"))
             else:
                 ransom = min(ca, stake)
-                coins_add(gid, qq, -ransom)
-                coins_add(gid, tid, ransom)
+                if ransom > 0:
+                    # 原子双钱包：失败如实告知，不改奴隶归属（禁半成功）
+                    try:
+                        _ok = ST.txn_two_wallets(gid, qq, tid, ransom)
+                    except Exception:
+                        _ok = None
+                    if _ok is None:
+                        return "\r\n".join(lines) + "\r\n赎金结算繁忙，请稍后重试。"
+                    if _ok is not True:
+                        ransom = 0
                 lines.append(_S.T.FIGHT_PAY_MONEY.format(money=ransom))
         elif shield:
             victim = _random.choice(stealable)

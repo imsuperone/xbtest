@@ -29,7 +29,6 @@ def handle(gid, qq, raw):
                 target = m.group(1)
                 text = text.replace(m.group(0), "", 1).strip()
         # 同时兼容 @昵称 形式的数字后剩余文本已由 _extract_transfer_target 处理
-        pass
 
     # 若目标已提取但 text 仍包含“转账”前缀，保留以便后续命令判断
     n = 0
@@ -69,20 +68,6 @@ def handle(gid, qq, raw):
             # 兼容 “抢红包 口令” 中间多空格
             pwd = re.sub(r"^抢红包\s*", "", raw or "").strip()
         return cmd_recv_red(gid, qq, pwd)
-    # 修复抢红包: 允许直接输入口令而无需前缀
-    # 若当前无其他指令匹配，且存在红包且输入等于口令，则视为抢红包
-    if text and not text.startswith(("存款", "取款", "强制取款", "转账", "赌博", "打劫", "发红包", "抢红包", "我要", "劫狱", "保释", "自我")):
-        # 纯口令尝试（持锁读；P1: 纯数字1-2位让路冒险/猜数作答）
-        try:
-            _txt = text.strip()
-            if not (_txt.isdigit() and len(_txt) <= 2):
-                if ST._DB is not None:
-                    with ST._LOCK:
-                        row = ST._DB.execute("SELECT pwd FROM redpacks WHERE gid=? AND pwd=?", (int(gid), _txt)).fetchone()
-                    if row:
-                        return cmd_recv_red(gid, qq, _txt)
-        except Exception:
-            pass
     if text in ("我要进监狱", "进监狱"):
         return cmd_go_jail(gid, qq)
     if text in ("我要出狱", "出狱"):

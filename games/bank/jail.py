@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """games/bank·jail（原 bank.py 切分，语义不变）。"""
 import datetime as dt
+import json
 import random
 import time
 try:
@@ -128,14 +129,47 @@ def cmd_bail(gid, qq, target, self_bail=False, kind="保释"):
         return f"亲，您的{ST.coin_name()}不足，无法{kind}！{kind}金需要{fee}{ST.coin_name()}！"
     if tili and a.int("stamina") < tili:
         return f"亲，您的体力不足，无法{kind}！{kind}需要{tili}体力！"
-    if fee:
-        ST.coins_add(gid, qq, -fee)
-    if tili:
-        ST.acct_add(gid, qq, "stamina", -tili)
-    if meli:
-        ST.acct_add(gid, qq, "charm", -meli)
-    _jail_release(ta)
-    ST.acct_save(gid, qq)
+    # 费用、体力、魅力和目标出狱状态一次提交，避免付费成功但目标仍在狱中。
+    try:
+        with ST._LOCK:
+            if ST._DB is None:
+                return "监狱系统繁忙，请稍后重试！"
+            a2 = ST.acct(gid, qq)
+            ta2 = a2 if str(tid) == str(qq) else ST.acct(gid, tid)
+            row = ST._DB.execute(
+                "SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))
+            ).fetchone()
+            money = int(row[0]) if row else 0
+            if money < fee or a2.int("stamina") < tili:
+                return "保释条件已变化，请稍后重试！"
+            if fee:
+                ST._DB.execute(
+                    "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
+                    "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
+                    (int(gid), int(qq), money - fee),
+                )
+            a2.set("stamina", str(max(0, a2.int("stamina") - tili)))
+            if meli:
+                a2.set("charm", str(max(0, a2.int("charm") - meli)))
+            _jail_release(ta2)
+            for account in ({id(a2): a2, id(ta2): ta2}).values():
+                ST._DB.execute(
+                    "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
+                    "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
+                    (int(gid), int(account.qq), json.dumps(account.kv, ensure_ascii=False)),
+                )
+            if not ST._safe_commit():
+                raise RuntimeError("bail commit failed")
+            a2.dirty = False
+            ta2.dirty = False
+    except Exception:
+        try:
+            ST._safe_rollback()
+            ST._ACC_CACHE.pop((str(gid), str(qq)), None)
+            ST._ACC_CACHE.pop((str(gid), str(tid)), None)
+        except Exception:
+            pass
+        return "监狱系统繁忙，本次保释未成功，未扣除费用，请稍后重试！"
     if self_bail:
         return (f"保释成功！花费{fee}{ST.coin_name()}、{tili}体力，魅力-{meli}。\r\n"
                 "你现在可以出狱了！希望你以后能够洗心革面，多做好事别犯罪！")
@@ -185,7 +219,8 @@ def cmd_jailbreak(gid, qq):
     prob = cfgi("银行配置", "越狱成功概率", 25)
     if a.int("stamina") < tili:
         return f"亲，您的体力不足，无法越狱！越狱需要{tili}体力！"
-    ST.acct_add(gid, qq, "stamina", -tili)
+    if ST.acct_add(gid, qq, "stamina", -tili) is None:
+        return "数据库繁忙，越狱扣费未成功，请稍后重试。"
     a.set("escape_timestamp", str(time.time()))
     a.set("escape_attempts", str(cnt + 1))
     if random.random() * 100 < prob:
@@ -193,7 +228,9 @@ def cmd_jailbreak(gid, qq):
         a.set("escape_attempts", "0")
         ST.acct_save(gid, qq)
         return f"越狱成功！扣除{tili}体力，你重获自由~"
-    ST.acct_add(gid, qq, "charm", -meli)
+    if ST.acct_add(gid, qq, "charm", -meli) is None:
+        ST.acct_save(gid, qq)
+        return f"越狱失败！扣除{tili}体力，魅力结算繁忙未扣除，未增加刑期，再接再厉！"
     # 失败不加刑期（需求33）
     ST.acct_save(gid, qq)
     return f"越狱失败！扣除{tili}体力，魅力-{meli}，未增加刑期，再接再厉！"
@@ -216,8 +253,10 @@ def cmd_go_jail(gid, qq):
     add_stam = cfgi("银行配置", "进监狱增加体力", 10)
     if add_stam <= 0:
         add_stam = 10
+    # 先发体力再落狱：体力失败直接返回（狱状态未动）；落狱保存失败则体力已到账、狱状态脏留待下轮落盘（禁倒挂）
+    if ST.acct_add(gid, qq, "stamina", add_stam) is None:
+        return "数据库繁忙，入狱体力奖励未到账，请稍后重试。"
     _jail_put(a, 10)
-    ST.acct_add(gid, qq, "stamina", add_stam)
     ST.recall_set(key, str(cnt + 1))
     ST.acct_save(gid, qq)
     left = 10

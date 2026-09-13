@@ -77,7 +77,8 @@ def group(gid):
                                 _S._DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(oldest_gid), int(qq2)))
                             else:
                                 _S._DB.execute("INSERT INTO groups(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(oldest_gid), int(qq2), json.dumps(kv2, ensure_ascii=False)))
-                        _S._DB.commit()
+                        if not _safe_commit():
+                            raise RuntimeError("group eviction commit failed")
                         oldest_g._dirty = False
                         try:
                             oldest_g._dirty_qqs.clear()
@@ -105,9 +106,9 @@ def save_group(gid):
     with _S._LOCK:
         g = _S._GROUP_CACHE.get(gid)
         if g is None or _S._DB is None:
-            return
+            return False
         if not g._dirty:
-            return  # 脏检查：千群千人“我的信息”等只读指令不再触发 DB 写
+            return True  # 只读指令不再触发 DB 写
         try:
             # 增量提交：仅脏用户（单群1000人场景 1000次→1次，3.44s→0.02s）。
             # 快照→写→commit→仅清快照集：写盘期间新标脏进新集合，下轮再刷，不吞并发标记。
@@ -126,7 +127,8 @@ def save_group(gid):
                         "INSERT INTO groups(gid, qq, data) VALUES(?,?,?) "
                         "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
                         (int(gid), int(qq), json.dumps(kv, ensure_ascii=False)))
-            _safe_commit()
+            if not _safe_commit():
+                return False
             if snap is None:
                 g._dirty = False
                 try:
@@ -143,6 +145,8 @@ def save_group(gid):
                     pass
         except Exception:
             _safe_rollback()
+            return False
+        return True
 
 
 def user_clear(gid, qq):
@@ -161,7 +165,9 @@ def user_clear(gid, qq):
                 _S._DB.execute("DELETE FROM wallet WHERE gid=? AND qq=?", (gid_i, qq_i))
                 _S._DB.execute("DELETE FROM accounts WHERE gid=? AND qq=?", (gid_i, qq_i))
                 _S._DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (gid_i, qq_i))
-                _force_commit()
+                _S._DB.execute("DELETE FROM redpacks WHERE gid=? AND qq=?", (gid_i, qq_i))
+                if not _force_commit():
+                    raise RuntimeError("user clear commit failed")
             except Exception:
                 try:
                     _safe_rollback()

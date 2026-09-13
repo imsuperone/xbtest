@@ -141,11 +141,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "2026w0913f"
+            return "unknown"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "2026w0913f"
+    PLUGIN_VERSION = "unknown"
 
 # 消息处理定长线程池：突发千群不再打爆默认无限池，与 ST._LOCK 串行叠加可控
 # import 期不建池（工具链 import 零线程）：首个 XbBot 实例化/首消息时懒建，全局单例，永不 shutdown
@@ -193,12 +193,19 @@ def handle(gid, qq, raw, is_admin=False):
     return None
 
 
+_API_HANDLER_CACHE = {}
+
+
 def _load_api_handler(mod_short, func_name):
     """双通道导入 API handler：插件根包绝对优先，顶层绝对回退。
     注意 mod_short（如 core.api.stats）是相对插件根的路径：
     本函数驻留 core/app.py，插件根包 = __package__ 去掉末级 .core；
     若将来搬回插件根 main.py，__package__ 即插件根（两种布局都对）。
     真机只有 data.plugins.X 一条路，顶层回退仅本机直跑有效。"""
+    cache_key = (str(mod_short), str(func_name))
+    cached = _API_HANDLER_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
     cands = []
     pkg = __package__ or ""
     if pkg.endswith(".core"):
@@ -208,8 +215,10 @@ def _load_api_handler(mod_short, func_name):
     cands.append(mod_short)
     for cand in cands:
         try:
-            return getattr(import_module(cand), func_name)
-        except Exception:
+            fn = getattr(import_module(cand), func_name)
+            _API_HANDLER_CACHE[cache_key] = fn
+            return fn
+        except (ImportError, ModuleNotFoundError, AttributeError):
             continue
     raise ImportError(f"cannot load API handler {mod_short}.{func_name}")
 
@@ -325,11 +334,11 @@ _XB_API_ROUTES = [
     ("user/import", "POST", "page_user_import", "导入单用户数据"),
     ("users/export", "GET,POST", "page_users_export", "导出全量用户数据"),
     ("users/import", "POST", "page_users_import", "导入全量用户数据"),
-    ("users/clean_left", "GET,POST", "page_users_clean_left", "清理退群人员数据"),
+    ("users/clean_left", "POST", "page_users_clean_left", "清理退群人员数据"),
     ("commands", "GET", "page_commands", "指令一览"),
     ("users", "GET", "page_users", "用户/财富列表"),
     ("user/edit", "POST", "page_user_edit", "编辑用户数据(金币/体力/魅力/奖券)"),
-    ("user/clear", "POST,GET", "page_user_clear", "清除单用户数据(含奴隶与精灵并可重领新手礼包)"),
+    ("user/clear", "POST", "page_user_clear", "清除单用户数据(含奴隶与精灵并可重领新手礼包)"),
     ("images/list", "GET", "page_images_list", "图片目录浏览"),
     ("images/upload", "POST", "page_images_upload", "上传图片"),
     ("images/delete", "POST", "page_images_delete", "删除图片"),
@@ -356,11 +365,11 @@ _XB_API_ROUTES = [
     ("backups/config/snapshot/save", "POST", "page_cfg_snapshot_save", "保存配置快照"),
     ("backups/config/snapshot/restore", "POST", "page_cfg_snapshot_restore", "恢复配置快照"),
     ("backups/export", "GET,POST", "page_backups_export", "导出备份"),
-    ("backups/doctor", "POST,GET", "page_db_doctor", "数据库健康体检与碎片整理"),
-    ("backups/prune", "POST,GET", "page_backups_prune", "按保留数量修剪本地与云端旧备份"),
+    ("backups/doctor", "POST", "page_db_doctor", "数据库健康体检与碎片整理"),
+    ("backups/prune", "POST", "page_backups_prune", "按保留数量修剪本地与云端旧备份"),
     ("import/legacy", "POST", "page_import_legacy", "旧库导入（兼容新旧格式）"),
     ("slave/users", "GET", "page_slave_users", "奴隶用户列表"),
-    ("slave/calibrate", "POST,GET", "page_slave_calibrate", "一键校准全员身价"),
+    ("slave/calibrate", "POST", "page_slave_calibrate", "一键校准全员身价"),
     ("spirit/users", "GET", "page_spirit_users", "精灵用户列表"),
     ("groups/list", "GET", "page_groups_list", "群聊列表"),
     ("groups/toggle", "POST", "page_groups_toggle", "切换群聊/总开关"),
@@ -369,7 +378,7 @@ _XB_API_ROUTES = [
     ("version/check", "GET,POST", "page_version_check", "在线检查版本更新"),
     ("version/channel", "GET,POST", "page_version_channel", "更新通道查询与切换"),
     ("logs", "GET,POST", "page_logs_get", "获取插件运行日志"),
-    ("logs/clear", "POST,GET", "page_logs_clear", "清空插件运行日志"),
+    ("logs/clear", "POST", "page_logs_clear", "清空插件运行日志"),
     ("logs/export", "GET,POST", "page_logs_export", "导出插件运行日志"),
 ]
 
@@ -381,6 +390,97 @@ _XB_WEBDAV_ROUTES = [
     ("webdav/restore", "POST", "page_webdav_restore", "从WebDAV远端备份恢复数据"),
     ("webdav/delete", "POST", "page_webdav_delete", "删除WebDAV远端备份"),
 ]
+
+# 写操作 handler 名集合：_call_api 对其做显式非管理员标记的失败关闭检查。
+# 注意：AstrBot 宿主鉴权契约未在本仓提供，缺标记时交由宿主 dashboard 会话判定；
+# 此处绝不因“无标记”而放行日志以外的结论，也不因猜测 header 而拦截正常管理台。
+_XB_MUTATING_HANDLERS = frozenset({
+    "page_cfg_save", "page_config_auto_balance",
+    "page_users_airdrop", "page_user_edit", "page_user_clear",
+    "page_users_clean_left", "page_user_import", "page_users_import",
+    "page_spirits_save",
+    "page_pool_rename", "page_pool_move", "page_pool_delete",
+    "page_pool_upload", "page_pool_attrs", "page_pool_replace_path",
+    "page_backups_restore", "page_backups_delete",
+    "page_cfg_snapshot_save", "page_cfg_snapshot_restore",
+    "page_backups_prune", "page_db_doctor", "page_clear_all",
+    "page_images_upload", "page_images_delete", "page_images_rename",
+    "page_images_mkdir", "page_images_copy",
+    "page_import_legacy", "page_groups_toggle", "page_groups_delete",
+    "page_logs_clear",
+    "page_webdav_backup_now", "page_webdav_restore", "page_webdav_delete",
+    "page_slave_calibrate",
+})
+
+
+def _web_admin_explicit_deny(request):
+    """仅当请求明确携带非管理员标记时返回 True（失败关闭），其余返回 False。
+
+    检查面：dict/query/headers/属性上的 is_admin/admin/role 显式假值。
+    未知形状或缺标记一律返回 False（交由宿主会话判定），避免误拦截管理台。
+    """
+    try:
+        cands = []
+        if request is None:
+            return False
+        if isinstance(request, dict):
+            for _k in ("is_admin", "admin", "isAdmin", "role", "user_role"):
+                if _k in request:
+                    cands.append(request.get(_k))
+            try:
+                _q = request.get("query") or request.get("query_params") or request.get("args")
+                if isinstance(_q, dict):
+                    for _k in ("is_admin", "admin"):
+                        if _k in _q:
+                            cands.append(_q.get(_k))
+            except Exception:
+                pass
+        else:
+            for _attr in ("is_admin", "admin"):
+                try:
+                    if hasattr(request, _attr):
+                        _v = getattr(request, _attr)
+                        cands.append(_v() if callable(_v) else _v)
+                except Exception:
+                    pass
+            try:
+                _headers = getattr(request, "headers", None)
+                if isinstance(_headers, dict):
+                    for _k in ("x-admin", "x-is-admin", "x-role"):
+                        if _k in _headers:
+                            cands.append(_headers.get(_k))
+                elif _headers is not None and hasattr(_headers, "get"):
+                    for _k in ("x-admin", "x-is-admin", "x-role"):
+                        try:
+                            _v = _headers.get(_k)
+                            if _v is not None:
+                                cands.append(_v)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+            for _acc in ("query", "query_params", "args"):
+                try:
+                    _q = getattr(request, _acc, None)
+                    _q = _q() if callable(_q) else _q
+                    if isinstance(_q, dict):
+                        for _k in ("is_admin", "admin"):
+                            if _k in _q:
+                                cands.append(_q.get(_k))
+                except Exception:
+                    pass
+        for _v in cands:
+            try:
+                if _v is False:
+                    return True
+                _s = str(_v).strip().lower()
+                if _s in ("0", "false", "no", "none", "user", "member", "guest"):
+                    return True
+            except Exception:
+                continue
+    except Exception:
+        return False
+    return False
 
 
 class XbBot(Star):
@@ -680,6 +780,13 @@ class XbBot(Star):
                         mode="request", with_base=False, use_context=False, fallback=None):
         """page_* 统一薄委托：双通道导入 handler 后按模式组装参数调用，异常归一 _err"""
         try:
+            # 管理 API 服务端收口：AstrBot 宿主 dashboard 会话是鉴权边界（宿主契约未在本仓提供，
+            # 见 AICODE_AUDIT §10，仍需真机确认 register_web_api 是否仅管理员可达）。
+            # 此处只做失败关闭的显式标记检查：请求明确携带非管理员标记时直接 403；
+            # 标记缺失时交由宿主会话判定，绝不因插件侧猜测而误放行或误拦截。
+            if func_name in _XB_MUTATING_HANDLERS and _web_admin_explicit_deny(
+                    request if request is not None else (args[0] if args else None)):
+                return _err("forbidden: admin required", 403)
             fn = _load_api_handler(mod_short, func_name)
             if mode == "none":
                 return await fn()

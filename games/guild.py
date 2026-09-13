@@ -220,9 +220,15 @@ def cmd_create(gid, qq, name):
         return f"亲，创建帮派需要消耗{ctili}点体力，您的体力不足！"
     if _acct(gid, qq).int("charm") < need_meili:
         return f"亲，创建帮派需要具备{need_meili}点魅力，您的魅力值不足！"
-    ST.coins_add(gid, qq, -cost)
-    ST.acct_add(gid, qq, "stamina", -ctili)
-    _save_member(gid, qq, {"name": name, "pos": "帮主", "gong": 0, "build": 0, "intro": ""})
+    guild_data = {"name": name, "pos": "帮主", "gong": 0, "build": 0, "intro": ""}
+    if ST.txn_coins_acct(
+        gid, qq, -cost,
+        {"stamina": str(max(0, _acct(gid, qq).int("stamina") - ctili)),
+         "guild": json.dumps(guild_data, ensure_ascii=False)},
+        require_funds=True,
+    ) is None:
+        return "帮派系统繁忙，创建未成功，请稍后重试！"
+    _invalidate_guild_cache(gid)
     return f"帮派「{name}」创建成功！您成为帮主！\r\n欢迎大家加入「{name}」！We Are 伐木累！"
 
 
@@ -245,9 +251,13 @@ def cmd_join(gid, qq, name):
         return f"亲，加入帮派需要消耗{join_tili}点体力，您的体力不足！"
     if _acct(gid, qq).int("charm") < join_meili:
         return f"亲，加入帮派需要具备{join_meili}点魅力，您的魅力值不足！"
+    guild_data = {"name": name, "pos": "成员", "gong": 0, "build": 0}
+    updates = {"guild": json.dumps(guild_data, ensure_ascii=False)}
     if join_tili:
-        ST.acct_add(gid, qq, "stamina", -join_tili)
-    _save_member(gid, qq, {"name": name, "pos": "成员", "gong": 0, "build": 0})
+        updates["stamina"] = str(max(0, _acct(gid, qq).int("stamina") - join_tili))
+    if ST.txn_coins_acct(gid, qq, 0, updates) is None:
+        return "帮派系统繁忙，加入未成功，请稍后重试！"
+    _invalidate_guild_cache(gid)
     return f"欢迎加入「{name}」！"
 
 
@@ -319,9 +329,16 @@ def cmd_exit(gid, qq):
     if _acct(gid, qq).int("charm") < exit_meili:
         return f"亲，退出帮派需要扣除{exit_meili}点魅力，您的魅力不足！"
     if exit_tili:
-        ST.acct_add(gid, qq, "stamina", -exit_tili)
+        if ST.acct_add(gid, qq, "stamina", -exit_tili) is None:
+            return "数据库繁忙，退出帮派未成功，请稍后重试。"
     if exit_meili:
-        ST.acct_add(gid, qq, "charm", -exit_meili)
+        if ST.acct_add(gid, qq, "charm", -exit_meili) is None:
+            if exit_tili:
+                try:
+                    ST.acct_add(gid, qq, "stamina", exit_tili)
+                except Exception:
+                    pass
+            return "数据库繁忙，退出帮派未成功（已退款），请稍后重试。"
     name = g["name"]
     _save_member(gid, qq, {})
     return f"您已退出帮派「{name}」！"
@@ -370,9 +387,12 @@ def cmd_contribute(gid, qq, amt):
         return f"亲，单次帮派贡献至少需要{min_amt}{ST.coin_name()}（每100{ST.coin_name()}加1帮贡）！"
     if ST.coins_get(gid, qq) < amt:
         return f"笑~你没有那么多{ST.coin_name()}！"
-    ST.coins_add(gid, qq, -amt)
     g["gong"] = int(g.get("gong", 0)) + amt // CONTRIBUTE_DIV
-    _save_member(gid, qq, g)
+    if ST.txn_coins_acct(
+        gid, qq, -amt, {"guild": json.dumps(g, ensure_ascii=False)}, require_funds=True
+    ) is None:
+        return "帮派系统繁忙，贡献未成功，请稍后重试！"
+    _invalidate_guild_cache(gid)
     return f"贡献成功！帮派帮贡 +{amt // CONTRIBUTE_DIV}，你的贡献 {g['gong']}"
 
 
@@ -399,9 +419,12 @@ def cmd_build(gid, qq, amt):
     cost = price * amt
     if ST.coins_get(gid, qq) < cost:
         return f"笑~你没有那么多{ST.coin_name()}（修筑城墙需要{cost}）"
-    ST.coins_add(gid, qq, -cost)
     g["build"] = cur + amt
-    _save_member(gid, qq, g)
+    if ST.txn_coins_acct(
+        gid, qq, -cost, {"guild": json.dumps(g, ensure_ascii=False)}, require_funds=True
+    ) is None:
+        return "帮派系统繁忙，修筑未成功，请稍后重试！"
+    _invalidate_guild_cache(gid)
     return f"修筑城墙成功！当前城墙长度{g['build']}/{cap}，花费{cost}{ST.coin_name()}"
 
 
@@ -414,8 +437,16 @@ def cmd_welfare(gid, qq):
         return "亲，您今天已经领取过帮派福利了，明天再来吧！"
     base = _cfgi("福利基数", 4000)
     got = base + int(g.get("gong", 0)) * WELFARE_PER_GONG
-    ST.coins_add(gid, qq, got)
-    ST.recall_set(key, "1")
+    # 先占领取标记再发钱（失败关闭）：崩溃/并发重入时至多少发、绝不多发；
+    # 发钱失败则回滚标记，允许重领（禁标记与发钱不一致）
+    if not ST.recall_set(key, "1"):
+        return "帮派系统繁忙，福利未发放，请稍后重试。"
+    if ST.coins_add(gid, qq, got) is None:
+        try:
+            ST.recall_set(key, "")
+        except Exception:
+            pass
+        return "帮派系统繁忙，福利未发放，请稍后重试。"
     return f"领取帮派福利成功！获得 {got}{ST.coin_name()}（基础{base}+帮贡奖励）"
 
 
@@ -534,9 +565,16 @@ def cmd_manage(gid, qq, arg):
         if _acct(gid, qq).int("charm") < dis_meili:
             return f"亲，解散帮派需要扣除{dis_meili}点魅力，您的魅力不足！"
         if dis_tili:
-            ST.acct_add(gid, qq, "stamina", -dis_tili)
+            if ST.acct_add(gid, qq, "stamina", -dis_tili) is None:
+                return "数据库繁忙，解散帮派未成功，请稍后重试。"
         if dis_meili:
-            ST.acct_add(gid, qq, "charm", -dis_meili)
+            if ST.acct_add(gid, qq, "charm", -dis_meili) is None:
+                if dis_tili:
+                    try:
+                        ST.acct_add(gid, qq, "stamina", dis_tili)
+                    except Exception:
+                        pass
+                return "数据库繁忙，解散帮派未成功（已退款），请稍后重试。"
         mem = _members(gid, name)
         for q, _ in mem:
             _save_member(gid, q, {})

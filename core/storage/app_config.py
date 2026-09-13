@@ -314,6 +314,26 @@ def load_config_from_db():
         pass
     return False
 
+
+def reload_config_from_db():
+    """恢复数据库后重新载入配置镜像；没有镜像时保留当前配置。"""
+    try:
+        raw = recall_get("sys_config_json", "")
+        if not raw:
+            return False
+        db_cfg = json.loads(raw)
+        if not isinstance(db_cfg, dict) or not db_cfg:
+            return False
+        _S._CONFIG.clear()
+        for sec, sub in db_cfg.items():
+            if sec in _S._COLL_FILES:
+                continue
+            _S._CONFIG[sec] = dict(sub) if isinstance(sub, dict) else sub
+        _bump_config_ver()
+        return True
+    except Exception:
+        return False
+
 # ==================== 9. 备份 ====================
 
-__all__ = ["cfg", "cfg_dict", "cfg_scope", "cfgf", "cfgi", "coin_name", "load_config_from_db", "save_config", "set_astrbot_config", "set_config", "set_config_path", "set_ini", "sync_astrbot_config", "wake"]
+__all__ = ["cfg", "cfg_dict", "cfg_scope", "cfgf", "cfgi", "coin_name", "load_config_from_db", "reload_config_from_db", "save_config", "set_astrbot_config", "set_config", "set_config_path", "set_ini", "sync_astrbot_config", "wake"]

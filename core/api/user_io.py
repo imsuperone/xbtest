@@ -4,7 +4,10 @@ import asyncio
 import base64
 import json
 import time
-from astrbot.api.web import json_response
+try:
+    from ..adapters import json_response
+except ImportError:
+    from core.adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json
 
@@ -25,11 +28,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "2026w0912a"
+            return "unknown"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "2026w0912a"
+    PLUGIN_VERSION = "unknown"
 
 
 def _extract_param(request, key, default=""):
@@ -145,6 +148,19 @@ async def handle_users_export(request):
             except Exception:
                 pass
     gid_valid = gid if (gid and gid.isdigit()) else ""
+    # 全量导出内存上限：无群过滤且三表总数超 2 万时拒绝打包（请按群导出；防 JSON+base64 双份内存峰值 OOM）
+    if not gid_valid and ST._DB is not None:
+        try:
+            _total = 0
+            for _t in ("wallet", "accounts", "groups"):
+                try:
+                    _total += int(ST._DB.execute(f"SELECT COUNT(*) FROM {_t}").fetchone()[0] or 0)
+                except Exception:
+                    pass
+            if _total > 60000:
+                return _err("too many users for full export, export per gid", 413)
+        except Exception:
+            pass
     try:
         # 先刷写内存缓存到 DB
         try:
@@ -276,57 +292,75 @@ async def handle_users_import(request):
     else:
         return _err("invalid payload", 400)
 
+    # 单次条数上限（防 JSON 巨包内存峰值；超限请分批导入）
+    if len(users) > 20000:
+        return _err("too many users (20000)", 400)
+
     ok = 0
+    failed = 0
     try:
         for item in users:
             if not isinstance(item, dict):
+                failed += 1
                 continue
             gid = str(item.get("gid") or "").strip()
             qq = str(item.get("qq") or "").strip()
             if not gid or not qq:
+                failed += 1
                 continue
 
+            _item_ok = True
             # 1. 钱包金币
             val = item.get("wallet", item.get("money"))
             if val is not None:
                 try:
                     tgt = int(val)
                     cur = ST.coins_get(gid, qq)
-                    ST.coins_add(gid, qq, tgt - cur)
+                    if tgt != cur and ST.coins_add(gid, qq, tgt - cur) is None:
+                        _item_ok = False
                 except Exception:
-                    pass
+                    _item_ok = False
 
             # 2. account 账户字典（包含武器/法宝/坐骑/精灵/属性）
-            a = ST.acct(gid, qq)
-            if "account" in item and isinstance(item["account"], dict):
-                for k, v in item["account"].items():
-                    a.set(str(k), str(v))
-            # 兼容扁平字段 (stamina, charm, lottery_tickets, deposit, sign)
-            for fk, ak in [("stamina", "stamina"), ("charm", "charm"), ("lottery_tickets", "lottery_tickets"), ("deposit", "deposit"), ("sign", "sign_count")]:
-                if fk in item and item[fk] is not None:
-                    a.set(ak, str(item[fk]))
-            ST.acct_save(gid, qq)
+            try:
+                a = ST.acct(gid, qq)
+                if "account" in item and isinstance(item["account"], dict):
+                    for k, v in item["account"].items():
+                        a.set(str(k), str(v))
+                # 兼容扁平字段 (stamina, charm, lottery_tickets, deposit, sign)
+                for fk, ak in [("stamina", "stamina"), ("charm", "charm"), ("lottery_tickets", "lottery_tickets"), ("deposit", "deposit"), ("sign", "sign_count")]:
+                    if fk in item and item[fk] is not None:
+                        a.set(ak, str(item[fk]))
+                if not ST.acct_save(gid, qq):
+                    _item_ok = False
+            except Exception:
+                _item_ok = False
 
             # 3. group 奴隶系统数据（包含身价/主人/惩罚/工作/保护状态）
             if "group" in item and isinstance(item["group"], dict):
-                g = ST.group(gid)
-                if not g.has_section(qq):
-                    g.add_section(qq)
-                for k, v in item["group"].items():
-                    g[qq][str(k)] = str(v)
-                g._dirty = True
-                ST.save_group(gid)
+                try:
+                    g = ST.group(gid)
+                    if not g.has_section(qq):
+                        g.add_section(qq)
+                    for k, v in item["group"].items():
+                        g[qq][str(k)] = str(v)
+                    g._dirty = True
+                    if not ST.save_group(gid):
+                        _item_ok = False
+                except Exception:
+                    _item_ok = False
 
             # 4. 昵称
             n = item.get("name")
             if n:
                 slave.NOTE_NAMES[qq] = str(n)
-            ok += 1
+            if _item_ok:
+                ok += 1
+            else:
+                failed += 1
 
         ST.register_names(slave.NOTE_NAMES)
         ST.flush_all()
-        return json_response({"ok": True, "imported": ok, "total": len(users)})
+        return json_response({"ok": True, "imported": ok, "failed": failed, "total": len(users)})
     except Exception as e:
         return _err(f"import failed: {e}", 500)
-
-

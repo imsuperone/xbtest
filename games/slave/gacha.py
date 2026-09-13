@@ -70,7 +70,8 @@ def cmd_gacha(gid, qq, st, count=1):
     u = U(st, qq)
     if coins_get(gid, qq) < cost:
         return f"武器{label}需要消耗{cost}{coin_name()}, " + _S.T.POOR.format(coin=coin_name())
-    coins_add(gid, qq, -cost)
+    if coins_add(gid, qq, -cost) is None:
+        return "武器抽奖系统繁忙，本次未扣款，请稍后重试！"
 
     pr = {"R": cfgi("设置", "抽武器R概率", 50),
           "SR": cfgi("设置", "抽武器SR概率", 38),
@@ -180,7 +181,8 @@ def cmd_starup(gid, qq, wname, st):
     if coins_get(gid, qq) < cost:
         return _S.T.WUP_USE_COIN.format(coin=cost) + "\r\n" + _S.T.POOR.format(coin=coin_name())
 
-    coins_add(gid, qq, -cost)
+    if coins_add(gid, qq, -cost) is None:
+        return "武器升星系统繁忙，本次未扣款，请稍后重试！"
     if _random.randint(1, 100) > prob:
         uset(u, wname, str(mat - need_cnt))
         uset(u, "weapon_exp", str(curexp - need_exp))
@@ -216,7 +218,8 @@ def cmd_treasure_up(gid, qq, tname, st):
     if coins_get(gid, qq) < cost:
         return f"升阶需要{cost}{coin_name()}，哦，攒够了再来吧~"
 
-    coins_add(gid, qq, -cost)
+    if coins_add(gid, qq, -cost) is None:
+        return "宝物升阶系统繁忙，本次未扣款，请稍后重试！"
     if _random.randint(1, 100) > prob:
         uset(u, tname, str(have - need))
         return (_S.T.TUP_FAIL + "\r\n" + _S.T.TUP_USED.format(items=f"{tname}x{need}")

@@ -356,7 +356,8 @@ def backup_user_data(force=False, auto_upload=True):
         with _S._LOCK:
             try:
                 _S._DB.execute("PRAGMA wal_checkpoint(PASSIVE)")
-                _safe_commit()
+                if not _safe_commit():
+                    raise RuntimeError("backup checkpoint commit failed")
             except Exception:
                 pass
             src_path = _S._DB_PATH

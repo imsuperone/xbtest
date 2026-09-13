@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 """配置 API — schema / commands / get / save / auto_balance (覆盖28大系统全套平衡预设)"""
 import asyncio
+import math
 import os
 import json
-from astrbot.api.web import json_response
+try:
+    from astrbot.api.web import json_response
+except ImportError:
+    def json_response(data, status=200):
+        return data
 from .web_utils import _err, get_req_json, no_cache_response
 
 try:
@@ -15,6 +20,49 @@ try:
     from .. import config as _cfg_layer
 except ImportError:
     import config as _cfg_layer  # type: ignore
+
+
+def _validate_config(norm, plugin_base=""):
+    """校验已归一配置的已知字段；未知字段保留给兼容/专用 sidecar。"""
+    base = plugin_base or os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    schema = _cfg_layer._load_schema(base)
+    known = {}
+    for sec, items in (schema.get("groups") or {}).items():
+        for item in items or []:
+            if isinstance(item, dict):
+                known[(str(sec), str(item.get("key")))] = str(item.get("type", "string"))
+    numeric = {}
+    for sec, values in norm.items():
+        if not isinstance(values, dict):
+            continue
+        for key, value in values.items():
+            if value is None or (sec, str(key)) not in known:
+                continue
+            typ = known[(sec, str(key))]
+            if typ not in ("int", "float"):
+                continue
+            try:
+                number = float(value)
+                if not math.isfinite(number):
+                    raise ValueError
+                if typ == "int" and number != int(number):
+                    raise ValueError
+            except (TypeError, ValueError):
+                return f"{sec}.{key} 必须是{typ}"
+            if "概率" in str(key) or "成功率" in str(key):
+                if not 0 <= number <= 100:
+                    return f"{sec}.{key} 必须在 0 到 100 之间"
+            elif number < 0 and "变化下限" not in str(key):
+                return f"{sec}.{key} 不能为负数"
+            numeric[(sec, str(key))] = number
+    for (sec, key), lower in list(numeric.items()):
+        if not key.endswith("下限"):
+            continue
+        upper_key = key[:-2] + "上限"
+        upper = numeric.get((sec, upper_key))
+        if upper is not None and lower > upper:
+            return f"{sec}.{key} 不能大于 {upper_key}"
+    return None
 
 
 async def handle_cfg_schema(request, plugin_base=""):
@@ -62,6 +110,9 @@ async def handle_cfg_save(request, plugin_base=""):
         if not isinstance(p, dict) or not p:
             return _err("未能读取到有效配置数据(请求体为空或解析失败)，请重试", 400)
         norm = _cfg_layer._normalize_cfg(p)
+        validation_error = _validate_config(norm, plugin_base)
+        if validation_error:
+            return _err(validation_error, 400)
         # WebDAV 密钥分存：地址/用户名按 payload 落独立文件（含清空语义），密码仅非空更新；
         # 内存/_CONFIG/镜像/快照/备份里一律留空，防泄露。
         _secrets_changed = False

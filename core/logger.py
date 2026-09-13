@@ -137,19 +137,17 @@ def get_logs(limit=200, level="", keyword=""):
         limit = 200
 
     log_file = get_log_file_path()
+    # 如果日志文件不存在，先写一条服务初始化日志，确保日志文件一定被创建且有基线日志
     if not os.path.isfile(log_file):
-        return {
-            "logs": [],
-            "count": 0,
-            "total_lines": 0,
-            "file_size_kb": 0.0,
-            "max_lines": _MAX_LINES,
-            "max_file_mb": round(_MAX_BYTES / (1024 * 1024), 1)
-        }
+        try:
+            info("小白插件运行日志服务已就绪")
+        except Exception:
+            pass
 
     file_size = 0
     try:
-        file_size = os.path.getsize(log_file)
+        if os.path.isfile(log_file):
+            file_size = os.path.getsize(log_file)
     except Exception:
         pass
 
@@ -157,14 +155,6 @@ def get_logs(limit=200, level="", keyword=""):
     if level == "ALL":
         level = ""
     keyword = (keyword or "").strip().lower()
-
-    # 如果日志文件不存在，先写一条服务初始化日志
-    if not os.path.isfile(log_file):
-        info("小白测试版日志服务已就绪")
-        try:
-            file_size = os.path.getsize(log_file)
-        except Exception:
-            file_size = 0
 
     lines = []
     with _LOCK:
@@ -184,10 +174,17 @@ def get_logs(limit=200, level="", keyword=""):
     total_lines = len(all_lines)
     # 从末尾开始收集符合条件的行
     collected = []
+    level_re = None
+    if level:
+        if level in ("WARN", "WARNING"):
+            level_re = _re.compile(r"^\[[^\]]*\]\s*\[(?:WARN|WARNING)\]")
+        else:
+            level_re = _re.compile(r"^\[[^\]]*\]\s*\[" + _re.escape(level) + r"\]")
+
     for line in reversed(all_lines):
         if not line.strip():
             continue
-        if level and not _re.match(r"^\[[^\]]*\]\s*\[" + _re.escape(level) + r"\]", line):
+        if level_re and not level_re.match(line):
             continue
         if keyword and keyword not in line.lower():
             continue

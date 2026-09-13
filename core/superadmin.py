@@ -214,6 +214,8 @@ def cmd_deduct(gid, qq, arg):
         return "格式：扣钱 @QQ 金额（正整数）"
     cur = _sum_money(gid, t)
     nv = ST.coins_add(gid, t, -amt)
+    if nv is None:
+        return "数据库繁忙，扣钱未成功，请稍后重试。"
     t_name = _target_name(gid, t)
     return f"已扣除【{t_name}】{amt}{ST.coin_name()}（{cur}→{nv}）"
 
@@ -224,13 +226,16 @@ def cmd_recharge(gid, qq, arg):
     if not t or amt is None or amt <= 0:
         return "格式：充钱 @QQ 金额（正整数）"
     nv = ST.coins_add(gid, t, amt)
+    if nv is None:
+        return "数据库繁忙，充值未成功，请稍后重试。"
     t_name = _target_name(gid, t)
     return f"已为【{t_name}】充值 {amt}{ST.coin_name()}（当前 {nv}）"
 
 
 def _clear_money(gid, t):
     cur = _sum_money(gid, t)
-    ST.coins_add(gid, t, -cur)
+    if cur and ST.coins_add(gid, t, -cur) is None:
+        return "数据库繁忙，清空财富未成功，请稍后重试。"
     return f"已清空 <{_name(t)}> 财富。"
 
 
@@ -492,7 +497,7 @@ def _version():
             return f"小白测试版版本：{_gv2()}"
         except Exception:
             pass
-    return "小白测试版版本：2026w0913f"
+    return "小白测试版版本：unknown"
 
 
 

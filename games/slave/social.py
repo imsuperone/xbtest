@@ -42,9 +42,18 @@ def cmd_flatter(gid, qq, st):
     if _random.randint(1, 100) <= cfgi("概率配置", "讨好概率", 80):
         got = _random.randint(50, max(50, min(mc, 500)))
         got = min(got, mc)
-        coins_add(gid, owner, -got)
+        if got <= 0:
+            return "你各种撒娇打泼，主人仍不为所动，你什么都没有讨到~"
+        # 原子双钱包：失败不推进 CD、不发奖励（禁半成功）
+        try:
+            _ok = ST.txn_two_wallets(gid, owner, qq, got)
+        except Exception:
+            _ok = None
+        if _ok is None:
+            return "数据库繁忙，讨好结算未成功，请稍后重试。"
+        if _ok is not True:
+            return _S.T.FLATTER_POOR_M
         cd_commit(u, "flatter_time")
-        coins_add(gid, qq, got)
         return _S.T.FLATTER_OK.format(got=got)
     return "你各种撒娇打泼，主人仍不为所动，你什么都没有讨到~"
 
@@ -79,9 +88,10 @@ def cmd_study(gid, qq, st):
         oc = coins_get(gid, owner)
         if oc < fee:
             return _S.T.STUDY_POOR_MASTER.format(fee=fee)
-    # 学费由主人支付(原版机制); 无主者自付
+    # 学费由主人支付(原版机制); 无主者自付。扣费失败即停，不加经验（禁免费增发）
     payer = owner if owner else qq
-    coins_add(gid, payer, -fee)
+    if coins_add(gid, payer, -fee) is None:
+        return "数据库繁忙，学费扣款未成功，学习未开始，请稍后重试。"
     exp_gain = _random.randint(STUDY_EXP_LO, STUDY_EXP_HI)
     uset(u, "weapon_exp", str(int(uget(u, "weapon_exp", "0") or 0) + exp_gain))
     cd_commit(u, "study_time")
@@ -139,21 +149,25 @@ def cmd_pray(gid, qq, st):
     cn = coin_name()
     if _random.randint(1, 100) <= cfgi("祈福配置", "人品爆发概率", 15):
         amt = cfgi("祈福配置", "人品爆发奖励", 30000)
-        coins_add(gid, qq, amt)
+        if coins_add(gid, qq, amt) is None:
+            return "数据库繁忙，祈福奖励未到账，请稍后重试。"
         return _S.T.PRAY_BIG.format(amt=f"{amt}{cn}") + f"\r\n[{name}] 获得 {amt} {cn}!!"
     if _random.randint(1, 100) <= PRAY_LOSE_CHANCE:
         lose = min(coins_get(gid, qq), _random.randint(PRAY_LOSE_LO, PRAY_LOSE_HI))
-        coins_add(gid, qq, -lose)
+        if lose > 0 and coins_add(gid, qq, -lose) is None:
+            return "数据库繁忙，祈福结算未成功，请稍后重试。"
         return (_S.T.PRAY_PITY_HEAD.format(who=f"[{name}]")
                 + f"\r\n被顺走了 {lose} {cn}...")
     lo = cfgi("祈福配置", "祈福奖励下限", 1000)
     hi = cfgi("祈福配置", "祈福奖励上限", 6000)
     if _random.randint(1, 100) <= PRAY_NINJA_CHANCE:
         amt = _random.randint(lo, hi)
-        coins_add(gid, qq, amt)
+        if coins_add(gid, qq, amt) is None:
+            return "数据库繁忙，祈福奖励未到账，请稍后重试。"
         return _S.T.PRAY_NINJA.format(who=f"[{name}]", amt=f"{amt}{cn}")
     amt = _random.randint(max(lo // 2, 10), max(hi // 4, 100))
-    coins_add(gid, qq, amt)
+    if coins_add(gid, qq, amt) is None:
+        return "数据库繁忙，祈福奖励未到账，请稍后重试。"
     return _S.T.PRAY_NORMAL.format(who=f"[{name}]", amt=f"{amt}{cn}")
 
 
@@ -215,6 +229,7 @@ def cmd_work_collect(gid, qq, st):
     total = _safe_int(uget(u, "work_wage"), 0)
     lines = [_S.T.WORK_COLLECT.format(total=total)]
     wage_paid = 0
+    _failed_names = []
     for s in my:
         su = U(st, s)
         # 打工后新买入的奴隶无本轮工资快照，不参与结算（防0工资误导与快照脱节）
@@ -228,13 +243,28 @@ def cmd_work_collect(gid, qq, st):
         got = wage * ratio // 100
         if _work_bonus > 0:
             got += got * _work_bonus // 100
-        coins_add(gid, s, got)
+        if got <= 0:
+            uset(su, "_work_wage", "")
+            continue
+        # 系统增发：失败保留该奴隶快照（不清 _work_wage），如实告知而非冒领成功
+        if coins_add(gid, s, got) is None:
+            _failed_names.append(uname(st, s))
+            continue
         wage_paid += got
         lines.append(f"[{uname(st,s)}]{_S.T.WORK_GOT_WAGE.format(wage=got)}")
         uset(su, "_work_wage", "")
+    if _failed_names:
+        lines.append("以下奴隶工资到账失败（系统繁忙，快照已保留，下轮收工可重结）："
+                     + "、".join(f"[{n}]" for n in _failed_names))
     master_net = total - wage_paid
     if master_net > 0:
-        coins_add(gid, qq, master_net)
+        if coins_add(gid, qq, master_net) is None:
+            lines.append("主人收益到账失败（系统繁忙），本轮收工状态已保留，可稍后重发送工。")
+            return "\r\n".join(lines)
+    if _failed_names:
+        # 保留收工状态与剩余快照，允许下轮重结；已到账部分不重复发（快照已清）
+        lines.append(_S.T.WORK_WAGE_TOTAL.format(wage=wage_paid))
+        return "\r\n".join(lines)
     uset(u, "work_status", "")
     uset(u, "work_time", "")
     lines.append(_S.T.WORK_WAGE_TOTAL.format(wage=wage_paid))
@@ -262,8 +292,16 @@ def cmd_revolt(gid, qq, st):
     om_power = battle_power(st, owner)
     if m_slaves >= 2 * max(1, len(slaves_of(st, qq))) and om_power > my_power:
         fine = min(coins_get(gid, qq), REVOLT_FINE)
-        coins_add(gid, qq, -fine)
-        coins_add(gid, owner, fine)
+        if fine > 0:
+            # 原子双钱包：失败不改群档（禁半成功）
+            try:
+                _ok = ST.txn_two_wallets(gid, qq, owner, fine)
+            except Exception:
+                _ok = None
+            if _ok is None:
+                return "数据库繁忙，造反结算未成功，请稍后重试。"
+            if _ok is not True:
+                return _S.T.REVOLT_TOO_POOR.format(need=need)
         return _S.T.REVOLT_CRUSHED + f"(被罚{fine})"
     sn = uget(u, "name") or (str(qq))
     loot = min(coins_get(gid, owner), _random.randint(REVOLT_LOOT_LO, REVOLT_LOOT_HI))
@@ -272,29 +310,57 @@ def cmd_revolt(gid, qq, st):
     master_has_gourd = _has_treasure_type(treasures_of(U(st, owner)), "pardon", (TREASURE_GOURD_NAME,))
 
     if i_have_gourd:
+        if loot > 0:
+            try:
+                _ok = ST.txn_two_wallets(gid, owner, qq, loot)
+            except Exception:
+                _ok = None
+            if _ok is None:
+                return "数据库繁忙，造反结算未成功，请稍后重试。"
+            if _ok is not True:
+                loot = 0
         uset(u, "owner", "")
         uset(u, "protect_until", "")
         uset(u, "protector", "")
-        coins_add(gid, owner, -loot)
-        coins_add(gid, qq, loot)
         return (_S.T.RV_GOURD_WIN + "\r\n" + _S.T.RV_LOOT.format(loot=loot, coin=coin_name())
                 + "\r\n" + _S.T.REVOLT_FREE.replace("，", ""))
     if master_has_gourd:
         pay = min(coins_get(gid, qq), loot)
-        coins_add(gid, qq, -pay)
-        coins_add(gid, owner, pay)
+        if pay > 0:
+            try:
+                _ok = ST.txn_two_wallets(gid, qq, owner, pay)
+            except Exception:
+                _ok = None
+            if _ok is None:
+                return "数据库繁忙，造反结算未成功，请稍后重试。"
+            if _ok is not True:
+                pay = 0
         return _S.T.RV_GOURD_LOSE + f"({pay}{coin_name()})\r\n" + _S.T.REVOLT_FAIL_STAY
     if _random.randint(1, 100) <= cfgi("概率配置", "造反概率", 20):
+        if loot > 0:
+            try:
+                _ok = ST.txn_two_wallets(gid, owner, qq, loot)
+            except Exception:
+                _ok = None
+            if _ok is None:
+                return "数据库繁忙，造反结算未成功，请稍后重试。"
+            if _ok is not True:
+                loot = 0
         uset(u, "owner", "")
         uset(u, "protect_until", "")
         uset(u, "protector", "")
-        coins_add(gid, owner, -loot)
-        coins_add(gid, qq, loot)
         return (_S.T.RV_NORMAL_WIN + f"\r\n[{sn}] " + _S.T.RV_LOOT.format(loot=loot, coin=coin_name())
                 + "\r\n" + _S.T.REVOLT_FREE.replace("，", ""))
     pay = min(coins_get(gid, qq), 500)
-    coins_add(gid, qq, -pay)
-    coins_add(gid, owner, pay)
+    if pay > 0:
+        try:
+            _ok = ST.txn_two_wallets(gid, qq, owner, pay)
+        except Exception:
+            _ok = None
+        if _ok is None:
+            return "数据库繁忙，造反结算未成功，请稍后重试。"
+        if _ok is not True:
+            pay = 0
     return (_S.T.RV_NORMAL_LOSE + f"(罚{pay}{coin_name()})\r\n"
             + f"[{sn}]" + _S.T.REVOLT_FAIL_STAY)
 

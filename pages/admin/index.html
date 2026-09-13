@@ -6,12 +6,12 @@
   <title>管理控制台 - 小白机器人</title>
   <style>
     :root {
-      /* Android 16 (Material 3 Expressive) Color Tokens */
-      --bg: #F8F9FA;
+      /* Android 16 (Material 3 Expressive) Color Tokens - 纯白通透基底 */
+      --bg: #FFFFFF;
       --panel: #FFFFFF;
-      --panel-hover: #F1F4F9;
-      --panel2: #EDF2F9;
-      --panel3: #E2E8F0;
+      --panel-hover: #F8FAFC;
+      --panel2: #FFFFFF;
+      --panel3: #FFFFFF;
       --acc: #0B57D0;
       --acc-hover: #0842A0;
       --acc-active: #042B6A;
@@ -27,7 +27,7 @@
       --line: #D1D5DB;
       --line-subtle: rgba(0, 0, 0, 0.06);
 
-      --surface-container-high: #EDF2F9;
+      --surface-container-high: #FFFFFF;
       --outline: #74777F;
 
       --ok: #146C2E;
@@ -160,7 +160,7 @@
       gap: 6px;
     }
     .ver {
-      background: var(--panel2);
+      background: var(--panel);
       color: var(--text-secondary);
       font-size: 11px;
       padding: 3px 9px;
@@ -197,7 +197,7 @@
       position: relative;
     }
     .iconBtn {
-      background: var(--panel2);
+      background: transparent;
       border: 1px solid var(--line);
       color: var(--text);
       border-radius: var(--radius-full);
@@ -240,7 +240,7 @@
     .tab-nav-btn {
       width: 30px;
       height: 30px;
-      background: var(--panel2);
+      background: transparent;
       border: 1px solid var(--line);
       color: var(--text);
       display: inline-flex;
@@ -256,7 +256,8 @@
     }
     .tab-nav-btn:hover {
       color: var(--acc);
-      background: var(--panel3);
+      background: var(--panel-hover);
+      border-color: var(--acc);
     }
     .tabs {
       display: flex;
@@ -290,7 +291,7 @@
     }
     .tabs button:hover {
       color: var(--text);
-      background: var(--panel2);
+      background: var(--panel-hover);
     }
     .tabs button.on {
       background: var(--primary-container) !important;
@@ -472,10 +473,31 @@
       color: #E2E2E6 !important;
     }
     textarea { height: auto !important; }
-    input:not([type="checkbox"]):not([type="radio"]):hover, select:hover, textarea:hover {
+    /* Read-Only & Disabled Inputs: Elegant Lock Grey (映射逻辑与锁定只读指令灰底) */
+    input:read-only:not([type="button"]):not([type="submit"]),
+    input:disabled,
+    textarea:read-only,
+    textarea:disabled,
+    .inp-readonly {
+      background: #F3F4F6 !important;
+      color: var(--muted) !important;
+      border-color: #E5E7EB !important;
+      cursor: not-allowed !important;
+      user-select: text;
+    }
+    [data-theme="dark"] input:read-only:not([type="button"]):not([type="submit"]),
+    [data-theme="dark"] input:disabled,
+    [data-theme="dark"] textarea:read-only,
+    [data-theme="dark"] textarea:disabled,
+    [data-theme="dark"] .inp-readonly {
+      background: #1A1D24 !important;
+      color: var(--muted) !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    input:not([type="checkbox"]):not([type="radio"]):not(:read-only):hover, select:hover, textarea:not(:read-only):hover {
       border-color: var(--acc);
     }
-    input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus {
+    input:not([type="checkbox"]):not([type="radio"]):not(:read-only):focus, select:focus, textarea:not(:read-only):focus {
       border-color: var(--acc) !important;
       box-shadow: 0 0 0 3px var(--accSoft2) !important;
     }
@@ -583,7 +605,7 @@
       gap: 10px;
       flex-wrap: wrap;
       margin-bottom: 12px;
-      background: var(--panel2);
+      background: var(--panel);
       padding: 5px 10px;
       border-radius: var(--radius-full);
       border: 1px solid var(--line);
@@ -639,10 +661,10 @@
       font-size: 13px;
     }
     th {
-      background: var(--panel2);
+      background: var(--panel);
       color: var(--text-secondary);
       font-weight: 700;
-      text-align: left;
+      text-align: left !important;
       padding: 9px 12px;
       border-bottom: 1px solid var(--line);
       white-space: nowrap;
@@ -654,11 +676,14 @@
       border-bottom: 1px solid var(--line-subtle);
       color: var(--text);
       vertical-align: middle;
-      text-align: left;
+      text-align: left !important;
     }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--panel-hover); }
-    td:has(.switch), th:has(.switch), .td-switch { text-align: left !important; }
+    td .switch, th .switch, .td-switch .switch {
+      margin-left: 0 !important;
+      margin-right: auto !important;
+    }
 
     /* Dashboard Stats KPI Cards (Clean White Background) */
     .kpi-grid {
@@ -701,10 +726,10 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
-      background: var(--panel2);
+      background: var(--panel);
       padding: 10px 12px;
       border-radius: var(--radius-md);
-      border: 1px solid var(--line-subtle);
+      border: 1px solid var(--line);
       box-sizing: border-box;
     }
     .ov-field label {
@@ -731,6 +756,12 @@
     .badge-warn { background: var(--warnSoft); color: var(--warn); }
     .badge-bad, .badge-danger { background: var(--badSoft); color: var(--bad); }
     .badge-purple { background: var(--purpleSoft); color: var(--purple); }
+
+    [data-theme="dark"] .m3-search-pill,
+    [data-theme="dark"] #appModalInput {
+      background: #22262B !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
+    }
 
     /* Configuration Settings Flow */
     .cfg-sec {
@@ -761,14 +792,37 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
-      padding: 8px 0;
+      gap: 16px;
+      padding: 10px 0;
       border-bottom: 1px solid var(--line-subtle);
     }
     .cfg-row:last-child { border-bottom: none; }
-    .cfg-lab { font-weight: 600; font-size: 13px; color: var(--text); }
-    .cfg-help { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .cfg-inp { min-width: 170px; }
+    .cfg-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .cfg-lab { font-weight: 650; font-size: 13.5px; color: var(--text); }
+    .cfg-help { font-size: 11.5px; color: var(--muted); margin-top: 1px; line-height: 1.4; }
+    .cfg-ctrl {
+      flex: 0 0 240px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .cfg-ctrl input:not([type="checkbox"]):not([type="radio"]),
+    .cfg-ctrl select {
+      width: 100% !important;
+      text-align: right;
+    }
+    .cfg-ctrl textarea {
+      width: 100% !important;
+    }
+    .cfg-ctrl .switch {
+      margin-left: auto !important;
+    }
 
     /* Command Details & Tree */
     .cmd-block {
@@ -776,7 +830,7 @@
       border-radius: var(--radius-lg);
       margin-bottom: 12px;
       overflow: hidden;
-      background: var(--panel2);
+      background: var(--panel);
       transition: all 0.2s;
     }
     .cmd-block > summary {
@@ -788,7 +842,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: var(--panel2);
+      background: var(--panel);
       color: var(--text);
       transition: background 0.15s;
     }
@@ -835,7 +889,7 @@
       background: var(--primary-container);
       transform: translateY(-1px);
     }
-    .cmd-tag.off { opacity: .45; text-decoration: line-through; background: var(--panel2); }
+    .cmd-tag.off { opacity: .45; text-decoration: line-through; background: var(--panel); }
     .cmd-tag.custom { border-style: dashed; color: var(--acc); border-color: var(--acc); }
     .cmd-dflt {
       color: var(--muted);
@@ -863,20 +917,26 @@
       flex-wrap: wrap;
       gap: 10px;
       align-items: center;
-      background: var(--panel2);
-      border: 1px solid var(--line-subtle);
-      border-radius: var(--radius-md);
-      padding: 10px 14px;
+      background: #FFFFFF;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
       margin-top: 8px;
+      box-shadow: var(--shadow-xs);
       transition: all 0.18s;
     }
+    [data-theme="dark"] .s-fields {
+      background: #1E2228;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
     .s-fields:hover {
-      background: var(--panel-hover);
-      border-color: var(--line);
+      border-color: var(--accBorder);
+      box-shadow: var(--shadow-sm);
     }
     .s-row { display: flex; flex-direction: column; gap: 3px; flex: 0 1 95px; }
     .s-row small { color: var(--muted); font-size: 11px; font-weight: 600; }
-    .s-row input, .s-row select { width: 100%; padding: 4px 8px; font-size: 12px; border-radius: 8px; height: 28px; }
+    .s-row input, .s-row select { width: 100%; padding: 4px 8px; font-size: 12px; border-radius: 8px; height: 28px; background: #FFFFFF !important; border: 1px solid #D1D5DB !important; }
+    [data-theme="dark"] .s-row input, [data-theme="dark"] .s-row select { background: #22262B !important; border-color: rgba(255, 255, 255, 0.15) !important; }
 
     /* Atlas & Treasures */
     #atlasBox {
@@ -901,7 +961,7 @@
     }
     .atlas-seg-tabs {
       display: flex;
-      background: var(--panel2);
+      background: var(--panel);
       border: 1px solid var(--line);
       border-radius: var(--radius-full);
       padding: 3px;
@@ -933,7 +993,7 @@
       gap: 6px;
       flex: 1;
       min-width: 170px;
-      background: var(--panel2);
+      background: var(--panel);
       border: 1px solid var(--line);
       border-radius: var(--radius-full);
       padding: 3px 10px;
@@ -948,7 +1008,7 @@
       height: 26px !important;
     }
     .tre-panel {
-      background: var(--panel2);
+      background: var(--panel);
       border: 1px solid var(--line);
       border-radius: var(--radius-lg);
       padding: 12px 14px;
@@ -1048,10 +1108,10 @@
     .tre-card-desc {
       font-size: 11.5px;
       color: var(--text-secondary);
-      background: var(--panel2);
+      background: var(--panel);
       padding: 6px 8px;
       border-radius: var(--radius-md);
-      border: 1px solid var(--line-subtle);
+      border: 1px solid var(--line);
       line-height: 1.4;
       min-height: 36px;
     }
@@ -1065,6 +1125,8 @@
       margin-bottom: 8px;
       transition: all 0.2s;
     }
+    .s-mapbody { display: none; margin-top: 10px; }
+    .s-mapcard.open .s-mapbody { display: block; }
     .s-maphead {
       display: flex;
       align-items: center;
@@ -1082,8 +1144,8 @@
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
-      background: var(--panel2);
-      border: 1px solid var(--line-subtle);
+      background: var(--panel);
+      border: 1px solid var(--line);
       border-radius: var(--radius-md);
       padding: 6px 10px;
       margin: 8px 0;
@@ -1093,36 +1155,65 @@
       align-items: center;
       gap: 6px;
       font-size: 12px;
+      width: 100%;
+      min-width: 0;
     }
     .s-slot-val-inline {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
+      width: 100% !important;
       border-radius: var(--radius-sm) !important;
-      padding: 3px 6px !important;
+      padding: 3px 8px !important;
       font-size: 12px !important;
-      height: 26px !important;
-      border: 1px solid var(--line) !important;
+      height: 28px !important;
+      border: 1px solid #D1D5DB !important;
       background: #FFFFFF !important;
+      color: var(--text) !important;
+      box-sizing: border-box !important;
+    }
+    [data-theme="dark"] .s-slot-val-inline {
+      background: #22262B !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
+    }
+    /* 地图设置：推荐等级输入框紧凑化，出没精灵自适应长框 */
+    .s-map-settings .s-slot-h {
+      width: auto !important;
+      min-width: 0 !important;
+    }
+    .s-map-settings input[data-map-field="lv"] {
+      width: 56px !important;
+      max-width: 56px !important;
+      flex: 0 0 56px !important;
+      text-align: center !important;
+      padding: 3px 4px !important;
+    }
+    .s-map-settings input[data-map-field="drops"] {
+      flex: 1 1 200px !important;
+      min-width: 160px !important;
+      width: 100% !important;
     }
 
     /* =========================================================================
-       Spirit Cards: Neat Squircle Grid (彻底解决乱七八糟)
+       Spirit Cards: Neat Squircle Grid (自适应美观角色卡)
        ========================================================================= */
     .sp-spirits {
       display: grid !important;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
-      gap: 12px !important;
-      margin-top: 10px !important;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)) !important;
+      gap: 14px !important;
+      margin-top: 12px !important;
     }
     .sp-card {
-      border-radius: var(--radius-lg) !important;
+      border-radius: 16px !important;
       background: #FFFFFF !important;
       border: 1px solid var(--line) !important;
-      padding: 12px 14px !important;
+      padding: 14px !important;
       box-shadow: var(--shadow-xs) !important;
       display: flex !important;
       flex-direction: column !important;
-      gap: 8px !important;
-      transition: all 0.2s;
+      gap: 10px !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       box-sizing: border-box !important;
+      overflow: hidden !important;
     }
     [data-theme="dark"] .sp-card {
       background: #191C20 !important;
@@ -1138,6 +1229,7 @@
       align-items: center !important;
       justify-content: space-between !important;
       gap: 8px !important;
+      min-width: 0 !important;
     }
     .sp-name {
       display: flex !important;
@@ -1146,62 +1238,76 @@
       font-weight: 700 !important;
       font-size: 13.5px !important;
       color: var(--text) !important;
-      flex: 1 !important;
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
     }
     .sp-rename-inp {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
       width: 100% !important;
       background: #FFFFFF !important;
       color: var(--text) !important;
-      border: 1px solid var(--line) !important;
+      border: 1px solid #D1D5DB !important;
       border-radius: var(--radius-sm) !important;
-      padding: 2px 6px !important;
-      font-size: 12.5px !important;
+      padding: 3px 8px !important;
+      font-size: 13px !important;
       font-weight: 700 !important;
       box-sizing: border-box !important;
       height: 28px !important;
     }
-    [data-theme="dark"] .sp-rename-inp { background: #22262B !important; }
+    [data-theme="dark"] .sp-rename-inp { background: #22262B !important; border-color: rgba(255, 255, 255, 0.15) !important; }
     .sp-core-grid {
       display: grid !important;
       grid-template-columns: repeat(4, 1fr) !important;
-      gap: 5px !important;
+      gap: 6px !important;
+      width: 100% !important;
     }
     .s-slot {
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
-      background: var(--panel2) !important;
-      padding: 4px !important;
-      border-radius: var(--radius-sm) !important;
-      border: 1px solid var(--line-subtle) !important;
+      background: #FFFFFF !important;
+      padding: 4px 2px !important;
+      border-radius: 8px !important;
+      border: none !important;
       box-sizing: border-box !important;
+      min-width: 0 !important;
+    }
+    [data-theme="dark"] .s-slot {
+      background: #1E2228 !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
     }
     .s-slot-lab {
-      font-size: 10px !important;
+      font-size: 10.5px !important;
       color: var(--muted) !important;
       font-weight: 600 !important;
-      line-height: 1.2 !important;
-      margin-bottom: 2px !important;
+      line-height: 1 !important;
+      margin-bottom: 3px !important;
       text-align: center !important;
       user-select: none;
     }
     .s-slot-val {
       width: 100% !important;
+      min-width: 0 !important;
       background: #FFFFFF !important;
-      border: 1px solid var(--line) !important;
+      border: 1px solid #CBD5E1 !important;
       font-size: 12px !important;
       font-weight: 700 !important;
       color: var(--text) !important;
       text-align: center !important;
-      padding: 1px 0 !important;
+      padding: 0 !important;
       margin: 0 !important;
       outline: none !important;
-      border-radius: 4px !important;
+      border-radius: 5px !important;
       box-sizing: border-box !important;
       height: 24px !important;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    [data-theme="dark"] .s-slot-val { background: #22262B !important; }
+    [data-theme="dark"] .s-slot-val {
+      background: #282C34 !important;
+      border-color: rgba(255, 255, 255, 0.18) !important;
+    }
     .s-slot-val:focus {
       border-color: var(--acc) !important;
       box-shadow: 0 0 0 2px var(--accSoft2) !important;
@@ -1210,36 +1316,82 @@
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
       gap: 6px !important;
+      width: 100% !important;
     }
-    .sp-actions, .sp-assign-row {
+    .sp-actions {
       display: flex !important;
       gap: 6px !important;
       align-items: center !important;
-      flex-wrap: wrap !important;
+      width: 100% !important;
+    }
+    .sp-actions button {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
+      padding: 0 6px !important;
+      height: 28px !important;
+      font-size: 11.5px !important;
+      white-space: nowrap !important;
+    }
+    .sp-assign-row {
+      display: flex !important;
+      gap: 6px !important;
+      align-items: center !important;
+      width: 100% !important;
+      margin-top: 2px !important;
+    }
+    .sp-assign-select {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
+      height: 28px !important;
+      padding: 0 8px !important;
+      border-radius: var(--radius-sm) !important;
+      font-size: 12px !important;
+      background: #FFFFFF !important;
+      border: 1px solid #D1D5DB !important;
+      color: var(--text) !important;
+      box-sizing: border-box !important;
+    }
+    [data-theme="dark"] .sp-assign-select {
+      background: #22262B !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
+    }
+    .sp-assign-btn {
+      flex: 0 0 auto !important;
+      height: 28px !important;
+      padding: 0 12px !important;
+      font-size: 12px !important;
+      white-space: nowrap !important;
     }
 
-    /* Images */
+    /* Images & File Browser Cards (图标居中 / 文字置底 / 纯净无白底) */
     #imgBrowser .grid, #imgList {
       display: grid !important;
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
-      gap: 10px !important;
+      gap: 12px !important;
     }
     .fcard, .icard, .img-card {
       position: relative !important;
-      background: var(--panel2) !important;
+      background: #FFFFFF !important;
       border: 1px solid var(--line) !important;
       border-radius: var(--radius-lg) !important;
-      padding: 8px !important;
+      padding: 10px 8px !important;
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
+      justify-content: space-between !important;
       text-align: center !important;
       cursor: pointer !important;
       overflow: hidden !important;
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       box-sizing: border-box !important;
       width: 100% !important;
       max-width: 100% !important;
+      height: 138px !important;
+      min-height: 138px !important;
+    }
+    [data-theme="dark"] .fcard, [data-theme="dark"] .icard, [data-theme="dark"] .img-card {
+      background: #191C20 !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
     }
     .fcard:hover, .icard:hover, .img-card:hover {
       background: var(--panel-hover) !important;
@@ -1252,37 +1404,58 @@
       background: var(--primary-container) !important;
       box-shadow: 0 0 0 2px var(--acc) !important;
     }
-    /* Folder & Backup Icons: NO Ugly White Box */
-    .fi, .bk-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 26px;
+    /* 文件夹与文件图标：绝对上下左右居中，背景绝对纯透明无杂底 */
+    .fi {
+      flex: 1 1 auto !important;
+      width: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 46px !important;
+      line-height: 1 !important;
       background: transparent !important;
       border: none !important;
       box-shadow: none !important;
-      margin: 6px 0;
+      margin: 0 !important;
+      user-select: none;
+    }
+    .bk-icon {
+      width: 36px !important;
+      height: 36px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 22px !important;
+      line-height: 1 !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      margin: 0 !important;
+      flex-shrink: 0 !important;
     }
     .icard img, .img-card img {
       width: 100% !important;
-      aspect-ratio: 1 / 1 !important;
-      height: 100px !important;
+      height: 88px !important;
+      flex: 1 1 auto !important;
       object-fit: cover !important;
       border-radius: var(--radius-md) !important;
       display: block !important;
+      background: transparent !important;
     }
+    /* 文件夹与文件卡片文字：绝对置底对齐 */
     .icard .nm, .fcard .fn, .img-card .nm {
       width: 100% !important;
-      font-size: 11px !important;
+      font-size: 11.5px !important;
       font-weight: 600 !important;
-      color: var(--text);
-      margin-top: 6px !important;
+      color: var(--text) !important;
+      margin-top: auto !important;
+      padding-top: 6px !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
+      text-align: center !important;
+      line-height: 1.3 !important;
+      flex-shrink: 0 !important;
     }
 
     /* Breadcrumbs Pill (No Ugly Background) */
@@ -1402,32 +1575,37 @@
     .cmd-modal-footer, .m3-modal-footer {
       padding: 10px 20px;
       border-top: 1px solid var(--line-subtle);
-      background: var(--panel2);
+      background: var(--panel);
       display: flex;
       align-items: center;
       justify-content: flex-end;
       gap: 8px;
     }
     .m3-icon-circle {
-      width: 36px;
-      height: 36px;
-      border-radius: var(--radius-md);
-      background: var(--primary-container);
-      color: var(--on-primary-container);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 17px;
-      flex-shrink: 0;
+      width: auto !important;
+      height: auto !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      color: inherit !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 22px !important;
+      line-height: 1 !important;
+      flex-shrink: 0 !important;
+      padding: 0 !important;
+      margin-right: 2px !important;
     }
     .apple-card, .m3-card {
-      background: var(--panel2);
-      border: 1px solid var(--line-subtle);
+      background: var(--panel);
+      border: 1px solid var(--line);
       border-radius: var(--radius-lg);
-      padding: 12px 14px;
+      padding: 14px 16px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 12px;
     }
     .apple-card-row {
       display: flex;
@@ -1435,7 +1613,7 @@
       justify-content: space-between;
       gap: 10px;
     }
-    .apple-card-divider { height: 1px; background: var(--line-subtle); margin: 2px 0; }
+    .apple-card-divider { display: none; }
     .apple-card-field { display: flex; flex-direction: column; gap: 4px; }
     .apple-card-field > label { font-size: 11.5px; color: var(--text-secondary); font-weight: 650; }
     .cmd-reply-preview {
@@ -1489,8 +1667,8 @@
       align-items: center;
       justify-content: space-between;
       padding: 10px 12px;
-      background: var(--panel2);
-      border: 1px solid var(--line-subtle);
+      background: var(--panel);
+      border: 1px solid var(--line);
       border-radius: var(--radius-lg);
       transition: all 0.2s;
       cursor: pointer;
@@ -1508,53 +1686,108 @@
     .bk-name { font-size: 12.5px; font-weight: 650; color: var(--text); }
     .bk-meta { font-size: 11px; color: var(--muted); }
 
-    /* Material You Monet Palette */
+    /* Material You Monet Palette (高阶精致卡片 / 深浅沉浸适配) */
     .monet-popover {
       position: absolute;
-      top: calc(100% + 8px);
+      top: calc(100% + 12px);
       right: 0;
       background: var(--panel);
-      border: 1.5px solid var(--line);
-      border-radius: var(--radius-xl);
-      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px 18px 16px;
       box-shadow: var(--shadow-lg);
       z-index: 100;
-      width: 280px;
+      width: 300px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      backdrop-filter: blur(24px);
+      gap: 14px;
+      box-sizing: border-box;
+      animation: m3PopIn 0.2s cubic-bezier(0.2, 0, 0, 1);
     }
-    .monet-pop-header { display: flex; align-items: center; justify-content: space-between; }
-    .monet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    @keyframes m3PopIn {
+      from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    [data-theme="dark"] .monet-popover {
+      background: #1C2026 !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+    }
+    .monet-pop-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line-subtle);
+    }
+    .monet-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
     .monet-item {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
-      padding: 6px 3px;
-      border-radius: var(--radius-md);
+      gap: 6px;
+      padding: 9px 4px;
+      border-radius: 12px;
       cursor: pointer;
-      font-size: 10.5px;
+      font-size: 11.5px;
+      font-weight: 600;
       color: var(--text-secondary);
-      border: 1.5px solid transparent;
-      background: var(--panel2);
-      transition: all 0.2s;
+      border: 1.5px solid var(--line);
+      background: var(--panel);
+      transition: all 0.2s ease;
+      user-select: none;
     }
-    .monet-item:hover { background: var(--panel-hover); border-color: var(--accBorder); }
-    .monet-item.on { border-color: var(--acc); background: var(--panel3); font-weight: 700; color: var(--text); }
-    .monet-swatch { width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+    [data-theme="dark"] .monet-item {
+      background: #252A33 !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #E2E2E6 !important;
+    }
+    .monet-item:hover {
+      background: var(--panel-hover);
+      border-color: var(--accBorder);
+      transform: translateY(-2px);
+    }
+    [data-theme="dark"] .monet-item:hover {
+      background: #2D333D !important;
+      border-color: var(--acc) !important;
+    }
+    .monet-item.on {
+      border-color: var(--acc) !important;
+      background: var(--primary-container) !important;
+      color: var(--on-primary-container) !important;
+      font-weight: 750;
+      box-shadow: 0 0 0 2px var(--acc);
+    }
+    [data-theme="dark"] .monet-item.on {
+      background: var(--primary-container) !important;
+      color: var(--on-primary-container) !important;
+    }
+    .monet-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+      border: 2px solid #FFFFFF;
+    }
+    [data-theme="dark"] .monet-swatch {
+      border-color: #1C2026;
+    }
     .monet-custom-row {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding-top: 6px;
+      justify-content: space-between;
+      gap: 10px;
+      padding-top: 10px;
       border-top: 1px solid var(--line-subtle);
     }
 
     /* Hub & Export Modal */
     .preset-pill, .hub-solo-btn {
-      background: var(--panel2);
+      background: var(--panel);
       border: 1px solid var(--line);
       color: var(--text);
       border-radius: var(--radius-full);
@@ -1570,8 +1803,8 @@
       color: var(--acc);
     }
     .hub-mod-card {
-      background: var(--panel2);
-      border: 1px solid var(--line-subtle);
+      background: var(--panel);
+      border: 1px solid var(--line);
       border-radius: var(--radius-lg);
       padding: 10px 12px;
       display: flex;
@@ -1590,7 +1823,7 @@
     }
     .hub-mod-desc { font-size: 11px; color: var(--muted); margin-left: 22px; }
     .m3-summary-banner {
-      background: var(--panel2);
+      background: var(--panel);
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
       padding: 8px 10px;
@@ -1678,21 +1911,58 @@
       .tre-grid { grid-template-columns: 1fr !important; }
       .sp-spirits { grid-template-columns: 1fr !important; }
       .sp-core-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 4px !important; }
-      .sp-actions { flex-wrap: wrap; width: 100%; gap: 4px; }
-      .sp-actions button { flex: 1 1 30% !important; font-size: 11px !important; }
+      .sp-actions { display: flex !important; width: 100% !important; gap: 4px !important; }
+      .sp-actions button { flex: 1 1 0 !important; font-size: 11px !important; padding: 0 4px !important; }
       .table-wrap {
         max-width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
       }
       .cfg-row {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 6px;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+      }
+      .cfg-ctrl {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        justify-content: flex-start !important;
+      }
+      .cfg-ctrl input:not([type="checkbox"]):not([type="radio"]),
+      .cfg-ctrl select {
+        text-align: left !important;
       }
       .cfg-inp { width: 100% !important; }
       .s-fields { flex-direction: column; align-items: stretch; }
       .s-row { flex: 1 1 100% !important; }
+      /* 地图卡片移动端响应式：垂直流式分行，消除出没精灵折行挤压 */
+      .s-map-settings {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+      }
+      .s-map-settings .s-slot-h {
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+      }
+      .s-map-settings .s-slot-lab {
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+      }
+      .s-map-settings input[data-map-field="lv"] {
+        width: 56px !important;
+        max-width: 56px !important;
+        flex: 0 0 56px !important;
+        text-align: center !important;
+      }
+      .s-map-settings input[data-map-field="drops"] {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+      }
     }
     @media (min-width: 769px) {
       .hdr-btn-short { display: none; }
@@ -1704,57 +1974,55 @@
   <div class="wrap">
     <header>
       <div class="brand">
-        <h1>管理控制台 <span class="ver">v2026w0913f</span></h1>
+        <h1>管理控制台 <span class="ver">v2026w0914a</span></h1>
         <div class="sub">
           <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
         </div>
       </div>
       <div class="header-ctrl" style="position:relative">
-        <button id="btnOpenExportHub" class="btn sm tonal" title="打开模块化数据与预设导出中心"><span class="hdr-btn-full">📦 导出/预设中心</span><span class="hdr-btn-short">📦 导出</span></button>
+        <button id="btnOpenExportHub" class="btn sm tonal" title="打开模块化数据导出中心"><span class="hdr-btn-full">📦 模块化导出</span><span class="hdr-btn-short">📦 导出</span></button>
         <button id="btnOpenImportHub" class="ghost sm" title="智能选择性导入文件"><span class="hdr-btn-full">📤 智能导入</span><span class="hdr-btn-short">📤 导入</span></button>
-        <button class="iconBtn" id="themePaletteBtn" title="动态调色盘 (Material You / Android 16)">🎨</button>
+        <button class="iconBtn" id="themePaletteBtn" title="个性化调色盘">🎨</button>
         <button class="iconBtn" id="themeBtn" title="切换深浅主题">☀</button>
 
-        <!-- Android 16 Material You 动态调色盘浮层 -->
+        <!-- 动态调色盘浮层 -->
         <div id="monetPaletteCard" class="monet-popover" style="display:none">
           <div class="monet-pop-header">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:18px">🎨</span>
-              <div>
-                <div style="font-size:13.5px;font-weight:600;color:var(--text)">Material You 调色盘</div>
-              </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:18px;line-height:1">🎨</span>
+              <span style="font-size:14px;font-weight:700;color:var(--text);letter-spacing:0.2px">主题调色盘</span>
             </div>
-            <button id="monetPaletteClose" class="iconBtn" style="width:28px;height:28px;font-size:13px;border:none;background:transparent" title="关闭">✕</button>
+            <button id="monetPaletteClose" class="iconBtn" style="width:28px;height:28px;font-size:13px;border:none;background:transparent;cursor:pointer;border-radius:50%;color:var(--muted)" title="关闭">✕</button>
           </div>
           <div class="monet-grid">
-            <div class="monet-item" data-color="#0B57D0" title="谷歌经典蓝 (Google Blue)">
+            <div class="monet-item" data-color="#0B57D0" title="经典蓝">
               <div class="monet-swatch" style="background:#0B57D0"></div>
               <span>谷歌蓝</span>
             </div>
-            <div class="monet-item" data-color="#006C4C" title="翡翠薄荷绿 (Emerald Mint)">
+            <div class="monet-item" data-color="#006C4C" title="翡翠绿">
               <div class="monet-swatch" style="background:#006C4C"></div>
               <span>翡翠绿</span>
             </div>
-            <div class="monet-item" data-color="#6750A4" title="鸢尾梦境紫 (Iris Violet)">
+            <div class="monet-item" data-color="#6750A4" title="鸢尾紫">
               <div class="monet-swatch" style="background:#6750A4"></div>
               <span>鸢尾紫</span>
             </div>
-            <div class="monet-item" data-color="#B35C00" title="暖阳琥珀橙 (Amber Gold)">
+            <div class="monet-item" data-color="#B35C00" title="琥珀橙">
               <div class="monet-swatch" style="background:#B35C00"></div>
               <span>琥珀橙</span>
             </div>
-            <div class="monet-item" data-color="#BA1A1A" title="珊瑚赤霞红 (Coral Rose)">
+            <div class="monet-item" data-color="#BA1A1A" title="珊瑚红">
               <div class="monet-swatch" style="background:#BA1A1A"></div>
               <span>珊瑚红</span>
             </div>
-            <div class="monet-item" data-color="#006782" title="深海极光青 (Cyan Ocean)">
+            <div class="monet-item" data-color="#006782" title="极光青">
               <div class="monet-swatch" style="background:#006782"></div>
               <span>极光青</span>
             </div>
           </div>
           <div class="monet-custom-row">
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;cursor:pointer">
-              <span>自定义主色：</span>
+              <span>自定义色：</span>
               <input type="color" id="monetColorInput" value="#0B57D0" style="width:26px;height:26px;padding:0;border:none;border-radius:50%;cursor:pointer;background:transparent">
               <span id="monetColorHex" style="font-family:monospace;font-size:11.5px;color:var(--text-secondary)">#0B57D0</span>
             </label>
@@ -1920,8 +2188,11 @@
               <option value="stamina_asc">⚡ 体力 ↑ (从少到多)</option>
               <option value="charm_desc">💄 魅力 ↓ (从多到少)</option>
               <option value="charm_asc">💄 魅力 ↑ (从少到多)</option>
+              <option value="tickets_desc">🎟️ 奖券 ↓ (从多到少)</option>
+              <option value="tickets_asc">🎟️ 奖券 ↑ (从少到多)</option>
               <option value="sign_desc">📅 签到次数 ↓</option>
               <option value="sign_asc">📅 签到次数 ↑</option>
+              <option value="gid_asc">👥 群号顺序</option>
               <option value="qq_asc">🔢 QQ 顺序 (正序)</option>
               <option value="qq_desc">🔢 QQ 倒序</option>
             </select>
@@ -1933,14 +2204,16 @@
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th data-sort="qq" style="cursor:pointer;min-width:105px" title="点击按 QQ 排序">QQ ⇕</th>
-              <th style="min-width:90px">昵称</th>
-              <th data-sort="money" style="cursor:pointer" title="点击按货币排序">货币 ⇕</th>
-              <th data-sort="deposit" style="cursor:pointer" title="点击按存款排序">存款 ⇕</th>
-              <th data-sort="stamina" style="cursor:pointer" title="点击按体力排序">体力 ⇕</th>
-              <th data-sort="charm" style="cursor:pointer" title="点击按魅力排序">魅力 ⇕</th>
-              <th data-sort="sign" style="cursor:pointer" title="点击按签到排序">签到 ⇕</th>
-              <th style="min-width:140px">操作</th>
+              <th data-sort="qq" style="cursor:pointer;min-width:100px" title="点击按 QQ 排序">QQ ⇕</th>
+              <th style="min-width:85px">昵称</th>
+              <th data-sort="gid" style="cursor:pointer;min-width:90px" title="点击按群号排序">群号 ⇕</th>
+              <th data-sort="money" style="cursor:pointer;min-width:110px" title="点击按货币排序">货币 ⇕</th>
+              <th data-sort="deposit" style="cursor:pointer;min-width:110px" title="点击按存款排序">存款 ⇕</th>
+              <th data-sort="stamina" style="cursor:pointer;min-width:65px" title="点击按体力排序">体力 ⇕</th>
+              <th data-sort="charm" style="cursor:pointer;min-width:65px" title="点击按魅力排序">魅力 ⇕</th>
+              <th data-sort="tickets" style="cursor:pointer;min-width:65px" title="点击按奖券排序">奖券 ⇕</th>
+              <th data-sort="sign" style="cursor:pointer;min-width:70px" title="点击按签到排序">签到 ⇕</th>
+              <th style="min-width:140px;text-align:center">操作</th>
             </tr></thead>
             <tbody id="userBody"></tbody>
           </table>
@@ -2032,8 +2305,10 @@
         <div class="table-wrap">
           <table>
             <thead><tr>
+              <th>群号</th>
               <th data-spiritsort="qq" style="cursor:pointer" title="点击按 QQ 排序">QQ ⇕</th>
               <th>昵称</th>
+              <th data-spiritsort="count" style="cursor:pointer" title="点击按精灵数排序">精灵数 ⇕</th>
               <th>出战精灵</th>
               <th>最强精灵</th>
               <th data-spiritsort="level" style="cursor:pointer" title="点击按等级排序">最高 Lv ⇕</th>
@@ -2056,7 +2331,7 @@
             <div class="m3-subtitle">关闭单个群聊后，该群内 Bot 不响应任何指令（包括超管），其他群不受影响</div>
           </div>
           <div class="m3-action-bar">
-            <div style="display:flex;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-full);padding:2px 4px 2px 14px;gap:6px">
+            <div class="m3-search-pill" style="display:flex;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-full);padding:2px 4px 2px 14px;gap:6px">
               <input id="groupsAddGid" placeholder="输入群号添加…" style="width:130px;border:0;background:transparent;outline:none;font-size:12.5px;padding:4px 0">
               <button id="btnGroupsAdd" class="sm" style="padding:4px 14px">➕ 添加</button>
             </div>
@@ -2075,7 +2350,7 @@
 
         <div class="table-wrap">
           <table>
-            <thead><tr><th>群号</th><th>成员数</th><th>运行状态</th><th>维修状态</th><th style="text-align:center;width:90px">本群维修</th><th style="text-align:center;width:90px">群聊开关</th></tr></thead>
+            <thead><tr><th>群号</th><th>成员数</th><th>运行状态</th><th>维修状态</th><th style="text-align:left;width:95px">本群维修</th><th style="text-align:left;width:95px">群聊开关</th></tr></thead>
             <tbody id="groupsBody"></tbody>
           </table>
         </div>
@@ -2094,7 +2369,7 @@
           <div class="m3-action-bar">
             <button id="btnSave" class="btn sm">💾 保存配置</button>
             <button id="btnAutoBalance2" class="ghost sm tonal">🎯 数值智能平衡</button>
-            <span id="activeBalanceBadge1" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel2);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
+            <span id="activeBalanceBadge1" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
             <button id="btnReset" class="ghost sm">↩️ 恢复默认值</button>
             <button id="btnResetAll" class="ghost sm del">🧹 全部设置恢复默认</button>
             <button id="btnClearAll" class="ghost sm del" title="清空所有数据需三重确认">⚠️ 清空所有数据</button>
@@ -2126,7 +2401,7 @@
             <button class="ghost sm" id="btnCmdExpandAll" type="button">全部展开</button>
             <button class="ghost sm" id="btnCmdCollapseAll" type="button">全部收起</button>
             <button class="sm tonal" id="btnAutoBalance" type="button">🎯 数值智能平衡</button>
-            <span id="activeBalanceBadge2" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel2);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
+            <span id="activeBalanceBadge2" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
             <button class="btn sm" id="btnCmdAddCustomTop" type="button">＋ 自定义指令</button>
           </div>
         </div>
@@ -2233,11 +2508,11 @@
         <div class="hint">WebDAV 地址与账号只在此处填写保存（坚果云请用应用密码）。地址/账号/密码存独立文件，不进备份与快照；密码框留空=保持不变。</div>
         
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel2);padding:12px 16px;border-radius:var(--radius-md);border:1px solid var(--line)">
+          <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:var(--radius-md);border:1px solid var(--line)">
             <span style="font-size:12.5px;font-weight:600">WebDAV备份开关</span>
             <label class="switch"><input type="checkbox" id="wdSwitch"><span class="slider-toggle"></span></label>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel2);padding:12px 16px;border-radius:var(--radius-md);border:1px solid var(--line)">
+          <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:var(--radius-md);border:1px solid var(--line)">
             <span style="font-size:12.5px;font-weight:600">自动备份开关</span>
             <label class="switch"><input type="checkbox" id="autoSwitch"><span class="slider-toggle"></span></label>
           </div>
@@ -2346,7 +2621,7 @@
               <option value="ALL">全部等级</option>
               <option value="DEBUG">DEBUG</option>
               <option value="INFO">INFO</option>
-              <option value="WARNING">WARNING</option>
+              <option value="WARN">WARN</option>
               <option value="ERROR">ERROR</option>
             </select>
             <button id="btnLogsRefresh" class="ghost sm">🔄 刷新</button>
@@ -2384,8 +2659,8 @@
           <div>👤 作者：<b>Light</b></div>
           <div>📦 插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
           <div>🔗 仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
-          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w0913f</b></div>
-          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w0913f</b></div>
+          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w0914a</b></div>
+          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w0914a</b></div>
         </div>
       </div>
     </div>
@@ -2502,7 +2777,7 @@
       <div class="cmd-modal-body" style="padding:22px 26px">
         <div id="appModalContent" style="color:var(--text);font-size:13.5px;line-height:1.6"></div>
         <div id="appModalInputWrap" style="margin-top:14px;display:none">
-          <input id="appModalInput" style="width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--panel2);color:var(--text);font-size:13.5px;outline:none">
+          <input id="appModalInput" style="width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:14px;color:var(--text);font-size:13.5px;outline:none">
         </div>
       </div>
       <div class="cmd-modal-footer">
@@ -2516,7 +2791,7 @@
   <div id="toast"><span id="toastTxt"></span></div>
 
   <!-- 回到顶部：划过半屏出现，全页签通用 -->
-  <button id="backTop" title="回到顶部" style="position:fixed;right:14px;bottom:16px;z-index:60;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:16px;line-height:1;cursor:pointer;display:none;box-shadow:0 2px 10px rgba(0,0,0,0.18)">↑</button>
+  <button id="backTop" title="回到顶部" style="position:fixed;right:14px;bottom:16px;z-index:60;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:16px;line-height:1;cursor:pointer;display:none;box-shadow:0 2px 10px rgba(0,0,0,0.18)">↑</button>
 
   <!-- Android 15 / Material 3 模块化数据与预设导出中心 -->
   <div id="exportHubModal" class="modal-overlay" style="display:none">
@@ -2525,7 +2800,7 @@
         <div style="display:flex;align-items:center;gap:10px">
           <div class="m3-icon-circle">📦</div>
           <div>
-            <h2 style="margin:0;font-size:16.5px;font-weight:600">模块化数据与预设导出中心</h2>
+            <h2 style="margin:0;font-size:16.5px;font-weight:600">模块化数据导出中心</h2>
             <div style="color:var(--muted);font-size:12px;margin-top:2px">按项目精准勾选，绝不多导无关内容，绝不少导关联数据</div>
           </div>
         </div>
@@ -2535,7 +2810,7 @@
       <div class="m3-modal-body">
         <!-- 快捷场景 Pills -->
         <div style="margin-bottom:14px">
-          <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">⚡ 常用预设快捷选择：</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">⚡ 快速组合方案：</div>
           <div class="preset-pills" style="display:flex;gap:6px;flex-wrap:wrap">
             <button type="button" class="preset-pill" data-preset="atlas_gear">🎯 纯图鉴与装备包</button>
             <button type="button" class="preset-pill" data-preset="game_rules">⚙️ 纯玩法规则与指令</button>
@@ -2641,7 +2916,7 @@
       </div>
 
       <div class="m3-modal-body">
-        <div id="importHubMeta" style="margin-bottom:12px;padding:12px 14px;background:var(--panel2);border-radius:14px;border:1px solid var(--line);font-size:12.5px">
+        <div id="importHubMeta" class="card" style="margin-bottom:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);font-size:12.5px">
           <div id="importHubFileName" style="font-weight:600;color:var(--text)">📄 文件名</div>
           <div id="importHubFileInfo" style="color:var(--muted);font-size:11.5px;margin-top:2px">包版本与时间检测中…</div>
         </div>
@@ -2663,6 +2938,6 @@
       </div>
     </div>
   </div>
-  <script src="./admin.js?v=2026w0913f"></script>
+  <script src="./admin.js?v=2026w0914a"></script>
 </body>
 </html>

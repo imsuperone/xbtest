@@ -58,13 +58,23 @@ def cmd_buy_slave(gid, qq, target, st):
     if last_trade and _time.time() - last_trade < iv * 60:
         left = int(iv - (_time.time() - last_trade) / 60) + 1
         return _S.T.BUY_JUST_TRADED.format(min=left)
-    coins_add(gid, qq, -price)
     profit = price
-    if prev_owner:
-        coins_add(gid, prev_owner, profit)
+    if prev_owner and price > 0:
+        # 原子双钱包一次提交：失败不改群档、不继续扣款（禁非原子 fallback）
+        try:
+            _ok = ST.txn_two_wallets(gid, qq, prev_owner, price)
+        except Exception:
+            _ok = None
+        if _ok is None:
+            return "数据库繁忙，购买未成功，未扣款，请稍后重试。"
+        if _ok is not True:
+            return _S.T.BUY_COST.format(cost=price) + "\r\n" + _S.T.POOR.format(coin=coin_name())
         orig = int(uget(tgt, "purchase_price") or price)
     else:
-        profit = 0
+        if price > 0 and coins_add(gid, qq, -price) is None:
+            return "数据库繁忙，购买未成功，未扣款，请稍后重试。"
+        if not prev_owner:
+            profit = 0
         orig = price
     uset(tgt, "owner", qq)
     uset(tgt, "purchase_price", str(price))
@@ -122,8 +132,17 @@ def cmd_torture(gid, qq, target, st):
     evs = [e for e in _S.EVENTS if e.get("type", "").startswith("折磨")]
     if not evs:
         take = min(sc, _random.randint(TORTURE_FALLBACK_LO, TORTURE_FALLBACK_HI))
-        coins_add(gid, tid, -take)
-        coins_add(gid, qq, take // TORTURE_FALLBACK_OWNER_DIV)
+        if take > 0:
+            # 先扣奴隶再奖主人：任一步失败即退款回滚并中止，不改时间戳（禁半成功）
+            if coins_add(gid, tid, -take) is None:
+                return "数据库繁忙，折磨结算未成功，请稍后重试。"
+            _share = take // TORTURE_FALLBACK_OWNER_DIV
+            if _share > 0 and coins_add(gid, qq, _share) is None:
+                try:
+                    coins_add(gid, tid, take)
+                except Exception:
+                    pass
+                return "数据库繁忙，折磨结算未成功，已退款，请稍后重试。"
         uset(s, "tortured_time", cn_fmt(_time.time()))
         return f"折磨了 [{uname(st,tid)}], 掠夺 {take}"
     up_pool = [e for e in evs if e.get("effect") == "主人货币上涨"]
@@ -134,24 +153,28 @@ def cmd_torture(gid, qq, target, st):
     if up_pool and _random.random() < 0.6:
         ev = _random.choice(up_pool)
         amt = _event_delta()
-        coins_add(gid, qq, amt)
+        if coins_add(gid, qq, amt) is None:
+            return "数据库繁忙，折磨结算未成功，请稍后重试。"
         parts.append(_S.T.EVENT_MASTER_UP.format(text=ev.get("text", ""), amt=amt))
     elif down_pool and _random.random() < 0.3:
         ev = _random.choice(down_pool)
         amt = min(coins_get(gid, qq), _random.randint(50, 500))
         if amt > 0:
-            coins_add(gid, qq, -amt)
+            if coins_add(gid, qq, -amt) is None:
+                return "数据库繁忙，折磨结算未成功，请稍后重试。"
             parts.append(_S.T.EVENT_MASTER_DOWN.format(text=ev.get("text", ""), amt=amt))
     if sup_pool and _random.random() < 0.35:
         ev = _random.choice(sup_pool)
         amt = _random.randint(30, 300)
-        coins_add(gid, tid, amt)
+        if coins_add(gid, tid, amt) is None:
+            return "数据库繁忙，折磨结算未成功，请稍后重试。"
         parts.append(_S.T.EVENT_SLAVE_UP.format(text=ev.get("text", ""), amt=amt))
     elif sdown_pool and _random.random() < 0.5:
         ev = _random.choice(sdown_pool)
         amt = min(sc, _random.randint(30, 400))
         if amt > 0:
-            coins_add(gid, tid, -amt)
+            if coins_add(gid, tid, -amt) is None:
+                return "数据库繁忙，折磨结算未成功，请稍后重试。"
             parts.append(_S.T.EVENT_SLAVE_DOWN.format(text=ev.get("text", ""), amt=amt))
     if not parts:
         return _S.T.TORTURE_MERCY
@@ -184,7 +207,8 @@ def cmd_protect(gid, qq, target, st):
     fee = cfgi("设置", "保护费用", 1000)
     if coins_get(gid, qq) < fee:
         return _S.T.PROTECT_POOR.format(coin=coin_name())
-    coins_add(gid, qq, -fee)
+    if coins_add(gid, qq, -fee) is None:
+        return "数据库繁忙，保护未成功，未扣款，请稍后重试。"
     until = _time.time() + hours * 3600
     uset(u, "protect_until", _dt.datetime.fromtimestamp(until).strftime("%Y年%m月%d日%H时%M分%S秒"))
     uset(u, "protector", qq)
@@ -236,8 +260,15 @@ def cmd_ransom(gid, qq, target, st):
     price = int(int(uget(s, "price") or 0) * cfgf("费用配置", "赎身花费倍率", 1.5))
     if coins_get(gid, qq) < price:
         return _S.T.POOR.format(coin=coin_name()) + f"(需{price})"
-    coins_add(gid, qq, -price)
-    coins_add(gid, owner, price)
+    # 原子双钱包一次提交：失败不改群档（禁非原子 fallback）
+    try:
+        _ok = ST.txn_two_wallets(gid, qq, owner, price) if price > 0 else True
+    except Exception:
+        _ok = None
+    if _ok is None:
+        return "数据库繁忙，赎身未成功，未扣款，请稍后重试。"
+    if _ok is not True:
+        return _S.T.POOR.format(coin=coin_name()) + f"(需{price})"
     uset(s, "owner", "")
     uset(s, "赎身时间", cn_fmt(_time.time()))
     return f"[{uname(st,qq)}] 大发善心，花费{price}为 [{uname(st,tid)}] 赎身，Ta已恢复自由！"
@@ -260,8 +291,16 @@ def cmd_freedom(gid, qq, st):
     if have < price:
         return (_S.T.FREE_BY_TORTURE.format(cost=price) + "\r\n" + _S.T.FREE_FAIL_PAY
                 + f"\r\n(还差 {price - have} {coin_name()})")
-    coins_add(gid, qq, -price)
-    coins_add(gid, owner, price)
+    # 原子双钱包一次提交：失败不改群档（禁非原子 fallback）
+    try:
+        _ok = ST.txn_two_wallets(gid, qq, owner, price) if price > 0 else True
+    except Exception:
+        _ok = None
+    if _ok is None:
+        return "数据库繁忙，赎身未成功，未扣款，请稍后重试。"
+    if _ok is not True:
+        return (_S.T.FREE_BY_TORTURE.format(cost=price) + "\r\n" + _S.T.FREE_FAIL_PAY
+                + f"\r\n(还差 {price - have} {coin_name()})")
     uset(u, "owner", "")
     uset(u, "自由时间", cn_fmt(_time.time()))
     return _S.T.FREE_KIND.format(cost=price) + "\r\n换取自由！"
@@ -281,7 +320,8 @@ def cmd_buyslot(gid, qq, st):
     if coins_get(gid, qq) < price:
         return (_S.T.SLOT_NEED.format(price=price) + "\r\n" +
                 _S.T.SLOT_POOR.format(coin=coin_name()))
-    coins_add(gid, qq, -price)
+    if coins_add(gid, qq, -price) is None:
+        return "数据库繁忙，购买奴隶位未成功，未扣款，请稍后重试。"
     uset(u, "slave_slots", str(cur + 1))
     return ("\r\n".join([
         f"恭喜您花费{price}{coin_name()}",

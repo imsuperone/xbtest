@@ -659,13 +659,19 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
             if not fn:
                 continue
             matched = _matches_engine(raw, _eng, store)
+            # 纯指令引擎未命中时不进入业务函数；娱乐/冒险保留自由答案和数字选择。
+            if not matched and _eng not in ("ent", "adventure"):
+                continue
             g = _batch_map.get(_eng) if _batch_map else (_guard(gid, _eng, is_admin, raw, store) if store else None)
             if g:
                 if matched:
                     return None  # 系统已关：命中也不运行、不回复
                 continue
             try:
-                r = fn.handle(gid, qq, raw) if hasattr(fn, "handle") else fn(gid, qq, raw)
+                if _eng == "ent":
+                    r = fn.handle(gid, qq, raw, is_admin=is_admin) if hasattr(fn, "handle") else fn(gid, qq, raw, is_admin=is_admin)
+                else:
+                    r = fn.handle(gid, qq, raw) if hasattr(fn, "handle") else fn(gid, qq, raw)
             except Exception as e:
                 import traceback
                 err_tb = traceback.format_exc()

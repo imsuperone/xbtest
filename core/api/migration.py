@@ -8,7 +8,10 @@ import shutil
 import tempfile
 import zipfile
 
-from astrbot.api.web import json_response
+try:
+    from ..adapters import json_response
+except ImportError:
+    from core.adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json
 
@@ -24,6 +27,7 @@ except ImportError:
 
 
 async def _read_file_bytes_async(f):
+    # 与 weapon_pool 对齐：单文件 50M 上限，超限返回 b"" 由调用方判 400（防大包堵 loop＋OOM）
     data = b""
     try:
         if hasattr(f, "read"):
@@ -51,7 +55,16 @@ async def _read_file_bytes_async(f):
             data = bytes(data)
         except Exception:
             data = b""
-    return bytes(data)
+    data = bytes(data)
+    if len(data) > _IMPORT_MAX_BYTES:
+        return b""
+    return data
+
+
+# 旧库导入单次上限（与 weapon_pool 50M 对齐，防大包堵 loop＋OOM）
+_IMPORT_MAX_BYTES = 50 * 1024 * 1024
+# 单次用户列表条数上限（防 JSON 巨包内存峰值；超限请分群/分批导入）
+_IMPORT_MAX_USERS = 20000
 
 
 def _handle_ini_content(content, rel_path=""):
@@ -339,7 +352,9 @@ async def _read_raw_body(req):
 
 
 def _import_users_list(users, typ="json"):
-    """用户列表入库（线程池）：钱包差值+账户覆盖+群组覆盖。返成功数（调用方包回执）。"""
+    """用户列表入库（线程池）：钱包差值+账户覆盖+群组覆盖。返成功数（调用方包回执）。
+
+    部分失败只计成功：任一写失败该条不计入 ok（禁部分导入报全成功）。"""
     ok = 0
     for item in users or []:
         if not isinstance(item, dict):
@@ -348,26 +363,40 @@ def _import_users_list(users, typ="json"):
         qq = str(item.get("qq") or "").strip()
         if not gid or not qq:
             continue
+        _item_ok = True
         if "wallet" in item:
             try:
                 tgt = int(item["wallet"])
                 cur = ST.coins_get(gid, qq)
-                ST.coins_add(gid, qq, tgt - cur)
+                if tgt != cur and ST.coins_add(gid, qq, tgt - cur) is None:
+                    _item_ok = False
             except Exception:
-                pass
+                _item_ok = False
         if "account" in item and isinstance(item["account"], dict):
-            a = ST.acct(gid, qq)
-            a.kv.clear()
-            a.dirty = True
-            for k, v in item["account"].items():
-                a.set(str(k), str(v))
-            ST.acct_save(gid, qq)
+            try:
+                a = ST.acct(gid, qq)
+                a.kv.clear()
+                a.dirty = True
+                for k, v in item["account"].items():
+                    a.set(str(k), str(v))
+                if not ST.acct_save(gid, qq):
+                    _item_ok = False
+            except Exception:
+                _item_ok = False
         if "group" in item and isinstance(item["group"], dict):
-            g = ST.group(gid)
-            g[qq] = {str(k): str(v) for k, v in item["group"].items()}
-            ST.save_group(gid)
-        ok += 1
-    ST.flush_all()
+            try:
+                g = ST.group(gid)
+                g[qq] = {str(k): str(v) for k, v in item["group"].items()}
+                if not ST.save_group(gid):
+                    _item_ok = False
+            except Exception:
+                _item_ok = False
+        if _item_ok:
+            ok += 1
+    try:
+        ST.flush_all()
+    except Exception:
+        pass
     return ok
 
 
@@ -408,8 +437,10 @@ async def handle_import_legacy(req, plugin_base=""):
             except Exception:
                 pass
             if users_payload is None:
-                # 兜底：读原始体
+                # 兜底：读原始体（同样 50M 上限）
                 raw_data = await _read_raw_body(req)
+                if isinstance(raw_data, (bytes, bytearray)) and len(raw_data) > _IMPORT_MAX_BYTES:
+                    return _err("file too large (50M)", 400)
                 if isinstance(raw_data, (bytes, bytearray)) and len(raw_data) > 10:
                     # multipart 提取
                     try:
@@ -475,12 +506,16 @@ async def handle_import_legacy(req, plugin_base=""):
                 filename = "upload.bin"
             data = await _read_file_bytes_async(f)
             data = bytes(data or b"")
+            if not data:
+                return _err("file empty or too large (50M)", 400)
     except Exception as e:
         return _err(f"import failed: {e}", 500)
 
     def _work():
         try:
             if users_payload is not None:
+                if isinstance(users_payload, list) and len(users_payload) > _IMPORT_MAX_USERS:
+                    return json_response({"error": "too many users (20000)", "imported": 0})
                 return json_response({"imported": _import_users_list(users_payload, "json"), "type": "json"})
             return _import_file_data(filename, data)
         except Exception as e:

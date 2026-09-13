@@ -52,22 +52,6 @@ def __getattr__(name):
     for _m in _SUBMODS:
         try:
             return getattr(_m, name)
-        except Exception:
+        except AttributeError:
             continue
     raise AttributeError(f"slave facade has no attribute {name!r}")
-
-
-def __setattr__(name, value):
-    if name.startswith("__") and name.endswith("__"):
-        globals()[name] = value
-        return
-    try:
-        if name in globals():
-            globals()[name] = value
-            return
-    except Exception:
-        pass
-    try:
-        setattr(_state, name, value)
-    except Exception:
-        globals()[name] = value

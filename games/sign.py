@@ -114,7 +114,7 @@ def cmd_sign(gid, qq):
     cur_charm = int(float(a.get("charm", "0") or 0))
     cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
     # 单事务：钱包 delta + 账户批量字段（原5次提交→1次，持锁 1次）
-    # txn 失败返 None（内部已回滚）：走旧路径补，而非当成功
+    # txn 失败返 None：禁止拆成多次独立写入补偿，避免签到奖励半成功。
     if ST.txn_coins_acct(gid, qq, base + chain_bonus, {
         "sign_count": str(total),
         "total_sign_days": str(total),
@@ -126,19 +126,7 @@ def cmd_sign(gid, qq):
         "charm": str(cur_charm + meili),
         "lottery_tickets": str(cur_juan + juan),
     }) is None:
-        # 回退旧路径（兼容）
-        a.set("sign_count", str(total))
-        a.set("total_sign_days", str(total))
-        a.set("consecutive_days", str(chain))
-        a.set("sign_date", today)
-        a.set("last_sign_date", today)
-        if not a.get("account_created"):
-            a.set("account_created", dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        ST.coins_add(gid, qq, base + chain_bonus)
-        ST.acct_add(gid, qq, "stamina", tili)
-        ST.acct_add(gid, qq, "charm", meili)
-        ST.acct_add(gid, qq, "lottery_tickets", juan)
-        ST.acct_save(gid, qq)
+        return "签到系统繁忙，本次未结算，请稍后重试！"
     # 同步更新奴隶系统的 Group 存储，保证两边完全一致（走 DirtyDict 增量，持锁防单群并发崩溃）
     try:
         with ST._LOCK:
@@ -217,63 +205,76 @@ def cmd_personal(gid, qq):
 
 
 def cmd_draw(gid, qq, amount=1):
-    """抽奖: 消耗奖券(默认1张), 支持多连抽（如抽奖52），每抽独立判定，保底5连不中必中；不限制每日次数"""
+    """抽奖: 消耗奖券(默认1张), 支持多连抽（如抽奖52）；先全量预摇奖，再一次事务
+    扣券+发奖+写连败 streak（禁逐抽部分结算、禁失败后重摇）"""
     if amount <= 0:
         amount = 1
     if amount > 999:
         return "单次抽奖上限999张！"
     a = _acct(gid, qq)
+    # 读券→摇奖→结算全程持 _LOCK（RLock 可重入，txn 内复入无死锁）：防同用户并发双花；
+    # 摇奖为纯内存随机（≤999 次），持锁窗口可忽略
     with ST._LOCK:
         tickets = a.int("lottery_tickets")
         if tickets < amount:
             return f"奖券不足，需{amount}张，当前{tickets}张！"
-        # 扣除（持锁：防同用户并发双花）
-        a.set("lottery_tickets", str(tickets - amount))
-    # 多连抽循环
-    wins = 0
-    total_coin = 0
-    total_tili = 0
-    total_meili = 0
-    lose_streak = int(a.get("lottery_lose_streak", "0") or "0")
+        cur_stam = a.int("stamina")
+        cur_charm = a.int("charm")
+        lose_streak = int(a.get("lottery_lose_streak", "0") or "0")
+        # 预摇奖（纯随机，无 IO）：失败路径不再重摇，结果幂等
+        _coin_name = ST.coin_name()
+        _rate = cfgi("抽奖配置", "中奖率", 70)
+        _coin_v = cfgi("抽奖配置", "现金奖", 2000)
+        _stam_v = cfgi("抽奖配置", "体力奖", 60)
+        _charm_v = cfgi("抽奖配置", "魅力奖", 40)
+        _outcomes = []
+        _streak = lose_streak
+        for _i in range(amount):
+            _must = _streak >= 5
+            _win = _must or (random.randint(1, 100) <= _rate)
+            if _win:
+                _name_cn, _kind, _val = random.choice([
+                    (_coin_name, "coin", _coin_v),
+                    ("体力", "stamina", _stam_v),
+                    ("魅力", "charm", _charm_v),
+                ])
+                _outcomes.append((_kind, _name_cn, int(_val)))
+                _streak = 0
+            else:
+                _outcomes.append(None)
+                _streak += 1
+        total_coin = sum(_o[2] for _o in _outcomes if _o is not None and _o[0] == "coin") if _outcomes else 0
+        total_tili = sum(_o[2] for _o in _outcomes if _o is not None and _o[0] == "stamina") if _outcomes else 0
+        total_meili = sum(_o[2] for _o in _outcomes if _o is not None and _o[0] == "charm") if _outcomes else 0
+        wins = sum(1 for _o in _outcomes if _o is not None)
+        # 单事务原子结算：钱包 delta + 奖券/体力/魅力/streak 一次提交
+        _res = ST.txn_coins_acct(gid, qq, total_coin, {
+            "lottery_tickets": str(tickets - amount),
+            "stamina": str(cur_stam + total_tili),
+            "charm": str(cur_charm + total_meili),
+            "lottery_lose_streak": str(_streak),
+        })
+        if _res is None:
+            return "抽奖系统繁忙，本次抽奖未结算（奖券未扣除），请稍后重试！"
+        try:
+            a.set("lottery_lose_streak", str(_streak))
+            a.dirty = False
+        except Exception:
+            pass
+    if amount == 1:
+        _o = _outcomes[0]
+        if _o is None:
+            return "很遗憾，本次未中奖，再接再厉！"
+        _kind, _name_cn, _val = _o
+        return f"恭喜，抽奖成功！获得{_name_cn}+{_val}"
+    # 多连抽汇总（明细仅 amount<=10 时展开，避免刷屏）
     out_lines = []
-    for i in range(amount):
-        must_win = lose_streak >= 5
-        win = must_win or (random.randint(1, 100) <= cfgi("抽奖配置", "中奖率", 70))
-        if win:
-            pool = [
-                (ST.coin_name(), "coin", cfgi("抽奖配置", "现金奖", 2000)),
-                ("体力", "stamina", cfgi("抽奖配置", "体力奖", 60)),
-                ("魅力", "charm", cfgi("抽奖配置", "魅力奖", 40)),
-            ]
-            name_cn, kind, val = random.choice(pool)
-            if kind == "coin":
-                ST.coins_add(gid, qq, val)
-                total_coin += val
-            elif kind == "stamina":
-                ST.acct_add(gid, qq, "stamina", val)
-                total_tili += val
+    if amount <= 10:
+        for _i, _o in enumerate(_outcomes):
+            if _o is None:
+                out_lines.append(f"第{_i+1}抽：很遗憾 未中奖")
             else:
-                ST.acct_add(gid, qq, "charm", val)
-                total_meili += val
-            lose_streak = 0
-            wins += 1
-            if amount == 1:
-                a.set("lottery_lose_streak", "0")
-                ST.acct_save(gid, qq)
-                return f"恭喜，抽奖成功！获得{name_cn}+{val}"
-            else:
-                out_lines.append(f"第{i+1}抽：恭喜 获得{name_cn}+{val}")
-        else:
-            lose_streak += 1
-            if amount == 1:
-                a.set("lottery_lose_streak", str(lose_streak))
-                ST.acct_save(gid, qq)
-                return "很遗憾，本次未中奖，再接再厉！"
-            else:
-                out_lines.append(f"第{i+1}抽：很遗憾 未中奖")
-    a.set("lottery_lose_streak", str(lose_streak))
-    ST.acct_save(gid, qq)
-    # 多连抽汇总
+                out_lines.append(f"第{_i+1}抽：恭喜 获得{_o[1]}+{_o[2]}")
     summary = f"抽奖{amount}连抽完成：中奖{wins}/{amount}"
     if total_coin:
         summary += f" {ST.coin_name()}+{total_coin}"
@@ -296,21 +297,26 @@ def cmd_gift(gid, qq, kind, amount):
     key = "stamina" if kind == "stamina" else "charm"
     price = cfgi("签到配置", "体力价格" if kind == "stamina" else "魅力价格", 30 if kind == "stamina" else 3)
     total = price * amount
+    a = ST.acct(gid, qq)
     have = ST.coins_get(gid, qq)
-    dep = ST.acct(gid, qq).int("deposit")
+    dep = a.int("deposit")
+    current_value = a.int(key)
     if have < total:
         need = total - have
         if dep >= need:
-            if have:
-                ST.coins_add(gid, qq, -have)
-            ST.acct_add(gid, qq, "deposit", -need)
+            updates = {key: str(current_value + amount), "deposit": str(dep - need)}
+            if ST.txn_coins_acct(gid, qq, 0, updates, money_target=0) is None:
+                return "购买系统繁忙，本次购买未成功，请稍后重试！"
             total_paid = f"{have}{ST.coin_name()}+存款{need}"
         else:
             return f"亲，您的账户{ST.coin_name()}不足，无法购买！需要{total}{ST.coin_name()}（现金{have}+存款{dep}）"
     else:
-        ST.coins_add(gid, qq, -total)
+        if ST.txn_coins_acct(
+            gid, qq, -total, {key: str(current_value + amount)}, require_funds=True
+        ) is None:
+            return "购买系统繁忙，本次购买未成功，请稍后重试！"
         total_paid = f"{total}{ST.coin_name()}"
-    cur = ST.acct_add(gid, qq, key, amount)
+    cur = current_value + amount
     return f"恭喜您花费{total_paid}，购买了{amount}点{kind_cn}，您的{kind_cn}提升到{cur}点！"
 
 
@@ -323,7 +329,7 @@ def cmd_newbie(gid, qq):
     meili = cfgi("新手配置", "魅力", cfgi("新手配置", "新手魅力", cfgi("新手配置", "charm", 100)))
     jq = cfgi("新手配置", "奖券", cfgi("新手配置", "新手奖券", cfgi("新手配置", "lottery_tickets", 15)))
     # 单事务原子领取：钱包+账户同锁一次提交，避免签到并发时 database is locked
-    # txn 失败返 None（内部已回滚）：走单项补发，而非当成功
+    # txn 失败返 None：不再用多次独立写入补发，避免礼包半成功。
     cur_stam = int(float(a.get("stamina", "0") or 0))
     cur_charm = int(float(a.get("charm", "0") or 0))
     cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
@@ -333,12 +339,7 @@ def cmd_newbie(gid, qq):
         "charm": str(cur_charm + meili),
         "lottery_tickets": str(cur_juan + jq),
     }) is None:
-        a.set("novice_gift", "1")
-        ST.coins_add(gid, qq, money)
-        ST.acct_add(gid, qq, "stamina", tili)
-        ST.acct_add(gid, qq, "charm", meili)
-        ST.acct_add(gid, qq, "lottery_tickets", jq)
-        ST.acct_save(gid, qq)
+        return "新手礼包系统繁忙，本次未领取成功，请稍后重试！"
     else:
         # txn 内已覆盖 novice 标记，刷新内存避免旧对象覆盖
         try:

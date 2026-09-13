@@ -2,7 +2,10 @@
 """用户管理 API — 列表/编辑/单用户清除/退群清理（导入导出已拆至 user_io.py，空投已拆至 airdrop.py，端点不变）"""
 import asyncio
 import json
-from astrbot.api.web import json_response
+try:
+    from ..adapters import json_response
+except ImportError:
+    from core.adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json
 
@@ -23,11 +26,11 @@ except ImportError:
         from core.version import get_version as _get_version  # type: ignore
     except Exception:
         def _get_version(*a, **k):  # type: ignore
-            return "2026w0913f"
+            return "unknown"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
-    PLUGIN_VERSION = "2026w0913f"
+    PLUGIN_VERSION = "unknown"
 
 
 def _extract_param(request, key, default=""):
@@ -138,19 +141,21 @@ async def handle_user_edit(request):
     if not gid:
         return _err("gid required", 400)
     out = {}
+    money_target = None
     if "money" in p and str(p.get("money", "")).strip() != "":
         try:
-            tgt = int(p["money"])
+            money_target = int(p["money"])
         except Exception:
             return _err("money must be int", 400)
-        cur = ST.coins_get(gid, qq)
-        out["money"] = ST.coins_add(gid, qq, tgt - cur)
+        if money_target < 0:
+            return _err("money must be non-negative", 400)
     _map_old = {"tili": "stamina", "meili": "charm", "jiangquan": "lottery_tickets", "cunkuan": "deposit"}
     norm_p = {}
     for k, v in p.items():
         nk = _map_old.get(k, k)
         norm_p[nk] = v
     p = norm_p
+    updates = {}
     for fk in ("stamina", "charm", "lottery_tickets", "deposit"):
         if fk not in p:
             continue
@@ -160,10 +165,19 @@ async def handle_user_edit(request):
             val = int(p[fk])
         except Exception:
             return _err("%s must be int" % fk, 400)
-        a = ST.acct(gid, qq)
-        a.set(fk, str(val))
-        ST.acct_save(gid, qq)
+        if val < 0:
+            return _err("%s must be non-negative" % fk, 400)
+        updates[fk] = str(val)
         out[fk] = val
+    if money_target is None and not updates:
+        return _err("no editable fields", 400)
+    committed = ST.txn_coins_acct(
+        gid, qq, 0, updates, money_target=money_target
+    )
+    if committed is None:
+        return _err("edit failed: storage error", 500)
+    if money_target is not None:
+        out["money"] = committed
     return json_response({"saved": True, "qq": qq, "gid": gid, **out})
 
 
@@ -249,37 +263,10 @@ async def handle_users_clean_left(request, context=None):
         except Exception:
             pass
 
+        cleaned = 0
         for q in left_qqs:
-            try:
-                # 1. 彻底清除账户内存缓存并清除脏标记
-                if hasattr(ST, "_ACC_CACHE") and isinstance(ST._ACC_CACHE, dict):
-                    for k in ((str(g), str(q)), (int(g), int(q)), (str(g), int(q)), (int(g), str(q))):
-                        a_obj = ST._ACC_CACHE.pop(k, None)
-                        if a_obj is not None:
-                            a_obj.dirty = False
-                            a_obj.kv.clear()
-
-                # 2. 彻底删除数据库三表数据
-                ST._DB.execute("DELETE FROM wallet WHERE gid=? AND qq=?", (int(g), int(q)))
-                ST._DB.execute("DELETE FROM accounts WHERE gid=? AND qq=?", (int(g), int(q)))
-                ST._DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(g), int(q)))
-            except Exception:
-                pass
-
-            # 清理 store group 内存缓存
-            try:
-                if hasattr(ST, "_GROUP_CACHE") and isinstance(ST._GROUP_CACHE, dict):
-                    for g_key in (str(g), int(g)):
-                        g_obj = ST._GROUP_CACHE.get(g_key)
-                        if g_obj is not None:
-                            g_obj._users.pop(str(q), None)
-                            g_obj._users.pop(int(q), None)
-                            if hasattr(g_obj, "_dirty_qqs") and isinstance(g_obj._dirty_qqs, set):
-                                g_obj._dirty_qqs.discard(str(q))
-                                g_obj._dirty_qqs.discard(int(q))
-            except Exception:
-                pass
-
+            if not ST.user_clear(g, q):
+                continue
             if st:
                 try:
                     if st.has_section(q):
@@ -290,18 +277,19 @@ async def handle_users_clean_left(request, context=None):
                             st[sec]["purchase_price"] = "0"
                             st[sec]["purchase_time"] = ""
                 except Exception:
-                    pass
+                    continue
+            cleaned += 1
 
-        if st:
+        if st and cleaned:
             try:
                 slave.save(g)
             except Exception:
-                pass
+                failed_gids.append(g)
 
-        cleaned_total += len(left_qqs)
-        cleaned_details[g] = len(left_qqs)
+        cleaned_total += cleaned
+        if cleaned:
+            cleaned_details[g] = cleaned
 
-    ST.flush_all()
     if not cleaned_details and failed_gids:
         return json_response({"ok": False, "msg": f"无法连接机器人获取群 {','.join(failed_gids[:3])} 的实时成员列表，请确保 Bot 在线且在群内"}, status=400)
     return json_response({
@@ -315,29 +303,9 @@ async def handle_users_clean_left(request, context=None):
 
 async def handle_user_clear(request):
     """清除指定单用户的全部数据（钱包、账户、奴隶、精灵、新手礼包资格）"""
-    gid = _extract_param(request, "gid", "").strip()
-    qq = _extract_param(request, "qq", "").strip()
-    # 兼容 Bridge GET query（get_req_query 跨框架）与 POST JSON Body
-    if not gid:
-        try:
-            gid = str(get_req_query(request, "gid", "") or "").strip()
-        except Exception:
-            pass
-    if not qq:
-        try:
-            qq = str(get_req_query(request, "qq", "") or "").strip()
-        except Exception:
-            pass
-    if not gid or not qq:
-        try:
-            p = await get_req_json(request, default={})
-            if isinstance(p, dict):
-                if not gid and p.get("gid"):
-                    gid = str(p.get("gid")).strip()
-                if not qq and p.get("qq"):
-                    qq = str(p.get("qq")).strip()
-        except Exception:
-            pass
+    p = await get_req_json(request, default={})
+    gid = str(p.get("gid") or "").strip() if isinstance(p, dict) else ""
+    qq = str(p.get("qq") or "").strip() if isinstance(p, dict) else ""
 
     if not gid or not qq:
         return _err("gid and qq required", 400)

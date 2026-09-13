@@ -137,8 +137,16 @@ def cmd_start(gid, qq, mapname):
     gap = _cfgi("冒险间隔", 3) * 60
     if last and _now() - last < gap:
         return "休息一下，过会儿再冒险吧！"
-    ST.acct_add(gid, qq, "stamina", -cs)
-    ST.coins_add(gid, qq, -cost)
+    # 两腿扣费都校验：第二腿失败退第一腿（禁半成功开局）
+    if cs and ST.acct_add(gid, qq, "stamina", -cs) is None:
+        return "数据库繁忙，冒险扣费未成功，请稍后重试。"
+    if cost and ST.coins_add(gid, qq, -cost) is None:
+        if cs:
+            try:
+                ST.acct_add(gid, qq, "stamina", cs)
+            except Exception:
+                pass
+        return "数据库繁忙，冒险扣费未成功（已退款），请稍后重试。"
     adv = {"map": mapname, "round": 1, "ts": _now(), "last_choice": 0}
     _save(gid, qq, adv)
     ST.recall_set("advt_%s_%s" % (gid, qq), str(_now()))
@@ -201,21 +209,31 @@ def cmd_choose(gid, qq, n):
         kind = "trap"
 
     if kind == "bonus":
-        # 35% 额外复活币
+        # 35% 额外复活币：任一到账失败如实告知（禁冒领成功）
         if random.random() < REVIVE_CHANCE:
-            ST.coins_add(gid, qq, money)
-            ST.acct_add(gid, qq, "revive_coins", 1)
-            outcome = f"{event_text}\r\n✨ 关键抉择生效！奖励{money}{ST.coin_name()}，复活币+1（选择{choice}的勇气得到回应）"
+            _c_ok = ST.coins_add(gid, qq, money) is not None
+            _r_ok = ST.acct_add(gid, qq, "revive_coins", 1) is not None
+            if not (_c_ok and _r_ok):
+                outcome = (f"{event_text}\r\n✨ 关键抉择生效！奖励结算繁忙未到账"
+                           f"（{money}{ST.coin_name()} / 复活币+1），请稍后重试。")
+            else:
+                outcome = f"{event_text}\r\n✨ 关键抉择生效！奖励{money}{ST.coin_name()}，复活币+1（选择{choice}的勇气得到回应）"
         else:
-            ST.coins_add(gid, qq, money)
-            outcome = f"{event_text}\r\n🎉 你披荆斩棘，获得{money}{ST.coin_name()}！（选择{choice}）"
+            if ST.coins_add(gid, qq, money) is None:
+                outcome = f"{event_text}\r\n🎉 你披荆斩棘，但奖励{money}{ST.coin_name()}结算繁忙未到账，请稍后重试。"
+            else:
+                outcome = f"{event_text}\r\n🎉 你披荆斩棘，获得{money}{ST.coin_name()}！（选择{choice}）"
     elif kind == "neutral":
         outcome = f"{event_text}\r\n—— 你以少量代价换得通行，未得也未失（选择{choice}）"
     else:
         fine = min(random.randint(_cfgi("结局金钱下限", 1500), _cfgi("结局金钱上限", 2000)), _coin(gid, qq))
         if fine:
-            ST.coins_add(gid, qq, -fine)
-        outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，损失{fine}{ST.coin_name()}，狼狈脱险……（选择{choice}的代价）"
+            if ST.coins_add(gid, qq, -fine) is None:
+                outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，但损失结算繁忙未扣除，请稍后重试。"
+            else:
+                outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，损失{fine}{ST.coin_name()}，狼狈脱险……（选择{choice}的代价）"
+        else:
+            outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，损失{fine}{ST.coin_name()}，狼狈脱险……（选择{choice}的代价）"
 
     _save(gid, qq, adv)
     if adv["round"] >= max_round:
@@ -229,7 +247,16 @@ def cmd_choose(gid, qq, n):
             reward = random.randint(_elo, _ehi) if _ehi > 0 else int(max(lo, hi) * CLEAR_MULT)
         else:
             reward = int(max(lo, hi) * CLEAR_MULT)
-        ST.coins_add(gid, qq, reward)
+        if ST.coins_add(gid, qq, reward) is None:
+            _save(gid, qq, {})
+            return (
+                f"🏆【{m} · 史诗通关】\r\n"
+                f"━━━━━━━━━━━━━━\r\n"
+                f"你历经 {max_round} 轮惊心动魄的生死抉择，终于化险为夷，凯旋归来！\r\n"
+                f"{outcome}\r\n"
+                f"━━━━━━━━━━━━━━\r\n"
+                f"🎁 最终通关奖励 +{reward} {ST.coin_name()}结算繁忙未到账，请稍后重试。"
+            )
         _save(gid, qq, {})
         return (
             f"🏆【{m} · 史诗通关】\r\n"
@@ -268,7 +295,8 @@ def cmd_end(gid, qq):
         return "您当前没有进行中的冒险。"
     if _revive(gid, qq) <= 0:
         return "没有复活币，无法提前结束冒险！"
-    ST.acct_add(gid, qq, "revive_coins", -1)
+    if ST.acct_add(gid, qq, "revive_coins", -1) is None:
+        return "数据库繁忙，复活币扣除未成功，请稍后重试。"
     m = adv["map"]; _save(gid, qq, {})
     return ("【%s】冒险已提前结束！复活币-1，当前还剩%d个" % (m, _revive(gid, qq)))
 

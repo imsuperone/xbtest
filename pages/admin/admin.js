@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0913f";
+const FRONTEND_VER = "2026w0914a";
 
 let _WORKING_API_PREFIX = null;
 
@@ -226,12 +226,12 @@ function applyMonetTheme(hex) {
 
   if (!isDark) {
     const isGoogleBlue = hex.toLowerCase() === "#0b57d0";
-    const bgL = isGoogleBlue ? "#F8F9FA" : `hsl(${h}, ${Math.min(s * 0.16, 12)}%, 97.5%)`;
+    const bgL = "#FFFFFF";
     const panelL = "#FFFFFF";
-    const panelHoverL = isGoogleBlue ? "#F1F4F9" : `hsl(${h}, ${Math.min(s * 0.18, 14)}%, 95%)`;
-    const panel2L = isGoogleBlue ? "#EDF2F9" : `hsl(${h}, ${Math.min(s * 0.20, 16)}%, 93%)`;
-    const panel3L = isGoogleBlue ? "#E2E8F0" : `hsl(${h}, ${Math.min(s * 0.22, 18)}%, 89%)`;
-    const lineL = isGoogleBlue ? "#C4C7C5" : `hsla(${h}, ${Math.min(s * 0.20, 18)}%, 30%, 0.12)`;
+    const panelHoverL = "#F8FAFC";
+    const panel2L = "#FFFFFF";
+    const panel3L = "#FFFFFF";
+    const lineL = "#D1D5DB";
     const lineSubtleL = "rgba(0, 0, 0, 0.06)";
     const priContL = isGoogleBlue ? "#D3E3FD" : `hsl(${h}, ${Math.max(40, Math.min(85, s * 0.75))}%, 90%)`;
     const onPriContL = "#041E49";
@@ -378,7 +378,7 @@ function initMonetPalette() {
       const c = it.dataset.color;
       if (c) {
         applyMonetTheme(c);
-        toast("已应用 Android 16 主题色：" + (it.querySelector("span")?.textContent || c), "ok");
+        toast("已应用主题色：" + (it.querySelector("span")?.textContent || c), "ok");
       }
     });
   });
@@ -423,7 +423,39 @@ function toast(msg, type, duration = 2800) {
   _toastT = setTimeout(() => { el.className = ""; }, duration || 2800);
 }
 
-// 请求 API 封装（支持 GET 自动转参数拼在 URL 与 fallback POST 双向兼容）
+// GET->POST 白名单：仅明确读接口允许在 GET 明确不可用时回退 POST。
+// 写/删/恢复/修剪/清空类端点永远禁止回退（禁非原子 fallback 与 GET 副作用）。
+const _GET_POST_FALLBACK_ALLOW = new Set([
+  "stats", "rank", "config/get", "config/schema", "config/balance_state",
+  "analytics/overview", "commands", "users",
+  "user/export", "users/export",
+  "images/list", "images/thumb", "images/export",
+  "spirits", "gacha/weapons", "weapons/pool", "weapons/pool/img",
+  "backups/list", "backups/config/snapshots", "backups/export",
+  "version/check", "version/channel",
+  "logs", "logs/export",
+  "slave/users", "spirit/users", "groups/list",
+  "backup/webdav/test", "backups/webdav/test",
+  "backup/webdav/files", "backups/webdav/files",
+]);
+
+function _shouldFallbackPost(cleanEp, res, err) {
+  if (!_GET_POST_FALLBACK_ALLOW.has(cleanEp)) return false;
+  if (err) {
+    const msg = String((err && err.message) || err || "");
+    // 仅网络异常/404/405 触发；超时/取消 AbortError 不重放
+    if (/abort/i.test(msg)) return false;
+    return true;
+  }
+  if (!res) return true;
+  const msg = String((res && res.message) || "");
+  const code = res && (res.code !== undefined ? res.code : res.status);
+  if (/未找到|not found|404|405|method not allowed/i.test(msg)) return true;
+  if (code === 404 || code === 405 || code === "404" || code === "405") return true;
+  return false;
+}
+
+// 请求 API 封装（GET 参数拼 URL；仅白名单读接口在 404/405/网络异常时回退 POST）
 async function callApi(endpoint, data = {}, method = "GET") {
   const _b = getBridge();
   const cleanEp = String(endpoint || "").replace(/^\/+/, "").split("?")[0];
@@ -436,16 +468,20 @@ async function callApi(endpoint, data = {}, method = "GET") {
     });
   }
   if (method === "GET") {
+    let res = null;
+    let err = null;
     try {
-      let res = await _b.apiGet(cleanEp, cleanData);
-      // 空数组/空对象是合法结果，直接返回；仅无响应或明确“未找到”才回退 POST，避免双倍请求
-      if (!res || (res && res.status === "error" && res.message && res.message.includes("未找到"))) {
-        res = await _b.apiPost(cleanEp, cleanData);
-      }
-      return res;
+      res = await _b.apiGet(cleanEp, cleanData);
     } catch (e) {
-      return await _b.apiPost(cleanEp, cleanData);
+      err = e;
     }
+    // 空数组/空对象是合法结果，直接返回；仅白名单+明确不可用才回退 POST，避免双倍请求
+    if (_shouldFallbackPost(cleanEp, res, err)) {
+      res = await _b.apiPost(cleanEp, cleanData);
+      return res;
+    }
+    if (err) throw err;
+    return res;
   } else {
     return await _b.apiPost(cleanEp, cleanData);
   }
@@ -505,7 +541,7 @@ function showExportModal({ filename, blob, blobUrl, rawText, base64Data }) {
   const sizeKb = blob ? (blob.size / 1024).toFixed(1) : (rawText ? (new Blob([rawText]).size / 1024).toFixed(1) : "");
   if (content) {
     content.innerHTML = `
-      <div style="margin:4px 0 10px;padding:12px;background:var(--panel2);border-radius:12px;border:1px solid var(--line);font-size:12.5px">
+      <div class="card" style="margin:4px 0 10px;padding:12px;border-radius:12px;border:1px solid var(--line);font-size:12.5px">
         <div style="font-weight:600;color:var(--text);margin-bottom:4px;word-break:break-all;font-size:13px">📄 ${esc(filename)} ${sizeKb ? `<span class="badge badge-primary" style="margin-left:6px">${sizeKb} KB</span>` : ""}</div>
         <div style="color:var(--muted);font-size:11.5px;line-height:1.5">文件已生成完成。若浏览器未自动弹出保存提示，请点击下方按钮手动保存：</div>
       </div>
@@ -1366,9 +1402,12 @@ const TAB_LOADERS = {
   spirits: async () => { let r; try { r = await loadSpirits(); } catch(e) { try { err("tab spirits: " + e.message); } catch(_e){} } try { await loadShops(true); try { if (typeof refreshSpiritViews === "function") refreshSpiritViews(); } catch(_e){} } catch(e){} return r; },
   shops: async () => { return loadShops(); },
   backups: async () => {
-    if (typeof loadBackupCfg === "function") try { await loadBackupCfg(); } catch (e) {}
-    if (typeof loadRemoteWebDAVFiles === "function") try { await loadRemoteWebDAVFiles(); } catch (e) {}
-    return typeof loadBackups === "function" ? loadBackups("") : Promise.resolve();
+    const p1 = typeof loadBackupCfg === "function" ? loadBackupCfg().catch(() => {}) : Promise.resolve();
+    const p2 = typeof loadBackups === "function" ? loadBackups("").catch(() => {}) : Promise.resolve();
+    if (typeof loadRemoteWebDAVFiles === "function") {
+      setTimeout(() => { loadRemoteWebDAVFiles().catch(() => {}); }, 60);
+    }
+    await Promise.all([p1, p2]);
   },
   imgs: async () => { return loadImages(""); },
   groups: async () => { return loadGroups(); },
@@ -1506,15 +1545,58 @@ function renderImages(d) {
     else if (ext === "zip") ficon = "🗜️";
     else if (ext === "log") ficon = "📜";
 
-    html += `<div class="icard${selCls}" data-imgsrc="${esc(x.img)}" data-imgname="${esc(x.name)}" data-selpath="${esc(x.path)}" title="${esc(x.name)} (单击选中)">
+    html += `<div class="icard${selCls}" data-imgsrc="${esc(x.img)}" data-imgname="${esc(x.name)}" data-selpath="${esc(x.path)}" title="${esc(x.name)} (双击看大图/单击选中)">
       ${isImg ? `<button type="button" class="img-preview-badge" data-action="preview" title="查看大图" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;z-index:2">👁️</button>` : ""}
-      ${ficon ? `<div style="height:110px;display:flex;align-items:center;justify-content:center;font-size:42px;background:var(--panel2)">${ficon}</div>` : `<img loading="lazy" decoding="async" src="${esc(_safeImgSrc(x.img))}" alt="" style="height:110px;width:100%;object-fit:cover;display:block;pointer-events:none">`}
+      ${ficon ? `<div class="fi">${ficon}</div>` : `<img class="icard-img" loading="lazy" decoding="async" src="${esc(_safeImgSrc(x.img))}" alt="" style="height:88px;width:100%;object-fit:cover;border-radius:var(--radius-md);display:block">`}
       <div class="nm">${esc(x.name)}</div>
     </div>`;
   });
 
   html += `</div>`;
   box.innerHTML = html;
+
+  // 异步自动拉取并填充当前图片卡片的真实缩略图
+  box.querySelectorAll(".icard[data-selpath]").forEach((card) => {
+    const p = card.dataset.selpath;
+    const ext = (p.split(".").pop() || "").toLowerCase();
+    if (["png","jpg","jpeg","gif","webp","bmp","ico"].includes(ext)) {
+      getBridge().apiGet("images/thumb", { path: p }).then((res) => {
+        if (res && res.thumb) {
+          card.dataset.imgsrc = res.thumb;
+          const imgEl = card.querySelector("img");
+          if (imgEl) {
+            imgEl.src = _safeImgSrc(res.thumb);
+          }
+        }
+      }).catch(() => {});
+    }
+  });
+
+  async function _previewCard(card) {
+    if (!card) return;
+    let src = card.dataset.imgsrc;
+    const name = card.dataset.imgname || "";
+    if (src) {
+      showLightbox(src, name);
+      return;
+    }
+    const p = card.dataset.selpath;
+    if (!p) return;
+    try {
+      toast("正在载入大图预览…", "ok", 1200);
+      const res = await getBridge().apiGet("images/thumb", { path: p });
+      if (res && res.thumb) {
+        card.dataset.imgsrc = res.thumb;
+        const imgEl = card.querySelector("img");
+        if (imgEl) imgEl.src = _safeImgSrc(res.thumb);
+        showLightbox(res.thumb, name);
+      } else {
+        toast("预览图读取失败", "bad");
+      }
+    } catch(err) {
+      toast("加载大图失败: " + (err.message || String(err)), "bad");
+    }
+  }
 
   // 统一事件委托处理选择、双击与大图预览
   box.onclick = (e) => {
@@ -1523,9 +1605,7 @@ function renderImages(d) {
     if (prevBtn) {
       e.stopPropagation();
       const card = prevBtn.closest(".icard");
-      if (card && card.dataset.imgsrc) {
-        showLightbox(card.dataset.imgsrc, card.dataset.imgname);
-      }
+      _previewCard(card);
       return;
     }
 
@@ -1548,8 +1628,8 @@ function renderImages(d) {
     if (!card) return;
     if (card.dataset.imgdir) {
       loadImages(card.dataset.imgdir);
-    } else if (card.dataset.imgsrc) {
-      showLightbox(card.dataset.imgsrc, card.dataset.imgname);
+    } else if (card.classList.contains("icard")) {
+      _previewCard(card);
     }
   };
 
@@ -1760,7 +1840,7 @@ async function refreshBalanceBadges() {
       if (!el) return;
       if (drift > 0) {
         el.textContent = `⚪ ${meta.label}（已偏离${drift}项）`;
-        el.style.color = "var(--muted)"; el.style.background = "var(--panel2)"; el.style.border = "1px solid var(--line)";
+        el.style.color = "var(--muted)"; el.style.background = "var(--panel)"; el.style.border = "1px solid var(--line)";
         el.title = "数值与该档预设不一致，可点开重选覆盖";
       } else {
         el.textContent = `${meta.icon} 当前生效：${meta.label}`;
@@ -1811,24 +1891,24 @@ async function loadConfig() {
         const attrs = `data-sec="${esc(sec)}" data-key="${esc(it.key)}"`;
         const row = document.createElement("div");
         row.className = "cfg-row";
-        const small = `<small>${esc(it.desc || "")}</small>`;
+        const infoHtml = `<div class="cfg-info"><div class="cfg-lab">${esc(it.key)}</div>${it.desc ? `<div class="cfg-help">${esc(it.desc)}</div>` : ""}</div>`;
         if (isFlag(it.default)) {
           row.className = "cfg-row has-checkbox";
           const chk = flagVal(v) ? "checked" : "";
-          row.innerHTML = `<label>${esc(it.key)}</label>` +
-            `<label class="switch"><input type="checkbox" ${chk} ${attrs}><span class="slider-toggle"></span></label>${small}`;
+          row.innerHTML = infoHtml +
+            `<div class="cfg-ctrl"><label class="switch"><input type="checkbox" ${chk} ${attrs}><span class="slider-toggle"></span></label></div>`;
         } else if (isTextType(it.type) || isListType(it.type)) {
-          row.innerHTML = `<label>${esc(it.key)}</label>` +
-            `<textarea rows="${isListType(it.type) ? 3 : 2}" ${attrs}>${esc(v)}</textarea>${small}`;
+          row.innerHTML = infoHtml +
+            `<div class="cfg-ctrl" style="flex:1;max-width:360px"><textarea rows="${isListType(it.type) ? 3 : 2}" ${attrs} style="width:100%">${esc(v)}</textarea></div>`;
         } else if (it.type === "int" && /^-?\d+$/.test(String(v))) {
-          row.innerHTML = `<label>${esc(it.key)}</label>` +
-            `<input type="number" step="1" value="${esc(v)}" ${attrs}>${small}`;
+          row.innerHTML = infoHtml +
+            `<div class="cfg-ctrl"><input type="number" step="1" value="${esc(v)}" ${attrs} style="width:140px"></div>`;
         } else if (it.type === "float" && !isNaN(parseFloat(v))) {
-          row.innerHTML = `<label>${esc(it.key)}</label>` +
-            `<input type="number" step="any" value="${esc(v)}" ${attrs}>${small}`;
+          row.innerHTML = infoHtml +
+            `<div class="cfg-ctrl"><input type="number" step="any" value="${esc(v)}" ${attrs} style="width:140px"></div>`;
         } else {
-          row.innerHTML = `<label>${esc(it.key)}</label>` +
-            `<input type="text" value="${esc(v)}" ${attrs}>${small}`;
+          row.innerHTML = infoHtml +
+            `<div class="cfg-ctrl" style="flex:1;max-width:320px"><input type="text" value="${esc(v)}" ${attrs} style="width:100%"></div>`;
         }
         box.appendChild(row);
       }
@@ -1902,21 +1982,21 @@ async function openAutoBalanceModal() {
       系统基于<strong>群博弈论与经济学精算模型</strong>，为你自动推算并一键匹配最佳货币奖励、惩罚倍率、抽奖爆率与奴隶身价成长曲线：
     </div>${_driftInfo}
     <div style="display:flex;flex-direction:column;gap:10px">
-      <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--panel2);border:${activeMode === "standard" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
+      <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "standard" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="standard" ${activeMode === "standard" ? "checked" : ""} style="margin-top:3px">
         <div>
           <div style="font-weight:600;color:var(--text);font-size:13px">🟢 标准平衡模式（官方推荐 · 经济稳健）</div>
           <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 300-800 + 连签 50，利率 2%，造反率 35%，祈福爆发 5%。平稳通胀，适合绝大多数群聊。</div>
         </div>
       </label>
-      <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--panel2);border:${activeMode === "casual" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
+      <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "casual" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="casual" ${activeMode === "casual" ? "checked" : ""} style="margin-top:3px">
         <div>
           <div style="font-weight:600;color:var(--text);font-size:13px">🟡 休闲高福利模式（高爆率 · 活跃社群）</div>
           <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 800-2000 + 连签 100，利率 3%，造反率 20%，祈福爆发 15%，赌博成功率 60%。低惩罚快节奏，极大激发互动。</div>
         </div>
       </label>
-      <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--panel2);border:${activeMode === "hardcore" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
+      <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "hardcore" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="hardcore" ${activeMode === "hardcore" ? "checked" : ""} style="margin-top:3px">
         <div>
           <div style="font-weight:600;color:var(--text);font-size:13px">🔴 硬核博弈模式（高对抗 · 惩罚严酷）</div>
@@ -2098,7 +2178,7 @@ async function loadRank(type) {
     const rankBadges = ["🥇", "🥈", "🥉"];
     body.innerHTML = rows
       .map((r, i) => {
-        const rankIdx = i < 3 ? `<span style="font-size:16px">${rankBadges[i]}</span>` : `<span class="badge" style="background:var(--panel2)">${i + 1}</span>`;
+        const rankIdx = i < 3 ? `<span style="font-size:16px">${rankBadges[i]}</span>` : `<span class="badge" style="background:var(--panel);border:1px solid var(--line);color:var(--text)">${i + 1}</span>`;
         const valFormatted = typeof r.value === "number" ? r.value.toLocaleString() : esc(r.value);
         return `<tr>
           <td style="text-align:center">${rankIdx}</td>
@@ -2181,6 +2261,8 @@ function renderUserTable() {
   else if (sortMode === "stamina_asc") users.sort((a, b) => (a.stamina || 0) - (b.stamina || 0));
   else if (sortMode === "charm_desc") users.sort((a, b) => (b.charm || 0) - (a.charm || 0));
   else if (sortMode === "charm_asc") users.sort((a, b) => (a.charm || 0) - (b.charm || 0));
+  else if (sortMode === "tickets_desc") users.sort((a, b) => (b.lottery_tickets || 0) - (a.lottery_tickets || 0));
+  else if (sortMode === "tickets_asc") users.sort((a, b) => (a.lottery_tickets || 0) - (b.lottery_tickets || 0));
   else if (sortMode === "sign_desc") users.sort((a, b) => (b.sign || 0) - (a.sign || 0));
   else if (sortMode === "sign_asc") users.sort((a, b) => (a.sign || 0) - (b.sign || 0));
   else if (sortMode === "qq_asc") users.sort((a, b) => String(a.qq).localeCompare(String(b.qq)));
@@ -2205,13 +2287,13 @@ function renderUserTable() {
         <td><strong>${esc(u.qq)}</strong></td>
         <td>${nm}</td>
         <td><span class="badge badge-primary">${esc(u.gid)}</span></td>
-        <td>${inp("mm", u.money, 125)}</td>
+        <td>${inp("mm", u.money, 110)}</td>
+        <td>${inp("ck", u.deposit || 0, 110)}</td>
         <td>${inp("tt", u.stamina, 58)}</td>
         <td>${inp("ma", u.charm, 58)}</td>
-        <td>${inp("jj", u.lottery_tickets, 58)}</td>
-        <td>${inp("ck", u.deposit || 0, 135)}</td>
+        <td>${inp("jj", u.lottery_tickets || 0, 58)}</td>
         <td><span class="badge badge-success">${u.sign || 0}次</span></td>
-        <td style="white-space:nowrap"><button data-save="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" class="sm">保存</button> <button class="ghost sm" data-export="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}">导出</button> <button class="ghost sm del" data-clear="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" title="彻底清除该用户全部数据（含奴隶、精灵与礼包资格）">清除</button></td>
+        <td style="white-space:nowrap;text-align:center"><button data-save="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" class="sm">保存</button> <button class="ghost sm" data-export="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}">导出</button> <button class="ghost sm del" data-clear="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" title="彻底清除该用户全部数据（含奴隶、精灵与礼包资格）">清除</button></td>
       </tr>`;
     })
     .join("");
@@ -2246,8 +2328,7 @@ async function clearUserSingle(qq, gid) {
     try {
       res = await getBridge().apiPost("user/clear", { gid, qq });
     } catch (e) {
-      // Bridge POST 异常时回退 GET（后端 user/clear 同时支持 GET/POST）
-      try { res = await getBridge().apiGet("user/clear", { gid, qq }); } catch (e2) { throw e; }
+      // 清除是破坏性操作，只允许 POST；禁止降级为可被预取的 GET。
     }
     if (res && (res.ok || res.saved || res.cleared)) {
       toast(res.msg || `用户 ${qq} 数据已彻底清除`, "ok");
@@ -2353,7 +2434,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0913f"
+        version: res.version || "2026w0914a"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -3096,7 +3177,7 @@ function spiritAttrCards(spirits, dropNames, assignMaps) {
         <button type="button" class="ghost sm" data-sp-pick-upload="${esc(sn)}">上传图片</button>
         <button type="button" class="ghost sm" data-sp-pick-builtin="${esc(sn)}">内置图片</button>
       </div>
-      ${_assignOpts ? `<div class="sp-assign-row"><select data-assign-map="${esc(sn)}" style="flex:1;padding:4px 8px;border-radius:10px">${_assignOpts}</select><button type="button" class="ghost sm" data-assign-spirit="${esc(sn)}">分配进图</button></div>` : ""}
+      ${_assignOpts ? `<div class="sp-assign-row"><select data-assign-map="${esc(sn)}" class="sp-assign-select">${_assignOpts}</select><button type="button" class="ghost sm sp-assign-btn" data-assign-spirit="${esc(sn)}">分配进图</button></div>` : ""}
     </div>`;
   }).join("") + _dl;
 }
@@ -3133,6 +3214,7 @@ async function renderAtlas(curCfg){
     const _TREAS_BUILTIN = { "酒神葫芦": { effect: "灌醉您的奴隶,极大的增加其造反难度", type: "pardon", value: 0 }, "四象护符": { effect: "打架失败时降低赔偿奴隶的概率", type: "shield", value: 0 } };
     const _effOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); if (e) return String(e); const b = _TREAS_BUILTIN[n]; return b ? b.effect : ""; } catch (e) { return ""; } };
     const _treOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; return _TREAS_BUILTIN[n] || null; } catch (e) { return null; } };
+    const _valOf = (n) => { try { const o = _treOf(n); return (o && o.value !== undefined) ? (Number(o.value) || 0) : 0; } catch (e) { return 0; } };
     const _typeTag = (n) => { try { const o = _treOf(n) || {}; const t = String(o.type || ""); const v = Number(o.value) || 0; if (t === "atk" && v > 0) return "攻" + v; if (t === "shield") return "盾"; if (t === "pardon") return "免"; if ((t === "work" || t === "worth") && v > 0) return (t === "work" ? "工" : "价") + v + "%"; return ""; } catch (e) { return ""; } };
     if (ATLAS_CUR === "treasure") {
       let h = `<div class="tre-panel"><div class="tre-header"><div class="tre-header-title"><span>奴隶系统 · 宝物效果库</span><span class="badge badge-primary">${Treas.length} 种</span></div><div class="tre-header-actions"><button type="button" class="btn sm" id="btnAtlasSaveTreasure">保存宝物</button><button type="button" class="ghost sm" id="btnAtlasResetTreasure">恢复默认</button><button type="button" class="ghost sm" id="btnAtlasAddTreasure">添加宝物</button></div></div><div class="tre-grid">`;
@@ -3146,10 +3228,14 @@ async function renderAtlas(curCfg){
           + `<div class="tre-card-title"><strong>${esc(n)}</strong>${_tag ? `<span class="badge badge-primary">${esc(_tag)}</span>` : ""}</div>`
           + `<div class="tre-card-actions"><button type="button" class="icon-action-btn" data-atlas-edit-treasure="${esc(n)}" title="编辑效果类型与数值">✎</button><button type="button" class="icon-action-btn del" data-atlas-del="奴隶系统-宝物|${esc(n)}" title="删除此宝物">✕</button></div>`
           + `</div>`
+          + `<div class="tre-card-val-row" style="display:flex;align-items:center;gap:6px;margin:6px 0">`
+          + `<span style="font-size:11.5px;color:var(--muted);font-weight:600">效果数值:</span>`
+          + `<input type="number" min="0" class="tre-card-val-inp" data-treas-val="${esc(n)}" value="${_valOf(n)}" style="width:72px;height:26px;font-size:12px;text-align:center;padding:2px 4px;border-radius:6px;border:1px solid var(--line)" title="可直接编辑数值">`
+          + `</div>`
           + `<div class="tre-card-desc">${e ? esc(e.slice(0, 80)) : `<span style="color:var(--muted)">无自定义效果</span>`}</div>`
           + `</div>`;
       }).join("");
-      h += `</div><div class="hint" style="margin-top:10px">提示：点击 ✎ 可编辑加成属性，点击 ✕ 可直接删除，改动即时生效。</div></div>`;
+      h += `</div><div class="hint" style="margin-top:10px">提示：数值可直接在卡片上输入修改，点击 ✎ 可更换属性类型，改动后点击上方「保存宝物」生效。</div></div>`;
       html += h;
     }
     else if (ATLAS_CUR === "spirit") {
@@ -3195,7 +3281,7 @@ async function renderAtlas(curCfg){
       h += `<div class="hint" style="margin-top:6px">地图+属性一键保存/恢复，只动精灵范围</div></div>`;
       html += h;
     }
-    else html += `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)"><div style="color:var(--muted)">未知分类</div></div>`;
+    else html += `<div class="card" style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px"><div style="color:var(--muted)">未知分类</div></div>`;
     html += `</div><div class="hint" style="margin-top:6px">顶栏可搜宝物/地图/精灵；宝物改动即时保存；精灵卡改动点保存精灵；武器坐骑请到🛒商城管理</div>`;
     box.innerHTML = html;
     box.querySelectorAll("[data-atlas-tab]").forEach((b) => b.addEventListener("click", () => {
@@ -3279,6 +3365,19 @@ async function renderAtlas(curCfg){
     } catch (e) {}
     box.querySelectorAll("[data-atlas-edit-treasure]").forEach(el => el.addEventListener("click", async () => {
       openTreasureEditModal(el.dataset.atlasEditTreasure);
+    }));
+    box.querySelectorAll("[data-treas-val]").forEach(inp => inp.addEventListener("change", (e) => {
+      const n = e.target.dataset.treasVal;
+      const v = Math.max(0, Number(e.target.value) || 0);
+      if (!window._TREAS_EFF) window._TREAS_EFF = {};
+      const cur = _treOf(n) || { type: "", value: 0, effect: "" };
+      window._TREAS_EFF[n] = {
+        type: cur.type || "",
+        value: v,
+        effect: cur.effect || cur.desc || ""
+      };
+      window._TREAS_DIRTY = true;
+      toast(`已修改 "${n}" 数值: ${v} (需点击保存宝物)`, "ok", 1500);
     }));
     document.getElementById("btnAtlasSaveMaps")?.addEventListener("click", () => saveSpiritKind("all"));
     document.getElementById("btnAtlasResetMaps")?.addEventListener("click", () => resetSpiritKind("all"));
@@ -4826,7 +4925,7 @@ function renderShopRideBox(forceOpen = false) {
     else price = Number(val) || 0;
     // 自动匹配坐骑图片：自定义优先，否则按名称匹配 rides 目录
     let autoImg = "";
-    if (!img) { try { autoImg = `data/img/rides/${name}.jpg`; } catch (e) { autoImg = ""; } }
+    if (!img) { try { autoImg = `data/games/img/rides/${name}.jpg`; } catch (e) { autoImg = ""; } }
     const showImg = img || autoImg;
     html += `<div class="s-fields" data-ride-item="${esc(name)}" style="margin-top:8px">` +
       `<div class="s-row"><small>坐骑名</small><input data-ride-name value="${esc(name)}"></div>` +
@@ -5482,7 +5581,7 @@ function renderBackups(d, _q) {
   });
   html += `</div>`;
   if (!(d.dirs || []).length && !(d.files || []).length) {
-    html = `<div class="hint" style="padding:20px;text-align:center;background:var(--panel2);border-radius:8px">暂无备份文件，系统将每隔设定时间自动备份，您也可点击上方「立即备份」生成。</div>`;
+    html = `<div class="hint" style="padding:20px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:8px">暂无备份文件，系统将每隔设定时间自动备份，您也可点击上方「立即备份」生成。</div>`;
   }
   box.innerHTML = html;
   // 单击选中（高亮），文件夹双击进入
@@ -5695,13 +5794,13 @@ async function loadRemoteWebDAVFiles(fromCache) {
     const res = await getBridge().apiGet("backup/webdav/files", {});
     if (!res || !res.ok) {
       const errMsg = (res && res.msg) ? res.msg : ((res && res.error) ? res.error : "无法读取 WebDAV 远端列表，请先检查配置与网络连通性");
-      box.innerHTML = `<div class="hint" style="padding:14px;text-align:center;color:var(--bad);background:var(--panel2);border-radius:8px">❌ 读取远端归档失败: ${esc(errMsg)}</div>`;
+      box.innerHTML = `<div class="hint" style="padding:14px;text-align:center;color:var(--bad);background:var(--panel);border:1px solid var(--line);border-radius:8px">❌ 读取远端归档失败: ${esc(errMsg)}</div>`;
       return;
     }
     _WD_FILES = res.files || [];
     _WD_PAGE = 1;
     if (!_WD_FILES.length) {
-      box.innerHTML = `<div class="hint" style="padding:14px;text-align:center;background:var(--panel2);border-radius:8px">云端远端目录下暂无归档文件，点击上方「立即上传云端」即可上传备份。</div>`;
+      box.innerHTML = `<div class="hint" style="padding:14px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:8px">云端远端目录下暂无归档文件，点击上方「立即上传云端」即可上传备份。</div>`;
       return;
     }
   } catch (e) {
@@ -5712,7 +5811,7 @@ async function loadRemoteWebDAVFiles(fromCache) {
   try {
     const files = _WD_FILES || [];
     if (!files.length) {
-      box.innerHTML = `<div class="hint" style="padding:14px;text-align:center;background:var(--panel2);border-radius:8px">云端远端目录下暂无归档文件，点击上方「立即上传云端」即可上传备份。</div>`;
+      box.innerHTML = `<div class="hint" style="padding:14px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:8px">云端远端目录下暂无归档文件，点击上方「立即上传云端」即可上传备份。</div>`;
       return;
     }
     const totalPages = Math.max(1, Math.ceil(files.length / _WD_PAGE_SIZE));
@@ -5725,7 +5824,7 @@ async function loadRemoteWebDAVFiles(fromCache) {
       const isDb = f.name.endsWith(".db");
       const shDate = formatShanghaiDate(f.mtime, f.name);
       html += `
-        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel2);padding:10px 14px;border-radius:10px;border:1px solid var(--line);flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel);padding:10px 14px;border-radius:10px;border:1px solid var(--line);flex-wrap:wrap;gap:8px">
           <div style="display:flex;align-items:center;gap:10px;min-width:200px">
             <span style="font-size:20px">${isDb ? "🗄️" : "📄"}</span>
             <div>
@@ -5819,7 +5918,7 @@ async function loadRemoteWebDAVFiles(fromCache) {
       });
     });
   } catch (err) {
-    box.innerHTML = `<div class="hint" style="padding:14px;text-align:center;color:var(--bad);background:var(--panel2);border-radius:8px">❌ 网络或服务异常: ${esc(err.message || String(err))}</div>`;
+    box.innerHTML = `<div class="hint" style="padding:14px;text-align:center;color:var(--bad);background:var(--panel);border:1px solid var(--line);border-radius:8px">❌ 网络或服务异常: ${esc(err.message || String(err))}</div>`;
   }
 }
 document.getElementById("btnWebDAVRefreshFiles")?.addEventListener("click", () => loadRemoteWebDAVFiles());
@@ -6324,10 +6423,10 @@ async function loadLogs(isAuto = false) {
   } catch (e) {
     const container = document.getElementById("logTerminalContent");
     if (container && (!LOGS_CACHE || LOGS_CACHE.length === 0)) {
-      container.innerHTML = '<div class="log-empty">暂无运行日志记录</div>';
+      container.innerHTML = `<div class="log-empty" style="color:var(--bad)">拉取日志异常: ${esc(e.message || "网络或服务错误")} (可点击刷新重试)</div>`;
     }
     if (!isAuto) {
-      toast("拉取日志未成功，请稍后重试", "bad");
+      toast("拉取日志未成功: " + (e.message || "请稍后重试"), "bad");
     }
     return false;
   }

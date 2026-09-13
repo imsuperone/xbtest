@@ -196,8 +196,15 @@ def cmd_bomb(gid, qq, arg):
         return "笑~你没有那么多%s（扔炸弹需%d）" % (ST.coin_name(), cost)
     if a.int("stamina") < tili:
         return "体力不足，扔炸弹需要%d体力！" % tili
-    ST.coins_add(gid, qq, -cost)
-    ST.acct_add(gid, qq, "stamina", -tili)
+    # 两腿扣费都校验：任一失败即退款已扣项并中止（禁半成功开奖）
+    if ST.coins_add(gid, qq, -cost) is None:
+        return "数据库繁忙，扔炸弹扣费未成功，请稍后重试。"
+    if ST.acct_add(gid, qq, "stamina", -tili) is None:
+        try:
+            ST.coins_add(gid, qq, cost)
+        except Exception:
+            pass
+        return "数据库繁忙，扔炸弹体力扣除未成功（已退款），请稍后重试。"
     n = random.randint(nmin, nmax)
     if random.randint(1, 100) <= prob:
         mute = random.randint(mute_lo, mute_hi)

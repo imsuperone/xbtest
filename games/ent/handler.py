@@ -14,7 +14,7 @@ from .session import *  # noqa
 _CMD_PREFIXES = ('领养', '领取', '精灵', '坐骑', '帮派', 'adventure', '签到', '转账', 'deposit', '取款', '购买', '抽奖', '抽签', '扔炸弹', '猜拳', '开始', '加入', '退出', '我的', '查询', '打赏', '买下', '释放', '保护', '打架', '讨好', '学习', '祈福', '造反', '打工', '收工', '禁言', '踢人', '扣钱', '充钱', '群列表', '应用统计', '财富榜', '排行榜', '切换', '查看', '丢弃', '设置', '回收', '携带', '进化', '对战', '排行', '你好', '在吗', '谢谢', '晚安', '创建', '成员', '贡献', 'weapon', '修筑', '福利', '发起', '管理', '解散', '邀请', '同意', '接受', '当前', '选择', '复活', '背包', '商城', '地图', '出战', '银行', '奴隶', '超管', '娱乐', '系统', '榜', '接龙', '急转弯', '字谜', '猜数', '答题', '二四点', '打劫', '赌博', '红包', '更新', '检查更新', '小白更新', '查询更新', '检查版本', '小白升级', '版本', '小白版本', 'xb版本', '插件版本', '清空', '重置', '备份', '维护', '菜单', '帮助')
 
 
-def handle(gid, qq, raw):
+def handle(gid, qq, raw, is_admin=False):
     text = (raw or "").strip()
     if not text:
         return None
@@ -37,20 +37,21 @@ def handle(gid, qq, raw):
         if n <= CHOUQIAN_P1:
             r = "大吉"
             reward = cfgi("娱乐配置", "抽签大吉奖励", 888)
-            ST.coins_add(gid, qq, reward)
-            ST.acct_add(gid, qq, "charm", 2)
+            if ST.coins_add(gid, qq, reward) is None or ST.acct_add(gid, qq, "charm", 2) is None:
+                return "数据库繁忙，抽签奖励未到账，请稍后重试。"
             return f"你抽到了【{r}】🎉 今日运势极佳！奖励{reward}{ST.coin_name()} 魅力+2，好好把握哦～"
         elif n <= CHOUQIAN_P2:
             r = "上签"
             reward = cfgi("娱乐配置", "抽签上签奖励", 388)
-            ST.coins_add(gid, qq, reward)
-            ST.acct_add(gid, qq, "charm", 1)
+            if ST.coins_add(gid, qq, reward) is None or ST.acct_add(gid, qq, "charm", 1) is None:
+                return "数据库繁忙，抽签奖励未到账，请稍后重试。"
             return f"你抽到了【{r}】✨ 运势不错！奖励{reward}{ST.coin_name()} 魅力+1"
         elif n <= CHOUQIAN_P3:
             r = "中签"
             reward = cfgi("娱乐配置", "抽签中签奖励", 88)
             if reward:
-                ST.coins_add(gid, qq, reward)
+                if ST.coins_add(gid, qq, reward) is None:
+                    return "数据库繁忙，抽签奖励未到账，请稍后重试。"
             return f"你抽到了【{r}】 平稳之签，奖励{reward}{ST.coin_name()}，继续加油～"
         else:
             r = "下签"
@@ -128,6 +129,8 @@ def handle(gid, qq, raw):
         if not owner:
             _clear_active_game(gid)
             return "当前没有进行中的接龙游戏！"
+        if text in ("结束接龙", "重置接龙") and str(owner) != str(qq) and not is_admin:
+            return "只有接龙发起者或机器人管理员可以结束这局接龙！"
         if text in ("结束接龙", "重置接龙") or str(owner) == str(qq):
             ST.recall_set(f"chain_owner_{gid}", "")
             ST.recall_set(f"chain_{gid}", "")
@@ -285,10 +288,10 @@ def handle(gid, qq, raw):
             res = f"我出{names[ai]}！你赢了！"
             coin = cfgi("娱乐配置", "猜拳奖励金币", 58)
             meili = cfgi("娱乐配置", "猜拳奖励魅力", 1)
-            if coin:
-                ST.coins_add(gid, qq, coin)
-            if meili:
-                ST.acct_add(gid, qq, "charm", meili)
+            if coin and ST.coins_add(gid, qq, coin) is None:
+                return "数据库繁忙，猜拳奖励未到账，请稍后重试。"
+            if meili and ST.acct_add(gid, qq, "charm", meili) is None:
+                return f"我出{names[ai]}！你赢了！" + "（魅力奖励到账失败：系统繁忙，请稍后重试）"
             if coin or meili:
                 res += f" 奖励{coin}{ST.coin_name()}" + (f" 魅力+{meili}" if meili else "")
             return res
@@ -312,14 +315,23 @@ def _play(gid, qq, text):
         from ...core import storage as S
     except Exception:
         from core import storage as S
-    # 奖励 helper
+    # 奖励 helper：返回是否全部到账；失败调用方必须如实告知（禁冒领成功）
     def _reward(gid, qq, coin=0, meili=0):
+        _ok = True
         if coin:
-            try: S.coins_add(gid, qq, int(coin))
-            except Exception: pass
+            try:
+                if S.coins_add(gid, qq, int(coin)) is None:
+                    _ok = False
+            except Exception:
+                _ok = False
         if meili:
-            try: S.acct_add(gid, qq, "charm", int(meili))
-            except Exception: pass
+            try:
+                if S.acct_add(gid, qq, "charm", int(meili)) is None:
+                    _ok = False
+            except Exception:
+                _ok = False
+        return _ok
+    _REWARD_FAIL_NOTE = "（奖励到账失败：系统繁忙，请稍后重试）"
     # 若文本明显是其他系统的指令，则不拦截为答题答案，避免吞掉（需求14/15）
     def _is_cmd(txt):
         t = txt.strip()
@@ -379,7 +391,8 @@ def _play(gid, qq, text):
                 cfg_prefix = _LABEL_CFG.get(label, label)
                 coin = cfgi("娱乐配置", f"{cfg_prefix}奖励金币", 88 if label!="答题" else 128)
                 meili = cfgi("娱乐配置", f"{cfg_prefix}奖励魅力", 1)
-                _reward(gid, qq, coin, meili)
+                if not _reward(gid, qq, coin, meili):
+                    return f"恭喜！【{label}】答案正确：{ans}" + _REWARD_FAIL_NOTE
                 return f"恭喜！【{label}】答案正确：{ans} 奖励{coin}{S.coin_name()} 魅力+{meili}"
             return f"答案不对，再想想~（发送【退出{label}】结束）"
     # 猜数(题面存开局者 key, 参与者均可作答)
@@ -422,7 +435,8 @@ def _play(gid, qq, text):
                     S.recall_set(f"ent_game_{gid}", "")
                     coin = cfgi("娱乐配置", "猜数奖励金币", 188)
                     meili = cfgi("娱乐配置", "猜数奖励魅力", 2)
-                    _reward(gid, qq, coin, meili)
+                    if not _reward(gid, qq, coin, meili):
+                        return f"🎉 猜中啦！答案是 {n}！" + _REWARD_FAIL_NOTE
                     return f"🎉 猜中啦！答案是 {n}！奖励{coin}{S.coin_name()} 魅力+{meili}"
                 return "📉 小了，再猜！" if v < n else "📈 大了，再猜！"
     # 二四点（群组共享，可加入，30秒内）
@@ -486,7 +500,8 @@ def _play(gid, qq, text):
                                 S.recall_set(f"ent_game_{gid}", "")
                                 coin = cfgi("娱乐配置", "二四点奖励金币", 128)
                                 meili = cfgi("娱乐配置", "二四点奖励魅力", 1)
-                                _reward(gid, qq, coin, meili)
+                                if not _reward(gid, qq, coin, meili):
+                                    return f"太棒了！『{t}』= 24，二四点通关！" + _REWARD_FAIL_NOTE
                                 return f"太棒了！『{t}』= 24，二四点通关！奖励{coin}{S.coin_name()} 魅力+{meili}"
                             return "算式得数不是 24，再试试~"
                         return "请只用给出的 4 个数！"
@@ -509,7 +524,8 @@ def _play(gid, qq, text):
                             S.recall_set(f"ent_game_{gid}", "")
                             coin = cfgi("娱乐配置", "二四点奖励金币", 128)
                             meili = cfgi("娱乐配置", "二四点奖励魅力", 1)
-                            _reward(gid, qq, coin, meili)
+                            if not _reward(gid, qq, coin, meili):
+                                return f"太棒了！『{t}』= 24，二四点通关！" + _REWARD_FAIL_NOTE
                             return f"太棒了！『{t}』= 24，二四点通关！奖励{coin}{S.coin_name()} 魅力+{meili}"
                         return "算式得数不是 24，再试试~"
                     return "请只用给出的 4 个数！"
@@ -569,7 +585,8 @@ def _play(gid, qq, text):
 
                 coin = cfgi("娱乐配置", "接龙奖励金币", 20)
                 meili = cfgi("娱乐配置", "接龙奖励魅力", 0)
-                _reward(gid, qq, coin, meili)
+                if not _reward(gid, qq, coin, meili):
+                    return f"→ {text}" + _REWARD_FAIL_NOTE
                 if meili > 0:
                     return f"→ {text} 奖励{coin}{S.coin_name()} 魅力+{meili}"
                 return f"→ {text} 奖励{coin}{S.coin_name()}"

@@ -64,14 +64,16 @@ def _fee(gid, qq, kind):
         return None
     if ST.coins_get(gid, qq) < c:
         return "笑~你没有那么多%s（%s需%d）" % (ST.coin_name(), kind, c)
-    ST.coins_add(gid, qq, -c)
+    if ST.coins_add(gid, qq, -c) is None:
+        return "数据库繁忙，扣费未成功，请稍后重试。"
     return None
 
 
 
 
 def _ent_cost(gid, qq, prefix):
-    """通用娱乐消耗：需要金钱 + 消耗体力（0=免费）"""
+    """通用娱乐消耗：需要金钱 + 消耗体力（0=免费）。两腿都校验返回值；
+    体力扣失败时已扣金钱全额退回（禁半成功）"""
     need = cfgi("娱乐配置", prefix + "需要金钱", 0)
     tili = cfgi("娱乐配置", prefix + "消耗体力", 0)
     if need and ST.coins_get(gid, qq) < need:
@@ -79,9 +81,16 @@ def _ent_cost(gid, qq, prefix):
     if tili and ST.acct(gid, qq).int("stamina") < tili:
         return f"体力不足，{prefix}需要{tili}体力！"
     if need:
-        ST.coins_add(gid, qq, -need)
+        if ST.coins_add(gid, qq, -need) is None:
+            return "数据库繁忙，扣费未成功，请稍后重试。"
     if tili:
-        ST.acct_add(gid, qq, "stamina", -tili)
+        if ST.acct_add(gid, qq, "stamina", -tili) is None:
+            if need:
+                try:
+                    ST.coins_add(gid, qq, need)
+                except Exception:
+                    pass
+            return "数据库繁忙，体力扣除未成功（已退款），请稍后重试。"
     return None
 
 

@@ -44,26 +44,34 @@ async def handle_backups_list(request, plugin_base=""):
         return _err("bad dir", 400)
     if not os.path.isdir(root):
         return json_response({"dir": str(rel or ""), "dirs": [], "files": []})
-    dirs, files = [], []
-    base = _backup_base(plugin_base)
-    for name in sorted(os.listdir(root)):
-        f = os.path.join(root, name)
-        r = os.path.relpath(f, base).replace(os.sep, "/")
-        if os.path.isdir(f):
-            try:
-                mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(os.path.getmtime(f)))
-            except Exception:
-                mtime = ""
-            dirs.append({"name": name, "path": r, "mtime": mtime})
-        elif os.path.isfile(f) and (name.endswith(".db") or name.endswith(".json")):
-            try:
-                sz = f"{os.path.getsize(f)//1024}KB"
-                mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(os.path.getmtime(f)))
-            except Exception:
-                sz = ""; mtime = ""
-            files.append({"name": name, "path": r, "size": sz, "mtime": mtime})
-    dirs.sort(key=lambda x: x["name"], reverse=True)
-    files.sort(key=lambda x: x["name"], reverse=True)
+
+    def _scan_backups():
+        dirs, files = [], []
+        base = _backup_base(plugin_base)
+        try:
+            with os.scandir(root) as it:
+                for entry in it:
+                    try:
+                        name = entry.name
+                        r = os.path.relpath(entry.path, base).replace(os.sep, "/")
+                        if entry.is_dir(follow_symlinks=False):
+                            st = entry.stat(follow_symlinks=False)
+                            mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(st.st_mtime))
+                            dirs.append({"name": name, "path": r, "mtime": mtime})
+                        elif entry.is_file(follow_symlinks=False) and (name.endswith(".db") or name.endswith(".json")):
+                            st = entry.stat(follow_symlinks=False)
+                            sz = f"{st.st_size // 1024}KB"
+                            mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(st.st_mtime))
+                            files.append({"name": name, "path": r, "size": sz, "mtime": mtime})
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        dirs.sort(key=lambda x: x["name"], reverse=True)
+        files.sort(key=lambda x: x["name"], reverse=True)
+        return dirs, files
+
+    dirs, files = await asyncio.to_thread(_scan_backups)
     # sidecar 可读性标记：前端在备份时间后提示文件锁防重保护
     sidecar = {"ok": False, "time": ""}
     try:
@@ -104,23 +112,29 @@ async def handle_backups_restore(request, plugin_base=""):
         import sqlite3
         cur_db = ST._DB
         with ST._LOCK:
-            try:
-                ST.flush_all()
-            except Exception:
-                pass
+            if hasattr(ST, "flush_all") and ST.flush_all() is False:
+                raise RuntimeError("flush before restore failed")
             try:
                 cur_db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
             except Exception:
                 pass
             cur_db.commit()
+            if hasattr(ST, "close_read_conn"):
+                ST.close_read_conn()
             src_conn = sqlite3.connect(src)
-            src_conn.backup(cur_db)
-            src_conn.close()
+            try:
+                src_conn.backup(cur_db)
+            finally:
+                src_conn.close()
             cur_db.commit()
             ST._ACC_CACHE.clear()
             ST._GROUP_CACHE.clear()
             try:
                 ST._KV_CACHE.clear()
+            except Exception:
+                pass
+            try:
+                ST.reload_config_from_db()
             except Exception:
                 pass
     try:
@@ -236,15 +250,20 @@ async def handle_clear_all(request, plugin_base=""):
                     ST._ACC_CACHE.clear()
                     ST._GROUP_CACHE.clear()
                     # kv 内存缓存必须同步清空，否则开关/游戏锁/签到顺序等残留内存快照，清空后仍幽灵生效
-                    try:
-                        if hasattr(ST, "_KV_CACHE_LOCK"):
-                            with ST._KV_CACHE_LOCK:
-                                ST._KV_CACHE.clear()
-                        else:
-                            ST._KV_CACHE.clear()
-                    except Exception:
-                        pass
-                    ST._last_backup = 0
+            try:
+                if hasattr(ST, "_KV_CACHE_LOCK"):
+                    with ST._KV_CACHE_LOCK:
+                        ST._KV_CACHE.clear()
+                else:
+                    ST._KV_CACHE.clear()
+            except Exception:
+                pass
+            try:
+                ST.reload_config_from_db()
+            except Exception:
+                pass
+            if hasattr(ST, "set_last_backup"):
+                ST.set_last_backup(0)
             try:
                 base = _backup_base(plugin_base)
                 if os.path.isdir(base):
@@ -430,5 +449,3 @@ async def handle_backups_prune(request, plugin_base=""):
         "remote_msg": remote_msg,
         "msg": f"保留最新 {keep} 份：本地清理 {local_deleted} 份，云端清理 {remote_deleted} 份",
     })
-
-

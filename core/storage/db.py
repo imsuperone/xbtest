@@ -23,6 +23,18 @@ def _read_conn():
     except Exception:
         return None
 
+
+def close_read_conn():
+    """关闭只读连接；恢复/切库后必须调用，避免继续读旧快照。"""
+    with _S._LOCK:
+        conn = _S._DB_R
+        _S._DB_R = None
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
 _SQL_INIT = """
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
@@ -101,7 +113,8 @@ def set_persistent_data_dir(path):
     with _S._LOCK:
         if _S._DB is not None and _S._DB_PATH and _S._DB_PATH != target_db:
             try:
-                flush_all()
+                if not flush_all():
+                    raise RuntimeError("flush before database switch failed")
                 _old_path = _S._DB_PATH
                 _old_exists = bool(_old_path) and os.path.isfile(_old_path)
                 _tgt_exists = os.path.isfile(target_db)
@@ -267,38 +280,48 @@ def init(db_path, config=None):
                 if _apply_cfg is not None:
                     _apply_cfg(config)
             return
+        new_db = None
+        old_db = _S._DB
+        old_path = _S._DB_PATH
         try:
             d = os.path.dirname(db_path)
             if d and not os.path.isdir(d):
                 os.makedirs(d, exist_ok=True)
-            # 切换库时旧读副本先失效，由 _read_conn 懒重建
-            try:
-                if _S._DB_R is not None:
-                    _S._DB_R.close()
-            except Exception:
-                pass
-            _S._DB_R = None
-            _S._DB = sqlite3.connect(db_path, timeout=_S.DB_TIMEOUT, check_same_thread=False)
+            new_db = sqlite3.connect(db_path, timeout=_S.DB_TIMEOUT, check_same_thread=False)
+            new_db.executescript(_SQL_INIT)
+            new_db.commit()
+            _S._DB = new_db
             _S._DB_PATH = db_path
-            _S._DB.executescript(_SQL_INIT)
-            _S._DB.commit()
+            close_read_conn()
+            if old_db is not new_db:
+                _S._ACC_CACHE.clear()
+                _S._GROUP_CACHE.clear()
             from .kv import _init_kv_cache
             _init_kv_cache()
             if isinstance(config, dict):
                 if _apply_cfg is not None:
                     _apply_cfg(config)
+            if old_db is not None and old_db is not new_db:
+                try:
+                    old_db.close()
+                except Exception:
+                    pass
         except Exception:
             try:
-                _safe_rollback()
+                if new_db is not None:
+                    new_db.rollback()
+                    new_db.close()
             except Exception:
                 pass
+            _S._DB = old_db
+            _S._DB_PATH = old_path
 
 
 def flush_all():
     # 先快照→全写→commit，成功后才清脏标：中途抛错回滚＋标保留，下轮重刷（旧代码先清标后写，失败即永久丢增量）
     with _S._LOCK:
         if _S._DB is None:
-            return
+            return False
         try:
             acc_items = [(key, a) for key, a in list(_S._ACC_CACHE.items()) if a.dirty]
             grp_items = [(gid, g) for gid, g in list(_S._GROUP_CACHE.items()) if g._dirty]
@@ -345,10 +368,10 @@ def flush_all():
                 _S._DB.commit()
             except Exception:
                 _safe_rollback()
-                return
+                return False
         except Exception:
             _safe_rollback()
-            return
+            return False
         for _, a in _acc_ok:
             try:
                 a.dirty = False
@@ -367,6 +390,7 @@ def flush_all():
                     g._dirty = False
             except Exception:
                 pass
+        return True
 
 
 def merge_from(db_path):
@@ -398,7 +422,9 @@ def merge_from(db_path):
                     for r in rows:
                         _S._DB.execute("INSERT OR IGNORE INTO groups VALUES(?,?,?)", r)
                         n += 1
-            _safe_commit()
+            if not _safe_commit():
+                n = 0
+                raise RuntimeError("database merge commit failed")
     except Exception:
         try:
             _safe_rollback()
@@ -413,4 +439,4 @@ def merge_from(db_path):
             pass
     return n
 
-__all__ = ["flush_all", "get_persistent_data_dir", "init", "merge_from", "set_persistent_data_dir"]
+__all__ = ["close_read_conn", "flush_all", "get_persistent_data_dir", "init", "merge_from", "set_persistent_data_dir"]

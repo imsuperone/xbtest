@@ -1,4 +1,5 @@
 """storage/accounts.py — 账户 LRU 与落盘（原 store §4）。"""
+import copy
 import json
 from . import state as _S
 from .state import Acct, _safe_commit, _safe_rollback
@@ -85,8 +86,13 @@ def acct_add(gid, qq, name, delta, floor=0):
         newv = cur + int(delta)
         if newv < floor:
             newv = floor
+        old_kv = copy.deepcopy(a.kv)
+        old_dirty = bool(a.dirty)
         a.set(name, str(newv))
-        acct_save(gid, qq)
+        if not acct_save(gid, qq):
+            a.kv = old_kv
+            a.dirty = old_dirty
+            return None
         return newv
 
 
@@ -94,22 +100,22 @@ def acct_save(gid, qq):
     with _S._LOCK:
         a = _S._ACC_CACHE.get((str(gid), str(qq)))
         if a is None or _S._DB is None:
-            return
+            return False
         if not a.dirty:
-            return  # 千群只读指令免 DB 写
+            return True  # 千群只读指令免 DB 写
         try:
             _S._DB.execute(
                 "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
                 "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
                 (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
             # 先验 commit 再清脏：提交失败脏保留，下轮重刷
-            try:
-                _S._DB.commit()
-            except Exception:
+            if not _safe_commit():
                 _safe_rollback()
-                return
+                return False
             a.dirty = False
+            return True
         except Exception:
             _safe_rollback()
+            return False
 
 __all__ = ["acct", "acct_add", "acct_save"]

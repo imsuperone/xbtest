@@ -14,6 +14,7 @@ def _init_kv_cache():
         try:
             rows = _S._DB.execute("SELECT k, v FROM kv").fetchall()
             with _S._KV_CACHE_LOCK:
+                _S._KV_CACHE.clear()
                 for k, v in rows:
                     _S._KV_CACHE[str(k)] = str(v)
         except Exception:
@@ -24,24 +25,21 @@ def recall_set(k, v):
     _ensure_db()
     with _S._LOCK:
         if _S._DB is None:
-            try:
-                with _S._KV_CACHE_LOCK:
-                    _S._KV_CACHE[k_str] = v_str
-            except Exception:
-                pass
-            return
+            return False
         try:
             _S._DB.execute("INSERT INTO kv(k, v) VALUES(?,?) "
                         "ON CONFLICT(k) DO UPDATE SET v=excluded.v", (k_str, v_str))
-            _safe_commit()
+            if not _safe_commit():
+                return False
         except Exception:
             _safe_rollback()
-            return
+            return False
         try:
             with _S._KV_CACHE_LOCK:
                 _S._KV_CACHE[k_str] = v_str
         except Exception:
-            pass
+            return False
+        return True
 _WD_KEYS = ("WebDAV服务器地址", "WebDAV用户名", "WebDAV应用密码", "WebDAV远端目录", "WebDAV备份开关", "自动备份开关", "备份间隔小时", "保留备份数量")
 def wd_cfg_backup(payload_sec=None):
     """WebDAV 与自动备份配置 DB 镜像写透：仅镜像本次保存 payload 里出现的键（含清空语义）。
@@ -208,7 +206,8 @@ def redpack_put(gid, qq, pwd, amount):
             _S._DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
             _S._DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
                         (int(gid), int(qq), str(pwd), int(amount), int(time.time())))
-            _safe_commit()
+            if not _safe_commit():
+                return False
             return True
         except Exception:
             _safe_rollback()

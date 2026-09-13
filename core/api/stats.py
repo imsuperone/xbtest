@@ -55,7 +55,7 @@ async def handle_stats(request=None):
             n_acct = _one(cur, "SELECT COUNT(*) FROM accounts")
             n_group = _one(cur, "SELECT COUNT(DISTINCT gid) FROM wallet")
             total = _one(cur, "SELECT COALESCE(SUM(money),0) FROM wallet")
-            total_dep = _one(cur, "SELECT COALESCE(SUM(CAST(COALESCE(json_extract(data,'$.deposit'), json_extract(data,'$.cunkuan'), json_extract(data,'$.\"存款总数\"'), '0') AS INTEGER)),0) FROM accounts")
+            total_dep = _one(cur, "SELECT COALESCE(SUM(CAST(COALESCE(json_extract(data,'$.deposit'), json_extract(data,'$.cunkuan'), json_extract(data,'$.\"存款总数\"'), '0') AS INTEGER)),0) FROM accounts WHERE json_valid(data)")
             acct_rows = None
             if not total_dep and (n_acct or 0) < 100000:
                 # 兜底全表仅小库执行，大库跳过防秒级阻塞
@@ -63,7 +63,11 @@ async def handle_stats(request=None):
                     acct_rows = cur.execute("SELECT data FROM accounts").fetchall()
                 except Exception:
                     acct_rows = None
-            n_sign = _one(cur, "SELECT COALESCE(SUM(CAST(COALESCE(json_extract(data,'$.sign_count'), json_extract(data,'$.签到次数'), '0') AS INTEGER)),0) FROM accounts")
+            n_sign = _one(cur, "SELECT COALESCE(SUM(CAST(COALESCE(json_extract(data,'$.sign_count'), json_extract(data,'$.签到次数'), '0') AS INTEGER)),0) FROM accounts WHERE json_valid(data)")
+            try:
+                cur.close()
+            except Exception:
+                pass
         finally:
             if _lock is not None:
                 try:
@@ -113,13 +117,13 @@ async def handle_rank(request=None):
             sql = {
                 "money": ("SELECT qq, money FROM wallet ORDER BY money DESC LIMIT 20", None),
                 "sign": ("SELECT qq, CAST(COALESCE(json_extract(data,'$.sign_count'), json_extract(data,'$.签到次数'), '0') AS INTEGER) "
-                         "FROM accounts ORDER BY 2 DESC LIMIT 20", None),
+                         "FROM accounts WHERE json_valid(data) ORDER BY 2 DESC LIMIT 20", None),
                 "stamina": ("SELECT qq, CAST(COALESCE(json_extract(data,'$.stamina'), json_extract(data,'$.tili'), '0') AS INTEGER) "
-                         "FROM accounts ORDER BY 2 DESC LIMIT 20", None),
+                           "FROM accounts WHERE json_valid(data) ORDER BY 2 DESC LIMIT 20", None),
                 "charm": ("SELECT qq, CAST(COALESCE(json_extract(data,'$.charm'), json_extract(data,'$.meili'), '0') AS INTEGER) "
-                          "FROM accounts ORDER BY 2 DESC LIMIT 20", None),
+                           "FROM accounts WHERE json_valid(data) ORDER BY 2 DESC LIMIT 20", None),
                 "deposit": ("SELECT qq, CAST(COALESCE(json_extract(data,'$.deposit'), json_extract(data,'$.cunkuan'), json_extract(data,'$.存款总数'), '0') AS INTEGER) "
-                         "FROM accounts ORDER BY 2 DESC LIMIT 20", None),
+                          "FROM accounts WHERE json_valid(data) ORDER BY 2 DESC LIMIT 20", None),
             }.get(rtype)
             try:
                 if not sql:
@@ -498,7 +502,7 @@ def _get_local_version(plugin_base=""):
         return _gv(plugin_base)
     except Exception:
         pass
-    return "2026w0913f"
+    return "unknown"
 
 
 def _parse_version_tuple(v_str):

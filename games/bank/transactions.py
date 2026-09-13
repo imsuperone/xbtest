@@ -28,7 +28,7 @@ def cmd_deposit(gid, qq, amount):
     cap = cfgi("银行配置", "利息上限", 100000)
     interest = _settle_interest(a, rate, cap)
     old = a.int("deposit")
-    if ST.txn_coins_acct(gid, qq, -amount, {"stamina": str(a.int("stamina") - cs), "deposit": str(old + amount + interest), "withdraw_timestamp": str(int(time.time()))}) is None:
+    if ST.txn_coins_acct(gid, qq, -amount, {"stamina": str(a.int("stamina") - cs), "deposit": str(old + amount + interest), "withdraw_timestamp": str(int(time.time()))}, require_funds=True) is None:
         return "亲，银行系统繁忙，存款未成功，请稍后重试！"
     total = old + amount + interest
     return (f"存款成功！消耗{cs}点体力，共存入：{amount}，\r\n"
@@ -115,9 +115,7 @@ def cmd_force_withdraw(gid, qq, amount):
     # 原子：钱包 + 存款同事务，避免半成功（中文文案不变）
     # txn 失败返 None（内部已回滚）：走原子单项降级，而非当成功
     if ST.txn_coins_acct(gid, qq, amount, {"deposit": str(dep - amount)}) is None:
-        ST.acct_add(gid, qq, "deposit", -amount)
-        ST.coins_add(gid, qq, amount)
-        ST.acct_save(gid, qq)
+        return "亲，银行系统繁忙，强制取款未成功，请稍后重试！"
     # 不重置取款时间戳，利息仍按原剩余金额与原计时继续结算
     return (f"强制取款成功！因未到取款时间，本次没有利息（不影响后续利息按剩余{ dep - amount}计）。\r\n"
             f"本次取款：{amount}，还剩存款：{dep - amount}，"
@@ -190,7 +188,7 @@ def cmd_transfer(gid, qq, target, amount):
                     ST.acct_add(gid, qq, "stamina", cs)
                     return "亲，您的账户余额不足，转账失败！"
     except Exception:
-        # 主路径半截必须回滚＋逐缓存，否则降级读到 linger/脏缓存即双扣
+        # 主路径失败只回滚并返回；禁止拆成多个独立写入补偿。
         try:
             ST._safe_rollback()
         except Exception:
@@ -200,17 +198,7 @@ def cmd_transfer(gid, qq, target, amount):
                 ST._ACC_CACHE.pop((str(gid), str(qq)), None)
         except Exception:
             pass
-        try:
-            # 降级同样按接收上限截断并扣体力，防免费/超CAP到账
-            _dst_cur = int(ST.coins_get(gid, target) or 0)
-            credit = min(int(amount), max(0, getattr(ST, "COIN_CAP", 100000000000) - _dst_cur))
-            if credit <= 0:
-                return "对方钱包已满，无法接收转账！"
-            ST.acct_add(gid, qq, "stamina", -cs)
-            ST.coins_add(gid, qq, -credit)
-            ST.coins_add(gid, target, credit)
-        except Exception:
-            pass
+        return "亲，银行系统繁忙，转账未成功，请稍后重试！"
     try:
         from .. import slave as SL
         try:
@@ -302,7 +290,7 @@ def cmd_gamble(gid, qq, amount):
                             f"赌博时被抓了！被关监狱{jail_mins}分钟！")
                 return f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli}……愿赌服输~"
     except Exception:
-        # 主路径半截写入必须先回滚，否则降级重试即双重收费（redpack 同模式已修）
+        # 主路径半截写入必须先回滚；失败不得重新随机或拆单收费。
         try:
             ST._safe_rollback()
         except Exception:
@@ -317,26 +305,13 @@ def cmd_gamble(gid, qq, amount):
             a = ST.acct(gid, qq)
         except Exception:
             pass
-    # 降级
-    ST.recall_set("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), str(cnt + 1))
-    ST.acct_add(gid, qq, "stamina", -cs)
-    if random.random() * 100 < prob:
-        ST.coins_add(gid, qq, -amount)
-        ST.coins_add(gid, qq, gain)
-        return f"赌博成功！你获得了{gain}{ST.coin_name()}，净赚{gain - amount}！"
-    ST.coins_add(gid, qq, -amount)
-    ST.acct_add(gid, qq, "charm", -meli)
-    if random.random() < 0.5:
-        _jail_put(a, jail_mins)
-        return (f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli}！\r\n"
-                f"赌博时被抓了！被关监狱{jail_mins}分钟！")
-    return f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli}……愿赌服输~"
+    return "赌博系统繁忙，本次未结算，未扣除资金和体力，请稍后重试！"
 
 
 
 
 def cmd_rob_zone(gid, qq):
-    """打劫银行(全服风控简化: 本群随机目标)"""
+    """打劫银行：随机选择有余额目标，扣体力与钱包转移一次提交。"""
     a = _acct(gid, qq)
     if _check_jail(a):
         return _show_jail(a)
@@ -365,58 +340,37 @@ def cmd_rob_zone(gid, qq):
     prob = cfgi("银行配置", "打劫银行成功概率", 70)
     meli = cfgi("银行配置", "打劫银行魅力减少", 3)
     jail_mins = cfgi("银行配置", "打劫银行关押时间", 5)
-    ST.acct_add(gid, qq, "stamina", -cs)
+    now_s = _now_s()
     if random.random() * 100 > prob:
+        cur_st = a.int("stamina")
+        cur_charm = a.int("charm")
         fine = min(cfgi("银行配置", "打劫失败罚金", 500), ST.coins_get(gid, qq))
-        if fine:
-            ST.coins_add(gid, qq, -fine)
-        ST.acct_add(gid, qq, "charm", -meli)
-        _jail_put(a, jail_mins)
-        a.set("rob_bank_time", _now_s())
-        ST.acct_save(gid, qq)
+        updates = {
+            "stamina": str(max(0, cur_st - cs)),
+            "charm": str(max(0, cur_charm - meli)),
+            "jail": "1",
+            "jail_start": now_s,
+            "release_timestamp": str(int(time.time()) + int(jail_mins) * 60),
+            "rob_bank_time": now_s,
+        }
+        if ST.txn_coins_acct(gid, qq, -fine, updates) is None:
+            return "银行系统繁忙，本次打劫未结算，请稍后重试！"
         return (f"打劫银行失败，打劫银行时被抓！被关监狱{jail_mins}分钟，\r\n"
                 f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
     victim = random.choice(wins)
     lo = cfgi("银行配置", "打劫银行金钱下限", 6000)
     hi = cfgi("银行配置", "打劫银行金钱上限", 12000)
-    loot = min(ST.coins_get(gid, victim), random.randint(lo, hi))
+    victim_money = ST.coins_get(gid, victim)
+    loot = min(victim_money, random.randint(lo, hi))
     if loot <= 0:
-        # 银行不穷， victim 随机选有钱的，若仍为0则给保底
-        loot = random.randint(lo, hi)
-        # 若仍想模拟穷，返回银行特有文案而非“对方是个穷光蛋”
-        if loot <= 0:
-            return "银行金库暂时空虚，打劫失败，下次再来！"
-    # P1: 双人同时打劫同一victim时TOCTOU双花，同事务原子划转
-    # 失败时按现余额重算loot再试一次，防扣少发多凭空印钱
-    try:
-        _done = bool(hasattr(ST, "txn_two_wallets") and ST.txn_two_wallets(gid, victim, qq, loot))
-        if not _done:
-            try:
-                _cur_v = int(ST.coins_get(gid, victim) or 0)
-            except Exception:
-                _cur_v = 0
-            # 保底路径（victim原为0）允许银行垫付，不重算；否则按现余额钳制
-            _was_bailout = False
-            try:
-                _was_bailout = (loot > 0 and _cur_v <= 0)
-            except Exception:
-                pass
-            if not _was_bailout:
-                loot = min(_cur_v, loot)
-                if loot <= 0:
-                    a.set("rob_bank_time", _now_s())
-                    ST.acct_save(gid, qq)
-                    return "银行金库暂时空虚，打劫失败，下次再来！"
-                if hasattr(ST, "txn_two_wallets") and ST.txn_two_wallets(gid, victim, qq, loot):
-                    _done = True
-            if not _done:
-                ST.coins_add(gid, victim, -loot)
-                ST.coins_add(gid, qq, loot)
-    except Exception:
-        ST.coins_add(gid, victim, -loot)
-        ST.coins_add(gid, qq, loot)
-    a.set("rob_bank_time", _now_s())
-    ST.acct_save(gid, qq)
+        return "银行金库暂时空虚，打劫失败，下次再来！"
+    result = ST.txn_two_wallets_acct(
+        gid, victim, qq, loot,
+        {"stamina": str(max(0, a.int("stamina") - cs)), "rob_bank_time": now_s},
+        acct_qq=qq,
+    )
+    if result is not True:
+        return "银行系统繁忙，本次打劫未结算，请稍后重试！" if result is None else "银行金库暂时空虚，打劫失败，下次再来！"
     return f"打劫银行成功！获得{loot}{ST.coin_name()}！"
 
 
@@ -449,106 +403,35 @@ def cmd_sell_slave(gid, qq, target):
     hi = cfgi("银行配置", "打劫金钱上限", 100000)
     meli = cfgi("银行配置", "打劫魅力减少", 3)
     jail_mins = cfgi("银行配置", "打劫关押时间", 5)
-    # 原子化：体力/魅力/双钱包同事务
-    try:
-        with ST._LOCK:
-            cur_st = ST.acct(gid, qq).int("stamina")
-            if cur_st < cs:
-                return "亲，您的体力不足，无法实施打劫！"
-            cur_money = ST.coins_get(gid, qq)
-            if cur_money < 500:
-                return f"亲，您的{ST.coin_name()}不足，无法实施打劫！"
-            a2 = ST.acct(gid, qq)
-            a2.set("stamina", str(cur_st - cs))
-            a2.set("rob_time", _now_s())
-            if random.random() * 100 < prob:
-                victim_money = ST.coins_get(gid, target)
-                loot = min(victim_money, random.randint(lo, hi))
-                if loot <= 0:
-                    ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
-                    try:
-                        ST._DB.commit()
-                    except Exception:
-                        ST._safe_rollback()
-                        raise
-                    a2.dirty = False
-                    return "对方是个穷光蛋，无法对他实施打劫！"
-                src_cur = cur_money
-                dst_cur = victim_money
-                ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), src_cur + loot))
-                ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(target), max(0, dst_cur - loot)))
-                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
-                try:
-                    ST._DB.commit()
-                except Exception:
-                    ST._safe_rollback()
-                    raise
-                a2.dirty = False
-                tn = _disp_name(target, gid)
-                return f"打劫成功！你从 {tn} 处劫走{loot}{ST.coin_name()}！"
-            else:
-                # 失败
-                fine = min(1000, cur_money)
-                new_money = max(0, cur_money - fine)
-                cur_mei = a2.int("charm")
-                a2.set("charm", str(max(0, cur_mei - meli)))
-                a2.set("jail", "1")
-                a2.set("jail_start", _now_s())
-                a2.set("release_timestamp", str(int(time.time()) + int(jail_mins) * 60))
-                ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_money))
-                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
-                try:
-                    ST._DB.commit()
-                except Exception:
-                    ST._safe_rollback()
-                    raise
-                a2.dirty = False
-                return (f"打劫失败！实施打劫时被抓！被关监狱{jail_mins}分钟，\r\n"
-                        f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
-    except Exception:
-        # 主路径半截必须回滚（同连接 linger 对降级可见）＋逐缓存，防双扣双付
-        try:
-            ST._safe_rollback()
-        except Exception:
-            pass
-        try:
-            if ST._DB is not None:
-                ST._ACC_CACHE.pop((str(gid), str(qq)), None)
-        except Exception:
-            pass
-        try:
-            a = ST.acct(gid, qq)
-        except Exception:
-            pass
-    ST.acct_add(gid, qq, "stamina", -cs)
-    a.set("rob_time", _now_s())
+    now_s = _now_s()
+    cur_st = a.int("stamina")
     if random.random() * 100 < prob:
-        loot = min(ST.coins_get(gid, target), random.randint(lo, hi))
+        victim_money = ST.coins_get(gid, target)
+        loot = min(victim_money, random.randint(lo, hi))
         if loot <= 0:
             return "亲，对方是个穷光蛋，无法对他实施打劫！"
-        try:
-            if hasattr(ST, "txn_two_wallets") and ST.txn_two_wallets(gid, target, qq, loot):
-                pass
-            else:
-                try:
-                    _cur_v = int(ST.coins_get(gid, target) or 0)
-                except Exception:
-                    _cur_v = 0
-                loot = min(_cur_v, loot)
-                if loot <= 0:
-                    return "亲，对方是个穷光蛋，无法对他实施打劫！"
-                if not (hasattr(ST, "txn_two_wallets") and ST.txn_two_wallets(gid, target, qq, loot)):
-                    ST.coins_add(gid, target, -loot)
-                    ST.coins_add(gid, qq, loot)
-        except Exception:
-            ST.coins_add(gid, target, -loot)
-            ST.coins_add(gid, qq, loot)
+        result = ST.txn_two_wallets_acct(
+            gid, target, qq, loot,
+            {"stamina": str(max(0, cur_st - cs)), "rob_time": now_s},
+            acct_qq=qq,
+        )
+        if result is not True:
+            return "银行系统繁忙，本次打劫未结算，未扣除体力和资金，请稍后重试！" if result is None else "亲，对方是个穷光蛋，无法对他实施打劫！"
         tn = _disp_name(target, gid)
         return f"打劫成功！你从 {tn} 处劫走{loot}{ST.coin_name()}！"
-    ST.acct_add(gid, qq, "charm", -meli)
-    fine = min(1000, ST.coins_get(gid, qq))
-    ST.coins_add(gid, qq, -fine)
-    _jail_put(a, jail_mins)
+
+    cur_money = ST.coins_get(gid, qq)
+    fine = min(1000, cur_money)
+    updates = {
+        "stamina": str(max(0, cur_st - cs)),
+        "charm": str(max(0, a.int("charm") - meli)),
+        "jail": "1",
+        "jail_start": now_s,
+        "release_timestamp": str(int(time.time()) + int(jail_mins) * 60),
+        "rob_time": now_s,
+    }
+    if ST.txn_coins_acct(gid, qq, -fine, updates) is None:
+        return "银行系统繁忙，本次打劫未结算，未扣除体力和资金，请稍后重试！"
     return (f"打劫失败！实施打劫时被抓！被关监狱{jail_mins}分钟，\r\n"
             f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
 

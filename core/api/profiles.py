@@ -77,16 +77,12 @@ async def handle_slave_users(request):    # 请求参数在事件循环上提取
                 st = slave.state(gid)
                 _all_secs = [s for s in st.sections() if s.isdigit()]
                 _owner_cnt = _slave_owner_count(st)
-                _fixed = False
                 for qq in _all_secs:
                     if not qq.isdigit(): continue
                     u = slave.U(st, qq)
                     p = _to_int(u.get("price", "0") or 0)
                     if p <= 0:
                         p = default_init_price
-                        u["price"] = str(p)
-                        st.mark_dirty(qq)
-                        _fixed = True
                     seen.add((gid, str(qq)))
                     out.append({
                         "gid": gid,
@@ -115,16 +111,10 @@ async def handle_slave_users(request):    # 请求参数在事件循环上提取
                             "price": p, "owner": "", "owner_name": "",
                             "protect": "", "slaves": 0, "weapons": "", "treasures": ""
                         })
-                if _fixed:
-                    try:
-                        slave.save(gid)
-                    except Exception:
-                        pass
             else:
                 for g in _slave_all_gids():
                     try:
                         st = slave.state(g)
-                        _g_fixed = False
                         _all_secs = [s for s in st.sections() if s.isdigit()]
                         _owner_cnt = _slave_owner_count(st)
                         for qq in _all_secs:
@@ -133,9 +123,6 @@ async def handle_slave_users(request):    # 请求参数在事件循环上提取
                             p = _to_int(u.get("price", "0") or 0)
                             if p <= 0:
                                 p = default_init_price
-                                u["price"] = str(p)
-                                st.mark_dirty(qq)
-                                _g_fixed = True
                             seen.add((g, str(qq)))
                             out.append({
                                 "gid": g,
@@ -149,11 +136,6 @@ async def handle_slave_users(request):    # 请求参数在事件循环上提取
                                 "weapons": u.get("weapon", ""),
                                 "treasures": u.get("treasure", ""),
                             })
-                        if _g_fixed:
-                            try:
-                                slave.save(g)
-                            except Exception:
-                                pass
                     except Exception:
                         continue
 

@@ -89,11 +89,30 @@ def _get_auth_header(user, pwd):
     return "Basic " + base64.b64encode(raw).decode("ascii")
 
 
+def _strict_tls():
+    """WebDAV TLS 严格校验开关：备份配置/WebDAV严格校验 ∈ 真/true/1/on/yes 时启用。
+
+    默认关闭（兼容私有 NAS/自签证书，见 AIINFO 安全红线）；关闭时每次建上下文打一条
+    warning，生产环境请在管理台打开此开关。"""
+    try:
+        sw = ST.cfg("备份配置", "WebDAV严格校验", "假").strip().lower()
+        return sw in ("真", "true", "1", "on", "yes")
+    except Exception:
+        return False
+
+
 def _make_ssl_context():
+    if _strict_tls():
+        return ssl.create_default_context()
     ctx = ssl.create_default_context()
-    # 兼容私有 NAS 或自签名证书
+    # 兼容私有 NAS 或自签名证书（默认；生产环境请打开 WebDAV严格校验）
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
+    try:
+        if _logger is not None:
+            _logger.warning("WebDAV TLS 校验已关闭（自签兼容模式）；生产环境请在备份配置中打开 WebDAV严格校验")
+    except Exception:
+        pass
     return ctx
 
 
@@ -117,9 +136,8 @@ def _ensure_remote_dir(base_url, remote_dir, auth, timeout=6):
     cur_url = base_url.rstrip("/")
     _fatal = False
     for part in parts:
+        # 逐级 MKCOL：每级 URL 追加一段（集合 URL 以斜杠结尾，避免 301 把 MKCOL 变 GET）
         cur_url = f"{cur_url}/{urllib.parse.quote(part, safe='')}"
-    for part in parts:
-        cur_url = f"{cur_url}/{part}"
         try:
             # WebDAV 集合标准规定集合 URL 须以斜杠结尾，避免 301 重定向将 MKCOL 变更为 GET 导致目录未创建
             req = urllib.request.Request(f"{cur_url}/", method="MKCOL")

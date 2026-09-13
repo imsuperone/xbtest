@@ -1,4 +1,5 @@
 """storage/wallet.py — 钱包原子读写 + 批量排行（原 store §3/尾部；rank.py 已并入）。"""
+import copy
 import json
 from . import state as _S
 from .state import Acct, _safe_commit, _safe_rollback
@@ -30,14 +31,14 @@ def coins_add(gid, qq, delta):
     _ensure_db()
     with _S._LOCK:
         if _S._DB is None:
-            return 0
+            return None
         cur = 0
         try:
             row = _S._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?",
                               (int(gid), int(qq))).fetchone()
             cur = int(row[0]) if row else 0
         except Exception:
-            return cur
+            return None
         try:
             newv = cur + int(delta)
             if newv < 0:
@@ -48,14 +49,15 @@ def coins_add(gid, qq, delta):
                 "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
                 "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
                 (int(gid), int(qq), newv))
-            _safe_commit()
+            if not _safe_commit():
+                return None
             return newv
         except Exception:
             _safe_rollback()
-            return cur
+            return None
 
 
-def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
+def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None, money_target=None, require_funds=False):
     """原子事务：钱包 delta + 账户 kv 批量更新，同持 _LOCK 一次提交。
     成功返新余额，失败返 None（调用方禁当成功用，否则静默假成功）。"""
     _ensure_db()
@@ -63,12 +65,14 @@ def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
         acct_updates = {}
     with _S._LOCK:
         if _S._DB is None:
-            return 0
+            return None
         try:
             # 钱包：单次查询去重（原双查 coins_get+SELECT 已合并）
             row = _S._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
             cur = int(row[0]) if row else 0
-            newv = cur + int(delta_coins)
+            newv = int(money_target) if money_target is not None else cur + int(delta_coins)
+            if require_funds and newv < 0:
+                return None
             if newv < 0:
                 newv = 0
             if newv > _S.COIN_CAP:
@@ -79,6 +83,8 @@ def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
                 (int(gid), int(qq), newv))
             # 账户
             _touched = None
+            _old_kv = None
+            _old_dirty = False
             if acct_updates:
                 a = _S._ACC_CACHE.get((str(gid), str(qq)))
                 if a is None:
@@ -92,6 +98,8 @@ def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
                             kv = {}
                     a = Acct(gid, qq, kv)
                     _S._ACC_CACHE[(str(gid), str(qq))] = a
+                _old_kv = copy.deepcopy(a.kv)
+                _old_dirty = bool(a.dirty)
                 for k, v in acct_updates.items():
                     a.set(k, str(v))
                 _S._DB.execute(
@@ -100,10 +108,10 @@ def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
                     (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
                 _touched = a
             # 先验 commit 再清脏：吞错式提交失败时缓存与 DB 分叉，脏保留下轮重刷
-            try:
-                _S._DB.commit()
-            except Exception:
-                _safe_rollback()
+            if not _safe_commit():
+                if _touched is not None and _old_kv is not None:
+                    _touched.kv = _old_kv
+                    _touched.dirty = _old_dirty
                 return None
             if _touched is not None:
                 try:
@@ -113,6 +121,9 @@ def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
             return newv
         except Exception:
             _safe_rollback()
+            if _touched is not None and _old_kv is not None:
+                _touched.kv = _old_kv
+                _touched.dirty = _old_dirty
             return None
 
 
@@ -135,17 +146,98 @@ def txn_two_wallets(gid, src_qq, dst_qq, amount):
                 return False
             row2 = _S._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(dst_qq))).fetchone()
             dst_cur = int(row2[0]) if row2 else 0
+            if dst_cur + int(amount) > _S.COIN_CAP:
+                return False
             new_src = src_cur - int(amount)
-            new_dst = min(_S.COIN_CAP, dst_cur + int(amount))
+            new_dst = dst_cur + int(amount)
             _S._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(src_qq), new_src))
             _S._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(dst_qq), new_dst))
-            _safe_commit()
+            if not _safe_commit():
+                return False
             return True
         except Exception:
             _safe_rollback()
             return False
 
-__all__ = ["coins_add", "coins_get", "rank_batch", "txn_coins_acct", "txn_two_wallets"]
+
+def txn_two_wallets_acct(gid, src_qq, dst_qq, amount, acct_updates=None, acct_qq=None):
+    """双钱包加指定账户字段的一次性事务。
+
+    返回 False 表示余额/参数不满足，None 表示数据库失败，True 表示完整提交。
+    """
+    if int(amount) <= 0 or str(src_qq) == str(dst_qq):
+        return False
+    _ensure_db()
+    acct_updates = acct_updates or {}
+    acct_qq = src_qq if acct_qq is None else acct_qq
+    with _S._LOCK:
+        if _S._DB is None:
+            return None
+        touched = None
+        old_kv = None
+        old_dirty = False
+        try:
+            src_row = _S._DB.execute(
+                "SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(src_qq)
+            )).fetchone()
+            dst_row = _S._DB.execute(
+                "SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(dst_qq)
+            )).fetchone()
+            src_cur = int(src_row[0]) if src_row else 0
+            dst_cur = int(dst_row[0]) if dst_row else 0
+            amount = int(amount)
+            if src_cur < amount or dst_cur + amount > _S.COIN_CAP:
+                return False
+            if acct_updates:
+                key = (str(gid), str(acct_qq))
+                touched = _S._ACC_CACHE.get(key)
+                if touched is None:
+                    row = _S._DB.execute(
+                        "SELECT data FROM accounts WHERE gid=? AND qq=?",
+                        (int(gid), int(acct_qq)),
+                    ).fetchone()
+                    try:
+                        kv = json.loads(row[0]) if row and row[0] else {}
+                    except Exception:
+                        kv = {}
+                    touched = Acct(gid, acct_qq, kv)
+                    _S._ACC_CACHE[key] = touched
+                old_kv = copy.deepcopy(touched.kv)
+                old_dirty = bool(touched.dirty)
+                for key, value in acct_updates.items():
+                    touched.set(key, str(value))
+            _S._DB.execute(
+                "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
+                "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
+                (int(gid), int(src_qq), src_cur - amount),
+            )
+            _S._DB.execute(
+                "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
+                "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
+                (int(gid), int(dst_qq), dst_cur + amount),
+            )
+            if touched is not None:
+                _S._DB.execute(
+                    "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
+                    "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
+                    (int(gid), int(acct_qq), json.dumps(touched.kv, ensure_ascii=False)),
+                )
+            if not _safe_commit():
+                if touched is not None and old_kv is not None:
+                    touched.kv = old_kv
+                    touched.dirty = old_dirty
+                return None
+            if touched is not None:
+                touched.dirty = False
+            return True
+        except Exception:
+            _safe_rollback()
+            if touched is not None and old_kv is not None:
+                touched.kv = old_kv
+                touched.dirty = old_dirty
+            return None
+
+__all__ = ["coins_add", "coins_get", "rank_batch", "txn_coins_acct", "txn_two_wallets", "txn_two_wallets_acct"]
 
 
 def rank_batch(gid, field="money", topn=500):

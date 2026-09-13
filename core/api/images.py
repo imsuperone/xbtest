@@ -4,7 +4,10 @@ import asyncio
 import base64
 import os
 import time
-from astrbot.api.web import json_response
+try:
+    from ..adapters import json_response
+except ImportError:
+    from core.adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json, plugin_root, read_thumb_uri, read_upload_b64
 
@@ -19,19 +22,31 @@ def _img_base(plugin_base=""):
     return plugin_root(__file__)
 
 
+def _inside(path, root, allow_root=True):
+    """真实路径边界判断，拒绝同前缀目录和指向外部的符号链接。"""
+    try:
+        target = os.path.realpath(path)
+        base = os.path.realpath(root)
+        if not allow_root and target == base:
+            return False
+        return os.path.commonpath((target, base)) == base
+    except (OSError, ValueError):
+        return False
+
+
 def _safe_path(rel, base=""):
     b = base or _img_base()
-    p = os.path.abspath(os.path.join(b, str(rel or "").strip().lstrip("/\\")))
-    # 允许访问插件根及其子目录
-    if p != b and not p.startswith(b + os.sep):
-        # 也允许 data 与 persistent 目录
-        data_base = os.path.join(b, "data")
+    p = os.path.join(b, str(rel or "").strip().lstrip("/\\"))
+    if _inside(p, b):
+        return os.path.realpath(p)
+    data_base = os.path.join(b, "data")
+    try:
         pers_base = ST.get_persistent_data_dir(b) if hasattr(ST, "get_persistent_data_dir") else data_base
-        if (p != data_base and not p.startswith(data_base + os.sep)) and (p != pers_base and not p.startswith(pers_base + os.sep)):
-            # 宽松：只要在插件根下即可
-            if not p.startswith(b):
-                return None
-    return p
+    except Exception:
+        pers_base = data_base
+    if _inside(p, data_base) or _inside(p, pers_base):
+        return os.path.realpath(p)
+    return None
 
 
 _BLOCKED_NAMES = {"webdav_secret.json", ".xb_last_backup.json", ".xb_backup.busy",
@@ -60,7 +75,7 @@ def _in_data_roots(fp, base=""):
         except Exception:
             pers_base = ""
         for r in (data_base, pers_base):
-            if r and (fp == r or fp.startswith(r + os.sep)):
+            if r and _inside(fp, r):
                 return True
     except Exception:
         pass
@@ -77,7 +92,7 @@ def _in_data_strict(fp, base=""):
         except Exception:
             pers_base = ""
         for r in (data_base, pers_base):
-            if r and fp and str(fp) != r and str(fp).startswith(r + os.sep):
+            if r and fp and _inside(fp, r, allow_root=False):
                 return True
     except Exception:
         pass
@@ -106,22 +121,25 @@ async def handle_images_list(request, plugin_base=""):
                 sz = ""; mtime = ""
             return {"dir": str(rel or ""), "dirs": [], "files": [{"name": os.path.basename(root), "path": rel, "size": sz, "mtime": mtime}]}
         dirs, files = [], []
-        for name in sorted(os.listdir(root)):
-            f = os.path.join(root, name)
-            r = os.path.relpath(f, base).replace(os.sep, "/")
-            if os.path.isdir(f):
-                try:
-                    mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(os.path.getmtime(f)))
-                except Exception:
-                    mtime = ""
-                dirs.append({"name": name, "path": r, "mtime": mtime})
-            elif os.path.isfile(f):
-                try:
-                    sz = f"{os.path.getsize(f)//1024}KB"
-                    mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(os.path.getmtime(f)))
-                except Exception:
-                    sz = ""; mtime = ""
-                files.append({"name": name, "path": r, "size": sz, "mtime": mtime})
+        try:
+            with os.scandir(root) as it:
+                for entry in it:
+                    try:
+                        name = entry.name
+                        r = os.path.relpath(entry.path, base).replace(os.sep, "/")
+                        if entry.is_dir(follow_symlinks=False):
+                            st = entry.stat(follow_symlinks=False)
+                            mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(st.st_mtime))
+                            dirs.append({"name": name, "path": r, "mtime": mtime})
+                        elif entry.is_file(follow_symlinks=False):
+                            st = entry.stat(follow_symlinks=False)
+                            sz = f"{st.st_size // 1024}KB"
+                            mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(st.st_mtime))
+                            files.append({"name": name, "path": r, "size": sz, "mtime": mtime})
+                    except Exception:
+                        pass
+        except Exception:
+            pass
         dirs.sort(key=lambda x: x["name"])
         files.sort(key=lambda x: x["name"])
         return {"dir": str(rel or ""), "dirs": dirs, "files": files}
@@ -298,7 +316,28 @@ async def handle_images_thumb(request, plugin_base=""):
     base = _img_base(plugin_base)
     fp = _safe_path(rel, base)
     if not fp or not os.path.isfile(fp):
-        return _err("file not found", 404)
+        # 兼容旧路径与层级差异：data/img/ <-> data/games/img/
+        candidates = []
+        clean_rel = rel.replace("\\", "/")
+        if clean_rel.startswith("data/img/"):
+            candidates.append(clean_rel.replace("data/img/", "data/games/img/"))
+        elif clean_rel.startswith("data/games/img/"):
+            candidates.append(clean_rel.replace("data/games/img/", "data/img/"))
+        # 纯文件名回退探测
+        base_name = os.path.basename(clean_rel)
+        if base_name:
+            candidates.append(f"data/games/img/rides/{base_name}")
+            candidates.append(f"data/games/img/nuli/SSR/{base_name}")
+            candidates.append(f"data/games/img/nuli/SR/{base_name}")
+            candidates.append(f"data/games/img/nuli/R/{base_name}")
+        for c in candidates:
+            cfp = _safe_path(c, base)
+            if cfp and os.path.isfile(cfp):
+                fp = cfp
+                rel = c
+                break
+    if not fp or not os.path.isfile(fp):
+        return _err(f"file not found: {rel}", 404)
     if _is_blocked(fp) or not _in_data_strict(fp, base):
         return _err("path out of scope", 400)
 
@@ -388,13 +427,15 @@ async def handle_images_export(request, plugin_base=""):
     if not fp or not os.path.exists(fp):
         # 坏路径直接 404：禁 fallback 打包插件根（拼错即全仓源码 dump）
         return _err("file not found", 404)
+    if not _in_data_strict(fp, base):
+        return _err("export only supports data files", 400)
 
     def _work():
         if os.path.isdir(fp):
             import zipfile, io
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-                for root, dirs, files in os.walk(fp):
+                for root, dirs, files in os.walk(fp, followlinks=False):
                     dirs[:] = [d for d in dirs if d not in ("__pycache__", ".git") and not (os.path.relpath(os.path.join(root, d), fp).replace("\\", "/").startswith("data/backups"))]
                     for fn in files:
                         if fn.endswith((".db-wal", ".db-shm", ".db-journal", ".pyc", ".tmp", ".lock", ".log", ".db")):
