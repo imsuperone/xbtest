@@ -1457,11 +1457,11 @@ async function loadImages(dir) {
     IMG_CACHE = d;
     // 面包屑
     const segs = (d.dir || "").split("/").filter(Boolean);
-    let crumb = `<a data-imgcrumb="">根目录</a>`;
+    let crumb = `<a data-imgcrumb="" class="crumb-link" title="返回根目录">📁 根目录</a>`;
     let acc = "";
     segs.forEach((s, i) => {
       acc += (acc ? "/" : "") + s;
-      crumb += ` / <a data-imgcrumb="${esc(acc)}">${esc(s)}</a>`;
+      crumb += ` <span class="crumb-sep">/</span> <a data-imgcrumb="${esc(acc)}" class="crumb-link" title="进入目录 ${esc(s)}">📁 ${esc(s)}</a>`;
     });
     document.getElementById("imgCrumbs").innerHTML = `<span class="crumbs">${crumb}</span>`;
     document.querySelectorAll("#imgCrumbs a[data-imgcrumb]").forEach((a) =>
@@ -3071,30 +3071,30 @@ function spiritAttrCards(spirits, dropNames, assignMaps) {
   return dropNames.map((sn) => {
     const it = spirits[sn] || { type: "", hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0, lv: 0, evolve: "否" };
     const _img = String(it.img || "").trim();
-    // 8 项核心数值（HP、物攻、物防、特攻、特防、速度、等级、进化），4列自适应网格
+    // 8 项核心数值（HP、物攻、物防、特攻、特防、速度、等级、进化），4列自适应微槽网格
     const coreAttrs = [
       ["hp", "HP"], ["atk", "物攻"], ["def", "物防"], ["spa", "特攻"],
       ["spd", "特防"], ["spe", "速度"], ["lv", "等级"], ["evolve", "进化"]
     ];
     const coreCells = coreAttrs.map(([fk, label]) => {
       const _list = fk === "evolve" ? ` list="spEvolveList"` : "";
-      return `<div class="s-row"><small>${label}</small>` +
-        `<input data-sp-spirit="${esc(sn)}" data-s-field="${fk}" value="${esc(it[fk] ?? "")}"${_list}></div>`;
+      return `<div class="s-slot"><span class="s-slot-lab">${label}</span>` +
+        `<input class="s-slot-val" data-sp-spirit="${esc(sn)}" data-s-field="${fk}" value="${esc(it[fk] ?? "")}"${_list} title="可编辑数值"></div>`;
     });
     return `<div class="sp-card" data-sp="${esc(sn)}">
       <div class="sp-header">
-        <div class="sp-name">✦ <input data-sp-rename value="${esc(sn)}" title="直接改名，回车/失焦生效"></div>
-        <button type="button" class="s-del" data-del-spirit="${esc(sn)}" title="移除精灵">×</button>
+        <div class="sp-name">✦ <input class="sp-rename-inp" data-sp-rename value="${esc(sn)}" title="直接修改精灵名，回车/失焦生效"></div>
+        <button type="button" class="s-del" data-del-spirit="${esc(sn)}" title="移除此精灵">✕ 移除</button>
       </div>
       <div class="sp-core-grid">${coreCells.join("")}</div>
       <div class="sp-extra-row">
-        <div class="s-row"><small>属性</small><input data-sp-spirit="${esc(sn)}" data-s-field="type" value="${esc(it.type ?? "")}" placeholder="如: 水/火"></div>
-        <div class="s-row"><small>形象图</small><input data-sp-spirit="${esc(sn)}" data-s-field="img" value="${esc(it.img ?? "")}" placeholder="图片文件名"></div>
+        <div class="s-slot-h"><span class="s-slot-lab">属性:</span><input class="s-slot-val-inline" data-sp-spirit="${esc(sn)}" data-s-field="type" value="${esc(it.type ?? "")}" placeholder="水/火/草…"></div>
+        <div class="s-slot-h"><span class="s-slot-lab">图片:</span><input class="s-slot-val-inline" data-sp-spirit="${esc(sn)}" data-s-field="img" value="${esc(it.img ?? "")}" placeholder="文件名"></div>
       </div>
       <div class="sp-actions">
-        ${_img ? `<button type="button" class="ghost sm" data-sp-view="${esc(_img)}">浏览图片</button>` : ""}
-        <button type="button" class="ghost sm" data-sp-pick-upload="${esc(sn)}">外置选图</button>
-        <button type="button" class="ghost sm" data-sp-pick-builtin="${esc(sn)}">内置选图</button>
+        ${_img ? `<button type="button" class="ghost sm" data-sp-view="${esc(_img)}">👁️ 预览</button>` : ""}
+        <button type="button" class="ghost sm" data-sp-pick-upload="${esc(sn)}">📤 选图上传</button>
+        <button type="button" class="ghost sm" data-sp-pick-builtin="${esc(sn)}">🖼️ 内置图片</button>
       </div>
       ${_assignOpts ? `<div class="sp-assign-row"><select data-assign-map="${esc(sn)}" style="flex:1;padding:4px 8px;border-radius:10px">${_assignOpts}</select><button type="button" class="ghost sm" data-assign-spirit="${esc(sn)}">分配进图</button></div>` : ""}
     </div>`;
@@ -3124,30 +3124,32 @@ async function renderAtlas(curCfg){
     const _tabs = [["treasure", "🎁 宝物", Treas.length], ["spirit", "✨ 精灵", _spiritMaps.length]];
     const _q = String((typeof window._ATLAS_Q !== "undefined" && window._ATLAS_Q) || "").trim();
     const _ql = _q.toLowerCase();
-    let html = `<div style="position:sticky;top:0;z-index:5;background:var(--panel);padding:8px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">`
-      + `<div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">`
-      + _tabs.map(([k, label, n]) => `<button class="ghost sm" data-atlas-tab="${k}" style="${ATLAS_CUR === k ? "background:var(--acc);color:#fff;border-color:transparent" : "border-color:transparent"}" title="切换到${label}">${label} (${n})</button>`).join("")
+    let html = `<div class="atlas-top-bar">`
+      + `<div class="atlas-seg-tabs">`
+      + _tabs.map(([k, label, n]) => `<button type="button" class="atlas-seg-btn ${ATLAS_CUR === k ? "active" : ""}" data-atlas-tab="${k}" title="切换到${label}">${label} (${n})</button>`).join("")
       + `</div>`
-      + `<input id="atlasSearch" placeholder="🔍 搜宝物 / 地图 / 精灵…" value="${esc(_q)}" style="flex:1;min-width:140px;padding:5px 10px;border-radius:8px">`
-      + `</div><div style="display:flex;flex-direction:column;gap:8px">`;
+      + `<div class="atlas-search-wrap"><span class="atlas-search-ic">🔍</span><input id="atlasSearch" placeholder="搜索宝物 / 地图 / 精灵…" value="${esc(_q)}"></div>`
+      + `</div><div class="atlas-body-flow">`;
     const _TREAS_BUILTIN = { "酒神葫芦": { effect: "灌醉您的奴隶,极大的增加其造反难度", type: "pardon", value: 0 }, "四象护符": { effect: "打架失败时降低赔偿奴隶的概率", type: "shield", value: 0 } };
     const _effOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); if (e) return String(e); const b = _TREAS_BUILTIN[n]; return b ? b.effect : ""; } catch (e) { return ""; } };
     const _treOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; return _TREAS_BUILTIN[n] || null; } catch (e) { return null; } };
     const _typeTag = (n) => { try { const o = _treOf(n) || {}; const t = String(o.type || ""); const v = Number(o.value) || 0; if (t === "atk" && v > 0) return "攻" + v; if (t === "shield") return "盾"; if (t === "pardon") return "免"; if ((t === "work" || t === "worth") && v > 0) return (t === "work" ? "工" : "价") + v + "%"; return ""; } catch (e) { return ""; } };
     if (ATLAS_CUR === "treasure") {
-      let h = `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)"><div style="font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">奴隶系统-宝物 (${Treas.length}) <span style="margin-left:auto;display:inline-flex;gap:4px;flex-wrap:wrap"><button class="ghost sm" id="btnAtlasSaveTreasure">💾 保存宝物</button><button class="ghost sm" id="btnAtlasResetTreasure">↩️ 恢复默认</button><button class="ghost sm" id="btnAtlasAddTreasure">＋ 添加</button></span></div><div style="display:flex;flex-wrap:wrap;gap:8px">`;
+      let h = `<div class="tre-panel"><div class="tre-header"><div class="tre-header-title"><span>🎁 奴隶系统 · 宝物效果库</span><span class="badge badge-primary">${Treas.length} 种</span></div><div class="tre-header-actions"><button type="button" class="btn sm" id="btnAtlasSaveTreasure">💾 保存宝物</button><button type="button" class="ghost sm" id="btnAtlasResetTreasure">↩️ 恢复默认</button><button type="button" class="ghost sm" id="btnAtlasAddTreasure">＋ 添加宝物</button></div></div><div class="tre-grid">`;
       const _ft = Treas.filter((n) => !_ql || String(n).toLowerCase().includes(_ql) || _effOf(n).toLowerCase().includes(_ql));
-      if (!_ft.length) h += `<span style="color:var(--muted)">${_q ? "无匹配宝物" : "暂无"}</span>`;
+      if (!_ft.length) h += `<div class="atlas-empty-hint">${_q ? "无匹配宝物" : "暂无宝物数据"}</div>`;
       else h += _ft.map(n => {
         const e = _effOf(n);
         const _tag = _typeTag(n);
-        return `<div class="tre-card" data-treasure="${esc(n)}" style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel);min-width:190px;flex:1 1 200px">`
-          + `<div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px">🎁 ${esc(n)}${_tag ? `<span class="badge badge-primary" style="font-size:10.5px">${esc(_tag)}</span>` : ""}`
-          + `<span style="margin-left:auto;display:inline-flex;gap:2px"><button class="ghost sm" data-atlas-edit-treasure="${esc(n)}" title="编辑效果/类型/数值">✎</button><button class="s-del" data-atlas-del="奴隶系统-宝物|${esc(n)}" title="删除">×</button></span></div>`
-          + (e ? `<div style="font-size:11.5px;color:var(--muted);margin-top:4px">${esc(e.slice(0, 60))}</div>` : `<div style="font-size:11.5px;color:var(--muted);margin-top:4px">无自定义效果</div>`)
+        return `<div class="tre-card" data-treasure="${esc(n)}">`
+          + `<div class="tre-card-top">`
+          + `<div class="tre-card-title"><span class="tre-card-icon">🎁</span><strong>${esc(n)}</strong>${_tag ? `<span class="badge badge-primary">${esc(_tag)}</span>` : ""}</div>`
+          + `<div class="tre-card-actions"><button type="button" class="icon-action-btn" data-atlas-edit-treasure="${esc(n)}" title="编辑效果类型与数值">✎</button><button type="button" class="icon-action-btn del" data-atlas-del="奴隶系统-宝物|${esc(n)}" title="删除此宝物">✕</button></div>`
+          + `</div>`
+          + `<div class="tre-card-desc">${e ? esc(e.slice(0, 80)) : `<span style="color:var(--muted)">无自定义效果</span>`}</div>`
           + `</div>`;
       }).join("");
-      h += `</div><div class="hint" style="margin-top:6px">✎ 编辑效果类型与数值（攻击/护盾/免罪/打工/身价），× 删除；改动即时保存</div></div>`;
+      h += `</div><div class="hint" style="margin-top:10px">💡 提示：点击 ✎ 可编辑加成属性（攻击/护盾/免罪/打工/身价加成），点击 ✕ 可直接删除，改动即时生效。</div></div>`;
       html += h;
     }
     else if (ATLAS_CUR === "spirit") {
@@ -3168,15 +3170,15 @@ async function renderAtlas(curCfg){
         Object.values(_maps || {}).forEach((m) => ((m && m.drops) || []).map(String).forEach((s) => _used.add(s)));
         _orphans = Object.keys(_spirits || {}).filter((n) => !_used.has(String(n)));
       } catch (e) {}
-      let h = `<div style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px;background:var(--panel2)">`
-        + `<div style="font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">精灵系统-精灵地图 (${_names.length})`
-        + `<span style="margin-left:auto;display:inline-flex;gap:4px;flex-wrap:wrap">`
-        + `<button class="ghost sm" id="btnAtlasExpandAll" title="全部展开">▾ 展开</button>`
-        + `<button class="ghost sm" id="btnAtlasCollapseAll" title="全部收起">▸ 收起</button>`
-        + `<button class="ghost sm" id="btnAtlasSaveMaps">💾 保存精灵</button>`
-        + `<button class="ghost sm" id="btnAtlasResetMaps">↩️ 恢复默认</button>`
-        + `<button class="ghost sm" id="btnAtlasClearMaps">🧹 清空地图</button>`
-        + `</span></div>`;
+      let h = `<div class="tre-panel">`
+        + `<div class="tre-header"><div class="tre-header-title"><span>🗺️ 精灵系统 · 探索地图</span><span class="badge badge-primary">${_names.length} 张</span></div>`
+        + `<div class="tre-header-actions">`
+        + `<button type="button" class="ghost sm" id="btnAtlasExpandAll" title="全部展开">▾ 展开</button>`
+        + `<button type="button" class="ghost sm" id="btnAtlasCollapseAll" title="全部收起">▸ 收起</button>`
+        + `<button type="button" class="btn sm" id="btnAtlasSaveMaps">💾 保存精灵</button>`
+        + `<button type="button" class="ghost sm" id="btnAtlasResetMaps">↩️ 恢复默认</button>`
+        + `<button type="button" class="ghost sm del" id="btnAtlasClearMaps">🧹 清空地图</button>`
+        + `</div></div>`;
       if (!_names.length) {
         const _bc = (() => { try { return Object.keys((SPIRIT && SPIRIT._builtin && SPIRIT._builtin.maps) || {}).length; } catch (e) { return 0; } })();
         h += `<span style="color:var(--muted)">当前无自定义地图，运行中使用内置 ${_bc} 张</span>`;
@@ -3444,13 +3446,13 @@ function spiritMapCardsHTML(mapNames, maps, spirits, q) {
         <span class="s-arr">${open ? "▾" : "▸"}</span>
       </div>
       <div class="s-mapbody">
-        <div class="s-fields" style="margin-bottom:8px">
-          <div class="s-row"><small>推荐等级</small><input data-map-field="lv" value="${esc(d.lv ?? 1)}"></div>
-          <div class="s-row" style="flex:0 1 66%"><small>出没精灵(逗号分隔)</small><input data-map-field="drops" value="${esc(drops.join("，"))}"></div>
-          <button class="s-del" data-del-map="${esc(mname)}">删地图</button>
+        <div class="s-map-settings">
+          <div class="s-slot-h"><span class="s-slot-lab">推荐等级:</span><input class="s-slot-val-inline" data-map-field="lv" value="${esc(d.lv ?? 1)}" style="width:48px;text-align:center"></div>
+          <div class="s-slot-h" style="flex:1;min-width:180px"><span class="s-slot-lab">出没精灵(逗号分隔):</span><input class="s-slot-val-inline" data-map-field="drops" value="${esc(drops.join("，"))}" style="flex:1"></div>
+          <button type="button" class="s-del" data-del-map="${esc(mname)}" title="删除此地图">🗑️ 删除地图</button>
         </div>
         <div class="sp-spirits">${spiritAttrCards(spirits, drops)}</div>
-        <button class="ghost" data-add-spirit="${esc(mname)}">＋ 添加精灵</button>
+        <button type="button" class="btn sm tonal" data-add-spirit="${esc(mname)}" style="margin-top:10px">＋ 添加精灵</button>
       </div>
     </div>`;
     } catch (e) {
@@ -5438,11 +5440,11 @@ async function loadBackups(dir="") {
     if (!d || d.error) throw new Error((d && (d.error || d.msg)) || "备份列表接口异常");
     BACKUP_CACHE = d;
     const crumbs = (d.dir || "").split("/").filter(Boolean);
-    let crumb = `<a data-bkcrumb="">根目录</a>`;
+    let crumb = `<a data-bkcrumb="" class="crumb-link" title="返回根目录">📁 根目录</a>`;
     let acc = "";
     crumbs.forEach((s) => {
       acc += (acc ? "/" : "") + s;
-      crumb += ` / <a data-bkcrumb="${esc(acc)}">${esc(s)}</a>`;
+      crumb += ` <span class="crumb-sep">/</span> <a data-bkcrumb="${esc(acc)}" class="crumb-link" title="进入目录 ${esc(s)}">📁 ${esc(s)}</a>`;
     });
     document.getElementById("backupCrumbs").innerHTML = `<span class="crumbs">${crumb}</span>`;
     document.querySelectorAll("#backupCrumbs a[data-bkcrumb]").forEach((a) => a.addEventListener("click", () => loadBackups(a.dataset.bkcrumb)));
