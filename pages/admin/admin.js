@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0914j";
+const FRONTEND_VER = "2026w0914k";
 
 let _WORKING_API_PREFIX = null;
 
@@ -1601,7 +1601,7 @@ function renderImages(d) {
         toast("正在载入文本预览…", "ok", 1200);
         const res = await callApi("images/text", { path: p }, "GET");
         if (res && !res.error && typeof res.text === "string") {
-          showTextPreview(name || p, res.text, !!res.truncated);
+          showTextPreview(name || p, res.text, !!res.truncated, p);
         } else {
           toast("文本预览失败: " + ((res && (res.error || res.msg)) || "未知错误"), "bad");
         }
@@ -1633,7 +1633,7 @@ function renderImages(d) {
     }
   }
 
-function showTextPreview(name, text, truncated) {
+function showTextPreview(name, text, truncated, filePath) {
   const modal = document.getElementById("appModal");
   if (!modal) return;
   const icon = document.getElementById("appModalIcon");
@@ -1646,44 +1646,126 @@ function showTextPreview(name, text, truncated) {
   const modalBox = modal.querySelector(".cmd-modal-box");
   if (modalBox) modalBox.classList.add("modal-wide");
 
-  if (icon) icon.textContent = "📄";
-  if (title) title.textContent = String(name || "文本预览");
+  if (icon) icon.textContent = "✏️";
+  if (title) title.textContent = String(name || "文本编辑器");
   if (inputWrap) inputWrap.style.display = "none";
+
+  let isDirty = false;
+  const initialText = String(text || "");
+
   if (content) {
     content.innerHTML = `
-      <div style="margin:2px 0 8px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-size:12px;color:var(--muted)">点击下方文本框可快速全选 ${truncated ? '· <span class="badge badge-warn">内容过长已截断前256KB</span>' : ''}</span>
-          <button id="btnCopyTextPreview" class="ghost sm" style="padding:4px 12px;cursor:pointer">📋 复制全部内容</button>
+      <div style="margin:2px 0 6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap">
+          <span style="font-size:12px;color:var(--muted)" id="textEditorMeta">
+            ${truncated ? '<span class="badge badge-warn" style="margin-right:6px">已截断前256KB</span>' : ''}
+            <span>字数: ${initialText.length}</span>
+            <span class="badge badge-success" style="margin-left:6px" id="textEditorDirtyBadge">未修改</span>
+          </span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button id="btnCopyTextPreview" class="ghost sm" style="padding:4px 12px;cursor:pointer">📋 复制</button>
+          </div>
         </div>
-        <textarea readonly style="width:100%;height:min(520px, 60vh);background:var(--panel);color:var(--text);font-family:monospace;font-size:12px;border:1px solid var(--line);border-radius:12px;padding:12px;outline:none;resize:vertical;line-height:1.55;white-space:pre" onclick="this.select()">${esc(text || "")}</textarea>
+        <textarea class="text-editor-textarea" id="textEditorArea" spellcheck="false" placeholder="在此编辑文件内容…">${esc(initialText)}</textarea>
       </div>`;
   }
+
+  const ta = document.getElementById("textEditorArea");
+  const dirtyBadge = document.getElementById("textEditorDirtyBadge");
+  const metaSpan = document.getElementById("textEditorMeta");
   const copyBtn = document.getElementById("btnCopyTextPreview");
-  if (copyBtn) {
+
+  if (ta) {
+    ta.addEventListener("input", () => {
+      isDirty = (ta.value !== initialText);
+      if (dirtyBadge) {
+        if (isDirty) {
+          dirtyBadge.className = "badge badge-warn";
+          dirtyBadge.textContent = "● 未保存修改";
+          dirtyBadge.style.display = "inline-flex";
+        } else {
+          dirtyBadge.className = "badge badge-success";
+          dirtyBadge.textContent = "未修改";
+        }
+      }
+    });
+
+    ta.addEventListener("keydown", (e) => {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        ta.value = ta.value.substring(0, start) + "  " + ta.value.substring(end);
+        ta.selectionStart = ta.selectionEnd = start + 2;
+        ta.dispatchEvent(new Event("input"));
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (okBtn) okBtn.click();
+      }
+    });
+  }
+
+  if (copyBtn && ta) {
     copyBtn.onclick = () => {
-      copyToClipboard(text || "");
+      copyToClipboard(ta.value);
       copyBtn.textContent = "✅ 已复制";
-      setTimeout(() => { copyBtn.textContent = "📋 复制全部内容"; }, 1800);
+      setTimeout(() => { copyBtn.textContent = "📋 复制"; }, 1800);
     };
   }
-  if (cancelBtn) cancelBtn.style.display = "none";
 
   const doClose = () => {
+    if (isDirty) {
+      if (!confirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？")) return;
+    }
     modal.className = "";
     if (modalBox) modalBox.classList.remove("modal-wide");
-    if (cancelBtn) cancelBtn.style.display = "";
-    if (okBtn) okBtn.onclick = null;
+    if (cancelBtn) { cancelBtn.style.display = ""; cancelBtn.textContent = "取消"; }
+    if (okBtn) { okBtn.textContent = "确定"; okBtn.onclick = null; }
     if (closeBtn) closeBtn.onclick = null;
     modal.onclick = null;
   };
 
-  if (okBtn) {
-    okBtn.textContent = "关闭";
-    okBtn.onclick = doClose;
+  if (cancelBtn) {
+    cancelBtn.style.display = "inline-flex";
+    cancelBtn.textContent = "关闭";
+    cancelBtn.onclick = doClose;
   }
   if (closeBtn) {
     closeBtn.onclick = doClose;
+  }
+  if (okBtn) {
+    okBtn.textContent = "💾 保存文件";
+    okBtn.onclick = async () => {
+      if (!filePath) {
+        toast("无法识别文件路径", "bad");
+        return;
+      }
+      const newText = ta ? ta.value : "";
+      okBtn.disabled = true;
+      okBtn.textContent = "正在保存…";
+      try {
+        const res = await callApi("images/text/save", { path: filePath, text: newText }, "POST");
+        if (res && res.ok) {
+          toast("文件保存成功！", "ok");
+          isDirty = false;
+          modal.className = "";
+          if (modalBox) modalBox.classList.remove("modal-wide");
+          if (cancelBtn) cancelBtn.style.display = "";
+          okBtn.onclick = null;
+          if (closeBtn) closeBtn.onclick = null;
+          modal.onclick = null;
+        } else {
+          toast("保存失败: " + ((res && (res.error || res.msg)) || "未知错误"), "bad");
+        }
+      } catch (err) {
+        toast("保存异常: " + (err.message || String(err)), "bad");
+      } finally {
+        if (okBtn) {
+          okBtn.disabled = false;
+          okBtn.textContent = "💾 保存文件";
+        }
+      }
+    };
   }
   modal.onclick = (e) => {
     if (e.target === modal) doClose();
@@ -2527,7 +2609,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0914j"
+        version: res.version || "2026w0914k"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({

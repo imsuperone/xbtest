@@ -475,7 +475,23 @@
       border-color: rgba(255, 255, 255, 0.15) !important;
       color: #E2E2E6 !important;
     }
-    textarea { height: auto !important; }
+    textarea:not(.text-editor-textarea) { height: auto; }
+    .text-editor-textarea {
+      width: 100% !important;
+      height: 60vh !important;
+      min-height: 380px !important;
+      max-height: 72vh !important;
+      resize: vertical !important;
+      line-height: 1.55 !important;
+      font-family: 'JetBrains Mono', Consolas, 'Fira Code', monospace, sans-serif !important;
+      font-size: 12.5px !important;
+      padding: 12px 14px !important;
+      border-radius: var(--radius-md) !important;
+      box-sizing: border-box !important;
+      white-space: pre !important;
+      overflow-wrap: normal !important;
+      overflow-x: auto !important;
+    }
     /* Read-Only & Disabled Inputs: Elegant Lock Grey (映射逻辑与锁定只读指令灰底) */
     input:read-only:not([type="button"]):not([type="submit"]),
     input:disabled,
@@ -1557,8 +1573,8 @@
       transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), max-height 0.2s cubic-bezier(0.2, 0, 0, 1);
     }
     .cmd-modal-box.modal-wide, .m3-modal-box.modal-wide {
-      width: min(880px, 95vw) !important;
-      max-height: 90vh !important;
+      width: min(980px, 96vw) !important;
+      max-height: 94vh !important;
     }
     @keyframes m3DialogPop {
       from { opacity: 0; transform: scale(0.94); }
@@ -2003,7 +2019,7 @@
       .hdr-btn-short { display: none; }
     }
 
-    /* Dark mode hotfix: palette persistence & atlas visibility (v2026w0914j) */
+    /* Dark mode hotfix: palette persistence & atlas visibility (v2026w0914k) */
     [data-theme="dark"] .atlas-seg-btn:not(.active) {
       color: #C4C7D0 !important;
       background: transparent !important;
@@ -2040,7 +2056,7 @@
   <div class="wrap">
     <header>
       <div class="brand">
-        <h1>管理控制台 <span class="ver">v2026w0914j</span></h1>
+        <h1>管理控制台 <span class="ver">v2026w0914k</span></h1>
         <div class="sub">
           <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
         </div>
@@ -2728,8 +2744,8 @@
           <div>👤 作者：<b>Light</b></div>
           <div>📦 插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
           <div>🔗 仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
-          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w0914j</b></div>
-          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w0914j</b></div>
+          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w0914k</b></div>
+          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w0914k</b></div>
         </div>
       </div>
     </div>
@@ -3007,6 +3023,6 @@
       </div>
     </div>
   </div>
-  <script src="./admin.js?v=2026w0914j"></script>
+  <script src="./admin.js?v=2026w0914k"></script>
 </body>
 </html>

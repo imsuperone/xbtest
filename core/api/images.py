@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import os
+import tempfile
 import time
 try:
     from ..adapters import json_response
@@ -444,6 +445,53 @@ async def handle_images_text(request, plugin_base=""):
                                   "size": sz, "truncated": truncated})
         except Exception as e:
             return _err(f"text read failed: {e}", 500)
+
+    return await asyncio.to_thread(_work)
+
+
+async def handle_images_text_save(request, plugin_base=""):
+    """保存文本文件内容（原子替换+UTF-8落盘）"""
+    p = await get_req_json(request, default={})
+    if not isinstance(p, dict):
+        return _err("payload must be dict", 400)
+    rel = str(p.get("path") or p.get("file") or "").strip()
+    if not rel:
+        return _err("path required", 400)
+    text = p.get("text")
+    if text is None:
+        text = p.get("content", "")
+    text = str(text)
+    base = _img_base(plugin_base)
+    fp = _safe_path(rel, base)
+    if not fp or not os.path.isfile(fp):
+        return _err(f"file not found: {rel}", 404)
+    if _is_blocked(fp):
+        return _err("path out of scope", 400)
+    if os.path.splitext(fp)[1].lower() not in _TEXT_PREVIEW_EXTS:
+        return _err("not an editable text file", 400)
+
+    raw = text.encode("utf-8")
+    if len(raw) > 10 * 1024 * 1024:
+        return _err("text too large (10M)", 400)
+
+    def _work():
+        try:
+            dir_name = os.path.dirname(fp)
+            fd_tmp, tmp = tempfile.mkstemp(prefix="xbbot_edit_", dir=dir_name)
+            try:
+                with os.fdopen(fd_tmp, "wb") as w:
+                    w.write(raw)
+                os.replace(tmp, fp)
+            except Exception:
+                if os.path.exists(tmp):
+                    try:
+                        os.remove(tmp)
+                    except Exception:
+                        pass
+                raise
+            return json_response({"ok": True, "path": rel, "size": len(raw)})
+        except Exception as e:
+            return _err(f"save failed: {e}", 500)
 
     return await asyncio.to_thread(_work)
 
