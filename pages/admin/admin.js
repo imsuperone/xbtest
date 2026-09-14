@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0914f";
+const FRONTEND_VER = "2026w0914g";
 
 let _WORKING_API_PREFIX = null;
 
@@ -418,55 +418,7 @@ function toast(msg, type, duration = 2800) {
     txt = el.querySelector("span") || el;
   }
   txt.textContent = msg;
-  // 点击即复制（带选中态，便于长文本拖选）；点击不自动消失，悬停暂停计时
-  try {
-    txt.title = "点击复制";
-    txt.style.userSelect = "text";
-    txt.style.webkitUserSelect = "text";
-    txt.style.cursor = "text";
-    if (!txt._copyBound) {
-      txt._copyBound = true;
-      txt.addEventListener("click", () => {
-        const t = String(txt.textContent || "");
-        if (!t) return;
-        // 选中态，便于拖选后再点一键复制
-        try {
-          const sel = window.getSelection();
-          const r = document.createRange();
-          r.selectNodeContents(txt);
-          sel.removeAllRanges();
-          sel.addRange(r);
-        } catch (e) {}
-        // 复制到剪贴板（双保险：优先 Clipboard API，回退 execCommand）
-        let copied = false;
-        try {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(t);
-            copied = true;
-          }
-        } catch (e) {}
-        if (!copied) {
-          try { document.execCommand("copy"); copied = true; } catch (e) {}
-        }
-        if (copied) {
-          const prev = txt.textContent;
-          txt.textContent = "✅ 已复制: " + prev;
-          setTimeout(() => { try { txt.textContent = prev; } catch (e) {} }, 1200);
-        }
-      });
-    }
-  } catch (e) {}
   el.className = "show " + (type === "ok" ? "okk" : type === "bad" ? "badk" : "");
-  // 悬停暂停自动消失，便于复制
-  try {
-    if (!el._hoverBound) {
-      el._hoverBound = true;
-      el.addEventListener("mouseenter", () => { try { clearTimeout(_toastT); } catch (e) {} });
-      el.addEventListener("mouseleave", () => {
-        try { clearTimeout(_toastT); _toastT = setTimeout(() => { el.className = ""; }, 1200); } catch (e) {}
-      });
-    }
-  } catch (e) {}
   clearTimeout(_toastT);
   _toastT = setTimeout(() => { el.className = ""; }, duration || 2800);
 }
@@ -2538,7 +2490,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0914f"
+        version: res.version || "2026w0914g"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
