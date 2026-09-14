@@ -182,7 +182,8 @@ def _collect_commands(base_dir="", store=None):
                 if not p or not os.path.isfile(p):
                     continue
                 try:
-                    src += "\n" + open(p, encoding="utf-8").read()
+                    with open(p, encoding="utf-8") as _rf:
+                        src += "\n" + _rf.read()
                 except Exception:
                     continue
             if not src:

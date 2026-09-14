@@ -12,10 +12,7 @@ try:
 except ImportError:
     from core import storage as ST
 
-try:
-    from . import data_spirit as SD
-except ImportError:
-    from games.spirit import data_spirit as SD
+SD = ST.dual_attr(__package__, "data_spirit", ".", "games.spirit")
 try:
     from ..config.spirit import (POWER_DIV, EXP_FLOOR, CATCH_MIN, CATCH_MAX,
                                  CATCH_LV_STEP, CATCH_MASTER_EFF, CATCH_MASTER_RATE,

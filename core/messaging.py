@@ -6,7 +6,6 @@
 import os
 import re
 import threading as _threading
-import time
 
 # @卡片待落盘池锁：事件循环线程写、后台线程读清，加小锁防交错
 _CARDS_LOCK = _threading.Lock()
@@ -254,35 +253,6 @@ def _name_prefix(qq, reply, slave_mod=None):
         return f"{prefix}{s}"
     except Exception:
         return reply
-
-
-_GROUP_ADMIN_CACHE = {}
-_GROUP_ADMIN_TTL = 300.0
-
-
-async def _is_group_owner_or_admin(event):
-    try:
-        gid = str(event.get_group_id() or "")
-        qq = str(event.get_sender_id() or "")
-        key = f"{gid}:{qq}"
-        now = time.time()
-        hit = _GROUP_ADMIN_CACHE.get(key)
-        if hit and now - hit[0] < _GROUP_ADMIN_TTL:
-            return hit[1]
-        bot = getattr(event, "bot", None)
-        if bot is None:
-            return False
-        info = await bot.call_action("get_group_member_info", group_id=int(gid), user_id=int(qq))
-        data = (info.get("data") if isinstance(info, dict) else None) or info or {}
-        role = str(data.get("role", "")).lower()
-        ok = role in ("owner", "admin", "administrator")
-        if len(_GROUP_ADMIN_CACHE) > 500:
-            for k in list(_GROUP_ADMIN_CACHE.keys())[:250]:
-                _GROUP_ADMIN_CACHE.pop(k, None)
-        _GROUP_ADMIN_CACHE[key] = (now, ok)
-        return ok
-    except Exception:
-        return False
 
 
 async def _do_platform(marker, event, slave_mod=None):

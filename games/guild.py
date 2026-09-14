@@ -35,10 +35,7 @@ try:
     from .config.guild import DEFAULTS as _GUILD_DEFAULTS, CONTRIBUTE_DIV, WELFARE_PER_GONG
 except ImportError:
     from games.config.guild import DEFAULTS as _GUILD_DEFAULTS, CONTRIBUTE_DIV, WELFARE_PER_GONG  # type: ignore
-try:
-    from .config.spirit import POWER_DIV as _SPIRIT_POWER_DIV
-except ImportError:
-    from games.config.spirit import POWER_DIV as _SPIRIT_POWER_DIV  # type: ignore
+_SPIRIT_POWER_DIV = ST.dual_attr(__package__, "POWER_DIV", ".config.spirit", "games.config.spirit")
 
 
 def _cfgi(key, default=0):

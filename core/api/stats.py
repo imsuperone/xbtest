@@ -27,10 +27,7 @@ except ImportError:
     except ImportError:
         import slave  # type: ignore
 
-try:
-    from .. import logger
-except ImportError:
-    from core import logger  # type: ignore
+logger = ST.dual_attr(__package__, "logger", "..", "core")
 
 
 # ==================== stats/rank/logs/overview（原 stats.py） ====================

@@ -479,11 +479,12 @@ def _version():
         _base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         for _cand in (os.path.join(_base, "metadata.yaml"),):
             try:
-                for _ln in open(_cand, encoding="utf-8"):
-                    if _ln.strip().startswith("version:"):
-                        _v = _ln.split(":", 1)[1].strip().strip('"').strip("'")
-                        if _v:
-                            return f"小白测试版版本：{_v}"
+                with open(_cand, encoding="utf-8") as _vf:
+                    for _ln in _vf:
+                        if _ln.strip().startswith("version:"):
+                            _v = _ln.split(":", 1)[1].strip().strip('"').strip("'")
+                            if _v:
+                                return f"小白测试版版本：{_v}"
             except Exception:
                 pass
     except Exception:

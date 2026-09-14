@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0914c";
+const FRONTEND_VER = "2026w0914d";
 
 let _WORKING_API_PREFIX = null;
 
@@ -2490,7 +2490,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0914c"
+        version: res.version || "2026w0914d"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -2536,21 +2536,6 @@ async function importAllUsers() {
       const payload = data.users ? data : { users: [data] };
       const r = await getBridge().apiPost("users/import", payload);
       toast(`已导入 ${r.imported}/${r.total}`, "ok");
-      await loadUsers();
-    } catch (err) { toast("导入失败: " + err.message, "bad"); }
-  };
-  inp.click();
-}
-async function importSingleUser() {
-  const inp = document.createElement("input");
-  inp.type = "file"; inp.accept = ".json,application/json";
-  inp.onchange = async (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    try {
-      const txt = await file.text();
-      const data = JSON.parse(txt);
-      const r = await getBridge().apiPost("user/import", data);
-      toast("已导入单用户", "ok");
       await loadUsers();
     } catch (err) { toast("导入失败: " + err.message, "bad"); }
   };
@@ -4833,9 +4818,6 @@ async function resetPoolAttrs() {
     toast("已恢复默认", "ok"); await loadPool();
   } catch (e) { toast("恢复失败: " + e.message, "bad"); }
 }
-function poolUploadTo(rar) {
-  openPoolAddModal(rar || "SSR");
-}
 let _POOL_ADD_FILE = null;
 let _POOL_ADD_SRC = "";
 function openPoolAddModal(defRar) {
@@ -4946,10 +4928,6 @@ function openPoolAddModal(defRar) {
   }
   modal.className = "show";
   setTimeout(() => { try { document.getElementById("poolAddName")?.focus(); } catch (e) {} }, 50);
-}
-function parseShopRide(raw) {
-  // 兼容旧调用：只返回数据对象
-  return _parseShopInput(raw, _normRideObj).data;
 }
 function syncShopRaw() {
   try {

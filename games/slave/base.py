@@ -321,7 +321,8 @@ def _fmt(mins, act):
 
 def load_events():
     try:
-        _S.EVENTS = _json.load(open(_S.EVENTS_JSON, encoding="utf-8"))
+        with open(_S.EVENTS_JSON, encoding="utf-8") as _f:
+            _S.EVENTS = _json.load(_f)
     except Exception:
         _S.EVENTS = []
 

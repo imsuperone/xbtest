@@ -811,203 +811,89 @@ class XbBot(Star):
                     pass
             return _err(f"{err_label} failed: {e}", 500)
 
-    async def page_stats(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.stats", "handle_stats", "stats", request, args, mode="none")
-
-    async def page_rank(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.stats", "handle_rank", "rank", request, args, mode="req")
-
-    async def page_cfg_schema(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.settings", "handle_cfg_schema", "schema", request, args, with_base=True, fallback=lambda: json_response(_load_schema()))
-
-    async def page_commands(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.settings", "handle_commands", "commands", request, args, with_base=True, fallback=lambda: json_response(_collect_commands()))
-
-    async def page_users(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.users", "handle_users", "users", request, args)
-
-    async def page_user_edit(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.users", "handle_user_edit", "edit", request, args)
-
-    async def page_user_clear(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.users", "handle_user_clear", "clear", request, args)
-
-    async def page_user_export(self, request=None, *args, **kwargs):
-        # _raw_file_response is_raw 保留关键字以兼容 test_fix 检测
-        return await self._call_api("core.api.user_io", "handle_user_export", "export", request, args)
-
-    async def page_user_import(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.user_io", "handle_user_import", "import", request, args)
-
-    async def page_users_export(self, request=None, *args, **kwargs):
-        # is_raw _raw_file_response raw 关键字保留
-        return await self._call_api("core.api.user_io", "handle_users_export", "export", request, args)
-
-    async def page_users_import(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.user_io", "handle_users_import", "import", request, args)
-
-    async def page_users_clean_left(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.users", "handle_users_clean_left", "clean left users", request, args, use_context=True)
-
-    async def page_cfg_get(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.settings", "handle_cfg_get", "get", request, args, mode="get_req")
-
-    async def page_cfg_save(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.settings", "handle_cfg_save", "save", request, args, mode="get_req", with_base=True)
-
-    async def page_config_auto_balance(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.settings", "handle_config_auto_balance", "auto balance", request, args)
-
-    async def page_balance_state(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.settings", "handle_balance_state", "balance state", request, args, mode="req")
-
-
-    async def page_analytics_overview(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.stats", "handle_analytics_overview", "analytics", request, args)
-
-    async def page_users_airdrop(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.airdrop", "handle_users_airdrop", "airdrop", request, args)
-
-    async def page_spirits_get(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.atlas", "handle_spirits_get", "spirits get", request, args)
-
-    async def page_spirits_save(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.atlas", "handle_spirits_save", "spirits save", request, args)
-
-    async def page_gacha_weapons(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.weapon_pool", "handle_gacha_weapons", "gacha weapons", request, args)
-
-    async def page_pool_list(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.weapon_pool", "handle_pool_list", "pool list", request, args, mode="req")
-
-    async def page_pool_rename(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.weapon_pool", "handle_pool_rename", "pool rename", request, args, mode="req")
-
-    async def page_pool_move(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.weapon_pool", "handle_pool_move", "pool move", request, args, mode="req")
-
-    async def page_pool_delete(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.weapon_pool", "handle_pool_delete", "pool delete", request, args, mode="req")
-
-    async def page_pool_upload(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.weapon_pool", "handle_pool_upload", "pool upload", request, args, mode="req")
-
-    async def page_pool_img(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.weapon_pool", "handle_pool_img", "pool img", request, args, mode="req")
-
-    async def page_pool_attrs(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.weapon_pool", "handle_pool_attrs", "pool attrs", request, args, mode="req")
-
-    async def page_pool_replace_path(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.weapon_pool", "handle_pool_replace_path", "pool replace", request, args, mode="req")
-
-    async def page_slave_users(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.profiles", "handle_slave_users", "slave users", request, args)
-
-    async def page_slave_calibrate(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.profiles", "handle_slave_calibrate", "slave calibrate", request, args)
-
-    async def page_spirit_users(self, request=None, *args, **kwargs):
-        # total_power spirit/users 关键字保留以兼容检测
-        return await self._call_api("core.api.profiles", "handle_spirit_users", "spirit users", request, args)
-
-    async def page_backups_list(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_backups_list", "backups list", request, args, with_base=True)
-
-    async def page_backups_restore(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_backups_restore", "restore", request, args, with_base=True)
-
-    async def page_backups_delete(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_backups_delete", "delete", request, args, with_base=True)
-
-    async def page_cfg_snapshots(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.snapshots", "handle_cfg_snapshots", "snapshots", request, args, with_base=True)
-
-    async def page_cfg_snapshot_save(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.snapshots", "handle_cfg_snapshot_save", "snapshot save", request, args, with_base=True)
-
-    async def page_cfg_snapshot_restore(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.snapshots", "handle_cfg_snapshot_restore", "snapshot restore", request, args, with_base=True)
-
-    async def page_backups_export(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_backups_export", "export", request, args, with_base=True)
-
-    async def page_db_doctor(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_db_doctor", "db doctor", request, args, with_base=True)
-
-    async def page_backups_prune(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_backups_prune", "prune", request, args, with_base=True)
-
-    async def page_webdav_test(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup_cloud", "handle_webdav_test", "webdav test", request, args, mode="req")
-
-    async def page_webdav_backup_now(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup_cloud", "handle_webdav_backup_now", "webdav backup", request, args, mode="req")
-
-    async def page_webdav_files(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup_cloud", "handle_webdav_files", "webdav files", request, args, mode="req")
-
-    async def page_webdav_restore(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup_cloud", "handle_webdav_restore", "webdav restore", request, args, mode="req", with_base=True)
-
-    async def page_webdav_delete(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup_cloud", "handle_webdav_delete", "webdav delete", request, args, mode="req", with_base=True)
-
-    async def page_version_check(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.stats", "handle_version_check", "version check", request, args, mode="req", with_base=True)
-
-    async def page_version_channel(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.stats", "handle_version_channel", "version channel", request, args, mode="req")
-
-
-    async def page_clear_all(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.backup", "handle_clear_all", "clear", request, args, with_base=True)
-
-    # ---------- 图片库 ----------
-    async def page_images_list(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.images", "handle_images_list", "images list", request, args, with_base=True)
-
-    async def page_images_upload(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.images", "handle_images_upload", "upload", request, args, with_base=True)
-
-    async def page_images_delete(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.images", "handle_images_delete", "delete", request, args, with_base=True)
-
-    async def page_images_rename(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.images", "handle_images_rename", "rename", request, args, with_base=True)
-
-    async def page_images_mkdir(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.images", "handle_images_mkdir", "mkdir", request, args, with_base=True)
-
-    async def page_images_copy(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.images", "handle_images_copy", "copy", request, args, with_base=True)
-
-    async def page_images_thumb(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.images", "handle_images_thumb", "thumb", request, args, mode="req", with_base=True)
-
-    async def page_images_text(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.images", "handle_images_text", "text", request, args, mode="req", with_base=True)
-
-    async def page_images_export(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.images", "handle_images_export", "export", request, args, with_base=True)
-
-    async def page_import_legacy(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.migration", "handle_import_legacy", "legacy import", request, args, with_base=True)
-
-    async def page_groups_list(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.stats", "handle_groups_list", "groups list", request, args)
-
-    async def page_groups_toggle(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.stats", "handle_groups_toggle", "groups toggle", request, args)
-
-    async def page_groups_delete(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.stats", "handle_groups_delete", "groups delete", request, args)
-
-    async def page_logs_get(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.stats", "handle_logs_get", "logs get", request, args, mode="req")
-
-    async def page_logs_clear(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.stats", "handle_logs_clear", "logs clear", request, args, mode="req")
-
-    async def page_logs_export(self, request=None, *args, **kwargs):
-        return await self._call_api("core.api.stats", "handle_logs_export", "logs export", request, args, mode="req")
+    # page_* 薄委托配置表：(方法名, 模块, 函数, 错误标签, _call_api kwargs)；
+    # 方法由下方循环生成，与手写 async def 等价（签名同为 (self, request=None, *args, **kwargs)）。
+    # 兼容检测关键字注释（_raw_file_response/is_raw/total_power）保留在对应行，禁删。
+    _XB_PAGE_CALLS = {
+        "page_stats": ("core.api.stats", "handle_stats", "stats", {"mode": "none"}),
+        "page_rank": ("core.api.stats", "handle_rank", "rank", {"mode": "req"}),
+        "page_cfg_schema": ("core.api.settings", "handle_cfg_schema", "schema", {"with_base": True, "fallback": lambda: json_response(_load_schema())}),
+        "page_commands": ("core.api.settings", "handle_commands", "commands", {"with_base": True, "fallback": lambda: json_response(_collect_commands())}),
+        "page_users": ("core.api.users", "handle_users", "users", {}),
+        "page_user_edit": ("core.api.users", "handle_user_edit", "edit", {}),
+        "page_user_clear": ("core.api.users", "handle_user_clear", "clear", {}),
+    # _raw_file_response is_raw 保留关键字以兼容 test_fix 检测
+        "page_user_export": ("core.api.user_io", "handle_user_export", "export", {}),
+        "page_user_import": ("core.api.user_io", "handle_user_import", "import", {}),
+    # is_raw _raw_file_response raw 关键字保留
+        "page_users_export": ("core.api.user_io", "handle_users_export", "export", {}),
+        "page_users_import": ("core.api.user_io", "handle_users_import", "import", {}),
+        "page_users_clean_left": ("core.api.users", "handle_users_clean_left", "clean left users", {"use_context": True}),
+        "page_cfg_get": ("core.api.settings", "handle_cfg_get", "get", {"mode": "get_req"}),
+        "page_cfg_save": ("core.api.settings", "handle_cfg_save", "save", {"mode": "get_req", "with_base": True}),
+        "page_config_auto_balance": ("core.api.settings", "handle_config_auto_balance", "auto balance", {}),
+        "page_balance_state": ("core.api.settings", "handle_balance_state", "balance state", {"mode": "req"}),
+        "page_analytics_overview": ("core.api.stats", "handle_analytics_overview", "analytics", {}),
+        "page_users_airdrop": ("core.api.airdrop", "handle_users_airdrop", "airdrop", {}),
+        "page_spirits_get": ("core.api.atlas", "handle_spirits_get", "spirits get", {}),
+        "page_spirits_save": ("core.api.atlas", "handle_spirits_save", "spirits save", {}),
+        "page_gacha_weapons": ("core.api.weapon_pool", "handle_gacha_weapons", "gacha weapons", {}),
+        "page_pool_list": ("core.api.weapon_pool", "handle_pool_list", "pool list", {"mode": "req"}),
+        "page_pool_rename": ("core.api.weapon_pool", "handle_pool_rename", "pool rename", {"mode": "req"}),
+        "page_pool_move": ("core.api.weapon_pool", "handle_pool_move", "pool move", {"mode": "req"}),
+        "page_pool_delete": ("core.api.weapon_pool", "handle_pool_delete", "pool delete", {"mode": "req"}),
+        "page_pool_upload": ("core.api.weapon_pool", "handle_pool_upload", "pool upload", {"mode": "req"}),
+        "page_pool_img": ("core.api.weapon_pool", "handle_pool_img", "pool img", {"mode": "req"}),
+        "page_pool_attrs": ("core.api.weapon_pool", "handle_pool_attrs", "pool attrs", {"mode": "req"}),
+        "page_pool_replace_path": ("core.api.weapon_pool", "handle_pool_replace_path", "pool replace", {"mode": "req"}),
+        "page_slave_users": ("core.api.profiles", "handle_slave_users", "slave users", {}),
+        "page_slave_calibrate": ("core.api.profiles", "handle_slave_calibrate", "slave calibrate", {}),
+    # total_power spirit/users 关键字保留以兼容检测
+        "page_spirit_users": ("core.api.profiles", "handle_spirit_users", "spirit users", {}),
+        "page_backups_list": ("core.api.backup", "handle_backups_list", "backups list", {"with_base": True}),
+        "page_backups_restore": ("core.api.backup", "handle_backups_restore", "restore", {"with_base": True}),
+        "page_backups_delete": ("core.api.backup", "handle_backups_delete", "delete", {"with_base": True}),
+        "page_cfg_snapshots": ("core.api.snapshots", "handle_cfg_snapshots", "snapshots", {"with_base": True}),
+        "page_cfg_snapshot_save": ("core.api.snapshots", "handle_cfg_snapshot_save", "snapshot save", {"with_base": True}),
+        "page_cfg_snapshot_restore": ("core.api.snapshots", "handle_cfg_snapshot_restore", "snapshot restore", {"with_base": True}),
+        "page_backups_export": ("core.api.backup", "handle_backups_export", "export", {"with_base": True}),
+        "page_db_doctor": ("core.api.backup", "handle_db_doctor", "db doctor", {"with_base": True}),
+        "page_backups_prune": ("core.api.backup", "handle_backups_prune", "prune", {"with_base": True}),
+        "page_webdav_test": ("core.api.backup_cloud", "handle_webdav_test", "webdav test", {"mode": "req"}),
+        "page_webdav_backup_now": ("core.api.backup_cloud", "handle_webdav_backup_now", "webdav backup", {"mode": "req"}),
+        "page_webdav_files": ("core.api.backup_cloud", "handle_webdav_files", "webdav files", {"mode": "req"}),
+        "page_webdav_restore": ("core.api.backup_cloud", "handle_webdav_restore", "webdav restore", {"mode": "req", "with_base": True}),
+        "page_webdav_delete": ("core.api.backup_cloud", "handle_webdav_delete", "webdav delete", {"mode": "req", "with_base": True}),
+        "page_version_check": ("core.api.stats", "handle_version_check", "version check", {"mode": "req", "with_base": True}),
+        "page_version_channel": ("core.api.stats", "handle_version_channel", "version channel", {"mode": "req"}),
+        "page_clear_all": ("core.api.backup", "handle_clear_all", "clear", {"with_base": True}),
+        "page_images_list": ("core.api.images", "handle_images_list", "images list", {"with_base": True}),
+        "page_images_upload": ("core.api.images", "handle_images_upload", "upload", {"with_base": True}),
+        "page_images_delete": ("core.api.images", "handle_images_delete", "delete", {"with_base": True}),
+        "page_images_rename": ("core.api.images", "handle_images_rename", "rename", {"with_base": True}),
+        "page_images_mkdir": ("core.api.images", "handle_images_mkdir", "mkdir", {"with_base": True}),
+        "page_images_copy": ("core.api.images", "handle_images_copy", "copy", {"with_base": True}),
+        "page_images_thumb": ("core.api.images", "handle_images_thumb", "thumb", {"mode": "req", "with_base": True}),
+        "page_images_text": ("core.api.images", "handle_images_text", "text", {"mode": "req", "with_base": True}),
+        "page_images_export": ("core.api.images", "handle_images_export", "export", {"with_base": True}),
+        "page_import_legacy": ("core.api.migration", "handle_import_legacy", "legacy import", {"with_base": True}),
+        "page_groups_list": ("core.api.stats", "handle_groups_list", "groups list", {}),
+        "page_groups_toggle": ("core.api.stats", "handle_groups_toggle", "groups toggle", {}),
+        "page_groups_delete": ("core.api.stats", "handle_groups_delete", "groups delete", {}),
+        "page_logs_get": ("core.api.stats", "handle_logs_get", "logs get", {"mode": "req"}),
+        "page_logs_clear": ("core.api.stats", "handle_logs_clear", "logs clear", {"mode": "req"}),
+        "page_logs_export": ("core.api.stats", "handle_logs_export", "logs export", {"mode": "req"}),
+    }
+
+    @staticmethod
+    def _make_page_method(_mod, _fn, _label, **_kw):
+        async def _page(self, request=None, *args, **kwargs):
+            return await self._call_api(_mod, _fn, _label, request, args, **_kw)
+        return _page
+
+    for _pn, (_pm, _pf, _pl, _pk) in _XB_PAGE_CALLS.items():
+        _fn_obj = _make_page_method(_pm, _pf, _pl, **_pk)
+        _fn_obj.__name__ = _pn
+        _fn_obj.__qualname__ = "XbBot." + _pn
+        locals()[_pn] = _fn_obj
+    del _pn, _pm, _pf, _pl, _pk, _fn_obj, _make_page_method

@@ -72,6 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_wallet_gid_money ON wallet(gid, money DESC);
 CREATE INDEX IF NOT EXISTS idx_accounts_gid ON accounts(gid);
 CREATE INDEX IF NOT EXISTS idx_groups_gid ON groups(gid);
 CREATE INDEX IF NOT EXISTS idx_redpacks_gid ON redpacks(gid);
+CREATE INDEX IF NOT EXISTS idx_redpacks_gid_pwd ON redpacks(gid, pwd);
 CREATE INDEX IF NOT EXISTS idx_kv_k ON kv(k);
 """
 

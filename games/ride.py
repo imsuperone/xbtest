@@ -259,46 +259,50 @@ def cmd_my(gid, qq):
     return "\r\n".join(lines)
 
 
+def _parse_ride_shop(v):
+    """ride_shop 配置体解析（dict/JSON串）→ {名: {price, img}} 规范形；非法/空回 {}。
+    _ride_shop_raw 与 _ride_shop 唯一解析口（原两处内联逐行等价并入）"""
+    out = {}
+    try:
+        d = v
+        if isinstance(v, str) and v.strip():
+            d = json.loads(v)
+        if isinstance(d, dict):
+            for k, val in d.items():
+                if isinstance(val, dict):
+                    out[str(k)] = {"price": int(float(val.get("price", 0) or 0)),
+                                   "img": str(val.get("img", "") or "")}
+                elif val is not None and str(val).strip() != "":
+                    out[str(k)] = {"price": int(float(val)), "img": ""}
+    except Exception:
+        return {}
+    return out
+
+
 def _ride_shop_raw():
     """返回原始 ride_shop 配置对象(可能含 {price,img} 结构)，供取图用"""
     v = ST.cfg("商城图鉴", "ride_shop", "")
     if isinstance(v, dict) and v:
         return v
     if v:
-        try:
-            d = json.loads(v)
-            if isinstance(d, dict) and d:
-                return d
-        except Exception:
-            pass
+        d = _parse_ride_shop(v)
+        if d:
+            # 保持原返回口径：dict 原样回（调用方只读 .get(name)/["img"]）
+            try:
+                raw = json.loads(v) if isinstance(v, str) else v
+                if isinstance(raw, dict) and raw:
+                    return raw
+            except Exception:
+                pass
+            return d
     return DEFAULT_RIDE_SHOP_EXT
 
 def _ride_shop():
     """坐骑商城数据: 优先 商城图鉴.ride_shop(JSON name->price 或 {price,img})；空=未自定义，回退 RIDES 内置"""
     v = ST.cfg("商城图鉴", "ride_shop", "")
-    if isinstance(v, dict) and v:
-        out = {}
-        for k, val in v.items():
-            if isinstance(val, dict):
-                out[str(k)] = int(float(val.get("price", 0) or 0))
-            else:
-                out[str(k)] = int(float(val))
-        if out:
-            return out
-    if v:
-        try:
-            d = json.loads(v)
-            if isinstance(d, dict) and d:
-                out = {}
-                for k, val in d.items():
-                    if isinstance(val, dict):
-                        out[str(k)] = int(float(val.get("price", 0) or 0))
-                    else:
-                        out[str(k)] = int(float(val))
-                if out:
-                    return out
-        except Exception:
-            pass
+    d = _parse_ride_shop(v) if v else {}
+    if d:
+        return {k: val["price"] for k, val in d.items()}
     out = {}
     for name in RIDES:
         out[name] = _mount_price(name)
@@ -463,9 +467,16 @@ def check_welcome(gid, qq):
         if not w:
             return None
         key = f"ride_welcome_{gid}_{qq}"
-        last = ST.recall_get(key, "")
+        try:
+            last = ST.recall_get(key, "")
+        except Exception:
+            last = ""
         now = int(time.time())
-        if last and now - int(last) < 3 * 3600:
+        try:
+            _last_ts = int(last or "0")
+        except Exception:
+            _last_ts = 0
+        if last and now - _last_ts < 3 * 3600:
             return None
         ST.recall_set(key, str(now))
         # 群昵称优先（本群分群昵称，防跨群串扰）
