@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0914a";
+const FRONTEND_VER = "2026w0914b";
 
 let _WORKING_API_PREFIX = null;
 
@@ -2434,7 +2434,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0914a"
+        version: res.version || "2026w0914b"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -4434,16 +4434,16 @@ document.getElementById("btnSpiritImport")?.addEventListener("click", importSpir
 
 // 商城图鉴 (每商城独立栏 自由增删重命名+图片绑定)
 const DEFAULT_RIDE_SHOP = {
-  "企鹅": { price: 213250, img: "data/img/rides/企鹅.jpg" },
-  "伞兵": { price: 500000, img: "data/img/rides/伞兵.jpg" },
-  "宝驴": { price: 1000000, img: "data/img/rides/宝驴.jpg" },
-  "保时捷": { price: 1500000, img: "data/img/rides/保时捷.jpg" },
-  "法拉利": { price: 1500000, img: "data/img/rides/法拉利.jpg" },
-  "玛莎拉蒂": { price: 1500000, img: "data/img/rides/玛莎拉蒂.jpg" },
-  "劳斯莱斯": { price: 1500000, img: "data/img/rides/劳斯莱斯.jpg" },
-  "布加迪威龙": { price: 1500000, img: "data/img/rides/布加迪威龙.jpg" },
-  "私人航空": { price: 5000000, img: "data/img/rides/私人航空.jpg" },
-  "老八": { price: 500000, img: "data/img/rides/老八.jpg" },
+  "企鹅": { price: 213250, img: "data/games/img/rides/企鹅.jpg" },
+  "伞兵": { price: 500000, img: "data/games/img/rides/伞兵.jpg" },
+  "宝驴": { price: 1000000, img: "data/games/img/rides/宝驴.jpg" },
+  "保时捷": { price: 1500000, img: "data/games/img/rides/保时捷.jpg" },
+  "法拉利": { price: 1500000, img: "data/games/img/rides/法拉利.jpg" },
+  "玛莎拉蒂": { price: 1500000, img: "data/games/img/rides/玛莎拉蒂.jpg" },
+  "劳斯莱斯": { price: 1500000, img: "data/games/img/rides/劳斯莱斯.jpg" },
+  "布加迪威龙": { price: 1500000, img: "data/games/img/rides/布加迪威龙.jpg" },
+  "私人航空": { price: 5000000, img: "data/games/img/rides/私人航空.jpg" },
+  "老八": { price: 500000, img: "data/games/img/rides/老八.jpg" },
 };
 let SHOP_RIDE = {};
 let SHOP_DIRTY = false;
@@ -4914,7 +4914,7 @@ function renderShopRideBox(forceOpen = false) {
   const curDetails = box.querySelector("details");
   const wasOpen = curDetails ? curDetails.open : forceOpen;
   let html = `<details class="panel" style="margin:0"${wasOpen ? " open" : ""}><summary style="cursor:pointer;font-weight:600">🐴 坐骑商城 — ${entries.length} 件</summary>`;
-  html += `<div class="hint" style="margin-top:8px">每行一个坐骑，支持改名、改价、删、绑图（图片路径如 data/img/rides/企鹅.jpg，留空自动匹配）</div>`;
+  html += `<div class="hint" style="margin-top:8px">每行一个坐骑，支持改名、改价、删、绑图（图片路径如 data/games/img/rides/企鹅.jpg，留空自动匹配）</div>`;
   html += `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="ghost sm" id="btnRideAddTop">＋ 添加坐骑</button><button class="ghost sm" id="btnRideSaveTop">💾 保存坐骑</button><button class="ghost sm" id="btnRideReset">↩️ 恢复默认</button><button class="ghost sm" data-shopsec-up="ride" title="上移">↑</button><button class="ghost sm" data-shopsec-down="ride" title="下移">↓</button></div>`;
   if (!entries.length) {
     html += `<div class="hint" style="margin:8px 0">当前为空，运行时使用内置坐骑（${Object.keys(DEFAULT_RIDE_SHOP).length} 种）；可添加或恢复默认</div>`;
@@ -4978,11 +4978,11 @@ function renderShopRideBox(forceOpen = false) {
     const rb=document.querySelector("[data-tab=\"imgs\"]"); if(rb) rb.classList.add("on");
     document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
     const tab=document.getElementById("tab-imgs"); if(tab) tab.classList.add("on");
-    await loadImages("data/img/rides");
+    await loadImages("data/games/img/rides");
     // 在根目录顶部显示绑定提示（仅图片可选）
     const _oldTip = document.getElementById("shopPickTip"); if (_oldTip) _oldTip.remove();
     const tip=document.createElement("div"); tip.id="shopPickTip"; tip.style="background:var(--accSoft);border:1px solid var(--acc);padding:8px 12px;border-radius:8px;margin-bottom:10px";
-    tip.innerHTML=`<b>为坐骑 "${esc(k)}" 选择内置图：</b> 坐骑目录 data/img/rides（png/jpg/gif等），然后 <button class="ghost sm" id="btnShopPickConfirm">确定绑定</button> <button class="ghost sm" id="btnShopPickCancel">取消</button>`;
+    tip.innerHTML=`<b>为坐骑 "${esc(k)}" 选择内置图：</b> 坐骑目录 data/games/img/rides（png/jpg/gif等），然后 <button class="ghost sm" id="btnShopPickConfirm">确定绑定</button> <button class="ghost sm" id="btnShopPickCancel">取消</button>`;
     const panel=document.querySelector("#tab-imgs .panel"); if(panel) panel.prepend(tip);
     document.getElementById("btnShopPickConfirm")?.addEventListener("click", ()=>{
       const sel=IMG_SELECTED;
@@ -5009,9 +5009,9 @@ function renderShopRideBox(forceOpen = false) {
     inp.onchange = async (e) => {
       const file = e.target.files[0]; if (!file) return;
       try {
-        const r = await postFile("images/upload?dir=" + encodeURIComponent("data/img/rides"), {}, file);
+        const r = await postFile("images/upload?dir=" + encodeURIComponent("data/games/img/rides"), {}, file);
         if (r && r.error) throw new Error(r.error);
-        const path = (r && (r.path || (r.data && r.data.path))) || ("data/img/rides/" + file.name);
+        const path = (r && (r.path || (r.data && r.data.path))) || ("data/games/img/rides/" + file.name);
         SHOP_RIDE[k] = (typeof SHOP_RIDE[k]==="object"? {...SHOP_RIDE[k], img: path} : {price: Number(SHOP_RIDE[k])||0, img: path}); SHOP_DIRTY=true; syncShopRaw(); renderShopRideBox(true); toast("图片已上传并绑定，需保存","ok");
       } catch(err){ toast("上传失败:"+(err.message||err),"bad");}
     };
@@ -5072,8 +5072,8 @@ function openRideAddModal() {
         <input id="rideAddName" style="width:100%;padding:6px 10px;border-radius:8px" placeholder="如：汗血宝马"></div>
       <div><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">价格：</label>
         <input id="rideAddPrice" type="number" value="500000" style="width:100%;padding:6px 10px;border-radius:8px"></div>
-      <div><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">图片（坐骑目录 data/img/rides，可选，留空自动匹配）：</label>
-        <input id="rideAddImg" style="width:100%;padding:6px 10px;border-radius:8px" placeholder="data/img/rides/xxx.jpg">
+      <div><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">图片（坐骑目录 data/games/img/rides，可选，留空自动匹配）：</label>
+        <input id="rideAddImg" style="width:100%;padding:6px 10px;border-radius:8px" placeholder="data/games/img/rides/xxx.jpg">
         <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button class="ghost sm" id="rideAddPickUpload">外置选图（本地上传）</button><button class="ghost sm" id="rideAddPickBuiltin">内置选图（坐骑目录）</button><button class="ghost sm" id="rideAddPreview">浏览图片</button><span id="rideAddImgTip" style="font-size:11.5px;color:var(--muted)">未选择</span></div></div>
       <div class="hint">保存后记得点「保存坐骑」持久化；图片也可在列表中用“外置选图/内置选图”绑定</div>
     </div>`;
@@ -5084,9 +5084,9 @@ function openRideAddModal() {
     inp.onchange = async (e) => {
       const file = e.target.files[0]; if (!file) return;
       try {
-        const r = await postFile("images/upload?dir=" + encodeURIComponent("data/img/rides"), {}, file);
+        const r = await postFile("images/upload?dir=" + encodeURIComponent("data/games/img/rides"), {}, file);
         if (r && r.error) throw new Error(r.error);
-        const path = (r && (r.path || (r.data && r.data.path))) || ("data/img/rides/" + file.name);
+        const path = (r && (r.path || (r.data && r.data.path))) || ("data/games/img/rides/" + file.name);
         _RIDE_ADD_FILE = null;
         const ie = document.getElementById("rideAddImg");
         if (ie) ie.value = path;
@@ -5113,10 +5113,10 @@ function openRideAddModal() {
     const rb = document.querySelector("[data-tab=\"imgs\"]"); if (rb) rb.classList.add("on");
     document.querySelectorAll(".tab").forEach(x => x.classList.remove("on"));
     const tab = document.getElementById("tab-imgs"); if (tab) tab.classList.add("on");
-    await loadImages("data/img/rides");
+    await loadImages("data/games/img/rides");
     const old = document.getElementById("shopPickTip"); if (old) old.remove();
     const tip = document.createElement("div"); tip.id = "shopPickTip"; tip.style = "background:var(--accSoft);border:1px solid var(--acc);padding:8px 12px;border-radius:8px;margin-bottom:10px";
-    tip.innerHTML = `<b>为新坐骑选择内置图：</b> 坐骑目录 data/img/rides，然后 <button class="ghost sm" id="btnShopPickConfirm">确定绑定</button> <button class="ghost sm" id="btnShopPickCancel">取消</button>`;
+    tip.innerHTML = `<b>为新坐骑选择内置图：</b> 坐骑目录 data/games/img/rides，然后 <button class="ghost sm" id="btnShopPickConfirm">确定绑定</button> <button class="ghost sm" id="btnShopPickCancel">取消</button>`;
     const panel = document.querySelector("#tab-imgs .panel"); if (panel) panel.prepend(tip);
     const backToModal = () => {
       tip.remove(); window.SHOP_PICK_TARGET = null; window.SHOP_PICK_KIND = null;

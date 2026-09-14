@@ -20,11 +20,21 @@ except ImportError:
                                     SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS,
                                     WORTH_PCT_CAP)
 from .base import U, _fmt, _safe_int, cd_check, cd_commit, cfg, cfgf, cfgi, cn_fmt, cn_parse, coins_add, coins_get, slaves_of, star_of, treasures_of, uget, uset, weapons_of
+try:
+    from ..config.shop import TREASURES as _TREASURES_BUILTIN
+except ImportError:
+    try:
+        from games.config.shop import TREASURES as _TREASURES_BUILTIN  # type: ignore
+    except Exception:
+        _TREASURES_BUILTIN = {}
 from .nick import uname
 
 
 def _treasure_names():
-    """宝物名单：读 设置.宝物（WebUI/图鉴写入口径），兼容旧 设置.treasure，二者合并去重"""
+    """宝物名单：读 设置.宝物（WebUI/图鉴写入口径），兼容旧 设置.treasure，二者合并去重；
+    再并入图鉴结构表（商城图鉴.treasures/老 treasure_effects/内置表）中有名但名单漏配的，
+    保证图鉴入库即进入获取池与展示（名单>图鉴>内置优先级）；
+    全空时回退内置 TREASURES 键，保证宝物可获取/可展示（与 RIDE_SHOP 内置回退同构）"""
     out = []
     try:
         for key in ("宝物", "treasure"):
@@ -34,6 +44,23 @@ def _treasure_names():
                     out.append(t)
     except Exception:
         pass
+    # 图鉴入库即并入：只进结构表、名单漏配的宝物同样可获取（防名单/结构 desync 导致绝版）
+    try:
+        _items = _treasure_items() or {}
+        for t in _items.keys():
+            t = str(t or "").strip()
+            if t and t not in out:
+                out.append(t)
+    except Exception:
+        pass
+    if not out:
+        try:
+            for t in (_TREASURES_BUILTIN or {}).keys():
+                t = str(t or "").strip()
+                if t and t not in out:
+                    out.append(t)
+        except Exception:
+            pass
     return out
 
 
@@ -67,6 +94,13 @@ def _treasure_items():
                         out[str(k)] = v
                     elif v is not None and str(v).strip() != "":
                         out[str(k)] = {"desc": str(v)}
+    except Exception:
+        pass
+    # 内置回退：sidecar 为空时类型/数值/描述取 TREASURES 内置表（自定义侧按名覆盖）
+    try:
+        for k, v in (_TREASURES_BUILTIN or {}).items():
+            if str(k) not in out and isinstance(v, dict):
+                out[str(k)] = v
     except Exception:
         pass
     return out

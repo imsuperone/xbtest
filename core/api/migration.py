@@ -13,7 +13,7 @@ try:
 except ImportError:
     from core.adapters import json_response
 
-from .web_utils import _err, get_req_query, get_req_json
+from .web_utils import _err, get_req_query, get_req_json, read_upload_b64
 
 try:
     from .. import storage as ST
@@ -24,6 +24,16 @@ except ImportError:
         from core.keymap import cn_to_en as _cn2en
     except Exception:
         def _cn2en(k): return k
+# 坐骑/宝物名表（纯数据模块，无导入环）：后缀节 [QQ坐骑]/[QQ武器] 归类用
+try:
+    from ...games.config.shop import RIDE_SHOP as _RIDE_SHOP_BUILTIN, RIDE_PRICES as _RIDE_PRICES_BUILTIN, TREASURES as _TREASURES_BUILTIN
+except ImportError:
+    try:
+        from games.config.shop import RIDE_SHOP as _RIDE_SHOP_BUILTIN, RIDE_PRICES as _RIDE_PRICES_BUILTIN, TREASURES as _TREASURES_BUILTIN  # type: ignore
+    except Exception:
+        _RIDE_SHOP_BUILTIN = {}
+        _RIDE_PRICES_BUILTIN = {}
+        _TREASURES_BUILTIN = {}
 
 
 async def _read_file_bytes_async(f):
@@ -171,6 +181,97 @@ def _handle_ini_content(content, rel_path=""):
                 imported += 1
             except Exception:
                 pass
+        # 后缀节 [QQ武器]/[QQ坐骑]：旧库把坐骑/部分宝物计数散落在此，主循环按 digit 节处理会整段丢失。
+        # 归类：坐骑名（内置商城表）→ 账户 rides.list；宝物名/×升阶 → 群档案 treasure 名单＋账户计数；
+        # 未知键 → 群档案原样保留（不丢数据，展示层只读已知键）。
+        try:
+            _ride_names = set((_RIDE_SHOP_BUILTIN or {}).keys()) | set((_RIDE_PRICES_BUILTIN or {}).keys())
+            _tre_names = set((_TREASURES_BUILTIN or {}).keys()) | {"酒神葫芦", "四象护符"}
+            try:
+                for _tk in (ST.cfg("设置", "宝物", "") or "").split("|") + (ST.cfg("设置", "treasure", "") or "").split("|"):
+                    _tk = str(_tk or "").strip()
+                    if _tk:
+                        _tre_names.add(_tk)
+            except Exception:
+                pass
+            import re as _re_sfx
+            _sfx = {}
+            for _sec in secs:
+                _m = _re_sfx.match(r"^(\d{5,12})(武器|坐骑)$", str(_sec or "").strip())
+                if not _m:
+                    continue
+                _sfx.setdefault(str(_m.group(1)), []).append(str(_sec))
+            for _qq, _seclist in _sfx.items():
+                try:
+                    _a = ST.acct(gid, _qq)
+                    _g = ST.group(gid)
+                    _gu = _g[_qq]
+                    _touched = False
+                    for _sec in _seclist:
+                        try:
+                            _items = list(cp.items(_sec))
+                        except Exception:
+                            continue
+                        for _k, _v in _items:
+                            _k = str(_k or "").strip()
+                            if not _k:
+                                continue
+                            try:
+                                _iv = int(float(str(_v or "0").strip() or "0"))
+                            except Exception:
+                                _iv = 0
+                            if _k in _ride_names:
+                                # 坐骑：并入 rides.list（去重）
+                                try:
+                                    _r = json.loads(_a.get("rides", "{}") or "{}")
+                                    if not isinstance(_r, dict):
+                                        _r = {}
+                                except Exception:
+                                    _r = {}
+                                _lst = _r.get("list")
+                                if not isinstance(_lst, list):
+                                    _lst = []
+                                if _k not in _lst:
+                                    _lst.append(_k)
+                                    _touched = True
+                                _r["list"] = _lst
+                                _a.set("rides", json.dumps(_r, ensure_ascii=False))
+                            elif _k in _tre_names or _k.endswith("升阶"):
+                                # 宝物计数/升阶：计数进账户（与 digit 节同口径 _cn2en），名单并入群档案
+                                _base = _k[:-2] if _k.endswith("升阶") else _k
+                                try:
+                                    _a.set(_cn2en(_k), str(_v))
+                                except Exception:
+                                    pass
+                                try:
+                                    _tl = [t for t in str(_gu.get("treasure", "") or "").split("|") if t]
+                                    if _base and _base not in _tl:
+                                        _tl.append(_base)
+                                        _touched = True
+                                    _gu["treasure"] = "|".join(_tl)
+                                except Exception:
+                                    pass
+                                _touched = True
+                            else:
+                                try:
+                                    _gu[_cn2en(_k)] = str(_v)
+                                    _touched = True
+                                except Exception:
+                                    pass
+                    if _touched:
+                        try:
+                            ST.acct_save(gid, _qq)
+                        except Exception:
+                            pass
+                        try:
+                            ST.save_group(gid)
+                        except Exception:
+                            pass
+                        imported += 1
+                except Exception:
+                    pass
+        except Exception:
+            pass
         return imported
     # 单用户 ini（文件名=QQ，父目录=gid）：如 精灵系统/游戏账户/<gid>/<qq>.ini
     # 若 rel_path 仅为文件名导致 gid==qq 或 gid 缺失，则尝试从 DB 推断真实 gid
@@ -227,52 +328,73 @@ def _handle_ini_content(content, rel_path=""):
                         sp = {}
                 except Exception:
                     sp = {}
-                # 精灵列表
+                # 精灵列表：键须有同名属性节（LV）才算一条精灵，否则是分类占位（如 背包=1）直接跳过
                 lst = []
+                _listed = set()
                 if cp.has_section("精灵列表"):
                     for name, val in cp.items("精灵列表"):
                         name = name.strip()
                         if not name or val.strip() != "1":
                             continue
+                        if not cp.has_section(name):
+                            continue
+                        _listed.add(name)
                         it = {"name": name}
-                        if cp.has_section(name):
-                            # LV/EXP/HP/攻击/防御/特攻/特防/速度
-                            sec_items = dict(cp.items(name))
-                            try:
-                                it["level"] = int(float(sec_items.get("LV", "1") or "1"))
-                            except Exception:
-                                it["level"] = 1
-                            try:
-                                it["exp"] = int(float(sec_items.get("EXP", "0") or "0"))
-                            except Exception:
-                                it["exp"] = 0
-                            for cn_key, en_key in [("HP","hp"),("攻击","atk"),("防御","def"),("特攻","spa"),("特防","spd"),("速度","spe")]:
-                                try:
-                                    if cn_key in sec_items:
-                                        it[en_key] = int(float(sec_items[cn_key] or "0"))
-                                except Exception:
-                                    pass
-                            # 额外保留收服信息
-                            for k in ["收服地点","收服时间"]:
-                                if k in sec_items:
-                                    it[k] = sec_items[k]
-                        else:
+                        # LV/EXP/HP/攻击/防御/特攻/特防/速度
+                        sec_items = dict(cp.items(name))
+                        try:
+                            it["level"] = int(float(sec_items.get("LV", "1") or "1"))
+                        except Exception:
                             it["level"] = 1
+                        try:
+                            it["exp"] = int(float(sec_items.get("EXP", "0") or "0"))
+                        except Exception:
+                            it["exp"] = 0
+                        for cn_key, en_key in [("HP","hp"),("攻击","atk"),("防御","def"),("特攻","spa"),("特防","spd"),("速度","spe")]:
+                            try:
+                                if cn_key in sec_items:
+                                    it[en_key] = int(float(sec_items[cn_key] or "0"))
+                            except Exception:
+                                pass
+                        # 额外保留收服信息
+                        for k in ["收服地点","收服时间"]:
+                            if k in sec_items:
+                                it[k] = sec_items[k]
                         lst.append(it)
-                # 背包
+                # 收服名保留：[收服精灵]/收服精灵 有名但无属性节时，留一条 1 级占位（不丢名）
+                try:
+                    if cp.has_section("收服精灵") and cp.has_option("收服精灵", "收服精灵"):
+                        _cn = cp.get("收服精灵", "收服精灵").strip()
+                        if _cn and _cn not in _listed and not any(it.get("name") == _cn for it in lst):
+                            lst.append({"name": _cn, "level": 1, "exp": 0})
+                except Exception:
+                    pass
+                # 背包：新系统 shop/bag 全是中文名，键必须原样中文存（禁 _cn2en 译成拼音，否则买/用对不上）
                 bag = {}
                 if cp.has_section("我的背包"):
                     for k, v in cp.items("我的背包"):
                         try:
-                            nk = _cn2en(k.strip())
-                            # bag 存英文键
-                            bag[nk] = int(float(v or "0"))
+                            _bk = str(k or "").strip()
+                            if not _bk:
+                                continue
+                            _bv = int(float(v or "0"))
+                            if _bv:
+                                bag[_bk] = _bv
                         except Exception:
                             pass
-                # 出战精灵
+                # 出战精灵：[精灵冒险]/出战精灵优先；[我的精灵]/出战精灵 非数字且在列表中时兜底
                 active = ""
                 if cp.has_section("精灵冒险") and cp.has_option("精灵冒险", "出战精灵"):
                     active = cp.get("精灵冒险", "出战精灵").strip()
+                if not active and cp.has_section("我的精灵"):
+                    try:
+                        for _ak, _av in cp.items("我的精灵"):
+                            if str(_ak or "").strip() == "出战精灵":
+                                _cand = str(_av or "").strip()
+                                if _cand and not _cand.isdigit() and any(it.get("name") == _cand for it in lst):
+                                    active = _cand
+                    except Exception:
+                        pass
                 # 组装
                 if lst or bag or active:
                     sp["list"] = lst
@@ -428,8 +550,28 @@ async def handle_import_legacy(req, plugin_base=""):
             except Exception:
                 f = None
         if not f:
+            # base64 直传（WebUI postFile 发 {filename, file_base64}，无 multipart）：
+            # 先解 base64 拿真实文件，再按扩展名分发；与 weapon_pool 同口径
             try:
-                p = await get_req_json(req, default={})
+                b64_name, b64_data = await read_upload_b64(request)
+                if b64_data:
+                    if len(b64_data) > _IMPORT_MAX_BYTES:
+                        return _err("file too large (50M)", 400)
+
+                    class _B64File:
+                        def __init__(self, name, data):
+                            self.filename = name or "upload.bin"
+                            self._data = data
+
+                        async def read(self):
+                            return self._data
+
+                    f = _B64File(b64_name, bytes(b64_data))
+            except Exception:
+                pass
+        if not f:
+            try:
+                p = await get_req_json(request, default={})
                 if isinstance(p, dict) and p:
                     users = p.get("users")
                     if isinstance(users, list):

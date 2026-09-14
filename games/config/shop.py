@@ -8,6 +8,17 @@ slave_state._GACHA_COST_DEF 单源，不搬（消费方 slave/gacha.py 经 _S. �
 # work=打工工资加成%；worth=身价加成%（战斗力身价部分）；空=纯收藏
 TREASURE_TYPES = ("", "atk", "shield", "pardon", "work", "worth")
 
+# 宝物内置表 {名: {type, value, desc}}：商城图鉴.treasures 为空时回退此表，
+# 设置.宝物 为空时宝物名单回退此表键（与 RIDE_SHOP 内置回退同构，保证开箱可获取、有效果看）
+TREASURES = {
+    "酒神葫芦": {"type": "pardon", "value": 1, "desc": "造反免罪：持有时造反直接成功，恢复自由并劫掠主人"},
+    "四象护符": {"type": "shield", "value": 1, "desc": "打架护盾：己方被打败/打赢时免被偷走奴隶"},
+    "金蟾": {"type": "work", "value": 20, "desc": "打工工资 +20%"},
+    "玉如意": {"type": "worth", "value": 10, "desc": "身价加成 +10%（计入战斗力）"},
+    "雷公锤": {"type": "atk", "value": 500, "desc": "主人战力 +500"},
+    "夜明珠": {"type": "", "value": 0, "desc": "纯收藏，无实战效果"},
+}
+
 # 稀有度陈列顺序（武器池页签/校验共用）
 POOL_RARS = ("SSR", "SR", "R")
 
