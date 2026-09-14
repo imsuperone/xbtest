@@ -1,5 +1,12 @@
 # 更新日志
 
+## v2026w0914c
+- 🐛 **旧库上传真因修复**：上版 base64 补丁误用未定义变量名被吞错，`no file` 依旧；已修正并用仿真请求端到端验证（ini 45+148、zip 8 全部入库）；
+- 📦 **根目录持久化入口**：文件库新增 `persistent/` 虚拟域（realpath+commonpath 双检，穿越/绝对路径拒绝），根目录自动挂载「持久化目录」入口，db/密钥/配置照常屏蔽，上传/删/改名同步放行持久化域；
+- 🖼️ **双击看图根治**：列表无 `img` 字段时 `data-imgsrc="undefined"` 非空误进坏图分支；现缺图一律走缩略图拉取；
+- 📄 **文本在线浏览**：新增 `images/text`（json/md/txt/yaml/ini/log 等，256KB 预览，utf-8/gbk 自适应），双击文本文件弹窗预览＋复制；
+- 🔢 **版本号**：顺延至 `2026w0914c`。
+
 ## v2026w0914b
 - 📥 **旧库导入修复（上传断点+方言补齐）**：
   - WebUI base64 直传（`{filename, file_base64}`） previously 直接掉进 json 分支报 400，接上 `read_upload_b64` 解码，与 weapon_pool 同口径，50M 上限；

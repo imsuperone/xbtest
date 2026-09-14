@@ -553,7 +553,7 @@ async def handle_import_legacy(req, plugin_base=""):
             # base64 直传（WebUI postFile 发 {filename, file_base64}，无 multipart）：
             # 先解 base64 拿真实文件，再按扩展名分发；与 weapon_pool 同口径
             try:
-                b64_name, b64_data = await read_upload_b64(request)
+                b64_name, b64_data = await read_upload_b64(req)
                 if b64_data:
                     if len(b64_data) > _IMPORT_MAX_BYTES:
                         return _err("file too large (50M)", 400)

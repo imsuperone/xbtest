@@ -34,9 +34,30 @@ def _inside(path, root, allow_root=True):
         return False
 
 
+def _pers_base(base=""):
+    """AstrBot 持久化数据目录（StarTools.get_data_dir），失败回空（调用方再回退 data/）"""
+    try:
+        b = base or _img_base()
+        pb = ST.get_persistent_data_dir(b) if hasattr(ST, "get_persistent_data_dir") else ""
+        return str(pb or "")
+    except Exception:
+        return ""
+
+
 def _safe_path(rel, base=""):
     b = base or _img_base()
-    p = os.path.join(b, str(rel or "").strip().lstrip("/\\"))
+    s = str(rel or "").strip().replace("\\", "/")
+    # 持久化域虚拟前缀：persistent/... 映射到 AstrBot 持久化目录（可在管理台根目录进出）
+    if s == "persistent" or s.startswith("persistent/"):
+        pb = _pers_base(b)
+        if not pb:
+            return None
+        sub = s[len("persistent"):].lstrip("/")
+        p = os.path.realpath(os.path.join(pb, sub)) if sub else os.path.realpath(pb)
+        if _inside(p, pb):
+            return p
+        return None
+    p = os.path.join(b, s.lstrip("/"))
     if _inside(p, b):
         return os.path.realpath(p)
     data_base = os.path.join(b, "data")
@@ -47,6 +68,20 @@ def _safe_path(rel, base=""):
     if _inside(p, data_base) or _inside(p, pers_base):
         return os.path.realpath(p)
     return None
+
+
+def _to_rel(fp, base=""):
+    """绝对路径转回前端可用相对路径：持久化目录下用 persistent/ 前缀，保证往返可用"""
+    try:
+        b = base or _img_base()
+        t = os.path.realpath(str(fp or ""))
+        pb = _pers_base(b)
+        if pb and _inside(t, pb):
+            sub = os.path.relpath(t, os.path.realpath(pb)).replace(os.sep, "/")
+            return "persistent" if sub in ("", ".") else "persistent/" + sub
+        return os.path.relpath(t, os.path.realpath(b)).replace(os.sep, "/")
+    except Exception:
+        return ""
 
 
 _BLOCKED_NAMES = {"webdav_secret.json", ".xb_last_backup.json", ".xb_backup.busy",
@@ -126,7 +161,9 @@ async def handle_images_list(request, plugin_base=""):
                 for entry in it:
                     try:
                         name = entry.name
-                        r = os.path.relpath(entry.path, base).replace(os.sep, "/")
+                        r = _to_rel(entry.path, base)
+                        if not r:
+                            continue
                         if entry.is_dir(follow_symlinks=False):
                             st = entry.stat(follow_symlinks=False)
                             mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(st.st_mtime))
@@ -142,7 +179,22 @@ async def handle_images_list(request, plugin_base=""):
             pass
         dirs.sort(key=lambda x: x["name"])
         files.sort(key=lambda x: x["name"])
-        return {"dir": str(rel or ""), "dirs": dirs, "files": files}
+        out = {"dir": str(rel or ""), "dirs": dirs, "files": files}
+        # 根目录附带持久化目录入口（与插件 data/ 不重合时）：前端按普通文件夹渲染，双击进入
+        try:
+            if not str(rel or "").strip().strip("/"):
+                pb = _pers_base(base)
+                data_base = os.path.realpath(os.path.join(base, "data"))
+                if pb and os.path.isdir(pb) and os.path.realpath(pb) != data_base:
+                    if not any(x.get("path") == "persistent" for x in dirs):
+                        dirs.insert(0, {"name": "持久化目录（AstrBot数据）", "path": "persistent", "mtime": ""})
+        except Exception:
+            pass
+        try:
+            out["scope"] = "persistent" if str(rel or "").strip().replace("\\", "/").rstrip("/") == "persistent" or str(rel or "").strip().replace("\\", "/").startswith("persistent/") else "plugin"
+        except Exception:
+            out["scope"] = "plugin"
+        return out
     data = await asyncio.to_thread(_work)
     return json_response(data)
 
@@ -237,7 +289,7 @@ async def handle_images_upload(request, plugin_base=""):
             dst = os.path.join(dst_dir, filename)
             with open(dst, "wb") as w:
                 w.write(data)
-            return json_response({"ok": True, "path": os.path.relpath(dst, base).replace(os.sep, "/"), "size": len(data)})
+            return json_response({"ok": True, "path": _to_rel(dst, base) or os.path.relpath(dst, base).replace(os.sep, "/"), "size": len(data)})
         except Exception as e:
             return _err(f"upload failed: {e}", 500)
 
@@ -290,7 +342,7 @@ async def handle_images_rename(request, plugin_base=""):
         np = _safe_path(dst, base)
     else:
         np = os.path.join(os.path.dirname(fp), dst)
-        np = _safe_path(os.path.relpath(np, base), base)
+        np = _safe_path(_to_rel(np, base) or dst, base)
     if not np or _is_blocked(np) or not _in_data_roots(np, base):
         return _err("bad dst", 400)
 
@@ -353,6 +405,55 @@ async def handle_images_thumb(request, plugin_base=""):
             return json_response({"ok": True, "path": rel, "thumb": payload})
         except Exception as e:
             return _err(f"thumb failed: {e}", 500)
+
+    return await asyncio.to_thread(_work)
+
+
+_TEXT_PREVIEW_EXTS = (".json", ".md", ".markdown", ".txt", ".text", ".yaml", ".yml",
+                      ".ini", ".cfg", ".toml", ".csv", ".log")
+_TEXT_PREVIEW_MAX = 256 * 1024
+
+
+async def handle_images_text(request, plugin_base=""):
+    """文本文件在线浏览（json/md/txt/yaml/ini/log 等，≤256KB，超时截断标注）"""
+    p = await get_req_json(request, default={})
+    rel = str((p.get("path") or p.get("file") or "") if isinstance(p, dict) else "").strip()
+    if not rel:
+        rel = get_req_query(request, "path", "") or get_req_query(request, "file", "")
+    rel = str(rel).strip()
+    if not rel:
+        return _err("path required", 400)
+    base = _img_base(plugin_base)
+    fp = _safe_path(rel, base)
+    if not fp or not os.path.isfile(fp):
+        return _err(f"file not found: {rel}", 404)
+    if _is_blocked(fp) or not _in_data_strict(fp, base):
+        return _err("path out of scope", 400)
+    if os.path.splitext(fp)[1].lower() not in _TEXT_PREVIEW_EXTS:
+        return _err("not a previewable text file", 400)
+
+    def _work():
+        try:
+            sz = os.path.getsize(fp)
+            if sz > 10 * 1024 * 1024:
+                return _err("file too large (10M)", 400)
+            with open(fp, "rb") as f:
+                raw = f.read(_TEXT_PREVIEW_MAX + 1)
+            truncated = len(raw) > _TEXT_PREVIEW_MAX
+            raw = raw[:_TEXT_PREVIEW_MAX]
+            text = None
+            for enc in ("utf-8-sig", "gbk", "utf-8"):
+                try:
+                    text = raw.decode(enc)
+                    break
+                except Exception:
+                    continue
+            if text is None:
+                text = raw.decode("utf-8", errors="replace")
+            return json_response({"ok": True, "path": rel, "text": text,
+                                  "size": sz, "truncated": truncated})
+        except Exception as e:
+            return _err(f"text read failed: {e}", 500)
 
     return await asyncio.to_thread(_work)
 

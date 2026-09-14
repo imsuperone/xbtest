@@ -345,6 +345,7 @@ _XB_API_ROUTES = [
     ("images/rename", "POST", "page_images_rename", "重命名图片"),
     ("images/mkdir", "POST", "page_images_mkdir", "新建文件夹"),
     ("images/thumb", "GET,POST", "page_images_thumb", "单张图片预览"),
+    ("images/text", "GET", "page_images_text", "文本文件在线浏览"),
     ("images/copy", "POST", "page_images_copy", "复制文件"),
     ("images/export", "GET,POST", "page_images_export", "导出文件"),
     ("spirits", "GET", "page_spirits_get", "精灵图鉴读取"),
@@ -983,6 +984,9 @@ class XbBot(Star):
 
     async def page_images_thumb(self, request=None, *args, **kwargs):
         return await self._call_api("core.api.images", "handle_images_thumb", "thumb", request, args, mode="req", with_base=True)
+
+    async def page_images_text(self, request=None, *args, **kwargs):
+        return await self._call_api("core.api.images", "handle_images_text", "text", request, args, mode="req", with_base=True)
 
     async def page_images_export(self, request=None, *args, **kwargs):
         return await self._call_api("core.api.images", "handle_images_export", "export", request, args, with_base=True)

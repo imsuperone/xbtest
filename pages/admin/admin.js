@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0914b";
+const FRONTEND_VER = "2026w0914c";
 
 let _WORKING_API_PREFIX = null;
 
@@ -435,6 +435,7 @@ const _GET_POST_FALLBACK_ALLOW = new Set([
   "version/check", "version/channel",
   "logs", "logs/export",
   "slave/users", "spirit/users", "groups/list",
+  "images/text",
   "backup/webdav/test", "backups/webdav/test",
   "backup/webdav/files", "backups/webdav/files",
 ]);
@@ -1545,7 +1546,7 @@ function renderImages(d) {
     else if (ext === "zip") ficon = "🗜️";
     else if (ext === "log") ficon = "📜";
 
-    html += `<div class="icard${selCls}" data-imgsrc="${esc(x.img)}" data-imgname="${esc(x.name)}" data-selpath="${esc(x.path)}" title="${esc(x.name)} (双击看大图/单击选中)">
+    html += `<div class="icard${selCls}" data-imgsrc="${esc(x.img || "")}" data-imgname="${esc(x.name)}" data-selpath="${esc(x.path)}" title="${esc(x.name)} (双击看大图/单击选中)">
       ${isImg ? `<button type="button" class="img-preview-badge" data-action="preview" title="查看大图" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;z-index:2">👁️</button>` : ""}
       ${ficon ? `<div class="fi">${ficon}</div>` : `<img class="icard-img" loading="lazy" decoding="async" src="${esc(_safeImgSrc(x.img))}" alt="" style="height:88px;width:100%;object-fit:cover;border-radius:var(--radius-md);display:block">`}
       <div class="nm">${esc(x.name)}</div>
@@ -1574,14 +1575,32 @@ function renderImages(d) {
 
   async function _previewCard(card) {
     if (!card) return;
-    let src = card.dataset.imgsrc;
     const name = card.dataset.imgname || "";
+    const p = card.dataset.selpath;
+    if (!p) return;
+    const ext = (p.split(".").pop() || "").toLowerCase();
+    // 文本文件：走 images/text 在线浏览（json/md/txt/yaml/ini/log 等）
+    if (["json","md","markdown","txt","text","yaml","yml","ini","cfg","toml","csv","log"].includes(ext)) {
+      try {
+        toast("正在载入文本预览…", "ok", 1200);
+        const res = await callApi("images/text", { path: p }, "GET");
+        if (res && !res.error && typeof res.text === "string") {
+          showTextPreview(name || p, res.text, !!res.truncated);
+        } else {
+          toast("文本预览失败: " + ((res && (res.error || res.msg)) || "未知错误"), "bad");
+        }
+      } catch(err) {
+        toast("文本预览失败: " + (err.message || String(err)), "bad");
+      }
+      return;
+    }
+    let src = card.dataset.imgsrc;
+    // data-imgsrc 缺失时为 ""（旧缓存可能是 "undefined" 字符串）：一律视为无图，走缩略图拉取
+    if (!src || src === "undefined") src = "";
     if (src) {
       showLightbox(src, name);
       return;
     }
-    const p = card.dataset.selpath;
-    if (!p) return;
     try {
       toast("正在载入大图预览…", "ok", 1200);
       const res = await getBridge().apiGet("images/thumb", { path: p });
@@ -1597,6 +1616,43 @@ function renderImages(d) {
       toast("加载大图失败: " + (err.message || String(err)), "bad");
     }
   }
+
+function showTextPreview(name, text, truncated) {
+  const modal = document.getElementById("appModal");
+  if (!modal) return;
+  const icon = document.getElementById("appModalIcon");
+  const title = document.getElementById("appModalTitle");
+  const content = document.getElementById("appModalContent");
+  const inputWrap = document.getElementById("appModalInputWrap");
+  const cancelBtn = document.getElementById("appModalCancel");
+  const okBtn = document.getElementById("appModalOk");
+  if (icon) icon.textContent = "📄";
+  if (title) title.textContent = String(name || "文本预览");
+  if (inputWrap) inputWrap.style.display = "none";
+  if (content) {
+    content.innerHTML = `
+      <div style="margin:4px 0 10px"><div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">文本预览（点击文本框可自动全选）${truncated ? "　<span class=\"badge badge-primary\">内容过长已截断</span>" : ""}</div><textarea readonly style="width:100%;height:320px;background:var(--panel);color:var(--text);font-family:monospace;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:10px;outline:none;resize:vertical;line-height:1.5;white-space:pre" onclick="this.select()">${esc(text || "")}</textarea></div>
+      <div style="display:flex;gap:8px;margin:6px 0 2px;flex-wrap:wrap"><button id="btnCopyTextPreview" class="ghost" style="padding:8px 14px;font-size:12.5px;cursor:pointer">📋 复制全部内容</button></div>`;
+  }
+  const copyBtn = document.getElementById("btnCopyTextPreview");
+  if (copyBtn) {
+    copyBtn.onclick = () => {
+      copyToClipboard(text || "");
+      copyBtn.textContent = "✅ 已复制到剪贴板";
+      setTimeout(() => { copyBtn.textContent = "📋 复制全部内容"; }, 2000);
+    };
+  }
+  if (cancelBtn) cancelBtn.style.display = "none";
+  if (okBtn) {
+    okBtn.textContent = "关闭";
+    okBtn.onclick = () => {
+      modal.className = "";
+      if (cancelBtn) cancelBtn.style.display = "";
+      okBtn.onclick = null;
+    };
+  }
+  modal.className = "show";
+}
 
   // 统一事件委托处理选择、双击与大图预览
   box.onclick = (e) => {
@@ -2434,7 +2490,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0914b"
+        version: res.version || "2026w0914c"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
