@@ -52,6 +52,10 @@ def _validate_config(norm, plugin_base=""):
             if "概率" in str(key) or "成功率" in str(key):
                 if not 0 <= number <= 100:
                     return f"{sec}.{key} 必须在 0 到 100 之间"
+            elif "比例" in str(key) or "倍率" in str(key):
+                # 工资比例/身价上涨/赎身倍率：超 100 即百倍起步，直接卡掉（防配错印钱）
+                if not 0 <= number <= 100:
+                    return f"{sec}.{key} 必须在 0 到 100 之间"
             elif number < 0 and "变化下限" not in str(key):
                 return f"{sec}.{key} 不能为负数"
             numeric[(sec, str(key))] = number
@@ -59,6 +63,15 @@ def _validate_config(norm, plugin_base=""):
         if not key.endswith("下限"):
             continue
         upper_key = key[:-2] + "上限"
+        upper = numeric.get((sec, upper_key))
+        if upper is not None and lower > upper:
+            return f"{sec}.{key} 不能大于 {upper_key}"
+    for (sec, key), lower in list(numeric.items()):
+        if "最小" not in key:
+            continue
+        upper_key = key.replace("最小", "最大", 1)
+        if upper_key == key:
+            continue
         upper = numeric.get((sec, upper_key))
         if upper is not None and lower > upper:
             return f"{sec}.{key} 不能大于 {upper_key}"

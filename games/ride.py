@@ -66,25 +66,57 @@ def _alias_img_path(p):
 
 
 def _mount_img(name):
-    # 优先检查主路径，兼容中文文件名编码与多布局
-    for base in _ALT_IMG_BASES:
-        p = os.path.join(base, str(name) + ".jpg")
-        try:
-            if os.path.isfile(p):
-                return [p]
-        except Exception:
-            pass
-        # 尝试 URL 编码/GBK 回退
-        try:
-            import pathlib
-            pp = pathlib.Path(base) / (str(name) + ".jpg")
-            if pp.exists():
-                return [str(pp)]
-        except Exception:
-            pass
+    # 有效目录缓存命中即停；全 miss 时重扫一次（覆盖运行中新上传的目录），仍无走旧兜底
+    for base in _valid_img_bases():
+        hit = _probe_img_base(base, name)
+        if hit:
+            return hit
+    for base in _refresh_img_bases():
+        hit = _probe_img_base(base, name)
+        if hit:
+            return hit
     # 最后尝试主路径直接返回（交由 _build_chain 再校验）
     p = os.path.join(_IMG_BASE, str(name) + ".jpg")
     return [p] if os.path.exists(p) else []
+
+
+_IMG_BASES_CACHE = None
+
+
+def _valid_img_bases():
+    """有效图片目录缓存：过滤不存在目录（/AstrBot 硬编码等多为 miss），命中即零扫描"""
+    global _IMG_BASES_CACHE
+    if _IMG_BASES_CACHE:
+        return _IMG_BASES_CACHE
+    out = []
+    for base in _ALT_IMG_BASES:
+        try:
+            if base and os.path.isdir(base) and base not in out:
+                out.append(base)
+        except Exception:
+            pass
+    if not out:
+        out = list(_ALT_IMG_BASES[:3])
+    _IMG_BASES_CACHE = out
+    return out
+
+
+def _refresh_img_bases():
+    global _IMG_BASES_CACHE
+    _IMG_BASES_CACHE = None
+    return _valid_img_bases()
+
+
+def _probe_img_base(base, name):
+    # 单目录单次 isfile 探测（原 isfile+pathlib 双查同义，合并省一半 syscall）
+    # 优先检查主路径，兼容中文文件名编码与多布局
+    try:
+        p = os.path.join(base, str(name) + ".jpg")
+        if os.path.isfile(p):
+            return [p]
+    except Exception:
+        pass
+    return []
 
 MENU = (
     "🏍️ 坐骑管理\r\n"

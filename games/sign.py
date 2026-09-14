@@ -84,12 +84,20 @@ def cmd_sign(gid, qq):
     """签到: 基础奖励 + 连签加成 + 身价/资产联动(财富=现金+存款)"""
     a = _acct(gid, qq)
     today = _today().isoformat()
-    if a.get("sign_date") == today:
+    # 重复签到看两个日期键（旧数据可能只写其一，任一是今天都算已签，禁错位双签）
+    if a.get("sign_date") == today or a.get("last_sign_date") == today:
         return cfg("签到配置", "重复签到文案",
                       "亲，您今天已经签到过了，请明天继续吧！")
-    total = int(float(a.get("sign_count", "0")))
-    chain = int(float(a.get("consecutive_days", "0")))
-    prev = str(a.get("last_sign_date", ""))
+    # 脏值自愈：计数坏串按 0 起（禁整单抛错锁死签到）
+    try:
+        total = int(float(a.get("sign_count", "0")))
+    except Exception:
+        total = 0
+    try:
+        chain = int(float(a.get("consecutive_days", "0")))
+    except Exception:
+        chain = 0
+    prev = str(a.get("last_sign_date", "") or a.get("sign_date", ""))
     yest = (dt.date.today() - dt.timedelta(days=1)).isoformat()
     chain = chain + 1 if prev == yest else 1
     # 签到奖励按区间(优先支持中英双向键与休闲高福利默认值)
@@ -110,9 +118,19 @@ def cmd_sign(gid, qq):
     chain_bonus = bonus * min(chain, CHAIN_CAP)
     total += 1
     # 预取当前额外属性旧值，用于一次事务内计算新值（避免 3次 acct_add+acct_save 的 3锁3提交）
-    cur_stam = int(float(a.get("stamina", "0") or 0))
-    cur_charm = int(float(a.get("charm", "0") or 0))
-    cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
+    # 脏值自愈同上，坏串按 0 起
+    try:
+        cur_stam = int(float(a.get("stamina", "0") or 0))
+    except Exception:
+        cur_stam = 0
+    try:
+        cur_charm = int(float(a.get("charm", "0") or 0))
+    except Exception:
+        cur_charm = 0
+    try:
+        cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
+    except Exception:
+        cur_juan = 0
     # 单事务：钱包 delta + 账户批量字段（原5次提交→1次，持锁 1次）
     # txn 失败返 None：禁止拆成多次独立写入补偿，避免签到奖励半成功。
     if ST.txn_coins_acct(gid, qq, base + chain_bonus, {

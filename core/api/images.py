@@ -349,7 +349,7 @@ async def handle_images_rename(request, plugin_base=""):
     def _work():
         try:
             os.rename(fp, np)
-            return json_response({"ok": True, "path": os.path.relpath(np, base).replace(os.sep, "/")})
+            return json_response({"ok": True, "path": _to_rel(np, base) or os.path.relpath(np, base).replace(os.sep, "/")})
         except Exception as e:
             return _err(f"rename failed: {e}", 500)
 

@@ -30,7 +30,7 @@ def cmd_redpack(gid, qq, amount, pwd=None):
         pwd = str(pwd).strip()
         if len(pwd) > 10:
             return "亲，红包口令最长只能10位哦~"
-    else:
+    if not pwd:
         pwd = "".join(random.choices(string.digits, k=5))
     last = a.int("redpack_send_time")
     if last and time.time() - last < interval:
@@ -101,7 +101,12 @@ def cmd_recv_red(gid, qq, pwd):
             if int(row[0]) == int(qq):
                 return "自己不允许抢自己的红包！"
             a = _acct(gid, qq)
-            if a.get("redpack_code") == pwd:
+            # 已抢口令多槽位（旧 redpack_code 单槽抢A再抢B后可重抢A；新 redpack_codes 管道并存，旧键同步写兼容回退）
+            try:
+                _grabbed = [c for c in str(a.get("redpack_codes", "") or "").split("|") if c]
+            except Exception:
+                _grabbed = []
+            if pwd in _grabbed or a.get("redpack_code") == pwd:
                 return "你已经抢过这个红包了！"
             cost_tili = cfgi("银行配置", "红包_抢体力", 1)
             gain_meili = cfgi("银行配置", "红包_抢魅力", 10)
@@ -124,6 +129,13 @@ def cmd_recv_red(gid, qq, pwd):
             # 扣体力、加金币魅力
             a.set("stamina", str(a.int("stamina") - cost_tili))
             a.set("charm", str(a.int("charm") + gain_meili + base_meili))
+            try:
+                _grabbed = [c for c in str(a.get("redpack_codes", "") or "").split("|") if c]
+            except Exception:
+                _grabbed = []
+            if pwd not in _grabbed:
+                _grabbed.append(pwd)
+            a.set("redpack_codes", "|".join(_grabbed[-20:]))
             a.set("redpack_code", pwd)
             ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
             # 钱包
