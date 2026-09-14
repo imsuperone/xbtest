@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0914g";
+const FRONTEND_VER = "2026w0914h";
 
 let _WORKING_API_PREFIX = null;
 
@@ -2490,7 +2490,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0914g"
+        version: res.version || "2026w0914h"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -4431,6 +4431,9 @@ document.getElementById("btnImgRename")?.addEventListener("click", async () => {
   const nn = await uiPrompt("新文件名（含扩展名）:", cur, "重命名");
   if (!nn || nn === cur) return;
   try { await getBridge().apiPost("images/rename", { path: sel, name: nn }); toast("已重命名", "ok"); IMG_SELECTED=""; await loadImages(IMG_DIR); } catch (err) { toast("重命名失败: " + err.message, "bad"); }
+});
+document.getElementById("btnOpenPersistent")?.addEventListener("click", async () => {
+  try { await loadImages("persistent"); } catch (err) { toast("打开失败: " + (err.message || err), "bad"); }
 });
 // 指令编辑模态
 const _btnCmdSave = document.getElementById("cmdModalSave") || document.getElementById("btnCmdModalSave");

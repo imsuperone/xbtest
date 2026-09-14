@@ -180,16 +180,6 @@ async def handle_images_list(request, plugin_base=""):
         dirs.sort(key=lambda x: x["name"])
         files.sort(key=lambda x: x["name"])
         out = {"dir": str(rel or ""), "dirs": dirs, "files": files}
-        # 根目录附带持久化目录入口（与插件 data/ 不重合时）：前端按普通文件夹渲染，双击进入
-        try:
-            if not str(rel or "").strip().strip("/"):
-                pb = _pers_base(base)
-                data_base = os.path.realpath(os.path.join(base, "data"))
-                if pb and os.path.isdir(pb) and os.path.realpath(pb) != data_base:
-                    if not any(x.get("path") == "persistent" for x in dirs):
-                        dirs.insert(0, {"name": "持久化目录（AstrBot数据）", "path": "persistent", "mtime": ""})
-        except Exception:
-            pass
         try:
             out["scope"] = "persistent" if str(rel or "").strip().replace("\\", "/").rstrip("/") == "persistent" or str(rel or "").strip().replace("\\", "/").startswith("persistent/") else "plugin"
         except Exception:
