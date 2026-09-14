@@ -1,5 +1,10 @@
 # 更新日志
 
+## v2026w0914i
+- 🎨 **调色盘持久化**：`applyTheme`/`initTheme` 改为读写 `localStorage.xbbot_theme`，主题（亮/暗）与调色（`xbbot_monet_color`）双持久，刷新后还原；
+- 🌙 **深色模式可视性热修**：`atlas-seg-btn` 未激活态、`iconBtn`/`tab-nav-btn`、`themePaletteBtn`/`themeBtn` 在暗色下提亮边框与文字，`atlas-seg-tabs` 背景加深，搜索框占位符提亮；
+- 🔢 **版本号**：顺延至 `2026w0914i`.
+
 ## v2026w0914h
 - 📁 **持久化目录按钮下移**：根目录不再直接注入 `persistent` 文件夹，改为页面最底部“打开持久化目录”按钮（点击进 `persistent/` 虚拟域）；
 - 🔢 **版本号**：顺延至 `2026w0914h`.

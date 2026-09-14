@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0914h";
+const FRONTEND_VER = "2026w0914i";
 
 let _WORKING_API_PREFIX = null;
 
@@ -327,19 +327,24 @@ function applyMonetTheme(hex) {
 
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("xbbot_theme", t); } catch (e) {}
   const b = document.getElementById("themeBtn");
   if (b) b.textContent = t === "dark" ? "☀" : "☾";
   applyMonetTheme(_CURRENT_MONET_COLOR);
 }
 function initTheme() {
   let savedColor = "#0B57D0";
+  let savedTheme = "light";
   try { savedColor = localStorage.getItem("xbbot_monet_color") || "#0B57D0"; } catch (e) {}
+  try { savedTheme = localStorage.getItem("xbbot_theme") || "light"; } catch (e) {}
+  if (savedTheme !== "dark" && savedTheme !== "light") savedTheme = "light";
   _CURRENT_MONET_COLOR = savedColor;
-  applyTheme("light");
+  applyTheme(savedTheme);
 
   const b = document.getElementById("themeBtn");
   if (b) b.addEventListener("click", () => {
-    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+    const newTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    applyTheme(newTheme);
   });
 
   initMonetPalette();
@@ -2490,7 +2495,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0914h"
+        version: res.version || "2026w0914i"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
