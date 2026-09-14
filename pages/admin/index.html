@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="color-scheme" content="light dark">
   <title>管理控制台 - 小白机器人</title>
   <style>
-    :root {
+    :root, [data-theme="light"] {
+      color-scheme: light;
       /* Android 16 (Material 3 Expressive) Color Tokens - 纯白通透基底 */
       --bg: #FFFFFF;
       --panel: #FFFFFF;
@@ -52,6 +54,7 @@
     }
 
     [data-theme="dark"] {
+      color-scheme: dark;
       --bg: #111318;
       --panel: #191C20;
       --panel-hover: #252930;
@@ -1551,6 +1554,11 @@
       box-shadow: var(--shadow-lg);
       overflow: hidden;
       animation: m3DialogPop 0.22s cubic-bezier(0.2, 0, 0, 1);
+      transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), max-height 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .cmd-modal-box.modal-wide, .m3-modal-box.modal-wide {
+      width: min(880px, 95vw) !important;
+      max-height: 90vh !important;
     }
     @keyframes m3DialogPop {
       from { opacity: 0; transform: scale(0.94); }
@@ -1872,11 +1880,32 @@
       cursor: pointer;
       backdrop-filter: blur(10px);
     }
+    #lightbox.show {
+      display: flex !important;
+    }
     #lightbox img {
       max-width: 90vw;
       max-height: 90vh;
       border-radius: var(--radius-lg);
       box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    #lightbox .cap {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: #FFFFFF;
+      padding: 6px 16px;
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 600;
+      pointer-events: none;
+      max-width: 80vw;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* =========================================================================
@@ -1974,7 +2003,7 @@
       .hdr-btn-short { display: none; }
     }
 
-    /* Dark mode hotfix: palette persistence & atlas visibility (v2026w0914i) */
+    /* Dark mode hotfix: palette persistence & atlas visibility (v2026w0914j) */
     [data-theme="dark"] .atlas-seg-btn:not(.active) {
       color: #C4C7D0 !important;
       background: transparent !important;
@@ -2011,7 +2040,7 @@
   <div class="wrap">
     <header>
       <div class="brand">
-        <h1>管理控制台 <span class="ver">v2026w0914i</span></h1>
+        <h1>管理控制台 <span class="ver">v2026w0914j</span></h1>
         <div class="sub">
           <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
         </div>
@@ -2699,8 +2728,8 @@
           <div>👤 作者：<b>Light</b></div>
           <div>📦 插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
           <div>🔗 仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
-          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w0914i</b></div>
-          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w0914i</b></div>
+          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w0914j</b></div>
+          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w0914j</b></div>
         </div>
       </div>
     </div>
@@ -2978,6 +3007,6 @@
       </div>
     </div>
   </div>
-  <script src="./admin.js?v=2026w0914i"></script>
+  <script src="./admin.js?v=2026w0914j"></script>
 </body>
 </html>

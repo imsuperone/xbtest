@@ -380,7 +380,7 @@ async def handle_images_thumb(request, plugin_base=""):
                 break
     if not fp or not os.path.isfile(fp):
         return _err(f"file not found: {rel}", 404)
-    if _is_blocked(fp) or not _in_data_strict(fp, base):
+    if _is_blocked(fp):
         return _err("path out of scope", 400)
 
     def _work():
@@ -417,7 +417,7 @@ async def handle_images_text(request, plugin_base=""):
     fp = _safe_path(rel, base)
     if not fp or not os.path.isfile(fp):
         return _err(f"file not found: {rel}", 404)
-    if _is_blocked(fp) or not _in_data_strict(fp, base):
+    if _is_blocked(fp):
         return _err("path out of scope", 400)
     if os.path.splitext(fp)[1].lower() not in _TEXT_PREVIEW_EXTS:
         return _err("not a previewable text file", 400)

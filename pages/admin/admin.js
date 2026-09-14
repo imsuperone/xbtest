@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0914i";
+const FRONTEND_VER = "2026w0914j";
 
 let _WORKING_API_PREFIX = null;
 
@@ -327,6 +327,7 @@ function applyMonetTheme(hex) {
 
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
+  try { document.documentElement.style.colorScheme = t; } catch (e) {}
   try { localStorage.setItem("xbbot_theme", t); } catch (e) {}
   const b = document.getElementById("themeBtn");
   if (b) b.textContent = t === "dark" ? "☀" : "☾";
@@ -334,10 +335,20 @@ function applyTheme(t) {
 }
 function initTheme() {
   let savedColor = "#0B57D0";
-  let savedTheme = "light";
+  let savedTheme = "";
   try { savedColor = localStorage.getItem("xbbot_monet_color") || "#0B57D0"; } catch (e) {}
-  try { savedTheme = localStorage.getItem("xbbot_theme") || "light"; } catch (e) {}
-  if (savedTheme !== "dark" && savedTheme !== "light") savedTheme = "light";
+  try { savedTheme = localStorage.getItem("xbbot_theme") || ""; } catch (e) {}
+  if (!savedTheme || (savedTheme !== "dark" && savedTheme !== "light")) {
+    try {
+      if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        savedTheme = "dark";
+      } else {
+        savedTheme = "light";
+      }
+    } catch (e) {
+      savedTheme = "light";
+    }
+  }
   _CURRENT_MONET_COLOR = savedColor;
   applyTheme(savedTheme);
 
@@ -1608,7 +1619,7 @@ function renderImages(d) {
     }
     try {
       toast("正在载入大图预览…", "ok", 1200);
-      const res = await getBridge().apiGet("images/thumb", { path: p });
+      const res = await callApi("images/thumb", { path: p }, "GET");
       if (res && res.thumb) {
         card.dataset.imgsrc = res.thumb;
         const imgEl = card.querySelector("img");
@@ -1631,31 +1642,52 @@ function showTextPreview(name, text, truncated) {
   const inputWrap = document.getElementById("appModalInputWrap");
   const cancelBtn = document.getElementById("appModalCancel");
   const okBtn = document.getElementById("appModalOk");
+  const closeBtn = document.getElementById("appModalClose");
+  const modalBox = modal.querySelector(".cmd-modal-box");
+  if (modalBox) modalBox.classList.add("modal-wide");
+
   if (icon) icon.textContent = "📄";
   if (title) title.textContent = String(name || "文本预览");
   if (inputWrap) inputWrap.style.display = "none";
   if (content) {
     content.innerHTML = `
-      <div style="margin:4px 0 10px"><div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">文本预览（点击文本框可自动全选）${truncated ? "　<span class=\"badge badge-primary\">内容过长已截断</span>" : ""}</div><textarea readonly style="width:100%;height:320px;background:var(--panel);color:var(--text);font-family:monospace;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:10px;outline:none;resize:vertical;line-height:1.5;white-space:pre" onclick="this.select()">${esc(text || "")}</textarea></div>
-      <div style="display:flex;gap:8px;margin:6px 0 2px;flex-wrap:wrap"><button id="btnCopyTextPreview" class="ghost" style="padding:8px 14px;font-size:12.5px;cursor:pointer">📋 复制全部内容</button></div>`;
+      <div style="margin:2px 0 8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;color:var(--muted)">点击下方文本框可快速全选 ${truncated ? '· <span class="badge badge-warn">内容过长已截断前256KB</span>' : ''}</span>
+          <button id="btnCopyTextPreview" class="ghost sm" style="padding:4px 12px;cursor:pointer">📋 复制全部内容</button>
+        </div>
+        <textarea readonly style="width:100%;height:min(520px, 60vh);background:var(--panel);color:var(--text);font-family:monospace;font-size:12px;border:1px solid var(--line);border-radius:12px;padding:12px;outline:none;resize:vertical;line-height:1.55;white-space:pre" onclick="this.select()">${esc(text || "")}</textarea>
+      </div>`;
   }
   const copyBtn = document.getElementById("btnCopyTextPreview");
   if (copyBtn) {
     copyBtn.onclick = () => {
       copyToClipboard(text || "");
-      copyBtn.textContent = "✅ 已复制到剪贴板";
-      setTimeout(() => { copyBtn.textContent = "📋 复制全部内容"; }, 2000);
+      copyBtn.textContent = "✅ 已复制";
+      setTimeout(() => { copyBtn.textContent = "📋 复制全部内容"; }, 1800);
     };
   }
   if (cancelBtn) cancelBtn.style.display = "none";
+
+  const doClose = () => {
+    modal.className = "";
+    if (modalBox) modalBox.classList.remove("modal-wide");
+    if (cancelBtn) cancelBtn.style.display = "";
+    if (okBtn) okBtn.onclick = null;
+    if (closeBtn) closeBtn.onclick = null;
+    modal.onclick = null;
+  };
+
   if (okBtn) {
     okBtn.textContent = "关闭";
-    okBtn.onclick = () => {
-      modal.className = "";
-      if (cancelBtn) cancelBtn.style.display = "";
-      okBtn.onclick = null;
-    };
+    okBtn.onclick = doClose;
   }
+  if (closeBtn) {
+    closeBtn.onclick = doClose;
+  }
+  modal.onclick = (e) => {
+    if (e.target === modal) doClose();
+  };
   modal.className = "show";
 }
 
@@ -2495,7 +2527,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0914i"
+        version: res.version || "2026w0914j"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -4453,7 +4485,10 @@ if (_cmdModal) _cmdModal.addEventListener("click", (e) => {
   if (e.target === _cmdModal) closeCmdEditor();
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeCmdEditor();
+  if (e.key === "Escape") {
+    closeCmdEditor();
+    closeLightbox();
+  }
 });
 // 自定义指令: 填入「映射引擎指令」实时刷新其可调数值 + 常用变量帮助
 const _cmdModalCmd = document.getElementById("cmdModalCmd");

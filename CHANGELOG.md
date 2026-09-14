@@ -1,5 +1,11 @@
 # 更新日志
 
+## v2026w0914j
+- 🖼️ **图片双击大图预览修复**：补齐 `#lightbox.show` 规则，修复此前点击或双击无法唤起全屏大图预览的 Bug，支持点击背景与 Esc 键极速退出；
+- 📄 **文本文件只读范围解禁与弹窗重构**：只读预览解除 `data/` 目录过度限制，根目录 `README.md` / `CHANGELOG.md` 等直接在线浏览；重塑宽屏预览弹窗（`modal-wide`），修复右上角 ✕ 关不掉的问题，支持遮罩与 Esc 关闭；
+- 📱 **手机深色模式自动反色撕裂根治**：声明 `<meta name="color-scheme">` 与动态 `style.colorScheme`，彻底阻止移动端系统暗色模式对浅色页面的暴力强行反色；未手动设置主题时智能适配系统暗色偏好；
+- 🔢 **版本号**：顺延至 `2026w0914j`.
+
 ## v2026w0914i
 - 🎨 **调色盘持久化**：`applyTheme`/`initTheme` 改为读写 `localStorage.xbbot_theme`，主题（亮/暗）与调色（`xbbot_monet_color`）双持久，刷新后还原；
 - 🌙 **深色模式可视性热修**：`atlas-seg-btn` 未激活态、`iconBtn`/`tab-nav-btn`、`themePaletteBtn`/`themeBtn` 在暗色下提亮边框与文字，`atlas-seg-tabs` 背景加深，搜索框占位符提亮；
