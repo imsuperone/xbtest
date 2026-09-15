@@ -4,7 +4,7 @@ import os
 import re
 from . import state as _S
 from .state import _bump_config_ver
-from .collections import _coll_load, _coll_write, _coll_coerce, coll_merge
+from .collections import _coll_load, _coll_write, _coll_coerce, _sidecar_exists, coll_merge
 from .secrets import wd_secret_load
 from .kv import recall_set, recall_get
 from .db import get_persistent_data_dir
@@ -292,6 +292,26 @@ def save_config():
             recall_set("sys_config_json", json.dumps(_mirror, ensure_ascii=False))
     except Exception:
         pass
+    # sidecar（商城/精灵图鉴）同步镜像进 kv：单 .db 即含全部配置，完整迁移不再依赖导出中心补图鉴；
+    # 仅 sidecar 文件存在时镜像（文件缺失不判空，防止早初始化空缓存覆盖好镜像）
+    try:
+        _coll_secs = getattr(_S, "_COLL_FILES", {}) or {}
+        _coll_mirror = {}
+        _coll_any = False
+        for _sec in _coll_secs:
+            try:
+                if not _sidecar_exists(_sec):
+                    continue
+                _coll_any = True
+                _d = _coll_load(_sec)
+                if isinstance(_d, dict):
+                    _coll_mirror[_sec] = _d
+            except Exception:
+                pass
+        if _coll_any:
+            recall_set("sys_coll_json", json.dumps(_coll_mirror, ensure_ascii=False))
+    except Exception:
+        pass
 
 
 def load_config_from_db():
@@ -309,10 +329,43 @@ def load_config_from_db():
                         for k, v in sub.items():
                             if k not in s or s[k] in (None, ""):
                                 s[k] = v
+                _sidecar_heal_from_mirror()
                 return True
     except Exception:
         pass
+    try:
+        _sidecar_heal_from_mirror()
+    except Exception:
+        pass
     return False
+
+
+def _sidecar_heal_from_mirror():
+    """sidecar 缺文件自愈：仅 sidecar 文件缺失时才从 kv 镜像回填（文件优先，坏文件不碰）。
+    恢复全量替换语义由 reload_config_from_db 承担，此处只补“无文件”场景。"""
+    try:
+        raw = recall_get("sys_coll_json", "")
+        if not raw:
+            return False
+        db_coll = json.loads(raw)
+        if not isinstance(db_coll, dict) or not db_coll:
+            return False
+        healed = False
+        for sec, kv in db_coll.items():
+            try:
+                if sec not in (getattr(_S, "_COLL_FILES", {}) or {}):
+                    continue
+                if not isinstance(kv, dict) or not kv:
+                    continue
+                if _sidecar_exists(sec):
+                    continue
+                if coll_merge(sec, kv):
+                    healed = True
+            except Exception:
+                pass
+        return healed
+    except Exception:
+        return False
 
 
 def reload_config_from_db():
@@ -330,7 +383,35 @@ def reload_config_from_db():
                 continue
             _S._CONFIG[sec] = dict(sub) if isinstance(sub, dict) else sub
         _bump_config_ver()
+        _sidecar_restore_from_mirror()
         return True
+    except Exception:
+        return False
+
+
+def _sidecar_restore_from_mirror():
+    """恢复路径 sidecar 落盘：kv 镜像整体替换 sidecar 文件（恢复即回滚语义）。
+    老备份无镜像即跳过（行为不变）；坏文件由 _coll_write 拒写保护，不碰。"""
+    try:
+        raw = recall_get("sys_coll_json", "")
+        if not raw:
+            return False
+        db_coll = json.loads(raw)
+        if not isinstance(db_coll, dict) or not db_coll:
+            return False
+        done = False
+        for sec, kv in db_coll.items():
+            try:
+                if sec not in (getattr(_S, "_COLL_FILES", {}) or {}):
+                    continue
+                if not isinstance(kv, dict):
+                    continue
+                _S._COLL_CACHE[sec] = dict(kv)
+                if _coll_write(sec):
+                    done = True
+            except Exception:
+                pass
+        return done
     except Exception:
         return False
 
