@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0915a";
+const FRONTEND_VER = "2026w0915b";
 
 let _WORKING_API_PREFIX = null;
 
@@ -819,12 +819,14 @@ const exportShopsOnly = () => exportSingleModule("shops");
 const exportTreasuresOnly = () => exportSingleModule("treasures");
 const exportGameRulesOnly = () => exportSingleModule("rules");
 
-// 更新导出中心勾选计数与实时摘要
+// 更新导出中心勾选计数与实时摘要（含卡片 picked 高亮同步，单源：预设/点卡/点框全走此处）
 function updateExportHubSummary() {
   const selected = [];
   const mapIds = { atlas: "chkExpAtlas", shops: "chkExpShops", treasures: "chkExpTreasures", rules: "chkExpGameRules", users: "chkExpUsers" };
   EXPORT_MODULES.forEach(m => {
-    if (document.getElementById(mapIds[m.key])?.checked) selected.push(m.title.replace(/^[^\s]+\s*/, ""));
+    const chk = document.getElementById(mapIds[m.key]);
+    if (chk?.checked) selected.push(m.title.replace(/^[^\s]+\s*/, ""));
+    try { chk?.closest(".hub-mod-card")?.classList.toggle("picked", !!(chk && chk.checked)); } catch (e) {}
   });
 
   const sumTxt = document.getElementById("exportHubSummaryText");
@@ -887,6 +889,15 @@ function initExportHubEvents() {
 
   ["chkExpAtlas", "chkExpShops", "chkExpTreasures", "chkExpGameRules", "chkExpUsers"].forEach(id => {
     document.getElementById(id)?.addEventListener("change", updateExportHubSummary);
+  });
+
+  // 整卡点击切换勾选（“仅导出本项”按钮除外，其自带 stopPropagation 不冒泡到卡片）
+  document.querySelectorAll("#exportHubModal .hub-mod-card").forEach(card => {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      const chk = card.querySelector('input[type="checkbox"]');
+      if (chk) { chk.checked = !chk.checked; updateExportHubSummary(); }
+    });
   });
 
   document.getElementById("btnSoloExportAtlas")?.addEventListener("click", (e) => { e.stopPropagation(); exportSpiritsOnly(); });
@@ -2609,7 +2620,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0915a"
+        version: res.version || "2026w0915b"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
