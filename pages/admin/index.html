@@ -115,7 +115,7 @@
     }
 
     .wrap {
-      max-width: 1260px;
+      max-width: 1440px;
       margin: 0 auto;
       padding: 14px 16px 64px;
     }
@@ -649,12 +649,15 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
+      min-width: 0;
     }
     .m3-filter-chips select {
       border-radius: var(--radius-full) !important;
       padding: 3px 8px !important;
       font-size: 12px !important;
       height: 28px !important;
+      max-width: 100%;
     }
 
     .hint {
@@ -672,6 +675,10 @@
       border: 1px solid var(--line);
       background: var(--panel);
       -webkit-overflow-scrolling: touch;
+    }
+    /* 用户资产表：列宽固定后横向滚动，窄屏不再挤压截断（操作列 3 按钮约需 200px） */
+    #tab-users .table-wrap table {
+      min-width: 1080px;
     }
     table {
       width: 100%;
@@ -2056,7 +2063,7 @@
   <div class="wrap">
     <header>
       <div class="brand">
-        <h1>管理控制台 <span class="ver">v2026w0914k</span></h1>
+        <h1>管理控制台 <span class="ver">v2026w0915a</span></h1>
         <div class="sub">
           <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
         </div>
@@ -2286,16 +2293,16 @@
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th data-sort="qq" style="cursor:pointer;min-width:100px" title="点击按 QQ 排序">QQ ⇕</th>
-              <th style="min-width:85px">昵称</th>
-              <th data-sort="gid" style="cursor:pointer;min-width:90px" title="点击按群号排序">群号 ⇕</th>
-              <th data-sort="money" style="cursor:pointer;min-width:110px" title="点击按货币排序">货币 ⇕</th>
-              <th data-sort="deposit" style="cursor:pointer;min-width:110px" title="点击按存款排序">存款 ⇕</th>
-              <th data-sort="stamina" style="cursor:pointer;min-width:65px" title="点击按体力排序">体力 ⇕</th>
-              <th data-sort="charm" style="cursor:pointer;min-width:65px" title="点击按魅力排序">魅力 ⇕</th>
-              <th data-sort="tickets" style="cursor:pointer;min-width:65px" title="点击按奖券排序">奖券 ⇕</th>
-              <th data-sort="sign" style="cursor:pointer;min-width:70px" title="点击按签到排序">签到 ⇕</th>
-              <th style="min-width:140px;text-align:center">操作</th>
+              <th data-sort="qq" style="cursor:pointer;min-width:90px" title="点击按 QQ 排序">QQ ⇕</th>
+              <th style="min-width:80px">昵称</th>
+              <th data-sort="gid" style="cursor:pointer;min-width:80px" title="点击按群号排序">群号 ⇕</th>
+              <th data-sort="money" style="cursor:pointer;min-width:100px" title="点击按货币排序">货币 ⇕</th>
+              <th data-sort="deposit" style="cursor:pointer;min-width:100px" title="点击按存款排序">存款 ⇕</th>
+              <th data-sort="stamina" style="cursor:pointer;min-width:56px" title="点击按体力排序">体力 ⇕</th>
+              <th data-sort="charm" style="cursor:pointer;min-width:56px" title="点击按魅力排序">魅力 ⇕</th>
+              <th data-sort="tickets" style="cursor:pointer;min-width:56px" title="点击按奖券排序">奖券 ⇕</th>
+              <th data-sort="sign" style="cursor:pointer;min-width:60px" title="点击按签到排序">签到 ⇕</th>
+              <th style="min-width:210px;text-align:center">操作</th>
             </tr></thead>
             <tbody id="userBody"></tbody>
           </table>
@@ -2744,8 +2751,8 @@
           <div>👤 作者：<b>Light</b></div>
           <div>📦 插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
           <div>🔗 仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
-          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w0914k</b></div>
-          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w0914k</b></div>
+          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w0915a</b></div>
+          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w0915a</b></div>
         </div>
       </div>
     </div>
@@ -3023,6 +3030,6 @@
       </div>
     </div>
   </div>
-  <script src="./admin.js?v=2026w0914k"></script>
+  <script src="./admin.js?v=2026w0915a"></script>
 </body>
 </html>

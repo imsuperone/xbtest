@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0914k";
+const FRONTEND_VER = "2026w0915a";
 
 let _WORKING_API_PREFIX = null;
 
@@ -2457,16 +2457,16 @@ function renderUserTable() {
     .map((u) => {
       const nm = u.name ? esc(u.name) : '<span style="color:var(--muted)">-</span>';
       const inp = (id, v, w = 64) =>
-        `<input type="number" id="${id}_${esc(u.qq)}_${esc(u.gid)}" value="${esc(v)}" title="${esc(v)}" style="width:${w}px;font-size:12.5px;padding:5px 8px;font-variant-numeric:tabular-nums">`;
+        `<input type="number" id="${id}_${esc(u.qq)}_${esc(u.gid)}" value="${esc(v)}" title="${esc(v)}" style="width:${w}px;min-width:${w}px;font-size:12.5px;padding:5px 6px;font-variant-numeric:tabular-nums">`;
       return `<tr>
         <td><strong>${esc(u.qq)}</strong></td>
         <td>${nm}</td>
         <td><span class="badge badge-primary">${esc(u.gid)}</span></td>
-        <td>${inp("mm", u.money, 110)}</td>
-        <td>${inp("ck", u.deposit || 0, 110)}</td>
-        <td>${inp("tt", u.stamina, 58)}</td>
-        <td>${inp("ma", u.charm, 58)}</td>
-        <td>${inp("jj", u.lottery_tickets || 0, 58)}</td>
+        <td>${inp("mm", u.money, 96)}</td>
+        <td>${inp("ck", u.deposit || 0, 96)}</td>
+        <td>${inp("tt", u.stamina, 52)}</td>
+        <td>${inp("ma", u.charm, 52)}</td>
+        <td>${inp("jj", u.lottery_tickets || 0, 52)}</td>
         <td><span class="badge badge-success">${u.sign || 0}次</span></td>
         <td style="white-space:nowrap;text-align:center"><button data-save="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" class="sm">保存</button> <button class="ghost sm" data-export="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}">导出</button> <button class="ghost sm del" data-clear="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" title="彻底清除该用户全部数据（含奴隶、精灵与礼包资格）">清除</button></td>
       </tr>`;
@@ -2609,7 +2609,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "2026w0914k"
+        version: res.version || "2026w0915a"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({

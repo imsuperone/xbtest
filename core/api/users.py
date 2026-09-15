@@ -291,7 +291,7 @@ async def handle_users_clean_left(request, context=None):
             cleaned_details[g] = cleaned
 
     if not cleaned_details and failed_gids:
-        return json_response({"ok": False, "msg": f"无法连接机器人获取群 {','.join(failed_gids[:3])} 的实时成员列表，请确保 Bot 在线且在群内"}, status=400)
+        return _err(f"无法连接机器人获取群 {','.join(failed_gids[:3])} 的实时成员列表，请确保 Bot 在线且在群内", 400)
     return json_response({
         "ok": True,
         "cleaned_count": cleaned_total,

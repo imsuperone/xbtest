@@ -75,6 +75,32 @@ async def _read_file_bytes_async(f):
 _IMPORT_MAX_BYTES = 50 * 1024 * 1024
 # 单次用户列表条数上限（防 JSON 巨包内存峰值；超限请分群/分批导入）
 _IMPORT_MAX_USERS = 20000
+# SQLite 魔数（备份导出包裹解包判定用）
+_SQLITE_MAGIC = b"SQLite format 3\x00"
+
+
+def _unwrap_backup_export(data):
+    """备份导出 JSON 包裹解包：backups/export 返回 {ok,path,data:b64,size,filename}，
+    用户把该文件直接当旧库回导时，拆出内层 SQLite bytes。非包裹返回 None（调用方走原分支）。
+    判定：顶层 JSON dict 含 data 字段且 base64 解码后具 SQLite 魔数（禁按扩展名猜，避免误拆用户列表 json）。"""
+    try:
+        if not isinstance(data, (bytes, bytearray)) or len(data) < 2:
+            return None
+        if bytes(data).lstrip()[:1] != b"{":
+            return None
+        j = json.loads(bytes(data).decode("utf-8"))
+        if not isinstance(j, dict):
+            return None
+        b64s = j.get("data")
+        if not isinstance(b64s, str) or not b64s.strip():
+            return None
+        import base64 as _b64
+        raw = _b64.b64decode(b64s.strip())
+        if raw[:len(_SQLITE_MAGIC)] == _SQLITE_MAGIC:
+            return raw
+    except Exception:
+        pass
+    return None
 
 
 def _handle_ini_content(content, rel_path=""):
@@ -522,7 +548,7 @@ def _import_users_list(users, typ="json"):
     return ok
 
 
-async def handle_import_legacy(req, plugin_base=""):
+async def handle_import_legacy(request, plugin_base=""):
     """旧库导入：请求解析在事件循环上做，解包/入库等重活进线程池，不堵消息循环"""
     import asyncio as _aio
     # ---- Phase 1（loop）：只碰 request，产出纯数据 ----
@@ -531,7 +557,7 @@ async def handle_import_legacy(req, plugin_base=""):
     try:
         form = {}
         try:
-            form = await req.files()  # type: ignore
+            form = await request.files()  # type: ignore
         except Exception:
             form = {}
         f = None
@@ -553,7 +579,7 @@ async def handle_import_legacy(req, plugin_base=""):
             # base64 直传（WebUI postFile 发 {filename, file_base64}，无 multipart）：
             # 先解 base64 拿真实文件，再按扩展名分发；与 weapon_pool 同口径
             try:
-                b64_name, b64_data = await read_upload_b64(req)
+                b64_name, b64_data = await read_upload_b64(request)
                 if b64_data:
                     if len(b64_data) > _IMPORT_MAX_BYTES:
                         return _err("file too large (50M)", 400)
@@ -580,7 +606,7 @@ async def handle_import_legacy(req, plugin_base=""):
                 pass
             if users_payload is None:
                 # 兜底：读原始体（同样 50M 上限）
-                raw_data = await _read_raw_body(req)
+                raw_data = await _read_raw_body(request)
                 if isinstance(raw_data, (bytes, bytearray)) and len(raw_data) > _IMPORT_MAX_BYTES:
                     return _err("file too large (50M)", 400)
                 if isinstance(raw_data, (bytes, bytearray)) and len(raw_data) > 10:
@@ -615,7 +641,7 @@ async def handle_import_legacy(req, plugin_base=""):
                     fname = locals().get("_fname_from_multipart", "") or ""
                     if not fname:
                         try:
-                            fname = str(get_req_query(req, "filename", "") or get_req_query(req, "file", "")).strip()
+                            fname = str(get_req_query(request, "filename", "") or get_req_query(request, "file", "")).strip()
                         except Exception:
                             pass
                     if not fname:
@@ -704,6 +730,16 @@ def _heal_spirits_adopted():
 def _import_file_data(filename, data):
     """重活（线程池）：落临时文件 → 按 zip/db/ini/json 分发入库"""
     try:
+        # 备份导出回导：backups/export 落盘的 {ok,path,data:b64} JSON 常被改名 .db 直接回导，
+        # 先拆出内层 SQLite（仅魔数命中才拆，用户列表 json 不受影响），扩展名同步归 .db。
+        try:
+            _uw = _unwrap_backup_export(data)
+            if _uw is not None:
+                data = _uw
+                if not str(filename or "").lower().endswith(".db"):
+                    filename = (os.path.splitext(str(filename or "upload"))[0] or "upload") + ".db"
+        except Exception:
+            pass
         fd_tmp, tmp = tempfile.mkstemp(prefix="xbbot_legacy_", suffix="_" + os.path.basename(filename).replace("/", "_").replace("\\", "_"))
         os.close(fd_tmp)
         try:
@@ -743,6 +779,16 @@ def _import_file_data(filename, data):
                         rel = os.path.relpath(fp, ztmp).replace(os.sep, "/")
                         if fl.endswith(".db"):
                             try:
+                                # zip 内备份导出 JSON 同样先拆包（仅魔数命中改写）
+                                try:
+                                    with open(fp, "rb") as _rf:
+                                        _zraw = _rf.read()
+                                    _zuw = _unwrap_backup_export(_zraw)
+                                    if _zuw is not None:
+                                        with open(fp, "wb") as _wf:
+                                            _wf.write(_zuw)
+                                except Exception:
+                                    pass
                                 total += ST.merge_from(fp)
                             except Exception:
                                 pass

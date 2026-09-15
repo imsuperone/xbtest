@@ -470,7 +470,7 @@ async def handle_groups_delete(request):
             except Exception: pass
             return json_response({"ok": True, "gid": gid, "deleted": True})
         except Exception as e:
-            return json_response({"ok": False, "msg": str(e)}, status=500)
+            return _err(str(e), 500)
 
     return await asyncio.to_thread(_work)
 
