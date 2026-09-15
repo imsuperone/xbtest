@@ -3,10 +3,9 @@
 import json as _json
 import time
 try:
-    from astrbot.api.web import json_response
+    from ..adapters import json_response
 except ImportError:
-    def json_response(data, status=200):
-        return data
+    from core.adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json
 

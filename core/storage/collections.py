@@ -41,7 +41,15 @@ def _coll_load(sec):
     """读 sidecar（内存缓存；缺文件返回 {}，不回退内存，防旧值复活）"""
     try:
         if sec in _S._COLL_CACHE and isinstance(_S._COLL_CACHE[sec], dict):
-            return _S._COLL_CACHE[sec]
+            if _S._COLL_CACHE[sec]:
+                return _S._COLL_CACHE[sec]
+            # 空缓存可能是“文件缺失时”留下的 miss 印记：文件仍不存在则维持，
+            # 文件已出现（后建/恢复）则穿透重读，防永久隐身；热路径非空缓存零额外开销
+            try:
+                if not _sidecar_exists(sec):
+                    return _S._COLL_CACHE[sec]
+            except Exception:
+                return _S._COLL_CACHE[sec]
         d = {}
         p = _coll_path(sec)
         if p and os.path.isfile(p):

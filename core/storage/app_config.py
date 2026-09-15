@@ -359,7 +359,10 @@ def _sidecar_heal_from_mirror():
                     continue
                 if _sidecar_exists(sec):
                     continue
-                if coll_merge(sec, kv):
+                # 直写（禁 coll_merge）：镜像值多为原生纯字符串，
+                # coll_merge 的 JSON 串 coerce 会误杀，缺文件场景直写即等价替换
+                _S._COLL_CACHE[sec] = dict(kv)
+                if _coll_write(sec):
                     healed = True
             except Exception:
                 pass

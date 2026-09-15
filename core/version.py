@@ -3,15 +3,16 @@
 
 唯一手写处：`metadata.yaml` 的 `version` 字段。
 全仓 Python 代码一律 `get_version()` 获取，禁止各自硬编码版本号字面量。
-（Web 前端显示回退与 CHANGELOG/README 文档行由 `tools/verify_plugin.py` 校验对齐，
-打包脚本负责把占位回退刷成当前版。）
+（前端显示/CHANGELOG/README 对齐由 `dev_xbbot_beta/tests/test_beta.py::StaticContract::test_version_sync`
+常驻校验；升版用 `dev_xbbot_beta/bump_version.py` 机械执行，打包用 `dev_xbbot_beta/pack.py`。
+两脚本常驻插件目录外，永不进发布包。）
 
 beta 快照制（正式版仍走 semver）：`YYYYwMMDDx`（年＋w＋月日＋序号字母，同日递增 a→b…c，
 跨日归 a）。快照恒大于任何 semver（epoch 2），快照之间按日期＋序号比。
 """
 import os as _os
 
-_FALLBACK = "2026w0915c"
+_FALLBACK = "2026w0915d"
 _CACHE = ""
 
 

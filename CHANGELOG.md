@@ -1,5 +1,13 @@
 # 更新日志
 
+## v2026w0915d
+- 🧪 **常驻回归测试**：`dev_xbbot_beta/tests/test_beta.py`（20 用例，临时库零污染），锁死静态契约（无 `status=` 调用、adapters 单真相源、版本六处同步）、旧库导入、清理退群、sidecar 镜像、用户编辑；常驻插件目录外，永不进发布包；
+- 🧹 **收口 fallback 分叉**：删 7 个 api 模块复刻的 `json_response(data, status=200)`，统一走 `core/adapters`（真机语义不变，本地回退全兼容），`status=` bug 类型根治；
+- 🗂️ **前端拆分**：`admin.js` 6717 行单体按 Tab 拆 11 模块（`js/00_core`→`10_ops`，原顺序加载，拼接字节恒等已验证）+ 内联样式抽 `admin.css`；`dev_xbbot_beta/check_frontend.py` 常驻检查（node 逐文件/跨文件重名/引用完整）；
+- 🛠️ **升版/打包机械化**：`dev_xbbot_beta/bump_version.py`（格式+单调门禁，CHANGELOG 缺小节即失败）与 `pack.py`（条目集比对）接管发布，`version.py` 文档同步；
+- 🐛 **sidecar 空 miss 缓存**：`_coll_load` 空缓存遇文件后建穿透重读（热路径非空缓存零开销）；旧库导入面板注明的合并（新增不覆盖，红包/记忆不迁）与备份恢复（替换）语义区分；
+- 🔢 **版本号**：顺延至 `2026w0915d`.
+
 ## v2026w0915c
 - 🗄️ **单库自包含全部配置**：此前 `.db` 只镜像玩法规则，商城/精灵图鉴（`shop.json`/`atlas.json` sidecar）不在库内，拷库迁移会丢图鉴商城；现 `save_config` 同步镜像 sidecar 进 kv（`sys_coll_json`，KB 级，仅文件存在时写，防早初始化覆盖好镜像）；
 - ↩️ **恢复写回配套**：本地/云端恢复经 `reload_config_from_db` 把镜像整体替换回 sidecar 文件（老备份无镜像自动跳过，坏文件拒写）；`load_config_from_db` 仅缺文件时回填（文件优先）；清空数据行为不变（kv 已清即无镜像可写）；
