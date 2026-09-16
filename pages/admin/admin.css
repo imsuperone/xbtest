@@ -1856,26 +1856,7 @@
       width: 0;
       height: 0;
     }
-    .hub-check {
-      width: 20px;
-      height: 20px;
-      flex: 0 0 20px;
-      border: 1.5px solid var(--line);
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      line-height: 1;
-      color: transparent;
-      background: var(--panel);
-      transition: all 0.18s;
-    }
-    .hub-mod-card.picked .hub-check {
-      border-color: var(--acc);
-      background: var(--acc);
-      color: #fff;
-    }
+
     /* 选中态：描边+底色+左侧色条+标题变色，未选中标题置灰，一眼可辨 */
     .hub-mod-card.picked {
       border: 1.5px solid var(--acc);
