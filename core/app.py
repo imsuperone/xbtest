@@ -589,12 +589,23 @@ class XbBot(Star):
                     ST.maybe_auto_backup()
                 except Exception:
                     pass
-                # 每小时顺带执行一次保留数修剪（自动备份未到间隔时也能生效保留配置）
+                # 每小时顺带执行一次保留数修剪 + 瞬时 KV 过期回收（零阻塞，见 storage/kv.clean_expired_kv）
                 try:
                     _now_c = time.time()
                     if _now_c - _last_clean >= 3600:
                         _last_clean = _now_c
                         ST.clean_old_backups()
+                        try:
+                            if hasattr(ST, "clean_expired_kv"):
+                                ST.clean_expired_kv()
+                        except Exception:
+                            pass
+                        # 碎片回收：WAL 增量回收（auto_vacuum=0 下为 no-op，开增量后自动生效）
+                        try:
+                            if hasattr(ST, "_DB") and ST._DB is not None:
+                                ST._DB.execute("PRAGMA incremental_vacuum(50)")
+                        except Exception:
+                            pass
                 except Exception:
                     pass
         import threading

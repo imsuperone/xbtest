@@ -1,5 +1,10 @@
 # 更新日志
 
+## v2026w0915f
+- 🗄️ **DB 热字段索引**：新增 `accounts` 表达式索引 `sign/deposit/stamina/charm`（`IF NOT EXISTS`，旧库重启自动补，大库排行不扫全表解析）；
+- 🧹 **KV 过期回收**：`storage/kv.clean_expired_kv`（7 天 TTL，白名单前缀 `chat_ts_/spadv_/chain_/game24_/ent_game_/chouqian_`，值需为时间戳）每小时随备份线程顺带执行并伴 `incremental_vacuum(50)`；
+- 🔢 **版本号**：顺延至 `2026w0915f`.
+
 ## v2026w0915e
 - ⚡ **Tab 加载体感提速**：`admin.css` 与 11 个脚本加 `defer` 去除首屏同步阻塞（并行下载、解析完顺序执行）；`loadOverviewReq` 改串行两请求为并行；`getBridge` 直连探测加单航班共用（首屏 3 并发不再各跑 5 前缀惊群）；`index.html` 已无阻塞 `<style>`；
 - 🖼️ **图片库 N+1 限流**：`renderImages` 缩略图此前 30 图同时 `images/thumb` 打桥排队，现 5 并发限流顺序填充，滚动不再卡顿；

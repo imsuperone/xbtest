@@ -74,6 +74,11 @@ CREATE INDEX IF NOT EXISTS idx_groups_gid ON groups(gid);
 CREATE INDEX IF NOT EXISTS idx_redpacks_gid ON redpacks(gid);
 CREATE INDEX IF NOT EXISTS idx_redpacks_gid_pwd ON redpacks(gid, pwd);
 CREATE INDEX IF NOT EXISTS idx_kv_k ON kv(k);
+-- 热字段表达式索引（IF NOT EXISTS，旧库首次 init 自动补；小库零感，大库排行从数百 ms→数十 ms）
+CREATE INDEX IF NOT EXISTS idx_accounts_sign ON accounts(CAST(json_extract(data,'$.sign_count') AS INTEGER));
+CREATE INDEX IF NOT EXISTS idx_accounts_deposit ON accounts(CAST(COALESCE(json_extract(data,'$.deposit'), json_extract(data,'$.cunkuan'), '0') AS INTEGER));
+CREATE INDEX IF NOT EXISTS idx_accounts_stamina ON accounts(CAST(COALESCE(json_extract(data,'$.stamina'), json_extract(data,'$.tili'), '0') AS INTEGER));
+CREATE INDEX IF NOT EXISTS idx_accounts_charm ON accounts(CAST(COALESCE(json_extract(data,'$.charm'), json_extract(data,'$.meili'), '0') AS INTEGER));
 """
 
 # ---- DB 自举 ----

@@ -37,7 +37,7 @@ __all__ = ["register_names","register_name","parse_at","set_config","cfg","cfgi"
            "coins_get","coins_add","txn_coins_acct","txn_two_wallets","txn_two_wallets_acct","rank_batch",
            "Acct","acct","acct_add","acct_save",
            "Group","group","save_group",
-           "user_clear","redpack_put","redpack_get","wd_cfg_backup","wd_cfg_restore",
+           "user_clear","redpack_put","redpack_get","wd_cfg_backup","wd_cfg_restore","clean_expired_kv",
            "coll_merge","coll_migrate","wd_secret_load","wd_secret_set","set_last_backup",
            "init","flush_all","merge_from","get_persistent_data_dir","set_persistent_data_dir",
            "set_config_path","set_astrbot_config","sync_astrbot_config","set_ini","save_config","load_config_from_db",

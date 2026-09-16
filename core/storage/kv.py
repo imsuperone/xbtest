@@ -238,4 +238,57 @@ def redpack_get(gid, pwd):
         except Exception:
             return None
 
-__all__ = ["recall_get", "recall_set", "redpack_get", "redpack_put", "wd_cfg_backup", "wd_cfg_restore"]
+def clean_expired_kv(ttl_sec=7 * 24 * 3600):
+    """瞬时 KV 过期回收（后台每小时顺带扫一次，零阻塞）：
+    仅清理明确带时间戳语义或已知短命前缀的孤儿键（空串已由会话回收，误清无伤）。
+    前缀白名单：chat_ts_/spadv_/chain_/game24_/ent_game_/chouqian_ 等
+    （值需为数字时间戳，超 TTL 即删；非时间戳/非白名单键永不碰）。"""
+    _ensure_db()
+    if _S._DB is None:
+        return 0
+    prefixes = ("chat_ts_", "spadv_", "chain_", "game24_", "ent_game_", "chouqian_", "chain_start_", "chain_last_time_")
+    now = time.time()
+    try:
+        with _S._LOCK:
+            rows = _S._DB.execute("SELECT k, v FROM kv WHERE " + " OR ".join(["k LIKE ?"] * len(prefixes)),
+                                 tuple(p + "%" for p in prefixes)).fetchall()
+            dead = []
+            for k, v in rows:
+                s = str(v).strip()
+                if not s:
+                    # 空串短命锁残留已由会话清，此处不抢（防误删进行中空串占位）
+                    continue
+                try:
+                    ts = float(s)
+                except Exception:
+                    continue
+                # 时间戳合理区间：2020-01-01 ~ 2035-01-01
+                if 1577836800 < ts < 2051222400 and (now - ts) > ttl_sec:
+                    dead.append(str(k))
+            if not dead:
+                return 0
+            # 分批删（SQLite 变量上限 999）
+            n = 0
+            for i in range(0, len(dead), 400):
+                chunk = dead[i:i + 400]
+                _S._DB.execute("DELETE FROM kv WHERE k IN (%s)" % ",".join("?" * len(chunk)), chunk)
+                n += len(chunk)
+            if _safe_commit():
+                try:
+                    with _S._KV_CACHE_LOCK:
+                        for k in dead:
+                            _S._KV_CACHE.pop(k, None)
+                except Exception:
+                    pass
+                return n
+            _safe_rollback()
+            return 0
+    except Exception:
+        try:
+            _safe_rollback()
+        except Exception:
+            pass
+        return 0
+
+
+__all__ = ["recall_get", "recall_set", "redpack_get", "redpack_put", "wd_cfg_backup", "wd_cfg_restore", "clean_expired_kv"]
