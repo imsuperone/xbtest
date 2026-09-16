@@ -1,5 +1,9 @@
 # 更新日志
 
+## v2026w0915g
+- 🐛 **自定义/整体导出空包修复**：`config/get` 此前排除 `商城图鉴/精灵图鉴` 侧车，模块化导出 `shops/treasures` 经 `cfg["商城图鉴"]` 取数恒空（`loadShops` 同受影响仅显内置）；现 `handle_cfg_get` 只读合并侧车（文件优先），导出即见全量；整体预设 `full_all` 与单项 `exportSingleModule` 均已临时库端到端验证；
+- 🔢 **版本号**：顺延至 `2026w0915g`.
+
 ## v2026w0915f
 - 🗄️ **DB 热字段索引**：新增 `accounts` 表达式索引 `sign/deposit/stamina/charm`（`IF NOT EXISTS`，旧库重启自动补，大库排行不扫全表解析）；
 - 🧹 **KV 过期回收**：`storage/kv.clean_expired_kv`（7 天 TTL，白名单前缀 `chat_ts_/spadv_/chain_/game24_/ent_game_/chouqian_`，值需为时间戳）每小时随备份线程顺带执行并伴 `incremental_vacuum(50)`；

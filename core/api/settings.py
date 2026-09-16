@@ -97,7 +97,18 @@ async def handle_commands(request, plugin_base=""):
 
 async def handle_cfg_get(request):
     try:
-        cfg = getattr(ST, "_CONFIG", {}) or {}
+        cfg = dict(getattr(ST, "_CONFIG", {}) or {})
+        # 侧车配置（商城/精灵图鉴）合并只读回显：导出与前端 gather 需经 config/get 即见全量，文件优先
+        try:
+            from ..storage.collections import _coll_load as _c_load, _sidecar_exists as _c_exists
+            for _sec in getattr(ST, "_COLL_FILES", {}) or {}:
+                try:
+                    if _c_exists(_sec):
+                        cfg[_sec] = _c_load(_sec)
+                except Exception:
+                    pass
+        except Exception:
+            pass
         # WebDAV 密钥回填显示（地址/用户名明文，密码恒空；密钥本体只在独立文件）
         try:
             if hasattr(ST, "wd_secret_load"):
