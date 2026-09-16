@@ -1848,12 +1848,33 @@
       font-size: 12.5px;
       color: var(--text);
     }
+    /* 隐藏原生勾选框：卡片本身即是唯一选中态，不再双控 */
     .hub-checkbox-label input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      flex: 0 0 auto;
-      accent-color: var(--acc);
-      cursor: pointer;
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      width: 0;
+      height: 0;
+    }
+    .hub-check {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+      border: 1.5px solid var(--line);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      line-height: 1;
+      color: transparent;
+      background: var(--panel);
+      transition: all 0.18s;
+    }
+    .hub-mod-card.picked .hub-check {
+      border-color: var(--acc);
+      background: var(--acc);
+      color: #fff;
     }
     /* 选中态：描边+底色+左侧色条+标题变色，未选中标题置灰，一眼可辨 */
     .hub-mod-card.picked {

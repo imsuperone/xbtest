@@ -42,9 +42,10 @@ function showImportInspectModal(filename, parsedData) {
       listEl.innerHTML = `<div style="padding:16px;text-align:center;color:var(--bad);background:var(--badSoft);border-radius:10px">⚠️ 无法在当前文件中识别出有效的插件模块，请确认文件格式是否正确。</div>`;
     } else {
       listEl.innerHTML = modules.map(m => `
-        <div class="hub-mod-card" style="padding:12px 14px">
+        <div class="hub-mod-card${m.checked ? " picked" : ""}" style="padding:12px 14px">
           <label class="hub-checkbox-label" style="display:flex;align-items:flex-start;gap:10px">
-            <input type="checkbox" data-import-key="${esc(m.key)}" ${m.checked ? "checked" : ""} style="margin-top:2px">
+            <input type="checkbox" data-import-key="${esc(m.key)}" ${m.checked ? "checked" : ""}>
+            <span class="hub-check">✓</span>
             <div>
               <div class="hub-mod-title" style="font-size:13px">${esc(m.title)}</div>
               <div class="hub-mod-desc" style="font-size:11.5px">${esc(m.desc)}</div>
@@ -52,6 +53,24 @@ function showImportInspectModal(filename, parsedData) {
           </label>
         </div>
       `).join("");
+      // 卡片点选联动（与导出中心一致，单控）：点卡即切勾，不再双控
+      try {
+        listEl.querySelectorAll(".hub-mod-card").forEach(card => {
+          const chk = card.querySelector('input[type="checkbox"]');
+          if (chk) card.classList.toggle("picked", !!chk.checked);
+          card.addEventListener("click", (e) => {
+            if (e.target.closest("button")) return;
+            const c = card.querySelector('input[type="checkbox"]');
+            if (!c) return;
+            // label 默认会触发一次勾选，点卡补一次会抵消：卡片点击由 label 外区域进时才切
+            if (e.target.closest("label")) return;
+            c.checked = !c.checked;
+            card.classList.toggle("picked", !!c.checked);
+          });
+          const inp = card.querySelector('input[type="checkbox"]');
+          if (inp) inp.addEventListener("change", () => card.classList.toggle("picked", !!inp.checked));
+        });
+      } catch (e) {}
     }
   }
 
