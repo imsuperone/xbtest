@@ -10,12 +10,14 @@ const OV_REQ = [
 
 async function loadOverviewReq() {
   try {
-    const cur = await getBridge().apiGet("config/get");
-    // schema 默认回退：内存缺键时显示出厂默认值而非空白（如货币名称）
+    // 并行拉取（此前串行多付一次往返）
+    const [cur, _schRaw] = await Promise.all([
+      getBridge().apiGet("config/get"),
+      getBridge().apiGet("config/schema").catch(() => null)
+    ]);
     let _defs = {};
     try {
-      const _sch = await getBridge().apiGet("config/schema").catch(() => null);
-      ((_sch && _sch.groups && _sch.groups["设置"]) || []).forEach((it) => { _defs[it.key] = it.default; });
+      ((_schRaw && _schRaw.groups && _schRaw.groups["设置"]) || []).forEach((it) => { _defs[it.key] = it.default; });
     } catch (e) {}
     const box = document.getElementById("ovReq");
     box.innerHTML = OV_REQ.map(([sec, key, label, type, tip]) => {

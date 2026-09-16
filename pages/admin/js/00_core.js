@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "2026w0915d";
+const FRONTEND_VER = "2026w0915e";
 
 let _WORKING_API_PREFIX = null;
 
@@ -27,6 +27,23 @@ function cleanEndpointAndParams(endpoint, params) {
 
 // 传文件类读接口不加超时（备份/镜像导出按体积走，服务端自有熔断；加了会误杀大文件下载）
 const _NO_TIMEOUT_GET = /^(backups\/export|images\/export|user\/export|users\/export)/;
+
+// 直连探测单航班（并发探测共用一个 promise，防首屏 3 并发各跑 5 前缀=15 次 fetch 的惊群）
+let _PREFIX_PROBE_P = null;
+function _warmPrefixOnce() {
+  if (_WORKING_API_PREFIX !== null || _PREFIX_PROBE_P) return _PREFIX_PROBE_P;
+  const probe = "config/get";
+  const prefixes = [`/api/plugins/${PLUGIN_ID}/`, `/${PLUGIN_ID}/`, `api/`, `./api/`, ``];
+  _PREFIX_PROBE_P = (async () => {
+    for (const p of prefixes) {
+      try {
+        const r = await fetch(p + probe + "?_warm=1");
+        if (r.ok) { _WORKING_API_PREFIX = p; break; }
+      } catch (e) {}
+    }
+  })().finally(() => { _PREFIX_PROBE_P = null; });
+  return _PREFIX_PROBE_P;
+}
 
 function getBridge() {
   let rawBridge = null;
@@ -76,7 +93,6 @@ function getBridge() {
   return {
     apiGet(endpoint, params) {
       const { ep, params: cleanParams } = cleanEndpointAndParams(endpoint, params);
-      // 整条前缀链 30s 总预算（传文件类排除）：黑洞前缀不再 eternal hang
       const _run = async () => {
       let fullEp = ep;
       if (cleanParams && Object.keys(cleanParams).length > 0) {
@@ -87,6 +103,14 @@ function getBridge() {
           const r = await fetch(_WORKING_API_PREFIX + fullEp);
           if (r.ok) return await r.json();
         } catch (err) {}
+      } else if (_PREFIX_PROBE_P) {
+        try { await _PREFIX_PROBE_P; } catch (e) {}
+        if (_WORKING_API_PREFIX !== null) {
+          try {
+            const r = await fetch(_WORKING_API_PREFIX + fullEp);
+            if (r.ok) return await r.json();
+          } catch (err) {}
+        }
       }
       const prefixes = [`/api/plugins/${PLUGIN_ID}/`, `/${PLUGIN_ID}/`, `api/`, `./api/`, ``];
       for (const p of prefixes) {
@@ -116,6 +140,18 @@ function getBridge() {
           });
           if (r.ok) return await r.json();
         } catch (err) {}
+      } else if (_PREFIX_PROBE_P) {
+        try { await _PREFIX_PROBE_P; } catch (e) {}
+        if (_WORKING_API_PREFIX !== null) {
+          try {
+            const r = await fetch(_WORKING_API_PREFIX + ep, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data || {})
+            });
+            if (r.ok) return await r.json();
+          } catch (err) {}
+        }
       }
       const prefixes = [`/api/plugins/${PLUGIN_ID}/`, `/${PLUGIN_ID}/`, `api/`, `./api/`, ``];
       for (const p of prefixes) {

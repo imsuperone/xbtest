@@ -1,5 +1,11 @@
 # 更新日志
 
+## v2026w0915e
+- ⚡ **Tab 加载体感提速**：`admin.css` 与 11 个脚本加 `defer` 去除首屏同步阻塞（并行下载、解析完顺序执行）；`loadOverviewReq` 改串行两请求为并行；`getBridge` 直连探测加单航班共用（首屏 3 并发不再各跑 5 前缀惊群）；`index.html` 已无阻塞 `<style>`；
+- 🖼️ **图片库 N+1 限流**：`renderImages` 缩略图此前 30 图同时 `images/thumb` 打桥排队，现 5 并发限流顺序填充，滚动不再卡顿；
+- 🔮 **空闲预热**：总览首屏后空闲时段（idle callback/延时）静默预取高频 Tab（用户/奴隶/群聊），二次切 Tab 零等待；
+- 🔢 **版本号**：顺延至 `2026w0915e`.
+
 ## v2026w0915d
 - 🧪 **常驻回归测试**：`dev_xbbot_beta/tests/test_beta.py`（20 用例，临时库零污染），锁死静态契约（无 `status=` 调用、adapters 单真相源、版本六处同步）、旧库导入、清理退群、sidecar 镜像、用户编辑；常驻插件目录外，永不进发布包；
 - 🧹 **收口 fallback 分叉**：删 7 个 api 模块复刻的 `json_response(data, status=200)`，统一走 `core/adapters`（真机语义不变，本地回退全兼容），`status=` bug 类型根治；

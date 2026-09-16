@@ -92,22 +92,27 @@ function renderImages(d) {
   html += `</div>`;
   box.innerHTML = html;
 
-  // 异步自动拉取并填充当前图片卡片的真实缩略图
-  box.querySelectorAll(".icard[data-selpath]").forEach((card) => {
-    const p = card.dataset.selpath;
-    const ext = (p.split(".").pop() || "").toLowerCase();
-    if (["png","jpg","jpeg","gif","webp","bmp","ico"].includes(ext)) {
-      getBridge().apiGet("images/thumb", { path: p }).then((res) => {
+  // 异步自动拉取并填充当前图片卡片的真实缩略图（限流 5 并发，防 30 图同时打桥排队）
+  const thumbCards = Array.from(box.querySelectorAll(".icard[data-selpath]")).filter((card) => {
+    const ext = (card.dataset.selpath.split(".").pop() || "").toLowerCase();
+    return ["png","jpg","jpeg","gif","webp","bmp","ico"].includes(ext);
+  });
+  let _thumbIdx = 0;
+  async function _thumbWorker() {
+    while (_thumbIdx < thumbCards.length) {
+      const card = thumbCards[_thumbIdx++];
+      const p = card.dataset.selpath;
+      try {
+        const res = await getBridge().apiGet("images/thumb", { path: p });
         if (res && res.thumb) {
           card.dataset.imgsrc = res.thumb;
           const imgEl = card.querySelector("img");
-          if (imgEl) {
-            imgEl.src = _safeImgSrc(res.thumb);
-          }
+          if (imgEl) imgEl.src = _safeImgSrc(res.thumb);
         }
-      }).catch(() => {});
+      } catch (e) {}
     }
-  });
+  }
+  Array.from({ length: Math.min(5, thumbCards.length) }).forEach(() => _thumbWorker());
 
   async function _previewCard(card) {
     if (!card) return;

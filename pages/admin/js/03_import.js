@@ -524,6 +524,14 @@ async function main() {
   try { bindShopOrderOnce(); } catch (e) {}
   try { if (typeof initExportHubEvents === "function") initExportHubEvents(); } catch (e) {}
   try { if (typeof initImportHubEvents === "function") initImportHubEvents(); } catch (e) {}
+  // 直连直访问下首屏前先暖好前缀（共用单航班，防首屏并发各跑 5 前缀的惊群）
+  try {
+    const _probeBridge = getBridge();
+    if (!_probeBridge || (typeof _probeBridge.apiGet === "function" && String(_probeBridge.apiGet).includes("_warmPrefixOnce") === false)) {
+      // 仅 fallback 分支有探针
+      if (typeof _warmPrefixOnce === "function") { _warmPrefixOnce().catch(() => {}); }
+    }
+  } catch (e) {}
   const _b = getBridge();
   try {
     if (_b && typeof _b.ready === "function") {
@@ -536,5 +544,23 @@ async function main() {
   
   Promise.all([loadOverviewReq(), loadAnalytics()]).catch(() => {});
   TAB_DONE.overview = true;
+  // 空闲预取：总览首屏后，后台静默预热高频 Tab（用户/奴隶/群聊），切 Tab 即零等待
+  const _idlePrefetch = () => {
+    try {
+      const cand = ["users", "slave", "groups"];
+      cand.forEach((t, i) => {
+        if (TAB_DONE[t]) return;
+        setTimeout(() => {
+          if (TAB_DONE[t] || !TAB_LOADERS[t]) return;
+          TAB_DONE[t] = true;
+          Promise.resolve(TAB_LOADERS[t]()).catch(() => { try { TAB_DONE[t] = false; } catch (e) {} });
+        }, 600 + i * 400);
+      });
+    } catch (e) {}
+  };
+  try {
+    if (typeof requestIdleCallback === "function") requestIdleCallback(_idlePrefetch, { timeout: 1500 });
+    else setTimeout(_idlePrefetch, 900);
+  } catch (e) { try { setTimeout(_idlePrefetch, 900); } catch (_e) {} }
 }
 
