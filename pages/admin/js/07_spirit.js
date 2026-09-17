@@ -207,29 +207,46 @@ let _TREAS_EFF_LOADING = null;
 async function ensureTreasureEff(force) {
   try {
     if (!force && window._TREAS_DIRTY) return window._TREAS_EFF || {};
-    if (!force && window._TREAS_EFF && Object.keys(window._TREAS_EFF).length) return window._TREAS_EFF;
+    // 效果与名单分开记完成度：商城页先加载只算效果就绪，名单补齐仍要跑一次
+    const _effReady = !force && window._TREAS_EFF && Object.keys(window._TREAS_EFF).length;
+    const _listDone = !force && window._TREAS_LIST_DONE;
+    if (_effReady && _listDone) return window._TREAS_EFF || {};
     if (_TREAS_EFF_LOADING && !force) { try { await _TREAS_EFF_LOADING; } catch (e) {} return window._TREAS_EFF || {}; }
     _TREAS_EFF_LOADING = (async () => {
       const cur = await apiTimeout(getBridge().apiGet("config/get"), 20000, "config/get");
-      const shopSec = (cur && cur["商城图鉴"]) || {};
-      let src = shopSec["treasures"];
-      if (!src || typeof src !== "object" || Array.isArray(src)) {
-        const _old = shopSec["treasure_effects"];
-        if (typeof _old === "string" && _old.trim()) { try { src = JSON.parse(_old); } catch (e) { src = null; } }
-        else src = _old;
+      if (!_effReady) {
+        const shopSec = (cur && cur["商城图鉴"]) || {};
+        let src = shopSec["treasures"];
+        if (!src || typeof src !== "object" || Array.isArray(src)) {
+          const _old = shopSec["treasure_effects"];
+          if (typeof _old === "string" && _old.trim()) { try { src = JSON.parse(_old); } catch (e) { src = null; } }
+          else src = _old;
+        }
+        const norm = _normTreasureEffMap(src);
+        if (Object.keys(norm).length) window._TREAS_EFF = norm;
+        else if (!window._TREAS_EFF) window._TREAS_EFF = {};
       }
-      const norm = _normTreasureEffMap(src);
-      if (Object.keys(norm).length) window._TREAS_EFF = norm;
-      else if (!window._TREAS_EFF) window._TREAS_EFF = {};
       // 名单同步（未脏时）：设置.宝物为准，顺手回填 CFG.cur 供 renderAtlas 即时渲染
+      // 旧版默认只有2件（酒神葫芦|四象护符）时补齐现行6件：只改内存＋标脏＋toast，
+      // 点保存宝物才落盘，不静默写盘
       try {
         if (!window._TREAS_DIRTY) {
           const _setSec = (cur && cur["设置"]) || {};
-          const _lst = String(_setSec["宝物"] || "").split("|").map((s) => s.trim()).filter(Boolean);
+          let _lst = String(_setSec["宝物"] || "").split("|").map((s) => s.trim()).filter(Boolean);
+          const _FULL_DEFAULT = ["酒神葫芦", "四象护符", "金蟾", "玉如意", "雷公锤", "夜明珠"];
+          try {
+            const _s = new Set(_lst);
+            if (_lst.length === 2 && _s.has("酒神葫芦") && _s.has("四象护符")) {
+              _lst = [..._FULL_DEFAULT];
+              window._TREAS_DIRTY = true;
+              try { toast("检测到旧版默认2宝物，已补齐6件，点保存宝物生效", "ok", 2500); } catch (e) {}
+            }
+          } catch (e) {}
           if (_lst.length) {
             window._TREAS_LIST = _lst;
             try { if (typeof CFG !== "undefined" && CFG && CFG.cur) { CFG.cur["设置"] = CFG.cur["设置"] || {}; CFG.cur["设置"]["宝物"] = _lst.join("|"); } } catch (e) {}
           }
+          try { window._TREAS_LIST_DONE = true; } catch (e) {}
         }
       } catch (e) {}
     })();
@@ -319,9 +336,12 @@ async function renderAtlas(curCfg){
         const _tags = _effTags(n);
         return `<div class="tre-card" data-treasure="${esc(n)}">`
           + `<div class="tre-card-top">`
-          + `<div class="tre-card-title"><strong>${esc(n)}</strong>${_tags.map((t) => `<span class="badge badge-primary">${esc(t)}</span>`).join("")}</div>`
+          + `<div class="tre-card-title"><strong>${esc(n)}</strong></div>`
           + `<div class="tre-card-actions"><button type="button" class="icon-action-btn" data-atlas-edit-treasure="${esc(n)}" title="编辑效果类型与数值">✎</button><button type="button" class="icon-action-btn del" data-atlas-del="奴隶系统-宝物|${esc(n)}" title="删除此宝物">✕</button></div>`
           + `</div>`
+          + (_tags.length
+            ? `<div class="tre-card-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 2px">${_tags.map((t) => `<span class="badge badge-primary">${esc(t)}</span>`).join("")}</div>`
+            : `<div class="tre-card-tags" style="margin:6px 0 2px"><span style="font-size:11.5px;color:var(--muted)">纯收藏</span></div>`)
           + `<div class="tre-card-desc">${e ? esc(e.slice(0, 80)) : `<span style="color:var(--muted)">无自定义效果</span>`}</div>`
           + `</div>`;
       }).join("");
@@ -437,6 +457,7 @@ async function renderAtlas(curCfg){
       });
       if (r && r.error) throw new Error(r.error);
       window._TREAS_DIRTY = false;
+      try { window._TREAS_LIST_DONE = true; } catch (e) {}
       try { if (CFG && CFG.cur && CFG.cur["设置"]) CFG.cur["设置"]["宝物"] = (window._TREAS_LIST || Treas).filter(Boolean).join("|"); } catch (e) {}
     };
     box.querySelectorAll("[data-atlas-del]").forEach(el => el.addEventListener("click", async () => {
@@ -519,9 +540,12 @@ const TREASURE_TYPES = [["", "无（纯收藏）"], ["atk", "攻击加成"], ["s
 // 二进制型（有即生效，无数值概念）：shield/pardon，卡片与弹窗一律显示是否，不暴露 1/0
 function _treasureTypeOk(t) { return ["atk", "shield", "pardon", "work", "worth"].includes(String(t || "")); }
 function _treasureTypeBinary(t) { return t === "shield" || t === "pardon"; }
-// 单行数值区：数值型→数字框，二进制型→是否（固定值1），未选类型→提示
+// 单行数值区：数值型→数字框，二进制型→是否下拉（否＝去掉这条效果），未选类型→提示
 function _treEffValWrapHTML(t, v) {
-  if (_treasureTypeBinary(t)) return `<span class="badge badge-primary" title="拥有即生效，无需填数值">是否生效：是</span><input type="hidden" class="treEffVal" value="1">`;
+  if (_treasureTypeBinary(t)) {
+    return `<select class="treEffBool" style="padding:6px 10px;border-radius:8px" title="拥有即生效；选否＝去掉这条效果">`
+      + `<option value="1" selected>是</option><option value="0">否</option></select>`;
+  }
   if (t === "atk" || t === "work" || t === "worth") return `<input class="treEffVal" type="number" min="0" value="${Math.max(0, Number(v) || 0)}" style="width:100%;padding:6px 10px;border-radius:8px">`;
   return `<span style="color:var(--muted);font-size:12px">先选类型</span><input type="hidden" class="treEffVal" value="0">`;
 }
@@ -586,6 +610,12 @@ function openTreasureEditModal(name, isNew) {
         content.querySelectorAll("#treEffRows .treEffRow").forEach((row) => {
           const t = (row.querySelector(".treEffType")?.value || "").trim();
           if (!_treasureTypeOk(t)) return;
+          if (_treasureTypeBinary(t)) {
+            // 是否下拉：否＝去掉这条效果；是＝拥有即生效（值固定1，引擎不读数）
+            if ((row.querySelector(".treEffBool")?.value || "1") !== "1") return;
+            rows.push({ type: t, value: 1 });
+            return;
+          }
           rows.push({ type: t, value: Math.max(0, Number(row.querySelector(".treEffVal")?.value) || 0) });
         });
       } catch (e) {}
