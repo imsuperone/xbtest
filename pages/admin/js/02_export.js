@@ -63,8 +63,16 @@ const EXPORT_MODULES = [
         if (typeof raw === "object" && !Array.isArray(raw)) eff = raw;
         else if (typeof raw === "string" && raw.trim()) { try { eff = JSON.parse(raw); } catch (e) {} }
         if (window._TREAS_EFF && typeof window._TREAS_EFF === "object") eff = Object.assign({}, eff, window._TREAS_EFF);
-        Object.entries(eff).forEach(([k, v]) => {
-          items[k] = (v && typeof v === "object") ? { effect: String(v.effect || v.desc || ""), type: String(v.type || ""), value: Number(v.value) || 0 } : { effect: String(v || ""), type: "", value: 0 };
+        // 打包 effects 数组透传（多效果不丢）；顶层 type/value＝首效果，老包照读
+        const _packT = (typeof _normTreasureEffMap === "function") ? _normTreasureEffMap(eff) : null;
+        Object.entries(_packT || eff).forEach(([k, v]) => {
+          if (_packT) {
+            const _n = _packT[k] || { effect: "", effects: [] };
+            const _f = (_n.effects && _n.effects[0]) || {};
+            items[k] = { effect: String(_n.effect || ""), type: String(_f.type || ""), value: Number(_f.value) || 0, effects: _n.effects || [] };
+          } else {
+            items[k] = (v && typeof v === "object") ? { effect: String(v.effect || v.desc || ""), type: String(v.type || ""), value: Number(v.value) || 0 } : { effect: String(v || ""), type: "", value: 0 };
+          }
         });
       } catch (e) {}
       return { list, eff, items };

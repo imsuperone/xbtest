@@ -152,25 +152,56 @@ function spiritAttrCards(spirits, dropNames, assignMaps) {
 }
 
 // ---------- 宝物效果库自加载（图鉴页直读数值，不再依赖先进商城页） ----------
-// 与 08_shop.js loadShops 内 _norm1 同构：treasures 结构表优先，老 treasure_effects 只读兼容。
+// 与 08_shop.js loadShops 内 _norm1、02_export.js gather 同构：treasures 结构表优先，老 treasure_effects 只读兼容。
+// 内存口径统一为 {effect, effects:[{type, value}]}；老单体 {type, value} 即时换算；纯文案串只有 effect。
+// 落盘口径（persistTreasure）另带顶层 type/value＝首效果，老读者（旧前端/导出）照读不坏。
 // 脏编辑（_TREAS_DIRTY）永不覆盖；并发复用同一 promise。
+function _cleanTreasureRows(list) {
+  const out = [];
+  try {
+    (Array.isArray(list) ? list : []).forEach((r) => {
+      if (!r || typeof r !== "object") return;
+      const t = String(r.type || "");
+      if (!_treasureTypeOk(t)) return;
+      out.push({ type: t, value: Math.max(0, Number(r.value) || 0) });
+    });
+  } catch (e) {}
+  return out;
+}
 function _normTreasureEffMap(src) {
   const out = {};
   try {
     Object.entries(src || {}).forEach(([k, v]) => {
       if (v && typeof v === "object" && !Array.isArray(v)) {
-        const _t = String(v.type || "");
-        out[k] = {
-          effect: String(v.effect || v.desc || ""),
-          type: (_treasureTypeOk(_t) ? _t : ""),
-          value: Math.max(0, Number(v.value) || 0)
-        };
+        const rows = _cleanTreasureRows(v.effects);
+        if (rows.length) {
+          out[k] = { effect: String(v.effect || v.desc || ""), effects: rows };
+        } else {
+          const _t = String(v.type || "");
+          out[k] = {
+            effect: String(v.effect || v.desc || ""),
+            effects: (_treasureTypeOk(_t) ? [{ type: _t, value: Math.max(0, Number(v.value) || 0) }] : [])
+          };
+        }
       } else if (v && String(v).trim()) {
-        out[k] = { effect: String(v).trim(), type: "", value: 0 };
+        out[k] = { effect: String(v).trim(), effects: [] };
       }
     });
   } catch (e) {}
   return out;
+}
+// 内存条目取效果行（新 effects 数组 / 老单体 / 老串全兼容）
+function _treasRowsOf(entry) {
+  try {
+    if (entry && typeof entry === "object") {
+      const rows = _cleanTreasureRows(entry.effects);
+      if (rows.length) return rows;
+      const t = String(entry.type || "");
+      if (_treasureTypeOk(t)) return [{ type: t, value: Math.max(0, Number(entry.value) || 0) }];
+      return [];
+    }
+  } catch (e) {}
+  return [];
 }
 let _TREAS_EFF_LOADING = null;
 async function ensureTreasureEff(force) {
@@ -250,9 +281,34 @@ async function renderAtlas(curCfg){
     };
     try { window._TREAS_BUILTIN = _TREAS_BUILTIN; } catch (e) {}
     const _effOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); if (e) return String(e); const b = _TREAS_BUILTIN[n]; return b ? b.effect : ""; } catch (e) { return ""; } };
-    const _treOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; return _TREAS_BUILTIN[n] || null; } catch (e) { return null; } };
-    const _valOf = (n) => { try { const o = _treOf(n); return (o && o.value !== undefined) ? (Number(o.value) || 0) : 0; } catch (e) { return 0; } };
-    const _typeTag = (n) => { try { const o = _treOf(n) || {}; const t = String(o.type || ""); const v = Number(o.value) || 0; if (t === "atk" && v > 0) return "攻" + v; if (t === "shield") return "盾"; if (t === "pardon") return "免"; if ((t === "work" || t === "worth") && v > 0) return (t === "work" ? "工" : "价") + v + "%"; return ""; } catch (e) { return ""; } };
+    // 单宝物效果行（定制优先，内置回退；老单体/老串全兼容）
+    const _effRowsOf = (n) => {
+      try {
+        const e = (window._TREAS_EFF || {})[n];
+        if (e && typeof e === "object") { const r = _treasRowsOf(e); if (r.length) return r; if (e) return []; }
+        else if (e) return [];
+        const b = _TREAS_BUILTIN[n];
+        if (b && typeof b === "object") {
+          const r = _cleanTreasureRows(b.effects);
+          if (r.length) return r;
+          const t = String(b.type || "");
+          if (_treasureTypeOk(t)) return [{ type: t, value: Math.max(0, Number(b.value) || 0) }];
+        }
+        return [];
+      } catch (e) { return []; }
+    };
+    // 效果徽章：数值型显示数值，二进制型（盾/免）显示是否（不暴露 1/0）
+    const _effBadge = (t, v) => {
+      try {
+        if (t === "atk") return v > 0 ? "攻+" + v : "攻";
+        if (t === "shield") return "盾·是";
+        if (t === "pardon") return "免·是";
+        if (t === "work") return v > 0 ? "工+" + v + "%" : "工";
+        if (t === "worth") return v > 0 ? "价+" + v + "%" : "价";
+        return "";
+      } catch (e) { return ""; }
+    };
+    const _effTags = (n) => { try { return _effRowsOf(n).map((r) => _effBadge(r.type, r.value)).filter(Boolean); } catch (e) { return []; } };
     // 内置表挂 window，供编辑弹窗回填当前生效值（未定制宝物打开✎不再空白）
     if (ATLAS_CUR === "treasure") {
       let h = `<div class="tre-panel"><div class="tre-header"><div class="tre-header-title"><span>奴隶系统 · 宝物效果库</span><span class="badge badge-primary">${Treas.length} 种</span></div><div class="tre-header-actions"><button type="button" class="btn sm" id="btnAtlasSaveTreasure">保存宝物</button><button type="button" class="ghost sm" id="btnAtlasResetTreasure">恢复默认</button><button type="button" class="ghost sm" id="btnAtlasAddTreasure">添加宝物</button></div></div><div class="tre-grid">`;
@@ -260,20 +316,16 @@ async function renderAtlas(curCfg){
       if (!_ft.length) h += `<div class="atlas-empty-hint">${_q ? "无匹配宝物" : "暂无宝物数据"}</div>`;
       else h += _ft.map(n => {
         const e = _effOf(n);
-        const _tag = _typeTag(n);
+        const _tags = _effTags(n);
         return `<div class="tre-card" data-treasure="${esc(n)}">`
           + `<div class="tre-card-top">`
-          + `<div class="tre-card-title"><strong>${esc(n)}</strong>${_tag ? `<span class="badge badge-primary">${esc(_tag)}</span>` : ""}</div>`
+          + `<div class="tre-card-title"><strong>${esc(n)}</strong>${_tags.map((t) => `<span class="badge badge-primary">${esc(t)}</span>`).join("")}</div>`
           + `<div class="tre-card-actions"><button type="button" class="icon-action-btn" data-atlas-edit-treasure="${esc(n)}" title="编辑效果类型与数值">✎</button><button type="button" class="icon-action-btn del" data-atlas-del="奴隶系统-宝物|${esc(n)}" title="删除此宝物">✕</button></div>`
-          + `</div>`
-          + `<div class="tre-card-val-row" style="display:flex;align-items:center;gap:6px;margin:6px 0">`
-          + `<span style="font-size:11.5px;color:var(--muted);font-weight:600">效果数值:</span>`
-          + `<input type="number" min="0" class="tre-card-val-inp" data-treas-val="${esc(n)}" value="${_valOf(n)}" style="width:72px;height:26px;font-size:12px;text-align:center;padding:2px 4px;border-radius:6px;border:1px solid var(--line)" title="可直接编辑数值">`
           + `</div>`
           + `<div class="tre-card-desc">${e ? esc(e.slice(0, 80)) : `<span style="color:var(--muted)">无自定义效果</span>`}</div>`
           + `</div>`;
       }).join("");
-      h += `</div><div class="hint" style="margin-top:10px">提示：数值可直接在卡片上输入修改，点击 ✎ 可更换属性类型，改动后点击上方「保存宝物」生效。</div></div>`;
+      h += `</div><div class="hint" style="margin-top:10px">提示：点击 ✎ 可增删多条效果、更换属性类型、修改数值，改动后点击上方「保存宝物」生效。</div></div>`;
       html += h;
     }
     else if (ATLAS_CUR === "spirit") {
@@ -364,13 +416,16 @@ async function renderAtlas(curCfg){
       // delNames: 已删宝物名数组，显式 null 清 sidecar（merge 语义缺键≠删除，不传即复活）
       const items = {};
       Object.entries(window._TREAS_EFF || {}).forEach(([k, v]) => {
-        if (v && typeof v === "object") {
-          const _t = String(v.type || "");
-          let _v = Number(v.value) || 0;
-          if (_v < 0) _v = 0;
-          items[k] = { type: (_treasureTypeOk(_t) ? _t : ""), value: _v, desc: String(v.effect || "") };
-        } else if (v && String(v).trim()) {
-          items[k] = { type: "", value: 0, desc: String(v).trim() };
+        // 落盘：effects 数组为主；顶层 type/value＝首效果，老读者照读不坏
+        const rows = _treasRowsOf(v);
+        const _first = rows.length ? rows[0] : null;
+        const _desc = (v && typeof v === "object") ? String(v.effect || v.desc || "") : String(v || "").trim();
+        if (rows.length) {
+          items[k] = { type: _first.type, value: _first.value, desc: _desc, effects: rows };
+        } else if (_desc) {
+          items[k] = { type: "", value: 0, desc: _desc, effects: [] };
+        } else if (v && typeof v === "object") {
+          items[k] = { type: "", value: 0, desc: "", effects: [] };
         }
       });
       try {
@@ -403,19 +458,6 @@ async function renderAtlas(curCfg){
     } catch (e) {}
     box.querySelectorAll("[data-atlas-edit-treasure]").forEach(el => el.addEventListener("click", async () => {
       openTreasureEditModal(el.dataset.atlasEditTreasure);
-    }));
-    box.querySelectorAll("[data-treas-val]").forEach(inp => inp.addEventListener("change", (e) => {
-      const n = e.target.dataset.treasVal;
-      const v = Math.max(0, Number(e.target.value) || 0);
-      if (!window._TREAS_EFF) window._TREAS_EFF = {};
-      const cur = _treOf(n) || { type: "", value: 0, effect: "" };
-      window._TREAS_EFF[n] = {
-        type: cur.type || "",
-        value: v,
-        effect: cur.effect || cur.desc || ""
-      };
-      window._TREAS_DIRTY = true;
-      toast(`已修改 "${n}" 数值: ${v} (需点击保存宝物)`, "ok", 1500);
     }));
     document.getElementById("btnAtlasSaveMaps")?.addEventListener("click", () => saveSpiritKind("all"));
     document.getElementById("btnAtlasResetMaps")?.addEventListener("click", () => resetSpiritKind("all"));
@@ -464,21 +506,36 @@ async function renderAtlas(curCfg){
       if (_tl.includes(n)) { toast("已存在", "bad"); return; }
       window._TREAS_LIST = [..._tl, n];
       window._TREAS_EFF = window._TREAS_EFF || {};
-      if (!window._TREAS_EFF[n]) window._TREAS_EFF[n] = { effect: "", type: "", value: 0 };
+      if (!window._TREAS_EFF[n]) window._TREAS_EFF[n] = { effect: "", effects: [] };
       window._TREAS_DIRTY = true;
       renderAtlas();
       // 类型+数值+文案一次填完（编辑弹窗确定即保存，取消则保留名单稍后点保存宝物）
-      try { openTreasureEditModal(n); } catch (e) {}
+      try { openTreasureEditModal(n, true); } catch (e) {}
     });
   } catch (e) { box.innerHTML = `<span style="color:var(--muted)">图鉴加载失败: ${esc(e.message)}</span>`; }
 }
 
 const TREASURE_TYPES = [["", "无（纯收藏）"], ["atk", "攻击加成"], ["shield", "护盾（免被偷）"], ["pardon", "免罪（造反免罚）"], ["work", "打工加成%"], ["worth", "身价加成%"]];
+// 二进制型（有即生效，无数值概念）：shield/pardon，卡片与弹窗一律显示是否，不暴露 1/0
 function _treasureTypeOk(t) { return ["atk", "shield", "pardon", "work", "worth"].includes(String(t || "")); }
-function openTreasureEditModal(name) {
+function _treasureTypeBinary(t) { return t === "shield" || t === "pardon"; }
+// 单行数值区：数值型→数字框，二进制型→是否（固定值1），未选类型→提示
+function _treEffValWrapHTML(t, v) {
+  if (_treasureTypeBinary(t)) return `<span class="badge badge-primary" title="拥有即生效，无需填数值">是否生效：是</span><input type="hidden" class="treEffVal" value="1">`;
+  if (t === "atk" || t === "work" || t === "worth") return `<input class="treEffVal" type="number" min="0" value="${Math.max(0, Number(v) || 0)}" style="width:100%;padding:6px 10px;border-radius:8px">`;
+  return `<span style="color:var(--muted);font-size:12px">先选类型</span><input type="hidden" class="treEffVal" value="0">`;
+}
+function _treEffRowHTML(t, v) {
+  return `<div class="treEffRow" style="display:flex;gap:8px;align-items:flex-end">`
+    + `<div style="flex:1"><select class="treEffType" style="width:100%;padding:6px 10px;border-radius:8px">${TREASURE_TYPES.map(([vv, l]) => `<option value="${vv}"${String(t || "") === vv ? " selected" : ""}>${l}</option>`).join("")}</select></div>`
+    + `<div style="flex:1" class="treEffValWrap">${_treEffValWrapHTML(String(t || ""), v)}</div>`
+    + `<button type="button" class="icon-action-btn del treEffDel" title="删除这条效果">✕</button></div>`;
+}
+function openTreasureEditModal(name, isNew) {
   const modal = document.getElementById("appModal");
   if (!modal) return;
-  const cur = (() => { try { const e = (window._TREAS_EFF || {})[name]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; const b = (window._TREAS_BUILTIN || {})[name]; if (b && typeof b === "object") return { effect: String(b.effect || ""), type: String(b.type || ""), value: Number(b.value) || 0 }; return { effect: "", type: "", value: 0 }; } catch (e) { return { effect: "", type: "", value: 0 }; } })();
+  const curEff = (() => { try { const e = (window._TREAS_EFF || {})[name]; if (e && typeof e === "object") return String(e.effect || ""); if (e) return String(e); const b = (window._TREAS_BUILTIN || {})[name]; if (b && typeof b === "object") return String(b.effect || ""); return ""; } catch (e) { return ""; } })();
+  const curRows = (() => { try { const e = (window._TREAS_EFF || {})[name]; if (e && typeof e === "object") { const r = _treasRowsOf(e); if (r.length) return r; } const b = (window._TREAS_BUILTIN || {})[name]; if (b && typeof b === "object") { const t = String(b.type || ""); if (_treasureTypeOk(t)) return [{ type: t, value: Math.max(0, Number(b.value) || 0) }]; } return []; } catch (e) { return []; } })();
   const icon = document.getElementById("appModalIcon");
   const title = document.getElementById("appModalTitle");
   const content = document.getElementById("appModalContent");
@@ -486,33 +543,58 @@ function openTreasureEditModal(name) {
   const cancelBtn = document.getElementById("appModalCancel");
   const okBtn = document.getElementById("appModalOk");
   if (icon) icon.textContent = "🎁";
-  if (title) title.textContent = "编辑宝物「" + name + "」";
+  if (title) title.textContent = (isNew ? "添加宝物「" : "编辑宝物「") + name + "」";
   if (inputWrap) inputWrap.style.display = "none";
   content.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:10px">
       <div><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">效果文案（留空用内置/通用）：</label>
-        <input id="treEditDesc" value="${esc(cur.effect || "")}" style="width:100%;padding:6px 10px;border-radius:8px"></div>
-      <div style="display:flex;gap:8px">
-        <div style="flex:1"><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">实效类型：</label>
-          <select id="treEditType" style="width:100%;padding:6px 10px;border-radius:8px">${TREASURE_TYPES.map(([v, l]) => `<option value="${v}"${String(cur.type || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select></div>
-        <div style="flex:1"><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">数值（攻击/打工%/身价%用）：</label>
-          <input id="treEditValue" type="number" min="0" value="${Number(cur.value) || 0}" style="width:100%;padding:6px 10px;border-radius:8px"></div>
-      </div>
-      <div class="hint">攻击计入主人战力；护盾防打架被偷；免罪防造反被罚；打工加成主人全队工资；身价加成战斗力身价部分。保存后即时生效。</div>
+        <input id="treEditDesc" value="${esc(curEff)}" style="width:100%;padding:6px 10px;border-radius:8px"></div>
+      <div><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">实效（可多条叠加）：</label>
+        <div id="treEffRows" style="display:flex;flex-direction:column;gap:8px">${(curRows.length ? curRows : [null]).map((r) => _treEffRowHTML(r ? r.type : "", r ? r.value : 0)).join("")}</div>
+        <div style="margin-top:8px"><button type="button" class="ghost sm" id="treEffAdd">＋ 添加效果</button></div></div>
+      <div class="hint">攻击计入主人战力；护盾/免罪拥有即生效（显示是否）；打工加成主人全队工资；身价加成战斗力身价部分。多条同类型自动累加。保存后即时生效。</div>
     </div>`;
+  try {
+    content.querySelector("#treEffAdd")?.addEventListener("click", () => {
+      const box = content.querySelector("#treEffRows");
+      if (!box) return;
+      box.insertAdjacentHTML("beforeend", _treEffRowHTML("", 0));
+    });
+    content.querySelector("#treEffRows")?.addEventListener("change", (ev) => {
+      const sel = ev.target && ev.target.closest ? ev.target.closest(".treEffType") : null;
+      if (!sel) return;
+      const row = sel.closest(".treEffRow");
+      const wrap = row ? row.querySelector(".treEffValWrap") : null;
+      if (wrap) wrap.innerHTML = _treEffValWrapHTML(sel.value || "", 0);
+    });
+    content.querySelector("#treEffRows")?.addEventListener("click", (ev) => {
+      const del = ev.target && ev.target.closest ? ev.target.closest(".treEffDel") : null;
+      if (!del) return;
+      const row = del.closest(".treEffRow");
+      const box = content.querySelector("#treEffRows");
+      if (row && box && box.querySelectorAll(".treEffRow").length > 1) row.remove();
+      else if (row) { const s = row.querySelector(".treEffType"); if (s) { s.value = ""; s.dispatchEvent(new Event("change", { bubbles: true })); } }
+    });
+  } catch (e) {}
   if (cancelBtn) { cancelBtn.style.display = ""; cancelBtn.textContent = "取消"; cancelBtn.onclick = () => { modal.className = ""; }; }
   if (okBtn) {
-    okBtn.textContent = "保存宝物"; okBtn.style.background = "var(--acc)"; okBtn.style.borderColor = "transparent";
+    okBtn.textContent = isNew ? "添加并保存" : "保存宝物"; okBtn.style.background = "var(--acc)"; okBtn.style.borderColor = "transparent";
     okBtn.onclick = async () => {
       const desc = (document.getElementById("treEditDesc")?.value || "").trim();
-      const type = document.getElementById("treEditType")?.value || "";
-      const value = Math.max(0, Number(document.getElementById("treEditValue")?.value) || 0);
+      const rows = [];
+      try {
+        content.querySelectorAll("#treEffRows .treEffRow").forEach((row) => {
+          const t = (row.querySelector(".treEffType")?.value || "").trim();
+          if (!_treasureTypeOk(t)) return;
+          rows.push({ type: t, value: Math.max(0, Number(row.querySelector(".treEffVal")?.value) || 0) });
+        });
+      } catch (e) {}
       window._TREAS_EFF = window._TREAS_EFF || {};
       // 清空即删键：显式 null 穿透 merge（缺键≠删除，不传即复活）
-      if (!desc && !type) { delete window._TREAS_EFF[name]; try { await persistTreasure([name]); toast("已保存", "ok"); } catch (e) { toast("保存失败: " + e.message, "bad"); } }
+      if (!desc && !rows.length) { delete window._TREAS_EFF[name]; try { await persistTreasure([name]); toast("已保存", "ok"); } catch (e) { toast("保存失败: " + e.message, "bad"); } }
       else {
-        window._TREAS_EFF[name] = { effect: desc, type: (_treasureTypeOk(type) ? type : ""), value };
-        try { await persistTreasure(); toast("已保存", "ok"); }
+        window._TREAS_EFF[name] = { effect: desc, effects: rows };
+        try { await persistTreasure(); toast(isNew ? "已添加并保存" : "已保存", "ok"); }
         catch (e) { toast("保存失败: " + e.message, "bad"); }
       }
       modal.className = "";
@@ -1150,16 +1232,14 @@ async function exportPreset() {
     const setSec = (cur && cur["设置"]) || {};
     let tlist = "";
     let teff = {};
-    // v3 结构宝物优先（treasures 新家），老 treasure_effects 只读兼容
+    // v3 结构宝物优先（treasures 新家），老 treasure_effects 只读兼容；effects 数组透传
     const _normT = (o) => {
+      const _m = _normTreasureEffMap(o);
       const out = {};
       try {
-        Object.entries(o || {}).forEach(([k, v]) => {
-          if (v && typeof v === "object" && !Array.isArray(v)) {
-            out[k] = { effect: String(v.effect || v.desc || ""), type: (_treasureTypeOk(String(v.type || "")) ? String(v.type) : ""), value: Math.max(0, Number(v.value) || 0) };
-          } else if (v && String(v).trim()) {
-            out[k] = { effect: String(v).trim(), type: "", value: 0 };
-          }
+        Object.entries(_m).forEach(([k, v]) => {
+          const _f = (v.effects && v.effects[0]) || {};
+          out[k] = { effect: String(v.effect || ""), type: String(_f.type || ""), value: Number(_f.value) || 0, effects: v.effects || [] };
         });
       } catch (e) {}
       return out;
@@ -1249,13 +1329,9 @@ async function importPreset() {
           const _items = (parts.treasure.items && typeof parts.treasure.items === "object") ? parts.treasure.items : null;
           if (_items) {
             const _clean = {};
-            Object.entries(_items).forEach(([k, v]) => {
-              if (v && typeof v === "object" && !Array.isArray(v)) {
-                const _t = String(v.type || "");
-                _clean[k] = { type: (_treasureTypeOk(_t) ? _t : ""), value: Math.max(0, Number(v.value) || 0), desc: String(v.effect || v.desc || "") };
-              } else if (v && String(v).trim()) {
-                _clean[k] = { type: "", value: 0, desc: String(v).trim() };
-              }
+            Object.entries(_normTreasureEffMap(_items)).forEach(([k, v]) => {
+              const _f = (v.effects && v.effects[0]) || {};
+              _clean[k] = { type: String(_f.type || ""), value: Number(_f.value) || 0, desc: String(v.effect || ""), effects: v.effects || [] };
             });
             cfgPayload["商城图鉴"]["treasures"] = _clean;
           } else {

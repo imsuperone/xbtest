@@ -954,8 +954,9 @@ async function loadShops(skipAtlas = false) {
     } catch (e) {}
     try {
       // 宝物新家优先（treasures 结构表），老 treasure_effects 只读兼容
+      // 口径与 07 自加载同构：内存 {effect, effects[]}；07 未加载时回退老单体
       const _tn = sec["treasures"];
-      const _norm1 = (o) => {
+      const _norm1 = (typeof _normTreasureEffMap === "function") ? _normTreasureEffMap : ((o) => {
         const out = {};
         try {
           Object.entries(o || {}).forEach(([k, v]) => {
@@ -968,7 +969,7 @@ async function loadShops(skipAtlas = false) {
           });
         } catch (e) {}
         return out;
-      };
+      });
       const _newEff = _norm1((_tn && typeof _tn === "object" && !Array.isArray(_tn)) ? _tn : null);
       if (Object.keys(_newEff).length) { window._TREAS_EFF = _newEff; }
       else {

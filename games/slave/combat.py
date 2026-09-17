@@ -116,34 +116,71 @@ def _treasure_desc(tname):
         return ""
 
 
+def _treasure_effect_list(tname):
+    """单个宝物的实效列表 [(type, value)]：新 effects 数组优先，老单 type+value 回退。
+
+    sidecar 形态（商城图鉴.treasures）：{名: {desc, type, value, effects:[{type,value}]}}；
+    老串/老{effect}只有文案无实效。纯收藏返回 []。value 恒为非负数。"""
+    try:
+        v = (_treasure_items() or {}).get(str(tname or ""))
+        if isinstance(v, dict):
+            effs = v.get("effects")
+            if isinstance(effs, list) and effs:
+                out = []
+                for e in effs:
+                    if not isinstance(e, dict):
+                        continue
+                    t = str(e.get("type", "") or "")
+                    try:
+                        val = int(float(e.get("value", 0) or 0))
+                    except Exception:
+                        val = 0
+                    if t and val >= 0:
+                        out.append((t, max(0, val)))
+                    elif t:
+                        out.append((t, 0))
+                if out:
+                    return out
+            t = str(v.get("type", "") or "")
+            if t:
+                try:
+                    val = int(float(v.get("value", 0) or 0))
+                except Exception:
+                    val = 0
+                return [(t, max(0, val))]
+    except Exception:
+        pass
+    return []
+
+
 def _has_treasure_type(owned, ttype, fallbacks=()):
     """持有清单里是否有某型宝物；fallbacks 为内置名单（未自定义时保底生效）"""
     try:
-        items = _treasure_items()
         for t in (owned or []):
             t = str(t)
             if t in (fallbacks or ()):
                 return True
-            v = items.get(t)
-            if isinstance(v, dict) and str(v.get("type", "") or "") == str(ttype or ""):
-                return True
+            try:
+                if any(tt == str(ttype or "") for tt, _vv in _treasure_effect_list(t)):
+                    return True
+            except Exception:
+                continue
     except Exception:
         pass
     return False
 
 
 def _treasure_pct_total(owned, ttype, cap=100):
-    """持有宝物某百分比型加成之和（钳位 0..cap，默认 100）"""
+    """持有宝物某百分比型加成之和（钳位 0..cap，默认 100；多效果宝物按行累加）"""
     s = 0
     try:
-        items = _treasure_items()
         for t in (owned or []):
-            v = items.get(str(t))
-            if isinstance(v, dict) and str(v.get("type", "") or "") == str(ttype or ""):
-                try:
-                    s += max(0, int(float(v.get("value", 0) or 0)))
-                except Exception:
-                    pass
+            for tt, vv in _treasure_effect_list(str(t)):
+                if tt == str(ttype or ""):
+                    try:
+                        s += max(0, int(vv or 0))
+                    except Exception:
+                        pass
     except Exception:
         pass
     try:
@@ -154,17 +191,16 @@ def _treasure_pct_total(owned, ttype, cap=100):
 
 
 def _treasure_atk_total(owned):
-    """持有宝物攻击加成之和（战斗力外挂项，不钳位）"""
+    """持有宝物攻击加成之和（战斗力外挂项，不钳位；多效果宝物按行累加）"""
     s = 0
     try:
-        items = _treasure_items()
         for t in (owned or []):
-            v = items.get(str(t))
-            if isinstance(v, dict) and str(v.get("type", "") or "") == "atk":
-                try:
-                    s += max(0, int(float(v.get("value", 0) or 0)))
-                except Exception:
-                    pass
+            for tt, vv in _treasure_effect_list(str(t)):
+                if tt == "atk":
+                    try:
+                        s += max(0, int(vv or 0))
+                    except Exception:
+                        pass
     except Exception:
         pass
     return s

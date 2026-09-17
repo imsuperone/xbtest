@@ -12,7 +12,7 @@ beta 快照制（正式版仍走 semver）：`YYYYwMMDDx`（年＋w＋月日＋�
 """
 import os as _os
 
-_FALLBACK = "2026w0917b"
+_FALLBACK = "2026w0917c"
 _CACHE = ""
 
 
