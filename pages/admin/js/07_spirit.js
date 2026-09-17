@@ -67,6 +67,8 @@ async function loadSpirits(force) {
     SPIRIT_OPEN = {};
     const msg = document.getElementById("spiritMsg");
     if (msg) { msg.className = "msg"; msg.textContent = ""; }
+    // 宝物数值同批自加载（图鉴页不再依赖先进商城页；失败不挡精灵渲染）
+    try { await ensureTreasureEff(); } catch (e) {}
     refreshSpiritViews();
   } catch (e) {
     err("spirits: " + e.message);
@@ -149,6 +151,64 @@ function spiritAttrCards(spirits, dropNames, assignMaps) {
   }).join("") + _dl;
 }
 
+// ---------- 宝物效果库自加载（图鉴页直读数值，不再依赖先进商城页） ----------
+// 与 08_shop.js loadShops 内 _norm1 同构：treasures 结构表优先，老 treasure_effects 只读兼容。
+// 脏编辑（_TREAS_DIRTY）永不覆盖；并发复用同一 promise。
+function _normTreasureEffMap(src) {
+  const out = {};
+  try {
+    Object.entries(src || {}).forEach(([k, v]) => {
+      if (v && typeof v === "object" && !Array.isArray(v)) {
+        const _t = String(v.type || "");
+        out[k] = {
+          effect: String(v.effect || v.desc || ""),
+          type: (_treasureTypeOk(_t) ? _t : ""),
+          value: Math.max(0, Number(v.value) || 0)
+        };
+      } else if (v && String(v).trim()) {
+        out[k] = { effect: String(v).trim(), type: "", value: 0 };
+      }
+    });
+  } catch (e) {}
+  return out;
+}
+let _TREAS_EFF_LOADING = null;
+async function ensureTreasureEff(force) {
+  try {
+    if (!force && window._TREAS_DIRTY) return window._TREAS_EFF || {};
+    if (!force && window._TREAS_EFF && Object.keys(window._TREAS_EFF).length) return window._TREAS_EFF;
+    if (_TREAS_EFF_LOADING && !force) { try { await _TREAS_EFF_LOADING; } catch (e) {} return window._TREAS_EFF || {}; }
+    _TREAS_EFF_LOADING = (async () => {
+      const cur = await apiTimeout(getBridge().apiGet("config/get"), 20000, "config/get");
+      const shopSec = (cur && cur["商城图鉴"]) || {};
+      let src = shopSec["treasures"];
+      if (!src || typeof src !== "object" || Array.isArray(src)) {
+        const _old = shopSec["treasure_effects"];
+        if (typeof _old === "string" && _old.trim()) { try { src = JSON.parse(_old); } catch (e) { src = null; } }
+        else src = _old;
+      }
+      const norm = _normTreasureEffMap(src);
+      if (Object.keys(norm).length) window._TREAS_EFF = norm;
+      else if (!window._TREAS_EFF) window._TREAS_EFF = {};
+      // 名单同步（未脏时）：设置.宝物为准，顺手回填 CFG.cur 供 renderAtlas 即时渲染
+      try {
+        if (!window._TREAS_DIRTY) {
+          const _setSec = (cur && cur["设置"]) || {};
+          const _lst = String(_setSec["宝物"] || "").split("|").map((s) => s.trim()).filter(Boolean);
+          if (_lst.length) {
+            window._TREAS_LIST = _lst;
+            try { if (typeof CFG !== "undefined" && CFG && CFG.cur) { CFG.cur["设置"] = CFG.cur["设置"] || {}; CFG.cur["设置"]["宝物"] = _lst.join("|"); } } catch (e) {}
+          }
+        }
+      } catch (e) {}
+    })();
+    await _TREAS_EFF_LOADING;
+  } catch (e) {}
+  _TREAS_EFF_LOADING = null;
+  window._TREAS_EFF = window._TREAS_EFF || {};
+  return window._TREAS_EFF;
+}
+
 // ---------- 图鉴总览（atlasBox：宝物/精灵地图；f11 专属，商城只调不用，独立方便导出导入与自定义） ----------
 let ATLAS_CUR = "treasure";  // 总览分类：treasure | spirit（武器坐骑只在商城管理）
 async function renderAtlas(curCfg){
@@ -188,10 +248,12 @@ async function renderAtlas(curCfg){
       "雷公锤": { effect: "主人战力 +500", type: "atk", value: 500 },
       "夜明珠": { effect: "纯收藏，无实战效果", type: "", value: 0 }
     };
+    try { window._TREAS_BUILTIN = _TREAS_BUILTIN; } catch (e) {}
     const _effOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); if (e) return String(e); const b = _TREAS_BUILTIN[n]; return b ? b.effect : ""; } catch (e) { return ""; } };
     const _treOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; return _TREAS_BUILTIN[n] || null; } catch (e) { return null; } };
     const _valOf = (n) => { try { const o = _treOf(n); return (o && o.value !== undefined) ? (Number(o.value) || 0) : 0; } catch (e) { return 0; } };
     const _typeTag = (n) => { try { const o = _treOf(n) || {}; const t = String(o.type || ""); const v = Number(o.value) || 0; if (t === "atk" && v > 0) return "攻" + v; if (t === "shield") return "盾"; if (t === "pardon") return "免"; if ((t === "work" || t === "worth") && v > 0) return (t === "work" ? "工" : "价") + v + "%"; return ""; } catch (e) { return ""; } };
+    // 内置表挂 window，供编辑弹窗回填当前生效值（未定制宝物打开✎不再空白）
     if (ATLAS_CUR === "treasure") {
       let h = `<div class="tre-panel"><div class="tre-header"><div class="tre-header-title"><span>奴隶系统 · 宝物效果库</span><span class="badge badge-primary">${Treas.length} 种</span></div><div class="tre-header-actions"><button type="button" class="btn sm" id="btnAtlasSaveTreasure">保存宝物</button><button type="button" class="ghost sm" id="btnAtlasResetTreasure">恢复默认</button><button type="button" class="ghost sm" id="btnAtlasAddTreasure">添加宝物</button></div></div><div class="tre-grid">`;
       const _ft = Treas.filter((n) => !_ql || String(n).toLowerCase().includes(_ql) || _effOf(n).toLowerCase().includes(_ql));
@@ -396,16 +458,17 @@ async function renderAtlas(curCfg){
     document.getElementById("btnAtlasAddTreasure")?.addEventListener("click", async () => {
       let n = await uiPrompt("输入宝物名（奴隶系统-宝物）：", "", "添加宝物");
       if (!n) return; n = n.trim(); if (!n) return;
-      // 名单以 | 分隔，宝物名禁 | 与空格首尾（否则存档名单解析错位）
+      // 名单以 | 分隔，宝物名禁 | 与首尾空格（否则存档名单解析错位）
       if (/[|｜]/.test(n)) { toast("宝物名不能包含 |", "bad"); return; }
       const _tl = window._TREAS_DIRTY ? (window._TREAS_LIST || []) : Treas;
       if (_tl.includes(n)) { toast("已存在", "bad"); return; }
       window._TREAS_LIST = [..._tl, n];
-      const eff = await uiPrompt(`宝物「${n}」效果文案（可选，留空用通用，类型数值可在✎里改）：`, "", "宝物效果");
-      if (eff && String(eff).trim()) { window._TREAS_EFF = window._TREAS_EFF || {}; window._TREAS_EFF[n] = { effect: String(eff).trim(), type: "", value: 0 }; }
-      try { await persistTreasure(); toast("已添加并保存", "ok"); }
-      catch (e) { window._TREAS_DIRTY = true; toast("保存失败: " + e.message, "bad"); }
+      window._TREAS_EFF = window._TREAS_EFF || {};
+      if (!window._TREAS_EFF[n]) window._TREAS_EFF[n] = { effect: "", type: "", value: 0 };
+      window._TREAS_DIRTY = true;
       renderAtlas();
+      // 类型+数值+文案一次填完（编辑弹窗确定即保存，取消则保留名单稍后点保存宝物）
+      try { openTreasureEditModal(n); } catch (e) {}
     });
   } catch (e) { box.innerHTML = `<span style="color:var(--muted)">图鉴加载失败: ${esc(e.message)}</span>`; }
 }
@@ -415,7 +478,7 @@ function _treasureTypeOk(t) { return ["atk", "shield", "pardon", "work", "worth"
 function openTreasureEditModal(name) {
   const modal = document.getElementById("appModal");
   if (!modal) return;
-  const cur = (() => { try { const e = (window._TREAS_EFF || {})[name]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; return { effect: "", type: "", value: 0 }; } catch (e) { return { effect: "", type: "", value: 0 }; } })();
+  const cur = (() => { try { const e = (window._TREAS_EFF || {})[name]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; const b = (window._TREAS_BUILTIN || {})[name]; if (b && typeof b === "object") return { effect: String(b.effect || ""), type: String(b.type || ""), value: Number(b.value) || 0 }; return { effect: "", type: "", value: 0 }; } catch (e) { return { effect: "", type: "", value: 0 }; } })();
   const icon = document.getElementById("appModalIcon");
   const title = document.getElementById("appModalTitle");
   const content = document.getElementById("appModalContent");
