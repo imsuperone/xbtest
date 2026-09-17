@@ -800,3 +800,22 @@ def _handle_inner(gid, qq, raw):
     if m.startswith("精灵排行"):
         return cmd_rank(gid, m[4:].strip())
     return None
+
+
+COMMANDS = (
+    "领养精灵", "查看地图", "查看精灵", "购买", "精灵冒险",
+    "使用精灵球", "出战精灵", "携带精灵", "丢弃精灵",
+    "我的精灵", "精灵商城", "精灵背包", "精灵对战", "精灵排行", "羁绊",
+)
+WAKE = "精灵系统"
+
+
+def can_handle(gid, qq, raw):
+    try:
+        rt_n = str(raw or "").strip().replace(" ", "")
+        for c in COMMANDS:
+            if c and rt_n.startswith(str(c).replace(" ", "")):
+                return True
+    except Exception:
+        pass
+    return False

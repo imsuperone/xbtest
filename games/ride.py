@@ -605,3 +605,21 @@ def handle(gid, qq, raw):
     if text.startswith("携带精灵"):
         return cmd_ride_spirit(gid, qq, text[4:].strip())
     return None
+
+
+COMMANDS = (
+    "购买坐骑", "查看坐骑", "丢弃坐骑", "设置欢迎坐骑",
+    "切换坐骑", "回收欢迎坐骑", "携带精灵", "坐骑商城", "我的坐骑",
+)
+WAKE = "坐骑系统"
+
+
+def can_handle(gid, qq, raw):
+    try:
+        rt_n = str(raw or "").strip().replace(" ", "")
+        for c in COMMANDS:
+            if c and rt_n.startswith(str(c).replace(" ", "")):
+                return True
+    except Exception:
+        pass
+    return False

@@ -192,9 +192,15 @@ def _treasure_effect(tname):
             return _S.T.GOURD_EFFECT
         if any(k in t for k in TREASURE_CHARM_KEYS):
             return _S.T.CHARM_EFFECT
-        if hasattr(_S.T, "TREASURE_EFFECT_GENERIC") and _S.T.TREASURE_EFFECT_GENERIC:
-            return _S.T.TREASURE_EFFECT_GENERIC
-        return _S.T.T_COMMON_EFFECT if hasattr(_S.T, "T_COMMON_EFFECT") else ""
+        # 通用收藏兜底（text_slave.T_COMMON_EFFECT 经 _tmap 去前缀后为 COMMON_EFFECT，
+        # 旧 TREASURE_EFFECT_GENERIC/T_COMMON_EFFECT 属性名不存在，走不到这里即空白）
+        try:
+            _g = getattr(_S.T, "COMMON_EFFECT", "")
+            if _g:
+                return _g
+        except Exception:
+            pass
+        return ""
     except Exception:
         return ""
 

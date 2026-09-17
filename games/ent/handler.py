@@ -592,4 +592,23 @@ def _play(gid, qq, text):
                 return f"→ {text} 奖励{coin}{S.coin_name()}"
             return None
 
-__all__ = ["_play", "handle"]
+__all__ = ["_play", "handle", "COMMANDS", "WAKE", "can_handle"]
+
+
+COMMANDS = (
+    "抽签", "扔炸弹", "开始接龙", "开始急转弯", "开始猜字谜",
+    "开始猜数", "开始答题", "退出猜数", "开始二四点", "二四点", "猜拳",
+)
+WAKE = "娱乐系统"
+
+
+def can_handle(gid, qq, raw):
+    # ent 保留自由作答：can_handle 仅快速谓词，真入口仍由 router 特许直调 handle
+    try:
+        rt_n = str(raw or "").strip().replace(" ", "")
+        for c in COMMANDS:
+            if c and rt_n.startswith(str(c).replace(" ", "")):
+                return True
+    except Exception:
+        pass
+    return False

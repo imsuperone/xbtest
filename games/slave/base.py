@@ -139,6 +139,11 @@ def U(st, qq):
                     st.mark_dirty(qq)
         except Exception:
             u["price"] = str(init_price)
+    # 宝物旧键迁移（keymap 补映射前按 uXXXX 存的 4 内置宝物持有数/升阶，读时搬新键）
+    try:
+        _migrate_treasure_keys(u)
+    except Exception:
+        pass
     return st[qq]
 
 
@@ -204,7 +209,41 @@ def weapons_of(u):
 
 
 def treasures_of(u):
+    try:
+        _migrate_treasure_keys(u)
+    except Exception:
+        pass
     return [t for t in uget(u, "treasure").split("|") if t]
+
+
+# keymap 补齐 4 内置宝物映射前的旧 escapes：读时一次性搬到新键（只搬空键，不覆盖新数据）。
+# 旧档（u91d1u87fe 等）持有数/升阶原地保留，老键不清（回滚安全），写一律走新键。
+_TREASURE_KEY_MIGRATIONS = (
+    ("u91d1u87fe", "jinchan"),
+    ("u91d1u87feu5347u9636", "jinchan_stage"),
+    ("u7389u5982u610f", "yuruyi"),
+    ("u7389u5982u610fu5347u9636", "yuruyi_stage"),
+    ("u96f7u516cu9524", "leigongchui"),
+    ("u96f7u516cu9524u5347u9636", "leigongchui_stage"),
+    ("u591cu660eu73e0", "yemingzhu"),
+    ("u591cu660eu73e0u5347u9636", "yemingzhu_stage"),
+)
+
+
+def _migrate_treasure_keys(u):
+    try:
+        get = u.get
+    except Exception:
+        return
+    for _old, _new in _TREASURE_KEY_MIGRATIONS:
+        try:
+            _nv = get(_new, "")
+            if str(_nv or "").strip() in ("", "0"):
+                _ov = get(_old, "")
+                if str(_ov or "").strip() not in ("", "0"):
+                    u[_new] = str(_ov)
+        except Exception:
+            continue
 
 
 

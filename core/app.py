@@ -198,9 +198,9 @@ _API_HANDLER_CACHE = {}
 
 def _load_api_handler(mod_short, func_name):
     """双通道导入 API handler：插件根包绝对优先，顶层绝对回退。
-    注意 mod_short（如 core.api.stats）是相对插件根的路径：
-    本函数驻留 core/app.py，插件根包 = __package__ 去掉末级 .core；
-    若将来搬回插件根 main.py，__package__ 即插件根（两种布局都对）。
+
+    兼容搬迁后的 core.runtime.app / core.routing.* 布局：__package__ 无论是
+    `xxx.core` 还是 `xxx.core.runtime`，都回溯到插件根再拼 mod_short。
     真机只有 data.plugins.X 一条路，顶层回退仅本机直跑有效。"""
     cache_key = (str(mod_short), str(func_name))
     cached = _API_HANDLER_CACHE.get(cache_key)
@@ -208,9 +208,15 @@ def _load_api_handler(mod_short, func_name):
         return cached
     cands = []
     pkg = __package__ or ""
-    if pkg.endswith(".core"):
-        cands.append(pkg[:-len(".core")] + "." + mod_short)
-    elif pkg:
+    # 插件根回溯：xxx.core / xxx.core.runtime / xxx.core.routing 统一回到 xxx
+    _root = pkg
+    for _suffix in (".core.runtime", ".core.routing", ".core.platform", ".core.ops", ".core"):
+        if _root.endswith(_suffix):
+            _root = _root[:-len(_suffix)]
+            break
+    if _root:
+        cands.append(_root + "." + mod_short)
+    if pkg and (not cands or cands[0] != pkg + "." + mod_short):
         cands.append(pkg + "." + mod_short)
     cands.append(mod_short)
     for cand in cands:
@@ -689,14 +695,33 @@ class XbBot(Star):
                 is_admin = bool(event.is_admin())
             except Exception:
                 is_admin = False
-            # 维护统一门（与 router 管线同语义，对超管同样生效）：
+            # 维护统一门（单源 core.router.maintenance_gate，与管线同语义，对超管同样生效）：
             # 开则全员不再执行业务（含测试菜单/超管列表/迎新），仅被@时回一条维护通知。
+            try:
+                _mg = _router_layer.maintenance_gate(gid, raw, ST) if _HAS_CORE and hasattr(_router_layer, "maintenance_gate") else None
+                if _mg is not None:
+                    try:
+                        event.stop_event()
+                    except Exception:
+                        pass
+                    # _PROTO_SILENT 哨兵：维护中静默；str：被@回一条
+                    if isinstance(_mg, str):
+                        try:
+                            if _HAS_CORE and _name_prefix:
+                                _mg = _name_prefix(qq, _mg)
+                        except Exception:
+                            pass
+                        yield event.plain_result(_mg)
+                    return
+            except Exception:
+                pass
+            # 回退：router 未提供 maintenance_gate 时的旧内联语义（零行为差）
             try:
                 _m_on = (ST.cfg("维护配置", "维护开关", "假") == "真") or (
                     str(gid).isdigit() and ST.recall_get("group_maint_%s" % gid, "0") == "1")
             except Exception:
                 _m_on = False
-            if _m_on:
+            if _m_on and not (_HAS_CORE and hasattr(_router_layer, "maintenance_gate")):
                 try:
                     event.stop_event()
                 except Exception:

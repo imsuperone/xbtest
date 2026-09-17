@@ -720,3 +720,7 @@ def handle(gid, qq, raw, is_admin=False):
     if text == "超管列表":
         return None
     return None
+
+
+COMMANDS = ("超管", "系统开关", "群开关", "维护", "空投", "版本")
+WAKE = "超管系统"

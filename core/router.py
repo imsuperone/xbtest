@@ -4,6 +4,25 @@ shared（常量/缓存/渲染，原 template 已并入）/ guards（开关守卫
 rules（自定义/禁用/权限）/ pipeline（11 层 handle）。对外名与包门面一致。"""
 import random
 import time as _t_guard
+try:
+    from .protocol import (  # type: ignore
+        SILENT as _PROTO_SILENT, maintenance_active as _proto_active,
+        is_mentioned as _proto_mentioned, engine_commands as _proto_cmds,
+        norm_cmd as _proto_norm,
+    )
+except ImportError:
+    try:
+        from core.protocol import (  # type: ignore
+            SILENT as _PROTO_SILENT, maintenance_active as _proto_active,
+            is_mentioned as _proto_mentioned, engine_commands as _proto_cmds,
+            norm_cmd as _proto_norm,
+        )
+    except Exception:
+        _PROTO_SILENT = object()
+        _proto_active = None
+        _proto_mentioned = None
+        _proto_cmds = None
+        _proto_norm = None
 _REPLY_OVERRIDE_SEC = "指令回复配置"
 _DEFAULT_MARKERS = ("{回复}", "{默认}", "默认", "默认回复")
 _CUSTOM_SEC = "自定义指令配置"
@@ -272,7 +291,7 @@ def _get_engine_cmds(engine, store=None):
     return _ENGINE_CMDS.get(engine, [])
 
 
-def _matches_engine(raw, engine, store=None):
+def _matches_engine(raw, engine, store=None, _mod=None):
     if not raw:
         return False
     rt = str(raw).strip()
@@ -286,6 +305,18 @@ def _matches_engine(raw, engine, store=None):
             pass
     if rt in (sysname + "系统", sysname + "菜单", sysname + "帮助"):
         return True
+    # 显式注册表优先：引擎声明 COMMANDS 即免正则索引（config._collect_commands 仅回退）
+    try:
+        if _mod is not None and _proto_cmds is not None:
+            _explicit = _proto_cmds(_mod)
+            if _explicit:
+                rt_n0 = _norm_cmd(rt)
+                for c in _explicit:
+                    if c and rt_n0.startswith(_norm_cmd(c)):
+                        return True
+                # 显式表未命中仍继续走正则索引（兼容唤醒词扩展），不直接返回
+    except Exception:
+        pass
     cmds = _get_engine_cmds(engine, store)
     rt_n = _norm_cmd(rt)
     for c in cmds:
@@ -581,6 +612,74 @@ def _cmd_need_admin(raw, store):
 
 
 
+# ==================== maintenance 单源 + superadmin 去重 ====================
+def maintenance_gate(gid, raw, store):
+    """维护统一门单源（app._dispatch 与 handle 共用，零语义差）。
+
+    返回：None=放行；str=回复维护信息；_PROTO_SILENT=维护中静默。
+    """
+    try:
+        if _proto_active is not None:
+            _on = bool(_proto_active(store, gid))
+        else:
+            _on = False
+            try:
+                _on = bool(store) and store.cfg("维护配置", "维护开关", "假") == "真"
+            except Exception:
+                pass
+            try:
+                _on = _on or (gid and str(gid).isdigit() and bool(store)
+                              and store.recall_get("group_maint_%s" % gid, "0") == "1")
+            except Exception:
+                pass
+        if not _on:
+            return None
+        if _proto_mentioned is not None:
+            _hit = bool(_proto_mentioned(store, raw))
+        else:
+            try:
+                _pa = getattr(store, "parse_at", None) if store is not None else None
+                _hit = (_pa(str(raw or ""))[0] is not None) if callable(_pa) else ("[CQ:at" in str(raw or ""))
+            except Exception:
+                _hit = ("[CQ:at" in str(raw or ""))
+        if _hit:
+            try:
+                return store.cfg("维护配置", "维护信息", "🚧 维护中")
+            except Exception:
+                return "🚧 维护中"
+        return _PROTO_SILENT
+    except Exception:
+        return None
+
+
+def _call_superadmin(fn, gid, qq, raw, is_admin, matched, store):
+    """超管调用单源：两种 superadmin 入口（独立模块/engines表）的去重收口。"""
+    try:
+        try:
+            r = fn(gid, qq, raw, is_admin)
+        except TypeError:
+            r = fn(gid, qq, raw)
+        if r:
+            return apply_reply_override(raw, r, store)
+        return None
+    except Exception as e:
+        import traceback
+        try:
+            from .logger import error as _log_err
+            _log_err(f"[superadmin] handle异常: {e}\n{traceback.format_exc()}")
+        except Exception:
+            pass
+        if matched:
+            try:
+                _ml = str(e).lower()
+            except Exception:
+                _ml = ""
+            if any(k in _ml for k in ("database", "locked", "rollback", "transaction", "sqlite", "misuse")):
+                return "【超管系统】当前人数较多，系统繁忙，请稍后重试~"
+            return f"【超管系统】处理指令时出现异常，请稍后重试（原因: {e}）"
+        return None
+
+
 # ==================== pipeline（原 router/pipeline.py 并入） ====================
 def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mod=None):
     # 自定义索引版本兜底：handle_cfg_save 直改 _CONFIG 不走 set_config 时 ver 未 bump，
@@ -603,30 +702,16 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
                 return None
         except Exception:
             pass
-    # 维护开关（全局＋本群）：开则全员（含超管）不再执行业务；仅被@时回一条维护通知，
-    # 其余完全静默。聊天内无法自救关闭维护，WebUI 为唯一控制面（§7.8）。
+    # 维护开关（全局＋本群）：单源 maintenance_gate，与 app._dispatch 同语义。
+    # 开则全员（含超管）不再执行业务；仅被@时回一条维护通知，其余完全静默。
     try:
-        _maint_g = bool(store) and store.cfg("维护配置", "维护开关", "假") == "真"
+        _mg = maintenance_gate(gid, raw, store)
+        if _mg is _PROTO_SILENT:
+            return None
+        if isinstance(_mg, str):
+            return _mg
     except Exception:
-        _maint_g = False
-    try:
-        _maint_l = (gid and str(gid).isdigit() and bool(store)
-                    and store.recall_get("group_maint_%s" % gid, "0") == "1")
-    except Exception:
-        _maint_l = False
-    if _maint_g or _maint_l:
-        try:
-            _pa = getattr(store, "parse_at", None) if store is not None else None
-            # 被@才回一条：走 storage.parse_at（CQ:at,qq=/@QQ/@昵称），防 "[CQ:at" 子串误判
-            _mentioned = (_pa(str(raw or ""))[0] is not None) if callable(_pa) else ("[CQ:at" in str(raw or ""))
-        except Exception:
-            _mentioned = ("[CQ:at" in str(raw or ""))
-        if _mentioned:
-            try:
-                return store.cfg("维护配置", "维护信息", "🚧 维护中")
-            except Exception:
-                return "🚧 维护中"
-        return None
+        pass
     if raw.strip() in ("主菜单", "菜单", "系统菜单"):
         return _MAIN_MENU
     if store:
@@ -658,7 +743,7 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
             fn = engines.get(_eng)
             if not fn:
                 continue
-            matched = _matches_engine(raw, _eng, store)
+            matched = _matches_engine(raw, _eng, store, _mod=fn)
             # 纯指令引擎未命中时不进入业务函数；娱乐/冒险保留自由答案和数字选择。
             if not matched and _eng not in ("ent", "adventure"):
                 continue
@@ -694,65 +779,29 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
                 r = None
             if r:
                 return apply_reply_override(raw, r, store)
-    # 超管（复用同一批量map）
-    matched_admin = _matches_engine(raw, "superadmin", store)
-    if engines and superadmin_mod:
+    # 超管（复用同一批量map）：独立模块与 engines 表二选一，调用收口 _call_superadmin
+    _admin_mod = superadmin_mod or (engines.get("superadmin") if engines else None)
+    matched_admin = _matches_engine(raw, "superadmin", store, _mod=_admin_mod)
+    if engines and _admin_mod is not None:
         g = _batch_map.get("superadmin") if _batch_map else (_guard(gid, "superadmin", is_admin, raw, store) if store else None)
         if g:
             if matched_admin:
                 return None  # 系统已关：命中也不运行、不回复
         else:
             try:
-                r = superadmin_mod.handle(gid, qq, raw, is_admin)
-                if r:
-                    return apply_reply_override(raw, r, store)
-            except Exception as e:
-                import traceback
-                try:
-                    from .logger import error as _log_err
-                    _log_err(f"[superadmin] handle异常: {e}\n{traceback.format_exc()}")
-                except Exception:
-                    pass
-                if matched_admin:
-                    try:
-                        _ml = str(e).lower()
-                    except Exception:
-                        _ml = ""
-                    if any(k in _ml for k in ("database", "locked", "rollback", "transaction", "sqlite", "misuse")):
-                        return "【超管系统】当前人数较多，系统繁忙，请稍后重试~"
-                    return f"【超管系统】处理指令时出现异常，请稍后重试（原因: {e}）"
-    elif engines and "superadmin" in engines:
-        fn = engines["superadmin"]
-        g = _batch_map.get("superadmin") if _batch_map else (_guard(gid, "superadmin", is_admin, raw, store) if store else None)
-        if g:
-            if matched_admin:
-                return None  # 系统已关：命中也不运行、不回复
-        else:
-            try:
-                r = fn.handle(gid, qq, raw, is_admin) if hasattr(fn, "handle") else fn(gid, qq, raw, is_admin)
-                if r:
-                    return apply_reply_override(raw, r, store)
-            except Exception as e:
-                import traceback
-                try:
-                    from .logger import error as _log_err
-                    _log_err(f"[superadmin] handle异常: {e}\n{traceback.format_exc()}")
-                except Exception:
-                    pass
-                if matched_admin:
-                    try:
-                        _ml2 = str(e).lower()
-                    except Exception:
-                        _ml2 = ""
-                    if any(k in _ml2 for k in ("database", "locked", "rollback", "transaction", "sqlite", "misuse")):
-                        return "【超管系统】当前人数较多，系统繁忙，请稍后重试~"
-                    return f"【超管系统】处理指令时出现异常，请稍后重试（原因: {e}）"
+                _fn = _admin_mod.handle if hasattr(_admin_mod, "handle") else _admin_mod
+            except Exception:
+                _fn = None
+            if _fn is not None:
+                _r = _call_superadmin(_fn, gid, qq, raw, is_admin, matched_admin, store)
+                if _r:
+                    return _r
     return None
 
 
 __all__ = ["_MAIN_MENU", "_SYS_ENG", "_resolve_reply", "_norm_cmd",
            "apply_reply_override", "_sys_off", "_cfg_sys_off", "_guard",
-           "clear_guard_cache", "_batch_guard_map",
+           "clear_guard_cache", "_batch_guard_map", "maintenance_gate",
            "_engine_cache_ver", "_get_engine_cmds", "_matches_engine",
            "_multi_reply", "_render_vars",
            "_custom_fp", "_custom_idx", "_custom_cmd", "_cmd_disabled", "_cmd_need_admin",

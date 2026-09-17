@@ -701,3 +701,40 @@ def handle(gid, qq, raw):
             return cmd_gift(gid, qq, "charm", 1)
         return "购买魅力格式：【购买魅力】或【购买魅力 数量】"
     return None
+
+
+# 显式指令注册表（protocol.engine_commands 优先读此表，正则索引仅回退）。
+# 与 handle 内分支逐字对应，增删指令时两处同改。
+COMMANDS = (
+    "个人财富榜", "财富榜",
+    "签到排行榜", "签到榜",
+    "体力排行榜", "体力榜",
+    "魅力排行榜", "魅力榜",
+    "签到", "打卡",
+    "我的信息", "个人排行", "我的排行",
+    "抽奖",
+    "领取新手礼包", "领取新人礼包",
+    "赞我", "购买体力", "购买魅力",
+)
+WAKE = "签到系统"
+
+
+def can_handle(gid, qq, raw):
+    """自由函数式 can_handle：供 router 纯指令引擎快速谓词（零语义差）。"""
+    try:
+        from core.protocol import norm_cmd as _nc
+    except ImportError:
+        try:
+            from ..core.protocol import norm_cmd as _nc  # type: ignore
+        except Exception:
+            _nc = None
+    try:
+        rt = str(raw or "").strip()
+        rt_n = _nc(rt) if _nc else rt.replace(" ", "")
+        for c in COMMANDS:
+            _cn = _nc(c) if _nc else str(c).replace(" ", "")
+            if _cn and rt_n.startswith(_cn):
+                return True
+    except Exception:
+        pass
+    return False

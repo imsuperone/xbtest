@@ -85,9 +85,13 @@ PROP_CN_TO_EN = {
     "钻石剑": "zuanshijian",
     "老八脑!": "laobanao",
     "老八脑！": "laobanao",
-    # 宝物
+    # 宝物（与 games/config/shop.py TREASURES 内置表逐一对应，缺谁谁的存档键就掉进 uXXXX）
     "酒神葫芦": "jiushenhulu",
     "四象护符": "sixianghufu",
+    "金蟾": "jinchan",
+    "玉如意": "yuruyi",
+    "雷公锤": "leigongchui",
+    "夜明珠": "yemingzhu",
     # 坐骑
     "企鹅": "qie",
     "伞兵": "sanbing",

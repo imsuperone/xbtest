@@ -682,3 +682,23 @@ def handle(gid, qq, raw):
             or text.startswith("移出帮派") or text.startswith("出让帮派"):
         return cmd_manage(gid, qq, text)
     return None
+
+
+COMMANDS = (
+    "创建帮派", "加入帮派", "帮派邀请", "帮派贡献", "修筑城墙",
+    "发起帮战", "管理帮派", "帮派管理", "帮派升级", "解散帮派",
+    "修改宣言", "添加护法", "取消护法", "移出帮派", "出让帮派",
+    "我的帮派", "帮派成员", "帮派排行", "帮派福利", "退出帮派",
+)
+WAKE = "帮派系统"
+
+
+def can_handle(gid, qq, raw):
+    try:
+        rt_n = str(raw or "").strip().replace(" ", "")
+        for c in COMMANDS:
+            if c and rt_n.startswith(str(c).replace(" ", "")):
+                return True
+    except Exception:
+        pass
+    return False

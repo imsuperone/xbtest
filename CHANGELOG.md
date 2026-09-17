@@ -1,5 +1,10 @@
 # 更新日志
 
+## v2026w0917a
+- 🏗️ **架构去重**：维护门收口 `router.maintenance_gate`（`app._dispatch` 共用，删双份内联）；超管双分支收口 `_call_superadmin`；新增 `core/protocol.py` 引擎契约（`COMMANDS/WAKE/can_handle`，8引擎全注册，正则扫源码仅回退）；`DB_TIMEOUT 30→10s` 高峰快速失败走繁忙降级；新增 `Store` 实例门面、`core/{runtime,routing,platform,ops}` 前向分层（老路径垫片不断链）、`core/api/domains` 四域归拢；
+- 🐛 **宝物全系修复**：`keymap` 补金蟾/玉如意/雷公锤/夜明珠映射（此前掉进 `uXXXX`），`U()/treasures_of()` 读时迁移旧键（只搬空键，老键保留）；`_treasure_effect` 通用兜底死代码修活（`COMMON_EFFECT`）；前端宝物内置表按后端 `TREASURES` 对齐6件真实 `type/value/desc`，默认名单/恢复默认改6件套，添加宝物禁 `|`；
+- 🔢 **版本**：顺延至 `2026w0917a`.
+
 ## v2026w0915i
 - 🎨 **去开关极简**：按你要求删掉圆点开关，去开关留卡片，选中仅靠卡片描边/底色/左侧色条与标题变色；
 - 🔢 **版本号**：顺延至 `2026w0915i`.

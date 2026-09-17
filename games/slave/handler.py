@@ -426,4 +426,26 @@ _ROUTE_EXACT = {
 }
 
 
-__all__ = ["clear_user_slave", "handle", "init_slave"]
+__all__ = ["clear_user_slave", "handle", "init_slave", "COMMANDS", "WAKE", "can_handle"]
+
+
+# 显式指令注册表（与 handle 分支逐字对应，增删指令两处同改；正则索引仅回退）
+COMMANDS = (
+    "我的信息", "查询", "买下", "折磨", "保护", "释放", "赎身",
+    "买奴隶位", "购买奴隶位", "打架", "五十连抽", "50连抽",
+    "三十连抽", "30连抽", "十连抽", "抽武器", "武器升星", "升星",
+    "宝物升阶", "升阶", "我要造反", "造反", "讨好主人", "讨好",
+    "我要学习", "学习", "我要祈福", "祈福",
+)
+WAKE = "奴隶系统"
+
+
+def can_handle(gid, qq, raw):
+    try:
+        rt_n = str(raw or "").strip().replace(" ", "")
+        for c in COMMANDS:
+            if c and rt_n.startswith(str(c).replace(" ", "")):
+                return True
+    except Exception:
+        pass
+    return False

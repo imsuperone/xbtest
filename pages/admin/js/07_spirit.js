@@ -163,11 +163,12 @@ async function renderAtlas(curCfg){
         Treas = window._TREAS_LIST.filter(Boolean);
       } else {
         const curSec = (curCfg && curCfg["设置"]) || (CFG && CFG.cur && CFG.cur["设置"]) || {};
-        Treas = (curSec["宝物"] || "酒神葫芦|四象护符").toString().split("|").filter(Boolean);
+        // 默认名单与后端 games/config/shop.py TREASURES 内置表同构（改后端表时此处同改）
+        Treas = (curSec["宝物"] || "酒神葫芦|四象护符|金蟾|玉如意|雷公锤|夜明珠").toString().split("|").filter(Boolean);
         window._TREAS_LIST = [...Treas];
         window._TREAS_DIRTY = false;
       }
-    } catch(e) { Treas = ["酒神葫芦", "四象护符"]; }
+    } catch(e) { Treas = ["酒神葫芦", "四象护符", "金蟾", "玉如意", "雷公锤", "夜明珠"]; }
     const _spiritMaps = (() => { try { return Object.keys((SPIRIT && SPIRIT.maps) || {}); } catch (e) { return []; } })();
     const _tabs = [["treasure", "🎁 宝物", Treas.length], ["spirit", "✨ 精灵", _spiritMaps.length]];
     const _q = String((typeof window._ATLAS_Q !== "undefined" && window._ATLAS_Q) || "").trim();
@@ -178,7 +179,15 @@ async function renderAtlas(curCfg){
       + `</div>`
       + `<div class="atlas-search-wrap"><span class="atlas-search-ic">🔍</span><input id="atlasSearch" placeholder="搜索宝物 / 地图 / 精灵…" value="${esc(_q)}"></div>`
       + `</div><div class="atlas-body-flow">`;
-    const _TREAS_BUILTIN = { "酒神葫芦": { effect: "灌醉您的奴隶,极大的增加其造反难度", type: "pardon", value: 0 }, "四象护符": { effect: "打架失败时降低赔偿奴隶的概率", type: "shield", value: 0 } };
+    // 内置回退与后端 games/config/shop.py TREASURES 同构（含真实 type/value，改后端表时此处同改）
+    const _TREAS_BUILTIN = {
+      "酒神葫芦": { effect: "造反免罪：持有时造反直接成功，恢复自由并劫掠主人", type: "pardon", value: 1 },
+      "四象护符": { effect: "打架护盾：己方被打败/打赢时免被偷走奴隶", type: "shield", value: 1 },
+      "金蟾": { effect: "打工工资 +20%", type: "work", value: 20 },
+      "玉如意": { effect: "身价加成 +10%（计入战斗力）", type: "worth", value: 10 },
+      "雷公锤": { effect: "主人战力 +500", type: "atk", value: 500 },
+      "夜明珠": { effect: "纯收藏，无实战效果", type: "", value: 0 }
+    };
     const _effOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return String(e.effect || ""); if (e) return String(e); const b = _TREAS_BUILTIN[n]; return b ? b.effect : ""; } catch (e) { return ""; } };
     const _treOf = (n) => { try { const e = (window._TREAS_EFF || {})[n]; if (e && typeof e === "object") return e; if (e) return { effect: String(e), type: "", value: 0 }; return _TREAS_BUILTIN[n] || null; } catch (e) { return null; } };
     const _valOf = (n) => { try { const o = _treOf(n); return (o && o.value !== undefined) ? (Number(o.value) || 0) : 0; } catch (e) { return 0; } };
@@ -374,10 +383,10 @@ async function renderAtlas(curCfg){
       renderAtlas();
     });
     document.getElementById("btnAtlasResetTreasure")?.addEventListener("click", async () => {
-      if (!(await uiConfirm("直接恢复宝物为内置（酒神葫芦|四象护符）并清空自定义效果？旧数据不保留。", "恢复默认"))) return;
+      if (!(await uiConfirm("直接恢复宝物为内置6件（酒神葫芦|四象护符|金蟾|玉如意|雷公锤|夜明珠）并清空自定义效果？旧数据不保留。", "恢复默认"))) return;
       try {
         const _old = [...(window._TREAS_LIST || []), ...Object.keys(window._TREAS_EFF || {})];
-        window._TREAS_LIST = ["酒神葫芦", "四象护符"];
+        window._TREAS_LIST = ["酒神葫芦", "四象护符", "金蟾", "玉如意", "雷公锤", "夜明珠"];
         window._TREAS_EFF = {};
         await persistTreasure(_old);
         toast("已恢复默认", "ok");
@@ -387,6 +396,8 @@ async function renderAtlas(curCfg){
     document.getElementById("btnAtlasAddTreasure")?.addEventListener("click", async () => {
       let n = await uiPrompt("输入宝物名（奴隶系统-宝物）：", "", "添加宝物");
       if (!n) return; n = n.trim(); if (!n) return;
+      // 名单以 | 分隔，宝物名禁 | 与空格首尾（否则存档名单解析错位）
+      if (/[|｜]/.test(n)) { toast("宝物名不能包含 |", "bad"); return; }
       const _tl = window._TREAS_DIRTY ? (window._TREAS_LIST || []) : Treas;
       if (_tl.includes(n)) { toast("已存在", "bad"); return; }
       window._TREAS_LIST = [..._tl, n];
