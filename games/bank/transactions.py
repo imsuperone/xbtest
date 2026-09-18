@@ -202,7 +202,7 @@ def cmd_transfer(gid, qq, target, amount):
     try:
         from .. import slave as SL
         try:
-            tn = SL.get_note_name(gid, str(target)) or SL.fetch_card(gid, str(target)) or str(target)
+            tn = SL.display_name(gid, str(target))
         except Exception:
             tn = SL.NOTE_NAMES.get(str(target), str(target))
     except Exception:

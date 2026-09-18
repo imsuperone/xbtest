@@ -147,6 +147,16 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
                             try:
                                 if hasattr(sm, "set_note_name"):
                                     sm.set_note_name(gid, q, nm)
+                                elif hasattr(sm, "NOTE_NAMES_BY_GROUP"):
+                                    # 无 set_note_name 旧门面时仍写分群表，绝不只写全局
+                                    try:
+                                        sm.NOTE_NAMES_BY_GROUP[(str(gid), str(q))] = nm
+                                    except Exception:
+                                        pass
+                                    try:
+                                        sm.NOTE_NAMES[str(q)] = nm
+                                    except Exception:
+                                        pass
                                 else:
                                     old = sm.NOTE_NAMES.get(q, "")
                                     sm.NOTE_NAMES[q] = nm
@@ -215,12 +225,19 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
     return raw
 
 
-def _name_prefix(qq, reply, slave_mod=None):
+def _name_prefix(qq, reply, slave_mod=None, gid=""):
     sm = slave_mod or _slave
     try:
         nm = ""
         if sm is not None:
-            nm = sm.NOTE_NAMES.get(str(qq), "") or str(qq)
+            try:
+                # 分群链优先，全局仅兜底（防B群沿用A群昵称）
+                nm = sm.display_name(gid, str(qq), "") or sm.NOTE_NAMES.get(str(qq), "") or str(qq)
+            except Exception:
+                try:
+                    nm = sm.NOTE_NAMES.get(str(qq), "") or str(qq)
+                except Exception:
+                    nm = str(qq)
         else:
             nm = str(qq)
         prefix = f"[{nm}]"

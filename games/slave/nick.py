@@ -76,6 +76,35 @@ def get_note_name(gid, qq, fallback_global=False):
 
 
 
+def display_name(gid, qq, default=None):
+    """分群优先的只读昵称链（无写副作用）：分群昵称 → 本群卡片 → default（缺省为 qq 本身）。
+
+    gid 为空时直接回 default，绝不跨群取全局。散落各引擎的
+    `get_note_name(gid,x) or fetch_card(gid,x) or str(x)` 一律收口至此。"""
+    try:
+        q = str(qq)
+    except Exception:
+        return default
+    try:
+        g = str(gid or "").strip()
+        if g:
+            try:
+                n = get_note_name(g, q)
+                if n:
+                    return n
+            except Exception:
+                pass
+            try:
+                n = fetch_card(g, q)
+                if n:
+                    return n
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return default if default is not None else q
+
+
 def clear_note_name(gid, qq):
     """清除单用户分群昵称（WebUI 删除用户/退群清理后调用，防幽灵名）"""
     try:
@@ -240,4 +269,4 @@ def uname(st, qq):
 
 
 
-__all__ = ["clear_note_name", "exists_user", "fetch_card", "find_qq_by_name", "get_note_name", "mark_known", "set_note_name", "uname"]
+__all__ = ["clear_note_name", "display_name", "exists_user", "fetch_card", "find_qq_by_name", "get_note_name", "mark_known", "set_note_name", "uname"]

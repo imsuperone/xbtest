@@ -104,10 +104,11 @@ async def handle_users(request):
                     kv = {}
                 _nm = ""
                 try:
-                    if hasattr(slave, "get_note_name"):
-                        _nm = slave.get_note_name(str(sqm), str(qq)) or ""
+                    _nm = slave.display_name(str(sqm), str(qq), "")
                 except Exception:
                     _nm = ""
+                if not _nm:
+                    _nm = kv.get("name", "") or ""
                 if not _nm:
                     _nm = nm.get(str(qq), "")
                 out.append({

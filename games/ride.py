@@ -516,7 +516,7 @@ def check_welcome(gid, qq):
         try:
             from . import slave as SL
             try:
-                disp = SL.get_note_name(gid, str(qq)) or SL.fetch_card(gid, str(qq)) or str(qq)
+                disp = SL.display_name(gid, str(qq))
             except Exception:
                 disp = SL.NOTE_NAMES.get(str(qq), str(qq)) or str(qq)
             # 若为 QQ 本身，尝试档案 name
@@ -533,7 +533,7 @@ def check_welcome(gid, qq):
             try:
                 import slave as SL2
                 try:
-                    disp = SL2.get_note_name(gid, str(qq)) or SL2.fetch_card(gid, str(qq)) or str(qq)
+                    disp = SL2.display_name(gid, str(qq))
                 except Exception:
                     disp = SL2.NOTE_NAMES.get(str(qq), str(qq)) or str(qq)
             except Exception:

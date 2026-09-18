@@ -40,7 +40,7 @@ def _target_name(gid, t):
         from ..games import slave as S
         if gid:
             try:
-                n = S.get_note_name(gid, t_str) or S.fetch_card(gid, t_str)
+                n = S.display_name(gid, t_str, "")
                 if n:
                     return n
             except Exception:
@@ -75,9 +75,14 @@ def _target_name(gid, t):
         pass
     return t_str
 
-def _name(qq):
+def _name(qq, gid=""):
     try:
         from ..games import slave as S
+        n = S.display_name(gid, str(qq), "")
+        if n:
+            return n
+        if gid:
+            return str(qq)
         return S.NOTE_NAMES.get(str(qq), str(qq)) if hasattr(S, "NOTE_NAMES") else str(qq)
     except Exception:
         return str(qq)
@@ -236,14 +241,14 @@ def _clear_money(gid, t):
     cur = _sum_money(gid, t)
     if cur and ST.coins_add(gid, t, -cur) is None:
         return "数据库繁忙，清空财富未成功，请稍后重试。"
-    return f"已清空 <{_name(t)}> 财富。"
+    return f"已清空 <{_name(t, gid)}> 财富。"
 
 
 def _clear_field(gid, t, field, label):
     a = _acct(gid, t)
     a.set(field, "0")
     ST.acct_save(gid, t)
-    return f"已清空 <{_name(t)}> 的{label}。"
+    return f"已清空 <{_name(t, gid)}> 的{label}。"
 
 
 def cmd_clear(gid, qq, arg):
@@ -281,12 +286,12 @@ def cmd_clear(gid, qq, arg):
         a.kv.clear()
         ST.acct_save(gid, t)
         _clear_money(gid, t)
-        return f"已清空 <{_name(t)}> 的账户及财富数据。"
+        return f"已清空 <{_name(t, gid)}> 的账户及财富数据。"
     if kind == "精灵":
         a = _acct(gid, t)
         a.set("spirits", "{}")
         ST.acct_save(gid, t)
-        return f"已清空 <{_name(t)}> 的精灵。"
+        return f"已清空 <{_name(t, gid)}> 的精灵。"
     if kind == "用户":
         # 1. 清空底层存储与三表数据 (wallet, accounts, groups)
         if hasattr(ST, "user_clear"):
@@ -333,7 +338,7 @@ def cmd_clear(gid, qq, arg):
                     _gd2._invalidate_guild_cache(gid)
             except Exception:
                 pass
-        return f"已彻底清空 <{_name(t)}> 的所有数据（包含奴隶、精灵与礼包状态，可重新领取新手礼包）。"
+        return f"已彻底清空 <{_name(t, gid)}> 的所有数据（包含奴隶、精灵与礼包状态，可重新领取新手礼包）。"
     return "未知操作。"
 
 
@@ -513,9 +518,12 @@ def _cmd_current_values():
     命中预设报模式名，否则报自定义（判定口径与 config/balance_state 同源）。"""
     try:
         try:
-            from .api.settings import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG
+            from .api.balance import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG
         except ImportError:
-            from core.api.settings import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG  # type: ignore
+            try:
+                from core.api.balance import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG  # type: ignore
+            except ImportError:
+                from .api.settings import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG
     except Exception:
         return "数值引擎未就绪，请稍后重试"
     try:
@@ -632,15 +640,19 @@ def handle(gid, qq, raw, is_admin=False):
                     raise ValueError("cache-miss")
             except ValueError:
                 try:
-                    from .api import stats as updater
+                    from .api import version_check as updater
                     # 测试版查 BETA 通道（xbtest 快照仓）；空 repo 默认查官方仓，对 beta 是误导
                     info = updater.check_latest_version("", getattr(updater, "GITHUB_REPO_XBTEST", "imsuperone/xbtest"))
                 except Exception:
                     try:
-                        from core.api import stats as updater
+                        from core.api import version_check as updater
                         info = updater.check_latest_version("", getattr(updater, "GITHUB_REPO_XBTEST", "imsuperone/xbtest"))
                     except Exception:
-                        pass
+                        try:
+                            from .api import stats as _up_compat
+                            info = _up_compat.check_latest_version("", getattr(_up_compat, "GITHUB_REPO_XBTEST", "imsuperone/xbtest"))
+                        except Exception:
+                            pass
                 try:
                     import time as _t_ver2
                     _VER_CACHE["t"] = _t_ver2.time()

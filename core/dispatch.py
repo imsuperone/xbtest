@@ -39,15 +39,34 @@ def maybe_sync_card(gid, qq, card, slave, ST):
     global _NAME_POOL
     if not card:
         return
-    old = slave.get_note_name(gid, qq) if hasattr(slave, "get_note_name") else slave.NOTE_NAMES.get(qq, "")
+    try:
+        if hasattr(slave, "get_note_name"):
+            old = slave.get_note_name(gid, qq)
+        elif hasattr(slave, "NOTE_NAMES_BY_GROUP"):
+            old = slave.NOTE_NAMES_BY_GROUP.get((str(gid), str(qq)), "")
+        else:
+            old = slave.NOTE_NAMES.get(qq, "")
+    except Exception:
+        old = ""
     if old != card:
         try:
             if hasattr(slave, "set_note_name"):
                 slave.set_note_name(gid, qq, card)
+            elif hasattr(slave, "NOTE_NAMES_BY_GROUP"):
+                try:
+                    slave.NOTE_NAMES_BY_GROUP[(str(gid), str(qq))] = card
+                except Exception:
+                    pass
             else:
                 slave.NOTE_NAMES[qq] = card
         except Exception:
-            slave.NOTE_NAMES[qq] = card
+            try:
+                slave.NOTE_NAMES_BY_GROUP[(str(gid), str(qq))] = card
+            except Exception:
+                try:
+                    slave.NOTE_NAMES[qq] = card
+                except Exception:
+                    pass
         try:
             if _NAME_POOL is None:
                 from concurrent.futures import ThreadPoolExecutor as _TPE
@@ -173,16 +192,15 @@ def _render_admin_list(gid, qq, admins, slave):
     for q in admins:
         try:
             try:
-                nm = slave.get_note_name(gid, q) if hasattr(slave, "get_note_name") else slave.NOTE_NAMES.get(q, "")
+                nm = slave.display_name(gid, q, "")
             except Exception:
                 nm = ""
-            if not nm:
-                nm = slave.NOTE_NAMES.get(q, "") or ""
-            if not nm:
+            if not nm and not gid:
+                # 仅无群上下文时回退全局，防跨群串名
                 try:
-                    nm = slave.fetch_card(gid, q) or ""
+                    nm = slave.NOTE_NAMES.get(q, "") or ""
                 except Exception:
-                    pass
+                    nm = ""
             if nm:
                 lines.append(f"- {q} ({nm})")
             else:
@@ -273,7 +291,10 @@ async def send_reply(event, reply, qq, raw, gid, ST, logger, do_platform,
         reply = note
     # 纯自定义指令不自动带名字（用户要求），带变量渲染后直接返回
     if not _is_pure_custom(raw, ST):
-        reply = name_prefix(qq, reply)
+        try:
+            reply = name_prefix(qq, reply, None, gid)
+        except TypeError:
+            reply = name_prefix(qq, reply)
     try:
         comp = build_chain(reply)
         event.stop_event()

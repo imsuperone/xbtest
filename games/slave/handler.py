@@ -13,7 +13,7 @@ from . import slave_state as _S
 from .base import U, _cmd_lock, cfg, load_events, log, save, star_of, state, uget, weapons_of
 from .combat import _treasure_effect, _treasure_names, _weapon_atk_bonus, _weapon_desc, cmd_fight
 from .gacha import _gacha_pool, _img_path, _weapon_img_path, cmd_gacha, cmd_starup, cmd_treasure_menu, cmd_treasure_up, cmd_weapon_menu
-from .nick import clear_note_name, find_qq_by_name, mark_known
+from .nick import clear_note_name, exists_user, find_qq_by_name, mark_known
 from .profile import cmd_menu, cmd_myinfo, cmd_query, cmd_rank, cmd_rank_price, cmd_rank_sign
 from .social import cmd_flatter, cmd_pray, cmd_revolt, cmd_study, cmd_work_collect, cmd_work_dispatch
 from .trade import cmd_buy_slave, cmd_buyslot, cmd_freedom, cmd_protect, cmd_ransom, cmd_release, cmd_torture
@@ -95,20 +95,27 @@ def _route_locked(gid, qq, raw):
             if _t:
                 target = str(_t)
                 text = text.replace(m.group(0), "", 1).strip()
-            # 1b. 查全局 NOTE_NAMES 兜底（dm/旧数据）
-            if not target and _S.NOTE_NAMES:
+            # 1b. 全局兜底仅无群上下文（dm/旧数据）可用；有群时禁跨群串人
+            if not target and not str(gid or "").strip() and _S.NOTE_NAMES:
                 for _q, _n in _S.NOTE_NAMES.items():
                     clean_n = _re.sub(r"[\[\]【】\(\)\s]", "", str(_n or ""))
                     if clean_n and (clean_n == clean_nm or clean_nm in clean_n or clean_n in clean_nm):
                         target = str(_q)
                         text = text.replace(m.group(0), "", 1).strip()
                         break
-            # 2. 查 store._AT_NAMES
+            # 2. 查 store._AT_NAMES（全局索引，有群时必须验本群存在，防跨群串人）
             if not target and hasattr(store, "_AT_NAMES") and store._AT_NAMES:
                 for _an, _aq in store._AT_NAMES.items():
                     clean_an = _re.sub(r"[\[\]【】\(\)\s]", "", str(_an or ""))
                     if clean_an and (clean_an == clean_nm or clean_nm in clean_an or clean_an in clean_nm):
-                        target = str(_aq)
+                        _cand = str(_aq)
+                        if str(gid or "").strip():
+                            try:
+                                if not exists_user(gid, _cand):
+                                    continue
+                            except Exception:
+                                pass
+                        target = _cand
                         text = text.replace(m.group(0), "", 1).strip()
                         break
             # 3. 查群档案
@@ -200,19 +207,26 @@ def _route_locked(gid, qq, raw):
                             _t2 = None
                         if _t2:
                             t = str(_t2)
-                        # 1b. 查全局 NOTE_NAMES 兜底
-                        if not t:
+                        # 1b. 全局兜底仅无群上下文可用，有群时禁跨群串人
+                        if not t and not str(gid or "").strip():
                             for _q, _n in _S.NOTE_NAMES.items():
                                 clean_n = _re.sub(r"[\[\]【】\(\)\s]", "", str(_n or ""))
                                 if clean_n and (clean_n == clean_rest or clean_rest in clean_n or clean_n in clean_rest):
                                     t = str(_q)
                                     break
-                        # 2. 查 store._AT_NAMES
+                        # 2. 查 store._AT_NAMES（全局索引，有群时必须验本群存在）
                         if not t and hasattr(store, "_AT_NAMES") and store._AT_NAMES:
                             for _an, _aq in store._AT_NAMES.items():
                                 clean_an = _re.sub(r"[\[\]【】\(\)\s]", "", str(_an or ""))
                                 if clean_an and (clean_an == clean_rest or clean_rest in clean_an or clean_an in clean_rest):
-                                    t = str(_aq)
+                                    _cand2 = str(_aq)
+                                    if str(gid or "").strip():
+                                        try:
+                                            if not exists_user(gid, _cand2):
+                                                continue
+                                        except Exception:
+                                            pass
+                                    t = _cand2
                                     break
                         # 3. 查群档案
                         if not t:

@@ -73,11 +73,23 @@ def _render_vars(tpl, gid, qq, store):
         name = qq
         try:
             from ..games import slave as _sl  # type: ignore
-            name = _sl.NOTE_NAMES.get(str(qq), str(qq))
+            try:
+                name = _sl.display_name(gid, str(qq))
+            except Exception:
+                name = str(qq)
+            if name == str(qq):
+                # 本群无记录才回退全局，防B群沿用A群昵称
+                try:
+                    name = _sl.NOTE_NAMES.get(str(qq), str(qq))
+                except Exception:
+                    pass
         except Exception:
             try:
                 import slave as _sl2  # type: ignore
-                name = _sl2.NOTE_NAMES.get(str(qq), str(qq))
+                try:
+                    name = _sl2.display_name(gid, str(qq))
+                except Exception:
+                    name = _sl2.NOTE_NAMES.get(str(qq), str(qq))
             except Exception:
                 pass
         coin = ""

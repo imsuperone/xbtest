@@ -4,10 +4,10 @@
 目标 14→4：配置域 / 用户域 / 备份域 / 内容域。新代码从域导入，
 老 `core.api.stats.handle_*` 逐个留作垫片。
 """
-CONFIG_DOMAIN = ("settings", "snapshots")
+CONFIG_DOMAIN = ("settings", "balance", "snapshots")
 USERS_DOMAIN = ("users", "user_io", "airdrop", "profiles")
-BACKUP_DOMAIN = ("backup", "backup_cloud", "migration")
-CONTENT_DOMAIN = ("stats", "atlas", "weapon_pool", "images")
+BACKUP_DOMAIN = ("backup", "backup_cloud", "migration", "legacy_ini")
+CONTENT_DOMAIN = ("stats", "logs", "groups", "version_check", "atlas", "weapon_pool", "images")
 
 DOMAINS = {
     "config": CONFIG_DOMAIN,

@@ -27,6 +27,22 @@ def _to_int(v, default=0):
         return default
 
 
+def _nm(gid, qq, fallback=""):
+    """分群优先昵称：本群分群表/卡片优先，全局仅无群或本群无记录时兜底，防跨群串名"""
+    try:
+        n = slave.display_name(str(gid), str(qq), "")
+        if n:
+            return n
+    except Exception:
+        pass
+    if fallback:
+        return fallback
+    try:
+        return (getattr(slave, "NOTE_NAMES", {}) or {}).get(str(qq), "") or str(qq)
+    except Exception:
+        return str(qq)
+
+
 def _slave_all_gids():
     """三表 DISTINCT gid 并集（slave 列表/校准共用，零语义差）"""
     gids = set()
@@ -86,10 +102,10 @@ async def handle_slave_users(request):    # 请求参数在事件循环上提取
                     out.append({
                         "gid": gid,
                         "qq": str(qq),
-                        "name": slave.NOTE_NAMES.get(str(qq), u.get("name", "") or str(qq)),
+                        "name": _nm(gid, str(qq), u.get("name", "") or str(qq)),
                         "price": p,
                         "owner": u.get("owner", "") or "",
-                        "owner_name": slave.NOTE_NAMES.get(u.get("owner", ""), u.get("owner", "")) if u.get("owner") else "",
+                        "owner_name": _nm(gid, u.get("owner", ""), u.get("owner", "")) if u.get("owner") else "",
                         "protect": u.get("protect_until", ""),
                         "slaves": _owner_cnt.get(str(qq), 0),
                         "weapons": u.get("weapon", ""),
@@ -106,7 +122,7 @@ async def handle_slave_users(request):    # 请求参数在事件循环上提取
                         seen.add((gid, w_qq))
                         out.append({
                             "gid": gid, "qq": w_qq,
-                            "name": slave.NOTE_NAMES.get(w_qq, w_qq),
+                            "name": _nm(gid, w_qq, w_qq),
                             "price": p, "owner": "", "owner_name": "",
                             "protect": "", "slaves": 0, "weapons": "", "treasures": ""
                         })
@@ -126,10 +142,10 @@ async def handle_slave_users(request):    # 请求参数在事件循环上提取
                             out.append({
                                 "gid": g,
                                 "qq": str(qq),
-                                "name": slave.NOTE_NAMES.get(str(qq), u.get("name", "") or str(qq)),
+                                "name": _nm(g, str(qq), u.get("name", "") or str(qq)),
                                 "price": p,
                                 "owner": u.get("owner", "") or "",
-                                "owner_name": slave.NOTE_NAMES.get(u.get("owner", ""), u.get("owner", "")) if u.get("owner") else "",
+                                "owner_name": _nm(g, u.get("owner", ""), u.get("owner", "")) if u.get("owner") else "",
                                 "protect": u.get("protect_until", ""),
                                 "slaves": _owner_cnt.get(str(qq), 0),
                                 "weapons": u.get("weapon", ""),
@@ -255,7 +271,7 @@ async def handle_spirit_users(request):
                 out.append({
                     "gid": g,
                     "qq": qq,
-                    "name": getattr(slave, "NOTE_NAMES", {}).get(qq, kv.get("name", "") or qq),
+                    "name": _nm(g, qq, kv.get("name", "") or qq),
                     "count": len(lst),
                     "active": active,
                     "best": best_name,

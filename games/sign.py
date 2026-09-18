@@ -205,7 +205,7 @@ def cmd_personal(gid, qq):
     try:
         from . import slave as _sl_name
         try:
-            disp = _sl_name.get_note_name(gid, str(qq)) or _sl_name.fetch_card(gid, str(qq)) or str(qq)
+            disp = _sl_name.display_name(gid, str(qq))
         except Exception:
             disp = _sl_name.NOTE_NAMES.get(str(qq), str(qq)) or str(qq)
     except Exception:
@@ -409,6 +409,56 @@ def cmd_rank(gid, kind, st):
     return "未知排行类型"
 
 
+def _rank_name(SL, gid, q):
+    """排行昵称链（只读本群，绝不串群）：分群昵称→本群卡片→群档案→账户名"""
+    try:
+        if SL is not None:
+            nm = SL.display_name(gid, q, "")
+            if nm:
+                return nm
+            try:
+                st = SL.state(gid)
+                if st.has_section(q):
+                    return st[q].get("name", "") or ""
+            except Exception:
+                pass
+    except Exception:
+        pass
+    try:
+        return ST.acct(gid, q).get("name", "") or ""
+    except Exception:
+        return ""
+
+
+def _render_rank(lst, name, gid, topn=10):
+    """排行渲染单源（快/慢两路径共用）：昵称＋单位 emoji，防 QQ 与数值粘连误读"""
+    try:
+        from . import slave as SL
+    except Exception:
+        try:
+            import slave as SL
+        except Exception:
+            SL = None
+    out = [f"【{name}排行榜】"]
+    for i, (v, q) in enumerate(lst[:topn], 1):
+        nm = _rank_name(SL, gid, q)
+        display = f"{nm}({q})" if nm else q
+        # 加单位/emoji 隔开，避免 QQ 与数值连在一起像两个 QQ
+        if name == "财富":
+            out.append(f"{i}. {display}  💰 {v} {ST.coin_name()}")
+        elif name == "签到":
+            out.append(f"{i}. {display}  📅 {v} 次")
+        elif name == "体力":
+            out.append(f"{i}. {display}  ⚡ {v} 点")
+        elif name == "魅力":
+            out.append(f"{i}. {display}  💄 {v} 点")
+        elif name == "发言":
+            out.append(f"{i}. {display}  💬 {v} 条")
+        else:
+            out.append(f"{i}. {display}  ━ {v}")
+    return "\r\n".join(out)
+
+
 def _rank_by(gid, fn, name, topn=10):
     """排行来源: 统一委托 store.rank_batch 去重，行数 40→12"""
     field_map = {"财富": "cash", "签到": "sign", "体力": "stamina", "魅力": "charm"}
@@ -416,48 +466,7 @@ def _rank_by(gid, fn, name, topn=10):
     if fld and hasattr(ST, "rank_batch"):
         try:
             lst = ST.rank_batch(gid, fld, topn=500)[:topn]
-            # 快速渲染
-            try:
-                from . import slave as SL
-            except Exception:
-                try:
-                    import slave as SL
-                except Exception:
-                    SL = None
-            out = [f"【{name}排行榜】"]
-            for i, (v, q) in enumerate(lst[:topn], 1):
-                nm = ""
-                if SL is not None:
-                    try:
-                        try:
-                            nm = SL.get_note_name(gid, q) or "" if hasattr(SL, "get_note_name") else ""
-                        except Exception:
-                            nm = ""
-                        if not nm:
-                            nm = SL.fetch_card(gid, q) or ""
-                        if not nm:
-                            st = SL.state(gid)
-                            if st.has_section(q):
-                                nm = st[q].get("name", "") or ""
-                    except Exception:
-                        pass
-                if not nm:
-                    try:
-                        nm = ST.acct(gid, q).get("name", "") or ""
-                    except Exception:
-                        pass
-                display = f"{nm}({q})" if nm else q
-                if name == "财富":
-                    out.append(f"{i}. {display}  💰 {v} {ST.coin_name()}")
-                elif name == "签到":
-                    out.append(f"{i}. {display}  📅 {v} 次")
-                elif name == "体力":
-                    out.append(f"{i}. {display}  ⚡ {v} 点")
-                elif name == "魅力":
-                    out.append(f"{i}. {display}  💄 {v} 点")
-                else:
-                    out.append(f"{i}. {display}  ━ {v}")
-            return "\r\n".join(out)
+            return _render_rank(lst, name, gid, topn)
         except Exception:
             pass
     lst = []
@@ -515,51 +524,7 @@ def _rank_by(gid, fn, name, topn=10):
             lst.sort(reverse=True)
         except Exception:
             lst = []
-    # 尝试获取昵称
-    try:
-        from . import slave as SL
-    except Exception:
-        try:
-            import slave as SL
-        except Exception:
-            SL = None
-    out = [f"【{name}排行榜】"]
-    for i, (v, q) in enumerate(lst[:topn], 1):
-        nm = ""
-        if SL is not None:
-            try:
-                try:
-                    nm = SL.get_note_name(gid, q) or "" if hasattr(SL, "get_note_name") else ""
-                except Exception:
-                    nm = ""
-                if not nm:
-                    nm = SL.fetch_card(gid, q) or ""
-                if not nm:
-                    st = SL.state(gid)
-                    if st.has_section(q):
-                        nm = st[q].get("name", "") or ""
-            except Exception:
-                pass
-        if not nm:
-            try:
-                nm = ST.acct(gid, q).get("name", "") or ""
-            except Exception:
-                pass
-        display = f"{nm}({q})" if nm else q
-        # 加单位/emoji 隔开，避免 QQ 与数值连在一起像两个 QQ
-        if name == "财富":
-            out.append(f"{i}. {display}  💰 {v} {ST.coin_name()}")
-        elif name == "签到":
-            out.append(f"{i}. {display}  📅 {v} 次")
-        elif name == "体力":
-            out.append(f"{i}. {display}  ⚡ {v} 点")
-        elif name == "魅力":
-            out.append(f"{i}. {display}  💄 {v} 点")
-        elif name == "发言":
-            out.append(f"{i}. {display}  💬 {v} 条")
-        else:
-            out.append(f"{i}. {display}  ━ {v}")
-    return "\r\n".join(out)
+    return _render_rank(lst, name, gid, topn)
 
 
 _MENU = (

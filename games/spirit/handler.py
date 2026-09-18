@@ -711,14 +711,7 @@ def lstr(q, gid=None):
             from .. import slave as S
         except ImportError:
             from games import slave as S
-        if gid:
-            try:
-                nm = S.get_note_name(gid, q) or S.fetch_card(gid, q)
-                if nm:
-                    return nm
-            except Exception:
-                pass
-        return q
+        return S.display_name(gid, q, q)
     except Exception:
         return q
 

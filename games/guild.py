@@ -344,13 +344,7 @@ def cmd_exit(gid, qq):
 def _gname(gid, qq):
     try:
         from . import slave as SL
-        try:
-            nm = SL.get_note_name(gid, str(qq)) or SL.fetch_card(gid, str(qq))
-            if nm:
-                return nm
-        except Exception:
-            pass
-        return str(qq)
+        return SL.display_name(gid, str(qq))
     except Exception:
         return str(qq)
 

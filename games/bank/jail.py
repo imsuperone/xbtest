@@ -80,14 +80,7 @@ def _show_jail(a):
 def _bail_name(tid, gid=None):
     try:
         from .. import slave as SL
-        if gid:
-            try:
-                nm = SL.get_note_name(gid, str(tid)) or SL.fetch_card(gid, str(tid))
-                if nm:
-                    return nm
-            except Exception:
-                pass
-        return str(tid)
+        return SL.display_name(gid, str(tid))
     except Exception:
         return str(tid)
 

@@ -67,10 +67,14 @@ async def handle_user_export(request):
         gdata = {}
         if grp.has_section(qq):
             gdata = dict(grp[qq] or {})
+        try:
+            _nm0 = slave.display_name(gid, qq, "") or (getattr(slave, "NOTE_NAMES", {}) or {}).get(qq, "")
+        except Exception:
+            _nm0 = (getattr(slave, "NOTE_NAMES", {}) or {}).get(qq, "")
         payload = {
             "gid": gid,
             "qq": qq,
-            "name": getattr(slave, "NOTE_NAMES", {}).get(qq, ""),
+            "name": _nm0,
             "wallet": money,
             "account": kv,
             "group": gdata,
@@ -120,8 +124,20 @@ async def handle_user_import(request):
             g[str(qq)] = {str(k): str(v) for k, v in p["group"].items()}
             ST.save_group(gid)
         if p.get("name"):
-            slave.NOTE_NAMES[str(qq)] = str(p["name"])
-            ST.register_names(slave.NOTE_NAMES)
+            try:
+                if hasattr(slave, "set_note_name"):
+                    slave.set_note_name(gid, str(qq), str(p["name"]))
+                else:
+                    slave.NOTE_NAMES[str(qq)] = str(p["name"])
+            except Exception:
+                pass
+            try:
+                ST.register_name(str(qq), str(p["name"]))
+            except Exception:
+                try:
+                    ST.register_names(slave.NOTE_NAMES)
+                except Exception:
+                    pass
         return json_response({"imported": True, "gid": gid, "qq": qq})
     except Exception as e:
         return _err(f"import failed: {e}", 500)
@@ -222,10 +238,14 @@ async def handle_users_export(request):
             except Exception:
                 gdata = {}
 
+            try:
+                _nn = slave.display_name(g, q_, "")
+            except Exception:
+                _nn = ""
             out.append({
                 "gid": g,
                 "qq": q_,
-                "name": nm.get(q_, "") or kv.get("name", "") or gdata.get("name", ""),
+                "name": _nn or kv.get("name", "") or gdata.get("name", "") or nm.get(q_, ""),
                 "wallet": int(money or 0),
                 "account": kv,
                 "group": gdata
@@ -252,10 +272,14 @@ async def handle_users_export(request):
             except Exception:
                 gdata = {}
 
+            try:
+                _nn2 = slave.display_name(g, q_, "")
+            except Exception:
+                _nn2 = ""
             out.append({
                 "gid": g,
                 "qq": q_,
-                "name": nm.get(q_, "") or kv.get("name", "") or gdata.get("name", ""),
+                "name": _nn2 or kv.get("name", "") or gdata.get("name", "") or nm.get(q_, ""),
                 "wallet": 0,
                 "account": kv,
                 "group": gdata
@@ -350,16 +374,24 @@ async def handle_users_import(request):
                 except Exception:
                     _item_ok = False
 
-            # 4. 昵称
+            # 4. 昵称（分群写入，防跨群串名）
             n = item.get("name")
             if n:
-                slave.NOTE_NAMES[qq] = str(n)
+                try:
+                    if hasattr(slave, "set_note_name"):
+                        slave.set_note_name(gid, qq, str(n))
+                    else:
+                        slave.NOTE_NAMES[qq] = str(n)
+                except Exception:
+                    pass
+                try:
+                    ST.register_name(str(qq), str(n))
+                except Exception:
+                    pass
             if _item_ok:
                 ok += 1
             else:
                 failed += 1
-
-        ST.register_names(slave.NOTE_NAMES)
         ST.flush_all()
         return json_response({"ok": True, "imported": ok, "failed": failed, "total": len(users)})
     except Exception as e:
