@@ -184,8 +184,17 @@ def cmd_bomb(gid, qq, arg):
         else:
             t, _ = ST.parse_at(arg)
             if t:
-                target = t
-            else:
+                # parse_at 昵称命中走全局 _AT_NAMES：非直接@须验本群身份，防撞名炸错人
+                if not _re2.search(r"\[CQ:at,qq=|@\s*\d", arg) and str(gid or "").strip():
+                    try:
+                        from .. import slave as _SLb
+                        if hasattr(_SLb, "exists_user") and not _SLb.exists_user(gid, t):
+                            t = None
+                    except Exception:
+                        pass
+                if t:
+                    target = t
+            if not target:
                 # 纯数字 QQ
                 mm = _re2.search(r"(\d{5,12})", arg)
                 if mm:

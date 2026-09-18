@@ -42,6 +42,77 @@ def _ensure_legacy_once():
         _LEGACY_ONCE["done"] = True
 
 
+def _is_direct_at(raw):
+    """是否为显式直接@(CQ 码或 @数字)：是则目标明确，无须身份校验。失败开放（返 True）保旧语义。"""
+    try:
+        return bool(_re.search(r"\[CQ:at,qq=|@\s*\d", str(raw or "")))
+    except Exception:
+        return True
+
+
+def _resolve_name_target(gid, nm):
+    """@昵称→qq 四阶解析（本群优先）：分群索引 → 群档案 → 全局索引(_AT_NAMES) → 全局名。
+    后两阶为跨群猜测，有群号时必须验本群身份（exists_user），陌生人返回 None。"""
+    try:
+        clean = _re.sub(r"[\[\]【】\(\)\s]", "", str(nm or ""))
+        if not clean:
+            return None
+        g = str(gid or "").strip()
+        try:
+            _t = find_qq_by_name(gid, nm)
+        except Exception:
+            _t = None
+        if _t:
+            return str(_t)
+        # 群档案：本群真相优先于一切全局猜测（防撞名指错人）
+        try:
+            st = state(gid)
+            for _uid in st.users():
+                try:
+                    _unm = uget(U(st, _uid), "name")
+                except Exception:
+                    continue
+                _cu = _re.sub(r"[\[\]【】\(\)\s]", "", str(_unm or ""))
+                if _cu and (_cu == clean or clean in _cu or _cu in clean):
+                    return str(_uid)
+        except Exception:
+            pass
+        # _AT_NAMES 全局索引：命中须是本群成员
+        try:
+            _at = getattr(store, "_AT_NAMES", None) or {}
+            for _an, _aq in list(_at.items()):
+                _ca = _re.sub(r"[\[\]【】\(\)\s]", "", str(_an or ""))
+                if _ca and (_ca == clean or clean in _ca or _ca in clean):
+                    _cand = str(_aq)
+                    if g:
+                        try:
+                            if not exists_user(gid, _cand):
+                                continue
+                        except Exception:
+                            pass
+                    return _cand
+        except Exception:
+            pass
+        # 全局名兜底（dm/旧数据/未发言成员）：同样须验本群身份
+        try:
+            for _q, _n in list((_S.NOTE_NAMES or {}).items()):
+                _cn = _re.sub(r"[\[\]【】\(\)\s]", "", str(_n or ""))
+                if _cn and (_cn == clean or clean in _cn or _cn in clean):
+                    _cand = str(_q)
+                    if g:
+                        try:
+                            if not exists_user(gid, _cand):
+                                continue
+                        except Exception:
+                            pass
+                    return _cand
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return None
+
+
 def handle(gid, qq, raw):
     try:
         _ensure_legacy_once()
@@ -79,56 +150,26 @@ def _route_locked(gid, qq, raw):
 
     st = state(gid)
     target, text = store.parse_at(raw)
+    # parse_at 的 _AT_NAME 命中走全局 _AT_NAMES（说话即注册，不分群）：非直接@时须验本群身份，
+    # 否则撞名/陌生人直通全部指令。直接@(CQ/数字)是显式指定，一律放行。
+    if target and not _is_direct_at(raw) and str(gid or "").strip():
+        try:
+            if not exists_user(gid, target):
+                target = None
+        except Exception:
+            pass
     mark_known(gid, qq)
 
-    # @名字 兜底: 从 NOTE_NAMES / store._AT_NAMES / 本群已有档案(名片/昵称)反查 qq
+    # @名字 兜底：四阶收口（分群索引→群档案→全局索引→全局名，见 _resolve_name_target）。
+    # 注意：禁把全局 NOTE_NAMES 批量灌入 _AT_NAMES（曾有此行，导致查询分支 parse_at
+    # 无门控命中全局名，门控形同虚设；_AT_NAMES 只走说话/被@时的单条增量）。
     if not target:
         m = _re.search(r"@\s*([^@\s，,\r\n]+)", text)
         if m:
-            nm = m.group(1).strip()
-            clean_nm = _re.sub(r"[\[\]【】\(\)\s]", "", nm)
-            # 1. 查本群分群昵称反向索引（精确 O(1)，模糊限本群）
-            try:
-                _t = find_qq_by_name(gid, nm)
-            except Exception:
-                _t = None
+            _t = _resolve_name_target(gid, m.group(1).strip())
             if _t:
                 target = str(_t)
                 text = text.replace(m.group(0), "", 1).strip()
-            # 1b. 全局兜底仅无群上下文（dm/旧数据）可用；有群时禁跨群串人
-            if not target and not str(gid or "").strip() and _S.NOTE_NAMES:
-                for _q, _n in _S.NOTE_NAMES.items():
-                    clean_n = _re.sub(r"[\[\]【】\(\)\s]", "", str(_n or ""))
-                    if clean_n and (clean_n == clean_nm or clean_nm in clean_n or clean_n in clean_nm):
-                        target = str(_q)
-                        text = text.replace(m.group(0), "", 1).strip()
-                        break
-            # 2. 查 store._AT_NAMES（全局索引，有群时必须验本群存在，防跨群串人）
-            if not target and hasattr(store, "_AT_NAMES") and store._AT_NAMES:
-                for _an, _aq in store._AT_NAMES.items():
-                    clean_an = _re.sub(r"[\[\]【】\(\)\s]", "", str(_an or ""))
-                    if clean_an and (clean_an == clean_nm or clean_nm in clean_an or clean_an in clean_nm):
-                        _cand = str(_aq)
-                        if str(gid or "").strip():
-                            try:
-                                if not exists_user(gid, _cand):
-                                    continue
-                            except Exception:
-                                pass
-                        target = _cand
-                        text = text.replace(m.group(0), "", 1).strip()
-                        break
-            # 3. 查群档案
-            if not target:
-                for _uid in st.users():
-                    _unm = uget(U(st, _uid), "name")
-                    clean_unm = _re.sub(r"[\[\]【】\(\)\s]", "", str(_unm or ""))
-                    if clean_unm and (clean_unm == clean_nm or clean_nm in clean_unm or clean_unm in clean_nm):
-                        target = str(_uid)
-                        text = text.replace(m.group(0), "", 1).strip()
-                        break
-            if not target and store._AT_NAMES:
-                store.register_names(_S.NOTE_NAMES)  # 确保索引最新
         # 兼容纯 QQ 号（无 @）的写法：文案仅 @QQ，但解析支持 QQ 号
         if not target:
             # 仅对需要目标的指令尝试提取，避免金额被误判
@@ -189,6 +230,12 @@ def _route_locked(gid, qq, raw):
         t = target
         if not t:
             t2, _ = store.parse_at(text)
+            if t2 and not _is_direct_at(text) and str(gid or "").strip():
+                try:
+                    if not exists_user(gid, t2):
+                        t2 = None
+                except Exception:
+                    pass
             if t2:
                 t = t2
             else:
@@ -199,43 +246,10 @@ def _route_locked(gid, qq, raw):
                     if m_num:
                         t = m_num.group(1)
                     else:
-                        clean_rest = _re.sub(r"[\[\]【】\(\)\s]", "", rest)
-                        # 1. 查本群分群昵称反向索引（精确 O(1)，模糊限本群）
-                        try:
-                            _t2 = find_qq_by_name(gid, rest)
-                        except Exception:
-                            _t2 = None
+                        # @名字四阶收口（分群索引→群档案→全局索引→全局名，见 _resolve_name_target）
+                        _t2 = _resolve_name_target(gid, rest)
                         if _t2:
                             t = str(_t2)
-                        # 1b. 全局兜底仅无群上下文可用，有群时禁跨群串人
-                        if not t and not str(gid or "").strip():
-                            for _q, _n in _S.NOTE_NAMES.items():
-                                clean_n = _re.sub(r"[\[\]【】\(\)\s]", "", str(_n or ""))
-                                if clean_n and (clean_n == clean_rest or clean_rest in clean_n or clean_n in clean_rest):
-                                    t = str(_q)
-                                    break
-                        # 2. 查 store._AT_NAMES（全局索引，有群时必须验本群存在）
-                        if not t and hasattr(store, "_AT_NAMES") and store._AT_NAMES:
-                            for _an, _aq in store._AT_NAMES.items():
-                                clean_an = _re.sub(r"[\[\]【】\(\)\s]", "", str(_an or ""))
-                                if clean_an and (clean_an == clean_rest or clean_rest in clean_an or clean_an in clean_rest):
-                                    _cand2 = str(_aq)
-                                    if str(gid or "").strip():
-                                        try:
-                                            if not exists_user(gid, _cand2):
-                                                continue
-                                        except Exception:
-                                            pass
-                                    t = _cand2
-                                    break
-                        # 3. 查群档案
-                        if not t:
-                            for _uid in st.users():
-                                _unm = uget(U(st, _uid), "name")
-                                clean_unm = _re.sub(r"[\[\]【】\(\)\s]", "", str(_unm or ""))
-                                if clean_unm and (clean_unm == clean_rest or clean_rest in clean_unm or clean_unm in clean_rest):
-                                    t = str(_uid)
-                                    break
         if t:
             return cmd_query(gid, qq, t, st)
         return "未能找到该成员～格式：【查询 @QQ】或【查询 昵称】"

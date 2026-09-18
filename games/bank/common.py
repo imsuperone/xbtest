@@ -145,10 +145,24 @@ def _cd(a, key, mins):
 
 # ---- 监狱(入狱/出狱) ----
 def _resolve_qq_from_name(name, gid=None):
-    """通过分群昵称反查 qq (name -> qq)，优先本群（防跨群串扰）"""
+    """通过分群昵称反查 qq (name -> qq)，优先本群（防跨群串扰）。
+    全局两阶(_AT_NAMES/全局名)命中后须验本群身份，陌生人返回 None。"""
     name = str(name).strip()
     if not name:
         return None
+    g = str(gid or "").strip()
+
+    def _ok(cand):
+        if not g:
+            return True
+        try:
+            from .. import slave as _SLv
+            if hasattr(_SLv, "exists_user"):
+                return bool(_SLv.exists_user(gid, cand))
+        except Exception:
+            pass
+        return True
+
     # 优先本群分群昵称反向索引（精确 O(1)，模糊限本群）
     if gid:
         try:
@@ -162,7 +176,7 @@ def _resolve_qq_from_name(name, gid=None):
     # via ST._AT_NAMES
     try:
         qq = ST._AT_NAMES.get(name)
-        if qq:
+        if qq and _ok(str(qq)):
             return str(qq)
     except Exception:
         pass
@@ -170,14 +184,14 @@ def _resolve_qq_from_name(name, gid=None):
     try:
         from .. import slave as SL
         for qq_, nm_ in getattr(SL, "NOTE_NAMES", {}).items():
-            if str(nm_).strip() == name:
+            if str(nm_).strip() == name and _ok(str(qq_)):
                 return str(qq_)
     except Exception:
         pass
     try:
         import slave as SL2
         for qq_, nm_ in getattr(SL2, "NOTE_NAMES", {}).items():
-            if str(nm_).strip() == name:
+            if str(nm_).strip() == name and _ok(str(qq_)):
                 return str(qq_)
     except Exception:
         pass

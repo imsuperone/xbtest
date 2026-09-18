@@ -1,5 +1,10 @@
 # 更新日志
 
+## v2026w0918b
+- 🩹 **@目标解析修复**：删 `register_names` 全局灌索引后门（查询分支 `parse_at` 曾无门控命中全局名，门控形同虚设）；`slave/bank/ent` 三处昵称命中统一验本群身份，直接@/CQ/数字一律放行；
+- 🩹 **旧 bug**：`exists_user` 的 DB 检查曾误缩进进 `has_section` 分支，有钱包无档案者恒判 False，现已提到同级；
+- 🔢 **版本**：顺延至 `2026w0918b`.
+
 ## v2026w0918a
 - 🧹 **跨群昵称根治**：新增 `slave.display_name(gid,qq)` 只读单源（分群昵称→本群卡片→回退），15 处散装 `get_note_name/fetch_card` 链全收口；`@` 反查全局兜底仅无群可用、有群必验本群存在；A 群昵称不再带到 B 群；
 - 🧩 **API 拆分**：`stats` 拆出 `logs/groups/version_check`、`settings` 拆出 `balance`、`migration` 拆出 `legacy_ini`、`app` 路由三表抽到 `web_routes`，老路径门面兼容；

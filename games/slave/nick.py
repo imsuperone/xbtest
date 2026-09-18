@@ -203,18 +203,19 @@ def exists_user(gid, qq):
                             return True
                     else:
                         return True
-            # 再查 DB 钱包/账户是否存在实质数据（持锁读，避免跨线程 database is locked）
-            try:
-                if store._DB is not None:
-                    with store._LOCK:
-                        row = store._DB.execute("SELECT 1 FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
-                        row2 = store._DB.execute("SELECT 1 FROM accounts WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone() if not row else None
-                    if row:
-                        return True
-                    if row2:
-                        return True
-            except Exception:
-                pass
+        # 再查 DB 钱包/账户是否存在实质数据（持锁读，避免跨线程 database is locked）。
+        # 注意：必须与档案检查同级（曾误缩进进 has_section 分支，致有钱包无档案者恒 False）
+        try:
+            if store._DB is not None:
+                with store._LOCK:
+                    row = store._DB.execute("SELECT 1 FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
+                    row2 = store._DB.execute("SELECT 1 FROM accounts WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone() if not row else None
+                if row:
+                    return True
+                if row2:
+                    return True
+        except Exception:
+            pass
     except Exception:
         pass
     return bool(fetch_card(gid, qq))
