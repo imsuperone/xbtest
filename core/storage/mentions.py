@@ -1,4 +1,5 @@
 """storage/at.py — @ 文本解析与 QQ/昵称反查索引（原 store §0）。无 DB。"""
+import re as _re2
 from . import state as _S
 
 def _register_single(qq, name):
@@ -73,4 +74,25 @@ def parse_at(text):
             return qq, _S._AT_NAME.sub("", text, count=1).strip()
     return None, text.strip()
 
-__all__ = ["parse_at", "register_name", "register_names"]
+def is_qq_mention(t, text):
+    """QQ-only 目标校验单源：t 须以 CQ 码 / @数字 / 独立数字串形式出现在原文中。
+
+    @昵称经 parse_at 命中也不认（返 False），调用方据此丢弃昵称目标。
+    独立数字与金额数字撞车属病态输入（目标 QQ 恰等于金额数），不处理。"""
+    try:
+        t = str(t or "").strip()
+        text = str(text or "")
+        if not t.isdigit():
+            return False
+        if ("[CQ:at,qq=%s" % t) in text:
+            return True
+        if _re2.search(r"@\s*%s(?!\d)" % _re2.escape(t), text):
+            return True
+        if _re2.search(r"(?<!\d)%s(?!\d)" % _re2.escape(t), text):
+            return True
+        return False
+    except Exception:
+        return False
+
+
+__all__ = ["is_qq_mention", "parse_at", "register_name", "register_names"]

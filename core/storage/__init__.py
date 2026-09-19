@@ -33,7 +33,7 @@ except ImportError:
     from . import state as _state
     from .state import Acct, Group, _DirtyDict
 
-__all__ = ["register_names","register_name","parse_at","set_config","cfg","cfgi","cfgf","cfg_dict","cfg_scope","coin_name","wake",
+__all__ = ["register_names","register_name","parse_at","is_qq_mention","set_config","cfg","cfgi","cfgf","cfg_dict","cfg_scope","coin_name","wake",
            "coins_get","coins_add","txn_coins_acct","txn_two_wallets","txn_two_wallets_acct","rank_batch",
            "Acct","acct","acct_add","acct_save",
            "Group","group","save_group",

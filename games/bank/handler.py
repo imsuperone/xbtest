@@ -15,7 +15,7 @@ def handle(gid, qq, raw):
         return None
     if text in ST.wake("银行系统", "银行系统"):
         return _MENU
-    # 鲁棒转账目标解析: 依次尝试 ST.parse_at -> CQ -> @QQ数字 -> @名字 -> 纯QQ
+    # QQ-only 转账目标解析: ST.parse_at(过校验) -> CQ -> @QQ数字 -> 纯QQ，不认昵称
     target = None
     t1, r1 = _extract_transfer_target(text, gid)
     if t1:
@@ -28,7 +28,7 @@ def handle(gid, qq, raw):
             if m:
                 target = m.group(1)
                 text = text.replace(m.group(0), "", 1).strip()
-        # 同时兼容 @昵称 形式的数字后剩余文本已由 _extract_transfer_target 处理
+
 
     # 若目标已提取但 text 仍包含“转账”前缀，保留以便后续命令判断
     n = 0

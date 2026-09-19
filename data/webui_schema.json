@@ -532,11 +532,11 @@
       },
       "存款利率": {
         "type": "int",
-        "default": 3
+        "default": 2
       },
       "利息上限": {
         "type": "int",
-        "default": 100000
+        "default": 50000
       },
       "转账消耗体力": {
         "type": "int",

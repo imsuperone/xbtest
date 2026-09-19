@@ -175,7 +175,7 @@ def cmd_bomb(gid, qq, arg):
     prob = cfgi("娱乐配置", "扔炸弹_成功概率", 70)
     mute_lo = cfgi("娱乐配置", "扔炸弹_禁言下限", 5)
     mute_hi = cfgi("娱乐配置", "扔炸弹_禁言上限", 10)
-    # 解析目标（必须指定 @QQ / @昵称 / CQ码）
+    # 解析目标（QQ-only：CQ码 / @QQ / 纯数字，不认昵称）
     target = None
     if arg:
         m = _re2.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", arg)
@@ -183,17 +183,12 @@ def cmd_bomb(gid, qq, arg):
             target = m.group(1)
         else:
             t, _ = ST.parse_at(arg)
-            if t:
-                # parse_at 昵称命中走全局 _AT_NAMES：非直接@须验本群身份，防撞名炸错人
-                if not _re2.search(r"\[CQ:at,qq=|@\s*\d", arg) and str(gid or "").strip():
-                    try:
-                        from .. import slave as _SLb
-                        if hasattr(_SLb, "exists_user") and not _SLb.exists_user(gid, t):
-                            t = None
-                    except Exception:
-                        pass
-                if t:
-                    target = t
+            try:
+                _ok = ST.is_qq_mention(t, arg) if hasattr(ST, "is_qq_mention") else True
+            except Exception:
+                _ok = True
+            if t and _ok:
+                target = t
             if not target:
                 # 纯数字 QQ
                 mm = _re2.search(r"(\d{5,12})", arg)

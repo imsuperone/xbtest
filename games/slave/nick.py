@@ -11,18 +11,9 @@ from . import slave_state as _S
 from .base import U, save, state, uget, uset
 
 
-def _clean_nm(s):
-    """昵称归一化（去括号/空白），反查比对统一口径"""
-    try:
-        return _re.sub(r"[\[\]【】\(\)\s]", "", str(s or ""))
-    except Exception:
-        return str(s or "")
-
-
-
 
 def set_note_name(gid, qq, name):
-    """写入分群昵称 + 反向索引 + 全局最新兜底（写路径唯一入口，O(1)）"""
+    """写入分群昵称 + 全局最新兜底（写路径唯一入口，O(1)）"""
     try:
         g = str(gid or "").strip()
         q = str(qq or "").strip()
@@ -30,24 +21,12 @@ def set_note_name(gid, qq, name):
         if not q.isdigit() or not n:
             return
         if g:
-            old = _S.NOTE_NAMES_BY_GROUP.get((g, q), "")
-            if old:
-                _oc = _clean_nm(old)
-                if _oc and _S.NOTE_NAMES_REV.get((g, _oc)) == q:
-                    _S.NOTE_NAMES_REV.pop((g, _oc), None)
             _S.NOTE_NAMES_BY_GROUP[(g, q)] = n
-            _nc = _clean_nm(n)
-            if _nc:
-                _S.NOTE_NAMES_REV[(g, _nc)] = q
-            # 双表同生命周期上限防内存无限增长（淘汰最旧 10%）
+            # 单表上限防内存无限增长（淘汰最旧 10%）
             if len(_S.NOTE_NAMES_BY_GROUP) > 50000:
                 try:
                     for _k in list(_S.NOTE_NAMES_BY_GROUP.keys())[:5000]:
-                        _old2 = _S.NOTE_NAMES_BY_GROUP.pop(_k, None)
-                        if _old2:
-                            _oc2 = _clean_nm(_old2)
-                            if _oc2 and _S.NOTE_NAMES_REV.get((_k[0], _oc2)) == _k[1]:
-                                _S.NOTE_NAMES_REV.pop((_k[0], _oc2), None)
+                        _S.NOTE_NAMES_BY_GROUP.pop(_k, None)
                 except Exception:
                     pass
         # 保留全局最新，供无 gid 的旧展示路径兜底
@@ -111,40 +90,11 @@ def clear_note_name(gid, qq):
         g = str(gid or "").strip()
         q = str(qq or "").strip()
         if g and q:
-            old = _S.NOTE_NAMES_BY_GROUP.pop((g, q), None)
-            if old:
-                _oc = _clean_nm(old)
-                if _oc and _S.NOTE_NAMES_REV.get((g, _oc)) == q:
-                    _S.NOTE_NAMES_REV.pop((g, _oc), None)
+            _S.NOTE_NAMES_BY_GROUP.pop((g, q), None)
     except Exception:
         pass
 
 
-
-
-def find_qq_by_name(gid, name):
-    """本群昵称反查 qq：精确 O(1)，模糊仅扫本群已清洗键（不清别群，不逐条正则）"""
-    try:
-        g = str(gid or "").strip()
-        c = _clean_nm(name)
-        if not c:
-            return None
-        if g:
-            q = _S.NOTE_NAMES_REV.get((g, c))
-            if q:
-                return str(q)
-            for (g2, cn), q2 in _S.NOTE_NAMES_REV.items():
-                if g2 != g or not cn:
-                    continue
-                if cn == c or c in cn or cn in c:
-                    return str(q2)
-            return None
-        for _q, _n in _S.NOTE_NAMES.items():
-            if _clean_nm(_n) == c:
-                return str(_q)
-    except Exception:
-        pass
-    return None
 
 
 
@@ -270,4 +220,4 @@ def uname(st, qq):
 
 
 
-__all__ = ["clear_note_name", "display_name", "exists_user", "fetch_card", "find_qq_by_name", "get_note_name", "mark_known", "set_note_name", "uname"]
+__all__ = ["clear_note_name", "display_name", "exists_user", "fetch_card", "get_note_name", "mark_known", "set_note_name", "uname"]

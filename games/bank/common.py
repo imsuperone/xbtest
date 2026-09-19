@@ -144,72 +144,20 @@ def _cd(a, key, mins):
 
 
 # ---- 监狱(入狱/出狱) ----
-def _resolve_qq_from_name(name, gid=None):
-    """通过分群昵称反查 qq (name -> qq)，优先本群（防跨群串扰）。
-    全局两阶(_AT_NAMES/全局名)命中后须验本群身份，陌生人返回 None。"""
-    name = str(name).strip()
-    if not name:
-        return None
-    g = str(gid or "").strip()
-
-    def _ok(cand):
-        if not g:
-            return True
-        try:
-            from .. import slave as _SLv
-            if hasattr(_SLv, "exists_user"):
-                return bool(_SLv.exists_user(gid, cand))
-        except Exception:
-            pass
-        return True
-
-    # 优先本群分群昵称反向索引（精确 O(1)，模糊限本群）
-    if gid:
-        try:
-            from .. import slave as SL0
-            if hasattr(SL0, "find_qq_by_name"):
-                _q0 = SL0.find_qq_by_name(gid, name)
-                if _q0:
-                    return str(_q0)
-        except Exception:
-            pass
-    # via ST._AT_NAMES
-    try:
-        qq = ST._AT_NAMES.get(name)
-        if qq and _ok(str(qq)):
-            return str(qq)
-    except Exception:
-        pass
-    # via slave module
-    try:
-        from .. import slave as SL
-        for qq_, nm_ in getattr(SL, "NOTE_NAMES", {}).items():
-            if str(nm_).strip() == name and _ok(str(qq_)):
-                return str(qq_)
-    except Exception:
-        pass
-    try:
-        import slave as SL2
-        for qq_, nm_ in getattr(SL2, "NOTE_NAMES", {}).items():
-            if str(nm_).strip() == name and _ok(str(qq_)):
-                return str(qq_)
-    except Exception:
-        pass
-    return None
-
-
-
-
 def _extract_transfer_target(raw, gid=None):
-    """鲁棒解析 @目标: 顺序: ST.parse_at -> CQ码 -> @QQ数字 -> @名字查 slave.NOTE_NAMES -> 纯QQ字符串
-    返回 (target_qq_or_None, remaining_text)
-    """
+    """QQ-only 解析 @目标: 顺序 ST.parse_at(仅认 CQ/@数字/独立数字) -> CQ码 -> @QQ数字。
+    @昵称一律不认（防撞名串人）。返回 (target_qq_or_None, remaining_text)。"""
     raw = str(raw or "")
-    # 1) ST.parse_at
+    # 1) ST.parse_at（命中后必须过 QQ-only 校验，否则视为未命中继续直解）
     try:
         t, rem = ST.parse_at(raw)
         if t:
-            return str(t), rem.strip()
+            try:
+                _ok = ST.is_qq_mention(t, raw) if hasattr(ST, "is_qq_mention") else True
+            except Exception:
+                _ok = True
+            if _ok:
+                return str(t), rem.strip()
     except Exception:
         pass
     # 2) CQ code
@@ -222,38 +170,29 @@ def _extract_transfer_target(raw, gid=None):
     if m:
         rem = re.sub(r"@\s*\d{5,12}", "", raw, count=1).strip()
         return m.group(1), rem
-    # 4) @name via slave.NOTE_NAMES
-    m = re.search(r"@\s*([^@\s，,]+)", raw)
-    if m:
-        name = m.group(1).strip()
-        qq = _resolve_qq_from_name(name, gid)
-        if qq:
-            rem = re.sub(r"@\s*[^@\s，,]+", "", raw, count=1).strip()
-            return str(qq), rem
-    # 5) 纯QQ字符串兜底 (由调用方决定是否使用，这里也尝试返回以兼容)
-    # 仅当 raw 中包含独立的 5-12位数字且没有@时，视为候选
-    m = re.search(r"\b(\d{5,12})\b", raw)
-    if m:
-        # 调用方会在 handle 中对转账等指令再启用此兜底；这里返回供 cmd_transfer 内部使用
-        # 保持返回但不强制去除，避免误伤金额；只在明确需要时使用
-        pass
+    # 4) 纯QQ字符串兜底由调用方按指令启用（防金额误判），此处不解
     return None, raw.strip()
 
 
 
 
 def _ensure_target_qq(target, gid=None):
-    """cmd_transfer 内部兜底: 将各种形式的 target 转为纯QQ号"""
+    """cmd_transfer 内部兜底: QQ-only，只认纯QQ / CQ码 / @QQ数字 / 独立数字串，不认昵称"""
     if target is None:
         return None
     s = str(target).strip()
     if re.fullmatch(r"\d{5,12}", s):
         return s
-    # 尝试 ST.parse_at
+    # 尝试 ST.parse_at（命中须过 QQ-only 校验）
     try:
         t, _ = ST.parse_at(s)
         if t and re.fullmatch(r"\d{5,12}", str(t)):
-            return str(t)
+            try:
+                _ok = ST.is_qq_mention(t, s) if hasattr(ST, "is_qq_mention") else True
+            except Exception:
+                _ok = True
+            if _ok:
+                return str(t)
     except Exception:
         pass
     # CQ
@@ -264,28 +203,13 @@ def _ensure_target_qq(target, gid=None):
     m = re.search(r"@\s*(\d{5,12})", s)
     if m:
         return m.group(1)
-    # @name
-    m = re.search(r"@\s*([^@\s，,]+)", s)
-    if m:
-        qq = _resolve_qq_from_name(m.group(1).strip(), gid)
-        if qq:
-            return qq
-        # also try direct name without @
-        qq = _resolve_qq_from_name(s.lstrip("@").strip(), gid)
-        if qq:
-            return qq
-    else:
-        # 直接名字 (无@)
-        qq = _resolve_qq_from_name(s, gid)
-        if qq:
-            return qq
-        # 纯QQ字符串
-        m2 = re.search(r"\b(\d{5,12})\b", s)
-        if m2:
-            return m2.group(1)
+    # 纯QQ字符串
+    m2 = re.search(r"\b(\d{5,12})\b", s)
+    if m2:
+        return m2.group(1)
     # 解不出返 None（调用方均判空）：禁返原文，否则按 QQ 建幻影账户吞钱
     return None
 
 
 
-__all__ = ["_MENU", "_acct", "_cd", "_disp_name", "_ensure_target_qq", "_extract_transfer_target", "_now_s", "_resolve_qq_from_name", "cfgi", "GAMBLE_MULT", "REDPACK_MIN_DIV", "REDPACK_MAX_DIV"]
+__all__ = ["_MENU", "_acct", "_cd", "_disp_name", "_ensure_target_qq", "_extract_transfer_target", "_now_s", "cfgi", "GAMBLE_MULT", "REDPACK_MIN_DIV", "REDPACK_MAX_DIV"]

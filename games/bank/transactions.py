@@ -24,8 +24,8 @@ def cmd_deposit(gid, qq, amount):
     have = ST.coins_get(gid, qq)
     if have < amount:
         return f"亲，您的{ST.coin_name()}不足，请重新选择存款数！"
-    rate = cfgi("银行配置", "存款利率", 3)
-    cap = cfgi("银行配置", "利息上限", 100000)
+    rate = cfgi("银行配置", "存款利率", 2)
+    cap = cfgi("银行配置", "利息上限", 50000)
     interest = _settle_interest(a, rate, cap)
     old = a.int("deposit")
     if ST.txn_coins_acct(gid, qq, -amount, {"stamina": str(a.int("stamina") - cs), "deposit": str(old + amount + interest), "withdraw_timestamp": str(int(time.time()))}, require_funds=True) is None:
@@ -69,8 +69,8 @@ def cmd_withdraw(gid, qq, amount):
         return "请输入正确格式：取款 金额（正整数）"
     if dep < amount:
         return f"存款不足！当前存款：{dep}"
-    rate = cfgi("银行配置", "存款利率", 3)
-    cap = cfgi("银行配置", "利息上限", 100000)
+    rate = cfgi("银行配置", "存款利率", 2)
+    cap = cfgi("银行配置", "利息上限", 50000)
     interest = _settle_interest(a, rate, cap)
     # 利息未到时提示剩余时间与可用强制取款，但仍允许取款（取款成功但无利息，满足测试与需求38的提示）
     if interest == 0 and dep > 0:
@@ -125,7 +125,7 @@ def cmd_force_withdraw(gid, qq, amount):
 
 
 def cmd_transfer(gid, qq, target, amount):
-    # 增强: 兼容 @昵称 / CQ / @QQ / 纯昵称 / 纯QQ 字符串 原子体力+钱包
+    # QQ-only: 兼容 CQ / @QQ / 纯QQ 字符串，不认昵称
     target = _ensure_target_qq(target, gid)
     if amount <= 0 or not target:
         return "亲，您的格式有误，转账格式为：【转账 @QQ 金额】！"
@@ -310,8 +310,75 @@ def cmd_gamble(gid, qq, amount):
 
 
 
+_VAULT_LOCK = None  # 独立金库 RMW 锁（bank 无 _cmd_lock，12 worker 下防并发超发）
+
+
+def _vault_lock():
+    global _VAULT_LOCK
+    if _VAULT_LOCK is None:
+        try:
+            import threading as _th
+            _VAULT_LOCK = _th.Lock()
+        except Exception:
+            pass
+    return _VAULT_LOCK
+
+
+def _vault_state(gid):
+    """独立金库读+时间回流：seed/cap/每小时回流均走银行配置（代码缺省，无需 schema）。
+    返回 (vault, cap)。只读不写，写走 _vault_set。"""
+    try:
+        seed = cfgi("银行配置", "打劫银行金库初始", 50000)
+        cap = cfgi("银行配置", "打劫银行金库上限", 500000)
+        flow = cfgi("银行配置", "打劫银行金库回流", 5000)
+    except Exception:
+        seed, cap, flow = 50000, 500000, 5000
+    if seed <= 0:
+        seed = 50000
+    if cap <= 0:
+        cap = 500000
+    if flow < 0:
+        flow = 0
+    try:
+        _raw = ST.recall_get("bank_vault_%s" % gid, None)
+    except Exception:
+        _raw = None
+    if _raw is None or str(_raw).strip() == "":
+        # 从未初始化：按初始值开库（与“被掏空=0”严格区分，禁回种）
+        return min(seed, cap), cap
+    try:
+        v = max(0, int(_raw))
+    except Exception:
+        v = min(seed, cap)
+    try:
+        ts = float(ST.recall_get("bank_vault_ts_%s" % gid, "0") or 0)
+    except Exception:
+        ts = 0.0
+    if ts > 0 and flow > 0 and v < cap:
+        try:
+            v = min(cap, v + int(flow * (time.time() - ts) / 3600.0))
+        except Exception:
+            pass
+    return v, cap
+
+
+def _vault_set(gid, v):
+    """金库落盘（含时间戳），失败返 False（调用方退款/报繁忙，禁吞错）。"""
+    try:
+        v = max(0, int(v))
+    except Exception:
+        return False
+    try:
+        if not ST.recall_set("bank_vault_%s" % gid, str(v)):
+            return False
+        ST.recall_set("bank_vault_ts_%s" % gid, str(time.time()))
+        return True
+    except Exception:
+        return False
+
+
 def cmd_rob_zone(gid, qq):
-    """打劫银行：随机选择有余额目标，扣体力与钱包转移一次提交。"""
+    """打劫银行：只动独立金库，不碰任何用户存款。成功从金库提款，失败罚金充公进金库。"""
     a = _acct(gid, qq)
     if _check_jail(a):
         return _show_jail(a)
@@ -321,22 +388,6 @@ def cmd_rob_zone(gid, qq):
     ok, mins = _cd(a, "rob_bank_time", cfgi("银行配置", "打劫银行间隔", 10))
     if not ok:
         return f"{mins}分钟后再来打劫银行吧！"
-    wins = []
-    try:
-        ST._ensure_db()
-        if ST._DB is not None:
-            with ST._LOCK:
-                # 有界随机候选：ORDER BY RANDOM() LIMIT 8 再按 str 过滤自己。
-                # 等价性：8 个名额中自己至多占 1 个，大群必含他人；候选均匀故最终受害人仍均匀；
-                # 小群（≤8 人）一次取全，与原来全表 DISTINCT 结果一致（wallet 主键已保证唯一）。
-                rows = ST._DB.execute(
-                    "SELECT qq FROM wallet WHERE gid=? ORDER BY RANDOM() LIMIT 8", (int(gid),)).fetchall()
-            wins = [q for q in (r[0] for r in rows)
-                    if str(q) != str(qq)]
-    except Exception:
-        wins = []
-    if not wins:
-        return "银行金库暂时空虚，打劫失败，下次再来！"
     prob = cfgi("银行配置", "打劫银行成功概率", 70)
     meli = cfgi("银行配置", "打劫银行魅力减少", 3)
     jail_mins = cfgi("银行配置", "打劫银行关押时间", 5)
@@ -355,23 +406,60 @@ def cmd_rob_zone(gid, qq):
         }
         if ST.txn_coins_acct(gid, qq, -fine, updates) is None:
             return "银行系统繁忙，本次打劫未结算，请稍后重试！"
+        # 罚金充公进金库（按上限截断，落盘失败不影响主流程回执）
+        try:
+            _lk = _vault_lock()
+            if _lk is not None:
+                with _lk:
+                    _v, _cap = _vault_state(gid)
+                    _vault_set(gid, min(_cap, _v + max(0, int(fine or 0))))
+            else:
+                _v, _cap = _vault_state(gid)
+                _vault_set(gid, min(_cap, _v + max(0, int(fine or 0))))
+        except Exception:
+            pass
         return (f"打劫银行失败，打劫银行时被抓！被关监狱{jail_mins}分钟，\r\n"
                 f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
-    victim = random.choice(wins)
     lo = cfgi("银行配置", "打劫银行金钱下限", 6000)
     hi = cfgi("银行配置", "打劫银行金钱上限", 12000)
-    victim_money = ST.coins_get(gid, victim)
-    loot = min(victim_money, random.randint(lo, hi))
-    if loot <= 0:
-        return "银行金库暂时空虚，打劫失败，下次再来！"
-    result = ST.txn_two_wallets_acct(
-        gid, victim, qq, loot,
-        {"stamina": str(max(0, a.int("stamina") - cs)), "rob_bank_time": now_s},
-        acct_qq=qq,
-    )
-    if result is not True:
-        return "银行系统繁忙，本次打劫未结算，请稍后重试！" if result is None else "银行金库暂时空虚，打劫失败，下次再来！"
-    return f"打劫银行成功！获得{loot}{ST.coin_name()}！"
+    want = max(1, random.randint(lo, hi) if hi >= lo else lo)
+    try:
+        _lk = _vault_lock()
+        _held = False
+        if _lk is not None:
+            _lk.acquire()
+            _held = True
+        try:
+            vault, _cap = _vault_state(gid)
+            loot = min(vault, want)
+            if loot <= 0:
+                return "银行金库空空如也，打劫失败，过段时间等金库回流再来！"
+            if not _vault_set(gid, vault - loot):
+                return "银行系统繁忙，本次打劫未结算，请稍后重试！"
+        finally:
+            if _held:
+                try:
+                    _lk.release()
+                except Exception:
+                    pass
+    except Exception:
+        return "银行系统繁忙，本次打劫未结算，请稍后重试！"
+    if ST.txn_coins_acct(gid, qq, loot,
+                         {"stamina": str(max(0, a.int("stamina") - cs)), "rob_bank_time": now_s}) is None:
+        # 发放失败则金库退款（尽力，不抛错）
+        try:
+            _lk2 = _vault_lock()
+            if _lk2 is not None:
+                with _lk2:
+                    _v2, _cap2 = _vault_state(gid)
+                    _vault_set(gid, min(_cap2, _v2 + loot))
+            else:
+                _v2, _cap2 = _vault_state(gid)
+                _vault_set(gid, min(_cap2, _v2 + loot))
+        except Exception:
+            pass
+        return "银行系统繁忙，本次打劫未结算，请稍后重试！"
+    return f"打劫银行成功！从金库劫走{loot}{ST.coin_name()}！"
 
 
 

@@ -150,14 +150,19 @@ def cmd_stats():
 
 # ---- 账户管理 ----
 def _parse_target_amount(arg):
-    """解析 扣钱/充钱 目标与金额: 支持 [CQ:at,qq=]/@QQ/@昵称/纯数字，金额取末数（修复 @昵称 后金额被误判为 QQ 的 bug）"""
+    """解析 扣钱/充钱 目标与金额: QQ-only（[CQ:at,qq=]/@QQ/纯数字），@昵称不认，金额取末数"""
     arg = (arg or "").strip()
     t, rest = None, arg
-    # 1) 统一 @ 解析（含CQ/昵称/@QQ），优先
+    # 1) 统一 @ 解析（命中须过 QQ-only 校验）
     try:
         t_tmp, rest_tmp = ST.parse_at(arg)
         if t_tmp:
-            t, rest = t_tmp, rest_tmp
+            try:
+                _ok = ST.is_qq_mention(t_tmp, arg) if hasattr(ST, "is_qq_mention") else True
+            except Exception:
+                _ok = True
+            if _ok:
+                t, rest = t_tmp, rest_tmp
     except Exception:
         pass
     # 2) 直接 CQ 兜底
@@ -262,7 +267,12 @@ def cmd_clear(gid, qq, arg):
     try:
         t_parsed, _ = ST.parse_at(rest)
         if t_parsed:
-            t = str(t_parsed).strip()
+            try:
+                _ok = ST.is_qq_mention(t_parsed, rest) if hasattr(ST, "is_qq_mention") else True
+            except Exception:
+                _ok = True
+            if _ok:
+                t = str(t_parsed).strip()
     except Exception:
         pass
     if not t:
@@ -344,16 +354,21 @@ def cmd_clear(gid, qq, arg):
 
 # ---- 禁言/踢人(平台动作, 由 main._do_platform 执行) ----
 def cmd_mute(gid, qq, arg):
-    """禁言 @QQ 分钟  支持 @ 昵称"""
+    """禁言 @QQ 分钟（QQ-only，不认昵称）"""
     arg = (arg or "").strip()
-    # 先尝试统一 parse_at 解析 @ 昵称/数字
+    # 先尝试统一 parse_at 解析（命中须过 QQ-only 校验）
     target = None
     rest = arg
     try:
         t, r = ST.parse_at(arg)
         if t:
-            target = t
-            rest = r
+            try:
+                _ok = ST.is_qq_mention(t, arg) if hasattr(ST, "is_qq_mention") else True
+            except Exception:
+                _ok = True
+            if _ok:
+                target = t
+                rest = r
     except Exception:
         pass
     if target:
@@ -375,13 +390,18 @@ def cmd_mute(gid, qq, arg):
 
 
 def cmd_kick(gid, qq, arg):
-    """踢人 @QQ（支持 @ 昵称，与禁言同口径）"""
+    """踢人 @QQ（QQ-only，与禁言同口径）"""
     arg = (arg or "").strip()
     target = None
     try:
         t, _ = ST.parse_at(arg)
         if t:
-            target = str(t).strip()
+            try:
+                _ok = ST.is_qq_mention(t, arg) if hasattr(ST, "is_qq_mention") else True
+            except Exception:
+                _ok = True
+            if _ok:
+                target = str(t).strip()
     except Exception:
         pass
     if not target:

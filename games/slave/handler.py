@@ -13,7 +13,7 @@ from . import slave_state as _S
 from .base import U, _cmd_lock, cfg, load_events, log, save, star_of, state, uget, weapons_of
 from .combat import _treasure_effect, _treasure_names, _weapon_atk_bonus, _weapon_desc, cmd_fight
 from .gacha import _gacha_pool, _img_path, _weapon_img_path, cmd_gacha, cmd_starup, cmd_treasure_menu, cmd_treasure_up, cmd_weapon_menu
-from .nick import clear_note_name, exists_user, find_qq_by_name, mark_known
+from .nick import clear_note_name, mark_known
 from .profile import cmd_menu, cmd_myinfo, cmd_query, cmd_rank, cmd_rank_price, cmd_rank_sign
 from .social import cmd_flatter, cmd_pray, cmd_revolt, cmd_study, cmd_work_collect, cmd_work_dispatch
 from .trade import cmd_buy_slave, cmd_buyslot, cmd_freedom, cmd_protect, cmd_ransom, cmd_release, cmd_torture
@@ -40,77 +40,6 @@ def _ensure_legacy_once():
         except Exception:
             pass
         _LEGACY_ONCE["done"] = True
-
-
-def _is_direct_at(raw):
-    """是否为显式直接@(CQ 码或 @数字)：是则目标明确，无须身份校验。失败开放（返 True）保旧语义。"""
-    try:
-        return bool(_re.search(r"\[CQ:at,qq=|@\s*\d", str(raw or "")))
-    except Exception:
-        return True
-
-
-def _resolve_name_target(gid, nm):
-    """@昵称→qq 四阶解析（本群优先）：分群索引 → 群档案 → 全局索引(_AT_NAMES) → 全局名。
-    后两阶为跨群猜测，有群号时必须验本群身份（exists_user），陌生人返回 None。"""
-    try:
-        clean = _re.sub(r"[\[\]【】\(\)\s]", "", str(nm or ""))
-        if not clean:
-            return None
-        g = str(gid or "").strip()
-        try:
-            _t = find_qq_by_name(gid, nm)
-        except Exception:
-            _t = None
-        if _t:
-            return str(_t)
-        # 群档案：本群真相优先于一切全局猜测（防撞名指错人）
-        try:
-            st = state(gid)
-            for _uid in st.users():
-                try:
-                    _unm = uget(U(st, _uid), "name")
-                except Exception:
-                    continue
-                _cu = _re.sub(r"[\[\]【】\(\)\s]", "", str(_unm or ""))
-                if _cu and (_cu == clean or clean in _cu or _cu in clean):
-                    return str(_uid)
-        except Exception:
-            pass
-        # _AT_NAMES 全局索引：命中须是本群成员
-        try:
-            _at = getattr(store, "_AT_NAMES", None) or {}
-            for _an, _aq in list(_at.items()):
-                _ca = _re.sub(r"[\[\]【】\(\)\s]", "", str(_an or ""))
-                if _ca and (_ca == clean or clean in _ca or _ca in clean):
-                    _cand = str(_aq)
-                    if g:
-                        try:
-                            if not exists_user(gid, _cand):
-                                continue
-                        except Exception:
-                            pass
-                    return _cand
-        except Exception:
-            pass
-        # 全局名兜底（dm/旧数据/未发言成员）：同样须验本群身份
-        try:
-            for _q, _n in list((_S.NOTE_NAMES or {}).items()):
-                _cn = _re.sub(r"[\[\]【】\(\)\s]", "", str(_n or ""))
-                if _cn and (_cn == clean or clean in _cn or _cn in clean):
-                    _cand = str(_q)
-                    if g:
-                        try:
-                            if not exists_user(gid, _cand):
-                                continue
-                        except Exception:
-                            pass
-                    return _cand
-        except Exception:
-            pass
-    except Exception:
-        pass
-    return None
 
 
 def handle(gid, qq, raw):
@@ -150,28 +79,18 @@ def _route_locked(gid, qq, raw):
 
     st = state(gid)
     target, text = store.parse_at(raw)
-    # parse_at 的 _AT_NAME 命中走全局 _AT_NAMES（说话即注册，不分群）：非直接@时须验本群身份，
-    # 否则撞名/陌生人直通全部指令。直接@(CQ/数字)是显式指定，一律放行。
-    if target and not _is_direct_at(raw) and str(gid or "").strip():
-        try:
-            if not exists_user(gid, target):
-                target = None
-        except Exception:
-            pass
+    # QQ-only：目标仅认 CQ 码 / @数字 / 独立数字串；@昵称命中一律丢弃（防撞名串人）。
+    # 独立数字兜底在下方按指令前缀提取（金额误判防护见 _need）。
+    try:
+        _qq_ok = store.is_qq_mention(target, raw) if hasattr(store, "is_qq_mention") else True
+    except Exception:
+        _qq_ok = True
+    if target and not _qq_ok:
+        target = None
     mark_known(gid, qq)
 
-    # @名字 兜底：四阶收口（分群索引→群档案→全局索引→全局名，见 _resolve_name_target）。
-    # 注意：禁把全局 NOTE_NAMES 批量灌入 _AT_NAMES（曾有此行，导致查询分支 parse_at
-    # 无门控命中全局名，门控形同虚设；_AT_NAMES 只走说话/被@时的单条增量）。
+    # 兼容纯 QQ 号（无 @）的写法：文案仅 @QQ，但解析支持 QQ 号
     if not target:
-        m = _re.search(r"@\s*([^@\s，,\r\n]+)", text)
-        if m:
-            _t = _resolve_name_target(gid, m.group(1).strip())
-            if _t:
-                target = str(_t)
-                text = text.replace(m.group(0), "", 1).strip()
-        # 兼容纯 QQ 号（无 @）的写法：文案仅 @QQ，但解析支持 QQ 号
-        if not target:
             # 仅对需要目标的指令尝试提取，避免金额被误判
             _need = ("查询","买下","折磨","保护","释放","赎身","打架","购买奴隶位")
             for _pref in _need:
@@ -221,22 +140,22 @@ def _route_locked(gid, qq, raw):
         # 查询菜单（无空格）/查询 地图（有空格）此前漏放行会误查用户，现一并静默，行为一致。
         if _re.sub(r"\s+", "", text).startswith(_QUERY_SILENT):
             return None
-        # 查询 (不带参数) / 查询我 / 查询自己 -> 直接查看自己的档案
-        rest = text[len("查询"):].strip()
+        # 查询 (不带参数) / 查询我 / 查询自己 -> 直接查看自己的档案。
+        # rest 取自原消息（顶部 parse 会吞掉 @昵称，用解析后文本会导致 rest 为空而误查自己）。
+        _raw0 = _re.sub(r"\[(?:CQ|DR):[^\]]+\]", "", str(raw or "")).strip()
+        rest = _raw0[len("查询"):].strip() if _raw0.startswith("查询") else text[len("查询"):].strip()
         if not target and (not rest or rest in ("我", "自己", "个人", "我的信息", "自己信息", "个人信息")):
             return cmd_myinfo(gid, qq, st)
 
-        # 查询@QQ / 查询 @名字 / 查询 QQ / 查询 名字 -> 查他人档案，兼容已提取的 target
+        # 查询@QQ / 查询 QQ -> 查他人档案，兼容已提取的 target（QQ-only，不认昵称）
         t = target
         if not t:
             t2, _ = store.parse_at(text)
-            if t2 and not _is_direct_at(text) and str(gid or "").strip():
-                try:
-                    if not exists_user(gid, t2):
-                        t2 = None
-                except Exception:
-                    pass
-            if t2:
+            try:
+                _t2_ok = store.is_qq_mention(t2, text) if hasattr(store, "is_qq_mention") else True
+            except Exception:
+                _t2_ok = True
+            if t2 and _t2_ok:
                 t = t2
             else:
                 if rest.startswith("@"):
@@ -245,14 +164,9 @@ def _route_locked(gid, qq, raw):
                     m_num = _re.search(r"^(\d{5,12})$", rest)
                     if m_num:
                         t = m_num.group(1)
-                    else:
-                        # @名字四阶收口（分群索引→群档案→全局索引→全局名，见 _resolve_name_target）
-                        _t2 = _resolve_name_target(gid, rest)
-                        if _t2:
-                            t = str(_t2)
         if t:
             return cmd_query(gid, qq, t, st)
-        return "未能找到该成员～格式：【查询 @QQ】或【查询 昵称】"
+        return "未能找到该成员～格式：【查询 @QQ】"
     if text.startswith("买下"):
         return cmd_buy_slave(gid, qq, target, st)
     if text.startswith("折磨"):
