@@ -42,10 +42,6 @@ def cmd_redpack(gid, qq, amount, pwd=None):
     # 原子化：钱包+体力+红包表同锁，避免并发互删
     try:
         with ST._LOCK:
-            if ST.coins_get(gid, qq) < amount:
-                return "亲，您的账户余额不足，无法发红包！"
-            if a.int("stamina") < cost_tili:
-                return f"体力不足，发红包需要{cost_tili}体力！"
             # 复用 txn_coins_acct 思路：直接操作 DB
             # 扣钱扣体力
             row = ST._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()

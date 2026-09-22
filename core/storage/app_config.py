@@ -4,7 +4,7 @@ import os
 import re
 from . import state as _S
 from .state import _bump_config_ver
-from .collections import _coll_load, _coll_write, _coll_coerce, _sidecar_exists, coll_merge
+from .collections import _coll_load, _coll_write, _coll_coerce, _sidecar_exists
 from .secrets import wd_secret_load
 from .kv import recall_set, recall_get
 from .db import get_persistent_data_dir
@@ -314,32 +314,6 @@ def save_config():
         pass
 
 
-def load_config_from_db():
-    """从数据库恢复全量配置：若内存配置缺失或为空，从 kv 表补齐（跳过商城/图鉴 sidecar 节）"""
-    try:
-        raw = recall_get("sys_config_json", "")
-        if raw:
-            db_cfg = json.loads(raw)
-            if isinstance(db_cfg, dict) and db_cfg:
-                for sec, sub in db_cfg.items():
-                    if sec in _S._COLL_FILES:
-                        continue
-                    if isinstance(sub, dict):
-                        s = _S._CONFIG.setdefault(sec, {})
-                        for k, v in sub.items():
-                            if k not in s or s[k] in (None, ""):
-                                s[k] = v
-                _sidecar_heal_from_mirror()
-                return True
-    except Exception:
-        pass
-    try:
-        _sidecar_heal_from_mirror()
-    except Exception:
-        pass
-    return False
-
-
 def _sidecar_heal_from_mirror():
     """sidecar 缺文件自愈：仅 sidecar 文件缺失时才从 kv 镜像回填（文件优先，坏文件不碰）。
     恢复全量替换语义由 reload_config_from_db 承担，此处只补“无文件”场景。"""
@@ -420,4 +394,4 @@ def _sidecar_restore_from_mirror():
 
 # ==================== 9. 备份 ====================
 
-__all__ = ["cfg", "cfg_dict", "cfg_scope", "cfgf", "cfgi", "coin_name", "load_config_from_db", "reload_config_from_db", "save_config", "set_astrbot_config", "set_config", "set_config_path", "set_ini", "sync_astrbot_config", "wake"]
+__all__ = ["cfg", "cfg_dict", "cfg_scope", "cfgf", "cfgi", "coin_name", "reload_config_from_db", "save_config", "set_astrbot_config", "set_config", "set_config_path", "set_ini", "sync_astrbot_config", "wake"]

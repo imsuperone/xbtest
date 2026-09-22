@@ -320,9 +320,15 @@ async def handle_user_clear(request):
                 return _err("clear failed: storage error", 500)
         else:
             if ST._DB is not None:
-                ST._DB.execute("DELETE FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq)))
-                ST._DB.execute("DELETE FROM accounts WHERE gid=? AND qq=?", (int(gid), int(qq)))
-                ST._DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(gid), int(qq)))
+                with ST._LOCK:
+                    ST._DB.execute("DELETE FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq)))
+                    ST._DB.execute("DELETE FROM accounts WHERE gid=? AND qq=?", (int(gid), int(qq)))
+                    ST._DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(gid), int(qq)))
+                ST._safe_commit()
+                try:
+                    ST._ACC_CACHE.pop((str(gid), str(qq)), None)
+                except Exception:
+                    pass
 
         # 2. 奴隶系统清理：解除奴隶身份并释放名下奴隶
         try:

@@ -80,17 +80,18 @@ def _ent_cost(gid, qq, prefix):
         return f"笑~你没有那么多{ST.coin_name()}（{prefix}需{need}）"
     if tili and ST.acct(gid, qq).int("stamina") < tili:
         return f"体力不足，{prefix}需要{tili}体力！"
-    if need:
-        if ST.coins_add(gid, qq, -need) is None:
+    # 锁内原子扣两腿（RLock 可重入）
+    with ST._LOCK:
+        if need and ST.coins_get(gid, qq) < need:
+            return f"笑~你没有那么多{ST.coin_name()}（{prefix}需{need}）"
+        if tili and ST.acct(gid, qq).int("stamina") < tili:
+            return f"体力不足，{prefix}需要{tili}体力！"
+        updates = {}
+        if tili:
+            a = ST.acct(gid, qq)
+            updates["stamina"] = str(max(0, a.int("stamina") - tili))
+        if ST.txn_coins_acct(gid, qq, -need if need else 0, updates, require_funds=True) is None:
             return "数据库繁忙，扣费未成功，请稍后重试。"
-    if tili:
-        if ST.acct_add(gid, qq, "stamina", -tili) is None:
-            if need:
-                try:
-                    ST.coins_add(gid, qq, need)
-                except Exception:
-                    pass
-            return "数据库繁忙，体力扣除未成功（已退款），请稍后重试。"
     return None
 
 

@@ -102,18 +102,31 @@ def _strict_tls():
 
 
 def _make_ssl_context():
-    if _strict_tls():
-        return ssl.create_default_context()
-    ctx = ssl.create_default_context()
-    # 兼容私有 NAS 或自签名证书（默认；生产环境请打开 WebDAV严格校验）
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    try:
-        if _logger is not None:
-            _logger.warning("WebDAV TLS 校验已关闭（自签兼容模式）；生产环境请在备份配置中打开 WebDAV严格校验")
-    except Exception:
-        pass
-    return ctx
+    # 按校验档位缓存 SSLContext：每路径/每请求新建上下文开销大；warning 只打一次
+    mode = "strict" if _strict_tls() else "loose"
+    global _SSL_CTX_CACHE
+    with _SSL_CTX_LOCK:
+        cached = _SSL_CTX_CACHE.get(mode)
+        if cached is not None:
+            return cached
+        if mode == "strict":
+            ctx = ssl.create_default_context()
+        else:
+            ctx = ssl.create_default_context()
+            # 兼容私有 NAS 或自签名证书（默认；生产环境请打开 WebDAV严格校验）
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            try:
+                if _logger is not None:
+                    _logger.warning("WebDAV TLS 校验已关闭（自签兼容模式）；生产环境请在备份配置中打开 WebDAV严格校验")
+            except Exception:
+                pass
+        _SSL_CTX_CACHE[mode] = ctx
+        return ctx
+
+
+_SSL_CTX_CACHE = {}
+_SSL_CTX_LOCK = threading.Lock()
 
 
 _VERIFIED_REMOTE_DIRS = set()

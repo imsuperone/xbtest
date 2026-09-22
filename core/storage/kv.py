@@ -195,49 +195,6 @@ def recall_prefix(prefix):
         return []
 
 
-def redpack_put(gid, qq, pwd, amount):
-    """红包存入（原 storage/redpack.py 并入）：DELETE 同口令 + 清 86400 前过期，再 INSERT"""
-    _ensure_db()
-    with _S._LOCK:
-        if _S._DB is None:
-            return False
-        try:
-            _S._DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
-            _S._DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
-            _S._DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
-                        (int(gid), int(qq), str(pwd), int(amount), int(time.time())))
-            if not _safe_commit():
-                return False
-            return True
-        except Exception:
-            _safe_rollback()
-            return False
-
-
-def redpack_get(gid, pwd):
-    """红包读取：读副本快路径，未命中回主锁"""
-    _ensure_db()
-    try:
-        with _S._RLOCK:
-            if _S._DB_R is not None:
-                try:
-                    return _S._DB_R.execute(
-                        "SELECT qq, amount FROM redpacks WHERE gid=? AND pwd=?",
-                        (int(gid), str(pwd))).fetchone()
-                except Exception:
-                    pass
-    except Exception:
-        pass
-    with _S._LOCK:
-        if _S._DB is None:
-            return None
-        try:
-            return _S._DB.execute(
-                "SELECT qq, amount FROM redpacks WHERE gid=? AND pwd=?",
-                (int(gid), str(pwd))).fetchone()
-        except Exception:
-            return None
-
 def clean_expired_kv(ttl_sec=7 * 24 * 3600):
     """瞬时 KV 过期回收（后台每小时顺带扫一次，零阻塞）：
     仅清理明确带时间戳语义或已知短命前缀的孤儿键（空串已由会话回收，误清无伤）。
@@ -291,4 +248,4 @@ def clean_expired_kv(ttl_sec=7 * 24 * 3600):
         return 0
 
 
-__all__ = ["recall_get", "recall_set", "redpack_get", "redpack_put", "wd_cfg_backup", "wd_cfg_restore", "clean_expired_kv"]
+__all__ = ["recall_get", "recall_set", "wd_cfg_backup", "wd_cfg_restore", "clean_expired_kv"]

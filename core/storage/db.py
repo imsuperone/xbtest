@@ -7,21 +7,25 @@ from .state import _safe_commit, _safe_rollback
 
 
 def _read_conn():
-    """懒加载只读连接（query_only），失败返回 None 由调用方回退主连接"""
+    """懒加载只读连接（query_only），失败返回 None 由调用方回退主连接。
+    双检 + _LOCK：防多线程并发首建时重复 connect/覆盖句柄泄漏。"""
     if _S._DB_R is not None:
         return _S._DB_R
-    try:
-        if not _S._DB_PATH or not os.path.isfile(_S._DB_PATH):
-            return None
-        c = sqlite3.connect(_S._DB_PATH, timeout=_S.DB_TIMEOUT, check_same_thread=False)
+    with _S._LOCK:
+        if _S._DB_R is not None:
+            return _S._DB_R
         try:
-            c.execute("PRAGMA query_only=ON")
+            if not _S._DB_PATH or not os.path.isfile(_S._DB_PATH):
+                return None
+            c = sqlite3.connect(_S._DB_PATH, timeout=_S.DB_TIMEOUT, check_same_thread=False)
+            try:
+                c.execute("PRAGMA query_only=ON")
+            except Exception:
+                pass
+            _S._DB_R = c
+            return _S._DB_R
         except Exception:
-            pass
-        _S._DB_R = c
-        return _S._DB_R
-    except Exception:
-        return None
+            return None
 
 
 def close_read_conn():

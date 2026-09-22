@@ -137,16 +137,14 @@ def cmd_start(gid, qq, mapname):
     gap = _cfgi("冒险间隔", 3) * 60
     if last and _now() - last < gap:
         return "休息一下，过会儿再冒险吧！"
-    # 两腿扣费都校验：第二腿失败退第一腿（禁半成功开局）
-    if cs and ST.acct_add(gid, qq, "stamina", -cs) is None:
-        return "数据库繁忙，冒险扣费未成功，请稍后重试。"
-    if cost and ST.coins_add(gid, qq, -cost) is None:
-        if cs:
-            try:
-                ST.acct_add(gid, qq, "stamina", cs)
-            except Exception:
-                pass
-        return "数据库繁忙，冒险扣费未成功（已退款），请稍后重试。"
+    # 体力+金钱同锁单事务：禁两腿分扣半成功开局
+    with ST._LOCK:
+        cur_st = a.int("stamina")
+        if cur_st < cs:
+            return "亲，您的体力不足，无法进行冒险！"
+        updates = {"stamina": str(max(0, cur_st - cs))} if cs else None
+        if ST.txn_coins_acct(gid, qq, -cost if cost else 0, updates, require_funds=True) is None:
+            return "数据库繁忙，冒险扣费未成功，请稍后重试。"
     adv = {"map": mapname, "round": 1, "ts": _now(), "last_choice": 0}
     _save(gid, qq, adv)
     ST.recall_set("advt_%s_%s" % (gid, qq), str(_now()))

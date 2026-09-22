@@ -82,69 +82,71 @@ def _today_sign_order(gid):
 
 def cmd_sign(gid, qq):
     """签到: 基础奖励 + 连签加成 + 身价/资产联动(财富=现金+存款)"""
-    a = _acct(gid, qq)
-    today = _today().isoformat()
-    # 重复签到看两个日期键（旧数据可能只写其一，任一是今天都算已签，禁错位双签）
-    if a.get("sign_date") == today or a.get("last_sign_date") == today:
-        return cfg("签到配置", "重复签到文案",
-                      "亲，您今天已经签到过了，请明天继续吧！")
-    # 脏值自愈：计数坏串按 0 起（禁整单抛错锁死签到）
-    try:
-        total = int(float(a.get("sign_count", "0")))
-    except Exception:
-        total = 0
-    try:
-        chain = int(float(a.get("consecutive_days", "0")))
-    except Exception:
-        chain = 0
-    prev = str(a.get("last_sign_date", "") or a.get("sign_date", ""))
-    yest = (dt.date.today() - dt.timedelta(days=1)).isoformat()
-    chain = chain + 1 if prev == yest else 1
-    # 签到奖励按区间(优先支持中英双向键与休闲高福利默认值)
-    def _rng(cn_k, en_k, d_lo, d_hi):
-        lo = cfgi("签到配置", cn_k + "下限", cfgi("签到配置", en_k + "下限", d_lo))
-        hi = cfgi("签到配置", cn_k + "上限", cfgi("签到配置", en_k + "上限", d_hi))
-        if lo > hi: lo, hi = hi, lo
-        return random.randint(lo, hi)
-    base_cfg = cfgi("签到配置", "基础奖励", 0)
-    if base_cfg:
-        base = base_cfg
-    else:
-        base = _rng("金钱", "money", 800, 2000)
-    tili = _rng("体力", "stamina", 50, 100)
-    meili = _rng("魅力", "charm", 15, 30)
-    juan = _rng("奖券", "lottery_tickets", 3, 8)
-    bonus = cfgi("签到配置", "连签加成", 100)
-    chain_bonus = bonus * min(chain, CHAIN_CAP)
-    total += 1
-    # 预取当前额外属性旧值，用于一次事务内计算新值（避免 3次 acct_add+acct_save 的 3锁3提交）
-    # 脏值自愈同上，坏串按 0 起
-    try:
-        cur_stam = int(float(a.get("stamina", "0") or 0))
-    except Exception:
-        cur_stam = 0
-    try:
-        cur_charm = int(float(a.get("charm", "0") or 0))
-    except Exception:
-        cur_charm = 0
-    try:
-        cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
-    except Exception:
-        cur_juan = 0
-    # 单事务：钱包 delta + 账户批量字段（原5次提交→1次，持锁 1次）
-    # txn 失败返 None：禁止拆成多次独立写入补偿，避免签到奖励半成功。
-    if ST.txn_coins_acct(gid, qq, base + chain_bonus, {
-        "sign_count": str(total),
-        "total_sign_days": str(total),
-        "consecutive_days": str(chain),
-        "sign_date": today,
-        "last_sign_date": today,
-        "account_created": a.get("account_created") or dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "stamina": str(cur_stam + tili),
-        "charm": str(cur_charm + meili),
-        "lottery_tickets": str(cur_juan + juan),
-    }) is None:
-        return "签到系统繁忙，本次未结算，请稍后重试！"
+    # 判重+读-算-写全程持 _LOCK（RLock 可重入，txn 内复入无死锁）：防并发双签双领
+    with ST._LOCK:
+        a = _acct(gid, qq)
+        today = _today().isoformat()
+        # 重复签到看两个日期键（旧数据可能只写其一，任一是今天都算已签，禁错位双签）
+        if a.get("sign_date") == today or a.get("last_sign_date") == today:
+            return cfg("签到配置", "重复签到文案",
+                          "亲，您今天已经签到过了，请明天继续吧！")
+        # 脏值自愈：计数坏串按 0 起（禁整单抛错锁死签到）
+        try:
+            total = int(float(a.get("sign_count", "0")))
+        except Exception:
+            total = 0
+        try:
+            chain = int(float(a.get("consecutive_days", "0")))
+        except Exception:
+            chain = 0
+        prev = str(a.get("last_sign_date", "") or a.get("sign_date", ""))
+        yest = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+        chain = chain + 1 if prev == yest else 1
+        # 签到奖励按区间(优先支持中英双向键与休闲高福利默认值)
+        def _rng(cn_k, en_k, d_lo, d_hi):
+            lo = cfgi("签到配置", cn_k + "下限", cfgi("签到配置", en_k + "下限", d_lo))
+            hi = cfgi("签到配置", cn_k + "上限", cfgi("签到配置", en_k + "上限", d_hi))
+            if lo > hi: lo, hi = hi, lo
+            return random.randint(lo, hi)
+        base_cfg = cfgi("签到配置", "基础奖励", 0)
+        if base_cfg:
+            base = base_cfg
+        else:
+            base = _rng("金钱", "money", 800, 2000)
+        tili = _rng("体力", "stamina", 50, 100)
+        meili = _rng("魅力", "charm", 15, 30)
+        juan = _rng("奖券", "lottery_tickets", 3, 8)
+        bonus = cfgi("签到配置", "连签加成", 100)
+        chain_bonus = bonus * min(chain, CHAIN_CAP)
+        total += 1
+        # 预取当前额外属性旧值，用于一次事务内计算新值（避免 3次 acct_add+acct_save 的 3锁3提交）
+        # 脏值自愈同上，坏串按 0 起
+        try:
+            cur_stam = int(float(a.get("stamina", "0") or 0))
+        except Exception:
+            cur_stam = 0
+        try:
+            cur_charm = int(float(a.get("charm", "0") or 0))
+        except Exception:
+            cur_charm = 0
+        try:
+            cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
+        except Exception:
+            cur_juan = 0
+        # 单事务：钱包 delta + 账户批量字段（原5次提交→1次，持锁 1次）
+        # txn 失败返 None：禁止拆成多次独立写入补偿，避免签到奖励半成功。
+        if ST.txn_coins_acct(gid, qq, base + chain_bonus, {
+            "sign_count": str(total),
+            "total_sign_days": str(total),
+            "consecutive_days": str(chain),
+            "sign_date": today,
+            "last_sign_date": today,
+            "account_created": a.get("account_created") or dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "stamina": str(cur_stam + tili),
+            "charm": str(cur_charm + meili),
+            "lottery_tickets": str(cur_juan + juan),
+        }) is None:
+            return "签到系统繁忙，本次未结算，请稍后重试！"
     # 同步更新奴隶系统的 Group 存储，保证两边完全一致（走 DirtyDict 增量，持锁防单群并发崩溃）
     try:
         with ST._LOCK:
@@ -315,59 +317,63 @@ def cmd_gift(gid, qq, kind, amount):
     key = "stamina" if kind == "stamina" else "charm"
     price = cfgi("签到配置", "体力价格" if kind == "stamina" else "魅力价格", 30 if kind == "stamina" else 3)
     total = price * amount
-    a = ST.acct(gid, qq)
-    have = ST.coins_get(gid, qq)
-    dep = a.int("deposit")
-    current_value = a.int(key)
-    if have < total:
-        need = total - have
-        if dep >= need:
-            updates = {key: str(current_value + amount), "deposit": str(dep - need)}
-            if ST.txn_coins_acct(gid, qq, 0, updates, money_target=0) is None:
-                return "购买系统繁忙，本次购买未成功，请稍后重试！"
-            total_paid = f"{have}{ST.coin_name()}+存款{need}"
+    # 读-校验-写全程持 _LOCK（RLock 可重入）：防锁外读余额/存款/属性绝对值回写造成丢更新
+    with ST._LOCK:
+        a = ST.acct(gid, qq)
+        have = ST.coins_get(gid, qq)
+        dep = a.int("deposit")
+        current_value = a.int(key)
+        if have < total:
+            need = total - have
+            if dep >= need:
+                updates = {key: str(current_value + amount), "deposit": str(dep - need)}
+                if ST.txn_coins_acct(gid, qq, 0, updates, money_target=0) is None:
+                    return "购买系统繁忙，本次购买未成功，请稍后重试！"
+                total_paid = f"{have}{ST.coin_name()}+存款{need}"
+            else:
+                return f"亲，您的账户{ST.coin_name()}不足，无法购买！需要{total}{ST.coin_name()}（现金{have}+存款{dep}）"
         else:
-            return f"亲，您的账户{ST.coin_name()}不足，无法购买！需要{total}{ST.coin_name()}（现金{have}+存款{dep}）"
-    else:
-        if ST.txn_coins_acct(
-            gid, qq, -total, {key: str(current_value + amount)}, require_funds=True
-        ) is None:
-            return "购买系统繁忙，本次购买未成功，请稍后重试！"
-        total_paid = f"{total}{ST.coin_name()}"
-    cur = current_value + amount
+            if ST.txn_coins_acct(
+                gid, qq, -total, {key: str(current_value + amount)}, require_funds=True
+            ) is None:
+                return "购买系统繁忙，本次购买未成功，请稍后重试！"
+            total_paid = f"{total}{ST.coin_name()}"
+        cur = current_value + amount
     return f"恭喜您花费{total_paid}，购买了{amount}点{kind_cn}，您的{kind_cn}提升到{cur}点！"
 
 
 def cmd_newbie(gid, qq):
-    a = _acct(gid, qq)
-    if a.get("novice_gift", "") == "1":
-        return "亲，您已经领取过新手礼包了，无法再次领取！"
-    money = cfgi("新手配置", "现金", cfgi("新手配置", "新手金币", cfgi("新手配置", "money", 10000)))
-    tili = cfgi("新手配置", "体力", cfgi("新手配置", "新手体力", cfgi("新手配置", "stamina", 300)))
-    meili = cfgi("新手配置", "魅力", cfgi("新手配置", "新手魅力", cfgi("新手配置", "charm", 100)))
-    jq = cfgi("新手配置", "奖券", cfgi("新手配置", "新手奖券", cfgi("新手配置", "lottery_tickets", 15)))
-    # 单事务原子领取：钱包+账户同锁一次提交，避免签到并发时 database is locked
-    # txn 失败返 None：不再用多次独立写入补发，避免礼包半成功。
-    cur_stam = int(float(a.get("stamina", "0") or 0))
-    cur_charm = int(float(a.get("charm", "0") or 0))
-    cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
-    if ST.txn_coins_acct(gid, qq, money, {
-        "novice_gift": "1",
-        "stamina": str(cur_stam + tili),
-        "charm": str(cur_charm + meili),
-        "lottery_tickets": str(cur_juan + jq),
-    }) is None:
-        return "新手礼包系统繁忙，本次未领取成功，请稍后重试！"
-    else:
-        # txn 内已覆盖 novice 标记，刷新内存避免旧对象覆盖
-        try:
-            a.set("novice_gift", "1")
-            a.set("stamina", str(cur_stam + tili))
-            a.set("charm", str(cur_charm + meili))
-            a.set("lottery_tickets", str(cur_juan + jq))
-            a.dirty = False
-        except Exception:
-            pass
+    # 判重+读-写全程持 _LOCK（RLock 可重入）：防并发双领新手礼包
+    with ST._LOCK:
+        a = _acct(gid, qq)
+        if a.get("novice_gift", "") == "1":
+            return "亲，您已经领取过新手礼包了，无法再次领取！"
+        money = cfgi("新手配置", "现金", cfgi("新手配置", "新手金币", cfgi("新手配置", "money", 10000)))
+        tili = cfgi("新手配置", "体力", cfgi("新手配置", "新手体力", cfgi("新手配置", "stamina", 300)))
+        meili = cfgi("新手配置", "魅力", cfgi("新手配置", "新手魅力", cfgi("新手配置", "charm", 100)))
+        jq = cfgi("新手配置", "奖券", cfgi("新手配置", "新手奖券", cfgi("新手配置", "lottery_tickets", 15)))
+        # 单事务原子领取：钱包+账户同锁一次提交，避免签到并发时 database is locked
+        # txn 失败返 None：不再用多次独立写入补发，避免礼包半成功。
+        cur_stam = int(float(a.get("stamina", "0") or 0))
+        cur_charm = int(float(a.get("charm", "0") or 0))
+        cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
+        if ST.txn_coins_acct(gid, qq, money, {
+            "novice_gift": "1",
+            "stamina": str(cur_stam + tili),
+            "charm": str(cur_charm + meili),
+            "lottery_tickets": str(cur_juan + jq),
+        }) is None:
+            return "新手礼包系统繁忙，本次未领取成功，请稍后重试！"
+        else:
+            # txn 内已覆盖 novice 标记，刷新内存避免旧对象覆盖
+            try:
+                a.set("novice_gift", "1")
+                a.set("stamina", str(cur_stam + tili))
+                a.set("charm", str(cur_charm + meili))
+                a.set("lottery_tickets", str(cur_juan + jq))
+                a.dirty = False
+            except Exception:
+                pass
     return (f"恭喜您获得新手礼包一份！\r\n"
             f"{ST.coin_name()}+{money}\r\n体力+{tili}\r\n魅力+{meili}\r\n奖券+{jq}")
 

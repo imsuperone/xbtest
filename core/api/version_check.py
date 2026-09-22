@@ -5,12 +5,11 @@ import json
 import re
 import time
 import urllib.request
-import urllib.error
 try:
     from ..adapters import json_response
 except ImportError:
     from core.adapters import json_response
-from .web_utils import _err, get_req_query, get_req_json, no_cache_response
+from .web_utils import get_req_query, get_req_json, no_cache_response
 try:
     from .. import storage as ST
 except ImportError:

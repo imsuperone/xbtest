@@ -23,15 +23,16 @@ def handle(gid, qq, raw, is_admin=False):
     if text in ST.wake("娱乐系统", "娱乐系统"):
         return _MENU
     if text.startswith("抽签"):
-        _e = _fee(gid, qq, "抽签")
-        if _e:
-            return _e
-        # 每日一次
+        # 先查每日再扣费（原顺序先扣费后查，已抽过仍扣钱）
         a = ST.acct(gid, qq)
         today = ST.recall_get(f"chouqian_{gid}_{qq}", "")
         cur_day = time.strftime("%Y-%m-%d")
         if today == cur_day:
             return "今日已抽过签，明日再来试试手气吧～"
+        _e = _fee(gid, qq, "抽签")
+        if _e:
+            return _e
+        # 扣费成功后占坑，防并发双抽；奖励失败不回滚占坑（防重试刷奖）
         ST.recall_set(f"chouqian_{gid}_{qq}", cur_day)
         n = random.randint(1, 100)
         if n <= CHOUQIAN_P1:

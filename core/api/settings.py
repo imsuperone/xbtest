@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 """配置 API — schema / commands / get / save / auto_balance (覆盖28大系统全套平衡预设)"""
-import asyncio
 import math
 import os
-import json
 try:
     from ..adapters import json_response
 except ImportError:

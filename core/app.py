@@ -668,12 +668,14 @@ class XbBot(Star):
         """page_* 统一薄委托：双通道导入 handler 后按模式组装参数调用，异常归一 _err"""
         try:
             # 管理 API 服务端收口：AstrBot 宿主 dashboard 会话是鉴权边界（宿主契约未在本仓提供，
-            # 见 AICODE_AUDIT §10，仍需真机确认 register_web_api 是否仅管理员可达）。
-            # 此处只做失败关闭的显式标记检查：请求明确携带非管理员标记时直接 403；
-            # 标记缺失时交由宿主会话判定，绝不因插件侧猜测而误放行或误拦截。
-            if func_name in _XB_MUTATING_HANDLERS and _web_admin_explicit_deny(
-                    request if request is not None else (args[0] if args else None)):
-                return _err("forbidden: admin required", 403)
+            # 见 AICODE_AUDIT §10）。mutating 请求对象缺失时失败关闭直接 403；
+            # 有对象时仅做显式非管理员标记检查，缺标记交宿主会话判定。
+            if func_name in _XB_MUTATING_HANDLERS:
+                _deny_req = request if request is not None else (args[0] if args else None)
+                if _deny_req is None:
+                    return _err("forbidden: admin required", 403)
+                if _web_admin_explicit_deny(_deny_req):
+                    return _err("forbidden: admin required", 403)
             fn = _load_api_handler(mod_short, func_name)
             if mode == "none":
                 return await fn()

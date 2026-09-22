@@ -107,11 +107,10 @@ def cmd_bail(gid, qq, target, self_bail=False, kind="保释"):
         fee = 0
         tili = cfgi("银行配置", "劫狱消耗体力", 5)
         meli = cfgi("银行配置", "劫狱魅力减少", 0)
-        # 劫狱有独立冷却
+        # 劫狱冷却：锁外只读校验，写入延后到锁内 txn（防校验失败仍污染缓存冷却）
         ok, mins = _cd(a, "jailbreak_time", cfgi("银行配置", "劫狱间隔", 5))
         if not ok:
             return f"{mins}分钟后再来劫狱吧！"
-        a.set("jailbreak_time", _now_s())
     else:
         fee_lo = cfgi("银行配置", "保释金钱下限", 5000)
         fee_hi = cfgi("银行配置", "保释金钱上限", 10000)
@@ -129,6 +128,16 @@ def cmd_bail(gid, qq, target, self_bail=False, kind="保释"):
                 return "监狱系统繁忙，请稍后重试！"
             a2 = ST.acct(gid, qq)
             ta2 = a2 if str(tid) == str(qq) else ST.acct(gid, tid)
+            # 锁内复检：目标可能已在锁外被释放/到期自动出狱
+            if not _check_jail(ta2):
+                return f"对方({_bail_name(tid, gid)})没有入狱，不需要{kind}！"
+            if not self_bail and _check_jail(a2):
+                return "你自己都蹲在监狱里了，拿什么解救别人？？发送【我要出狱】试试！"
+            if kind == "劫狱":
+                ok, mins = _cd(a2, "jailbreak_time", cfgi("银行配置", "劫狱间隔", 5))
+                if not ok:
+                    return f"{mins}分钟后再来劫狱吧！"
+                a2.set("jailbreak_time", _now_s())
             row = ST._DB.execute(
                 "SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))
             ).fetchone()

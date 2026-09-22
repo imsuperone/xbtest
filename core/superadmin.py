@@ -754,5 +754,6 @@ def handle(gid, qq, raw, is_admin=False):
     return None
 
 
+# COMMANDS 已并入 protocol.engine_commands 统一读取；此处仅保留模块级声明供反射。
 COMMANDS = ("超管", "系统开关", "群开关", "维护", "空投", "版本")
 WAKE = "超管系统"

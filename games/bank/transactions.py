@@ -15,22 +15,24 @@ from .jail import *  # noqa
 def cmd_deposit(gid, qq, amount):
     if amount <= 0:
         return "亲，您的格式有误，存款格式为：【存款 金额】！"
-    a = _acct(gid, qq)
-    if _check_jail(a):
-        return _show_jail(a)
-    cs = cfgi("银行配置", "存取款消耗体力", 1)
-    if a.int("stamina") < cs:
-        return "亲，您的游戏体力不足，无法进行存款！"
-    have = ST.coins_get(gid, qq)
-    if have < amount:
-        return f"亲，您的{ST.coin_name()}不足，请重新选择存款数！"
-    rate = cfgi("银行配置", "存款利率", 2)
-    cap = cfgi("银行配置", "利息上限", 50000)
-    interest = _settle_interest(a, rate, cap)
-    old = a.int("deposit")
-    if ST.txn_coins_acct(gid, qq, -amount, {"stamina": str(a.int("stamina") - cs), "deposit": str(old + amount + interest), "withdraw_timestamp": str(int(time.time()))}, require_funds=True) is None:
-        return "亲，银行系统繁忙，存款未成功，请稍后重试！"
-    total = old + amount + interest
+    # 读-校验-写全程持 _LOCK（RLock 可重入，txn 内复入无死锁）：防同用户并发双花/丢更新
+    with ST._LOCK:
+        a = _acct(gid, qq)
+        if _check_jail(a):
+            return _show_jail(a)
+        cs = cfgi("银行配置", "存取款消耗体力", 1)
+        if a.int("stamina") < cs:
+            return "亲，您的游戏体力不足，无法进行存款！"
+        have = ST.coins_get(gid, qq)
+        if have < amount:
+            return f"亲，您的{ST.coin_name()}不足，请重新选择存款数！"
+        rate = cfgi("银行配置", "存款利率", 2)
+        cap = cfgi("银行配置", "利息上限", 50000)
+        interest = _settle_interest(a, rate, cap)
+        old = a.int("deposit")
+        if ST.txn_coins_acct(gid, qq, -amount, {"stamina": str(a.int("stamina") - cs), "deposit": str(old + amount + interest), "withdraw_timestamp": str(int(time.time()))}, require_funds=True) is None:
+            return "亲，银行系统繁忙，存款未成功，请稍后重试！"
+        total = old + amount + interest
     return (f"存款成功！消耗{cs}点体力，共存入：{amount}，\r\n"
             f"上期结息：{interest}，当前总存款：{total}，"
             f"当前利率：{rate}%，1小时后可取款！\r\n"
@@ -61,40 +63,42 @@ def _settle_interest(a, rate, cap):
 
 
 def cmd_withdraw(gid, qq, amount):
-    a = _acct(gid, qq)
-    if _check_jail(a):
-        return _show_jail(a)
-    dep = a.int("deposit")
-    if amount <= 0:
-        return "请输入正确格式：取款 金额（正整数）"
-    if dep < amount:
-        return f"存款不足！当前存款：{dep}"
-    rate = cfgi("银行配置", "存款利率", 2)
-    cap = cfgi("银行配置", "利息上限", 50000)
-    interest = _settle_interest(a, rate, cap)
-    # 利息未到时提示剩余时间与可用强制取款，但仍允许取款（取款成功但无利息，满足测试与需求38的提示）
-    if interest == 0 and dep > 0:
-        try:
-            last = float(a.get("withdraw_timestamp", "0") or "0")
-            left = int(3600 - (time.time() - last))
-            if left > 0:
-                # 仍允许取款，但在成功消息中附加提示，兼顾测试的“取款成功”校验
-                pot = int(dep * rate / 100.0)
-                pot = min(pot, cap)
-                # 不直接return，继续向下走取款成功逻辑，附加提示在最终返回中体现
-                interest_note = f"（提示：利息结算需1小时，还需{left//60}分{left%60}秒，到期可获{pot}{ST.coin_name()}，可强取）"
-            else:
+    # 读-校验-写全程持 _LOCK：防并发双取（同一存款被两个线程同时取走）
+    with ST._LOCK:
+        a = _acct(gid, qq)
+        if _check_jail(a):
+            return _show_jail(a)
+        dep = a.int("deposit")
+        if amount <= 0:
+            return "请输入正确格式：取款 金额（正整数）"
+        if dep < amount:
+            return f"存款不足！当前存款：{dep}"
+        rate = cfgi("银行配置", "存款利率", 2)
+        cap = cfgi("银行配置", "利息上限", 50000)
+        interest = _settle_interest(a, rate, cap)
+        # 利息未到时提示剩余时间与可用强制取款，但仍允许取款（取款成功但无利息，满足测试与需求38的提示）
+        if interest == 0 and dep > 0:
+            try:
+                last = float(a.get("withdraw_timestamp", "0") or "0")
+                left = int(3600 - (time.time() - last))
+                if left > 0:
+                    # 仍允许取款，但在成功消息中附加提示，兼顾测试的“取款成功”校验
+                    pot = int(dep * rate / 100.0)
+                    pot = min(pot, cap)
+                    # 不直接return，继续向下走取款成功逻辑，附加提示在最终返回中体现
+                    interest_note = f"（提示：利息结算需1小时，还需{left//60}分{left%60}秒，到期可获{pot}{ST.coin_name()}，可强取）"
+                else:
+                    interest_note = ""
+            except Exception:
                 interest_note = ""
-        except Exception:
+        else:
             interest_note = ""
-    else:
-        interest_note = ""
-    # 取款仅扣除本次取出的存款本金，利息为银行派发的收益额外计入钱包
-    new_dep = dep - amount
-    if ST.txn_coins_acct(gid, qq, amount + interest, {"deposit": str(new_dep), "withdraw_timestamp": str(int(time.time()))}) is None:
-        return "亲，银行系统繁忙，取款未成功，请稍后重试！"
-    base = (f"取款成功！获得利息：{interest}，本次取款：{amount}，\r\n"
-            f"还剩存款：{new_dep}，剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
+        # 取款仅扣除本次取出的存款本金，利息为银行派发的收益额外计入钱包
+        new_dep = dep - amount
+        if ST.txn_coins_acct(gid, qq, amount + interest, {"deposit": str(new_dep), "withdraw_timestamp": str(int(time.time()))}) is None:
+            return "亲，银行系统繁忙，取款未成功，请稍后重试！"
+        base = (f"取款成功！获得利息：{interest}，本次取款：{amount}，\r\n"
+                f"还剩存款：{new_dep}，剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
     if 'interest_note' in locals() and interest_note:
         base += f"\r\n{interest_note}"
     return base
@@ -104,22 +108,24 @@ def cmd_withdraw(gid, qq, amount):
 
 def cmd_force_withdraw(gid, qq, amount):
     """强制取款: 未到期限强制取款无利息，不影响后续利息按剩余计（不重置计时）原子版"""
-    a = _acct(gid, qq)
-    if _check_jail(a):
-        return _show_jail(a)
-    dep = a.int("deposit")
-    if amount <= 0:
-        return "请输入正确格式：强制取款 金额（正整数）"
-    if dep < amount:
-        return f"存款不足！当前存款：{dep}"
-    # 原子：钱包 + 存款同事务，避免半成功（中文文案不变）
-    # txn 失败返 None（内部已回滚）：走原子单项降级，而非当成功
-    if ST.txn_coins_acct(gid, qq, amount, {"deposit": str(dep - amount)}) is None:
-        return "亲，银行系统繁忙，强制取款未成功，请稍后重试！"
-    # 不重置取款时间戳，利息仍按原剩余金额与原计时继续结算
-    return (f"强制取款成功！因未到取款时间，本次没有利息（不影响后续利息按剩余{ dep - amount}计）。\r\n"
-            f"本次取款：{amount}，还剩存款：{dep - amount}，"
-            f"剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
+    # 读-校验-写全程持 _LOCK：防并发双取
+    with ST._LOCK:
+        a = _acct(gid, qq)
+        if _check_jail(a):
+            return _show_jail(a)
+        dep = a.int("deposit")
+        if amount <= 0:
+            return "请输入正确格式：强制取款 金额（正整数）"
+        if dep < amount:
+            return f"存款不足！当前存款：{dep}"
+        # 原子：钱包 + 存款同事务，避免半成功（中文文案不变）
+        # txn 失败返 None（内部已回滚）：走原子单项降级，而非当成功
+        if ST.txn_coins_acct(gid, qq, amount, {"deposit": str(dep - amount)}) is None:
+            return "亲，银行系统繁忙，强制取款未成功，请稍后重试！"
+        # 不重置取款时间戳，利息仍按原剩余金额与原计时继续结算
+        return (f"强制取款成功！因未到取款时间，本次没有利息（不影响后续利息按剩余{ dep - amount}计）。\r\n"
+                f"本次取款：{amount}，还剩存款：{dep - amount}，"
+                f"剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
 
 
 
@@ -143,50 +149,25 @@ def cmd_transfer(gid, qq, target, amount):
     if ST.coins_get(gid, qq) < amount:
         return "亲，您的账户余额不足，转账失败！"
     credit = int(amount)
-    # 原子化：体力与双钱包同锁，避免体力扣了但转账失败半成功
+    # 单事务原子转账：体力+双钱包同锁，避免体力扣了但转账失败半成功
     try:
-        # 尝试在同一 _LOCK 内完成体力扣减 + 钱包转账
-        if hasattr(ST, "_LOCK"):
-            with ST._LOCK:
-                # 二次校验（防并发）
-                cur_st = ST.acct(gid, qq).int("stamina")
-                if cur_st < cs:
-                    return "亲，您的游戏体力不足，无法进行转账！"
-                cur_money = 0
-                if ST._DB is not None:
-                    row = ST._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
-                    cur_money = int(row[0]) if row else 0
-                if cur_money < amount:
-                    return "亲，您的账户余额不足，转账失败！"
-                # 扣体力
-                a = ST.acct(gid, qq)
-                a.set("stamina", str(cur_st - cs))
-                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
-                # 钱包转账（P1: 接收方达上限截断时差额不得销毁，按实际credit扣减）
-                row2 = ST._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(target))).fetchone()
-                dst_cur = int(row2[0]) if row2 else 0
-                credit = min(int(amount), max(0, getattr(ST, "COIN_CAP", 100000000000) - dst_cur))
-                if credit <= 0:
-                    ST._safe_rollback()
-                    return "对方钱包已满，无法接收转账！"
-                new_src = cur_money - credit
-                new_dst = dst_cur + credit
-                ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_src))
-                ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(target), new_dst))
-                # 先验 commit 再清脏：提交失败抛给降级，不吞错报成功
-                try:
-                    ST._DB.commit()
-                except Exception:
-                    ST._safe_rollback()
-                    raise
-                a.dirty = False
-        else:
-            # 降级：原逻辑
-                ST.acct_add(gid, qq, "stamina", -cs)
-                if hasattr(ST, "txn_two_wallets") and not ST.txn_two_wallets(gid, qq, target, amount):
-                    # 回滚体力
-                    ST.acct_add(gid, qq, "stamina", cs)
-                    return "亲，您的账户余额不足，转账失败！"
+        with ST._LOCK:
+            # 二次校验（防并发）
+            cur_st = ST.acct(gid, qq).int("stamina")
+            if cur_st < cs:
+                return "亲，您的游戏体力不足，无法进行转账！"
+            cur_money = ST.coins_get(gid, qq)
+            if cur_money < amount:
+                return "亲，您的账户余额不足，转账失败！"
+            # 对方余额与上限（锁内读）
+            dst_cur = ST.coins_get(gid, target)
+            credit = min(int(amount), max(0, cap - dst_cur))
+            if credit <= 0:
+                return "对方钱包已满，无法接收转账！"
+            updates = {"stamina": str(max(0, cur_st - cs))}
+            # 用 txn_two_wallets_acct 一并提交：转出方扣体力+扣款，转入方加款
+            if ST.txn_two_wallets_acct(gid, qq, target, credit, acct_updates=updates, acct_qq=qq) is None:
+                return "亲，银行系统繁忙，转账未成功，请稍后重试！"
     except Exception:
         # 主路径失败只回滚并返回；禁止拆成多个独立写入补偿。
         try:
@@ -225,16 +206,11 @@ def cmd_gamble(gid, qq, amount):
     if a.int("stamina") < cs:
         return "亲，您的体力不足，无法进行赌博！"
     lim = cfgi("银行配置", "赌博限定次数", 5)
-    cnt = int(ST.recall_get("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), "0") or 0)
-    if cnt >= lim:
-        return "亲，您今日赌博次数已达上限，无法再进行赌博！"
-    if ST.coins_get(gid, qq) < amount:
-        return f"亲，您的{ST.coin_name()}不足，无法进行赌博！"
     meli = cfgi("银行配置", "赌博魅力减少", 20)
     jail_mins = cfgi("银行配置", "赌博关押时间", 5)
     prob = cfgi("银行配置", "赌博成功概率", 60)
     gain = int(amount * GAMBLE_MULT)
-    # 原子化：钱包+体力+魅力 同事务，避免半成功通胀
+    # 原子化：钱包+体力+魅力+日计数 同锁，避免半成功通胀/并发双花次数
     try:
         with ST._LOCK:
             cur = ST.coins_get(gid, qq)
@@ -243,6 +219,10 @@ def cmd_gamble(gid, qq, amount):
             cur_st = ST.acct(gid, qq).int("stamina")
             if cur_st < cs:
                 return "亲，您的体力不足，无法进行赌博！"
+            # 锁内重读日计数：防锁外读到旧值绕过当日上限
+            cnt = int(ST.recall_get("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), "0") or 0)
+            if cnt >= lim:
+                return "亲，您今日赌博次数已达上限，无法再进行赌博！"
             a2 = ST.acct(gid, qq)
             a2.set("stamina", str(cur_st - cs))
             if random.random() * 100 < prob:
@@ -310,20 +290,6 @@ def cmd_gamble(gid, qq, amount):
 
 
 
-_VAULT_LOCK = None  # 独立金库 RMW 锁（bank 无 _cmd_lock，12 worker 下防并发超发）
-
-
-def _vault_lock():
-    global _VAULT_LOCK
-    if _VAULT_LOCK is None:
-        try:
-            import threading as _th
-            _VAULT_LOCK = _th.Lock()
-        except Exception:
-            pass
-    return _VAULT_LOCK
-
-
 def _vault_state(gid):
     """独立金库读+时间回流：seed/cap/每小时回流均走银行配置（代码缺省，无需 schema）。
     返回 (vault, cap)。只读不写，写走 _vault_set。"""
@@ -362,23 +328,9 @@ def _vault_state(gid):
     return v, cap
 
 
-def _vault_set(gid, v):
-    """金库落盘（含时间戳），失败返 False（调用方退款/报繁忙，禁吞错）。"""
-    try:
-        v = max(0, int(v))
-    except Exception:
-        return False
-    try:
-        if not ST.recall_set("bank_vault_%s" % gid, str(v)):
-            return False
-        ST.recall_set("bank_vault_ts_%s" % gid, str(time.time()))
-        return True
-    except Exception:
-        return False
-
-
 def cmd_rob_zone(gid, qq):
-    """打劫银行：只动独立金库，不碰任何用户存款。成功从金库提款，失败罚金充公进金库。"""
+    """打劫银行：只动独立金库，不碰任何用户存款。成功从金库提款，失败罚金充公进金库。
+    金库 kv 与钱包/账户同 _LOCK 同事务：kv 先 stage 不单独 commit，txn_coins_acct 一并提交或一并回滚。"""
     a = _acct(gid, qq)
     if _check_jail(a):
         return _show_jail(a)
@@ -404,62 +356,78 @@ def cmd_rob_zone(gid, qq):
             "release_timestamp": str(int(time.time()) + int(jail_mins) * 60),
             "rob_bank_time": now_s,
         }
-        if ST.txn_coins_acct(gid, qq, -fine, updates) is None:
-            return "银行系统繁忙，本次打劫未结算，请稍后重试！"
-        # 罚金充公进金库（按上限截断，落盘失败不影响主流程回执）
-        try:
-            _lk = _vault_lock()
-            if _lk is not None:
-                with _lk:
-                    _v, _cap = _vault_state(gid)
-                    _vault_set(gid, min(_cap, _v + max(0, int(fine or 0))))
-            else:
-                _v, _cap = _vault_state(gid)
-                _vault_set(gid, min(_cap, _v + max(0, int(fine or 0))))
-        except Exception:
-            pass
+        with ST._LOCK:
+            staged = _vault_stage_delta(gid, max(0, int(fine or 0)))
+            if staged is None:
+                return "银行系统繁忙，本次打劫未结算，请稍后重试！"
+            if ST.txn_coins_acct(gid, qq, -fine, updates) is None:
+                return "银行系统繁忙，本次打劫未结算，请稍后重试！"
+            _vault_stage_commit_cache(gid, staged)
         return (f"打劫银行失败，打劫银行时被抓！被关监狱{jail_mins}分钟，\r\n"
                 f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
     lo = cfgi("银行配置", "打劫银行金钱下限", 6000)
     hi = cfgi("银行配置", "打劫银行金钱上限", 12000)
     want = max(1, random.randint(lo, hi) if hi >= lo else lo)
-    try:
-        _lk = _vault_lock()
-        _held = False
-        if _lk is not None:
-            _lk.acquire()
-            _held = True
+    with ST._LOCK:
         try:
             vault, _cap = _vault_state(gid)
             loot = min(vault, want)
             if loot <= 0:
                 return "银行金库空空如也，打劫失败，过段时间等金库回流再来！"
-            if not _vault_set(gid, vault - loot):
+            staged = _vault_stage_delta(gid, -loot)
+            if staged is None:
                 return "银行系统繁忙，本次打劫未结算，请稍后重试！"
-        finally:
-            if _held:
-                try:
-                    _lk.release()
-                except Exception:
-                    pass
+        except Exception:
+            try:
+                ST._safe_rollback()
+            except Exception:
+                pass
+            return "银行系统繁忙，本次打劫未结算，请稍后重试！"
+        if ST.txn_coins_acct(gid, qq, loot,
+                             {"stamina": str(max(0, a.int("stamina") - cs)), "rob_bank_time": now_s}) is None:
+            # txn 失败已回滚：金库扣减同事务一并回滚，无需手工退款
+            return "银行系统繁忙，本次打劫未结算，请稍后重试！"
+        _vault_stage_commit_cache(gid, staged)
+    return f"打劫银行成功！从金库劫走{loot}{ST.coin_name()}！"
+
+
+def _vault_stage_delta(gid, delta):
+    """金库增减 stage 进当前事务（不单独 commit；调用方随后 txn_coins_acct 统一提交）。
+    返回 (new_vault, cap) 成功；失败返回 None（内部已回滚）。须持 ST._LOCK 调用。"""
+    try:
+        v, cap = _vault_state(gid)
+        new_v = max(0, min(cap, int(v) + int(delta)))
+        if ST._DB is None:
+            return None
+        ST._DB.execute("INSERT INTO kv(k, v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v",
+                       ("bank_vault_%s" % gid, str(new_v)))
+        ST._DB.execute("INSERT INTO kv(k, v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v",
+                       ("bank_vault_ts_%s" % gid, str(time.time())))
+        return (new_v, cap)
     except Exception:
-        return "银行系统繁忙，本次打劫未结算，请稍后重试！"
-    if ST.txn_coins_acct(gid, qq, loot,
-                         {"stamina": str(max(0, a.int("stamina") - cs)), "rob_bank_time": now_s}) is None:
-        # 发放失败则金库退款（尽力，不抛错）
         try:
-            _lk2 = _vault_lock()
-            if _lk2 is not None:
-                with _lk2:
-                    _v2, _cap2 = _vault_state(gid)
-                    _vault_set(gid, min(_cap2, _v2 + loot))
-            else:
-                _v2, _cap2 = _vault_state(gid)
-                _vault_set(gid, min(_cap2, _v2 + loot))
+            ST._safe_rollback()
         except Exception:
             pass
-        return "银行系统繁忙，本次打劫未结算，请稍后重试！"
-    return f"打劫银行成功！从金库劫走{loot}{ST.coin_name()}！"
+        return None
+
+
+def _vault_stage_commit_cache(gid, staged):
+    """txn 成功后把已提交的金库值写进 _KV_CACHE（DB 已正确，仅防缓存读旧值）。"""
+    if not staged:
+        return
+    new_v, _cap = staged
+    try:
+        _kvc = getattr(ST, "_KV_CACHE", None)
+        _lock = getattr(ST, "_KV_CACHE_LOCK", None)
+        if _kvc is None or _lock is None:
+            from core.storage import state as _st_state  # type: ignore
+            _kvc, _lock = _st_state._KV_CACHE, _st_state._KV_CACHE_LOCK
+        with _lock:
+            _kvc["bank_vault_%s" % gid] = str(new_v)
+            _kvc["bank_vault_ts_%s" % gid] = str(time.time())
+    except Exception:
+        pass
 
 
 

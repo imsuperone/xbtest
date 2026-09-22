@@ -1,5 +1,12 @@
 # 更新日志
 
+## v2026w0922a
+- 🔒 **H1-H8 并发安全修复**：银行存/取/强取/打劫/赌博、签到送礼/签到/新手礼包 全部 `ST._LOCK` 包裹读-校验-写；`cmd_rob_zone` 金库与钱包同事务 stage+commit；`_call_api` mutating 强制 admin 403；`user_clear` else 分支加锁+commit+缓存清理；`_read_conn` 双检加锁；`cmd_bail` 锁内复检+劫狱冷却锁内写。
+- 🐛 **中危修复**：`cmd_transfer` 改 `txn_two_wallets_acct` 单事务（体力+双钱包原子）；`cmd_start` 冒险扣费改 `txn_coins_acct` 单事务；`_ent_cost`/扔炸弹 改锁内原子扣费；`抽签` 每日检查先于扣费、标记在奖励成功后写；帮派创建/加入/退出/解散 锁内复检 stamina/charm 并构建 updates。
+- 📉 **GAMBLE_MULT 1.8→1.6**：旧期望 60%*1.8=1.08x 印钱，现 60%*1.6=0.96x ≤1 庄家微利。
+- 🧹 **死代码清理**：`transactions._VAULT_LOCK/_vault_lock/_vault_set` 删除；`protocol.maintenance_reply`/`Engine` 协议类 删除；`kv.redpack_put/redpack_get`（零调用）删除；`app_config.load_config_from_db`（零调用，保留 `reload_config_from_db`）删除；未用 import（`coll_merge`/`_err`/`urllib.error`/`asyncio`/`json`）清理；`superadmin.COMMANDS` 补注释。
+- 🔢 **版本**：跨日归 `2026w0922a`.
+
 ## v2026w0919a
 - 🎯 **目标解析只留QQ**：新增 `storage.is_qq_mention` 单源（CQ/`@数字`/独立数字串才认）；`slave/bank/ent/超管` 昵称反查全摘除，`@昵称` 一律走格式错误，撞名串人根除；
 - 🧹 **删无用老代码**：`find_qq_by_name`、`_resolve_qq_from_name`、`_resolve_name_target`、`_clean_nm` 及反向索引维护全清；
