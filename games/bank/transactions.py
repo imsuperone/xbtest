@@ -209,6 +209,11 @@ def cmd_gamble(gid, qq, amount):
     meli = cfgi("银行配置", "赌博魅力减少", 20)
     jail_mins = cfgi("银行配置", "赌博关押时间", 5)
     prob = cfgi("银行配置", "赌博成功概率", 60)
+    try:
+        from ..sign import eff_prob as _luck_eff
+        prob = _luck_eff(prob, gid, qq)
+    except Exception:
+        pass
     gain = int(amount * GAMBLE_MULT)
     # 原子化：钱包+体力+魅力+日计数 同锁，避免半成功通胀/并发双花次数
     try:
@@ -341,6 +346,11 @@ def cmd_rob_zone(gid, qq):
     if not ok:
         return f"{mins}分钟后再来打劫银行吧！"
     prob = cfgi("银行配置", "打劫银行成功概率", 70)
+    try:
+        from ..sign import eff_prob as _luck_eff2
+        prob = _luck_eff2(prob, gid, qq)
+    except Exception:
+        pass
     meli = cfgi("银行配置", "打劫银行魅力减少", 3)
     jail_mins = cfgi("银行配置", "打劫银行关押时间", 5)
     now_s = _now_s()
@@ -455,6 +465,11 @@ def cmd_sell_slave(gid, qq, target):
     if not ok:
         return f"{mins}分钟后再来打劫吧！"
     prob = cfgi("银行配置", "打劫成功概率", 65)
+    try:
+        from ..sign import eff_prob as _luck_eff3
+        prob = _luck_eff3(prob, gid, qq)
+    except Exception:
+        pass
     lo = cfgi("银行配置", "打劫金钱下限", 1000)
     hi = cfgi("银行配置", "打劫金钱上限", 100000)
     meli = cfgi("银行配置", "打劫魅力减少", 3)

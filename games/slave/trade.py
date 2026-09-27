@@ -127,7 +127,13 @@ def cmd_torture(gid, qq, target, st):
         return _S.T.TORTURE_ALL_DONE
     sc = coins_get(gid, tid)
     cd_commit(U(st, qq), "torture_time")
-    if _random.randint(1, 100) > cfgi("概率配置", "折磨成功率", 75):
+    _tor_p = cfgi("概率配置", "折磨成功率", 75)
+    try:
+        from ..sign import eff_prob as _LP
+        _tor_p = _LP(_tor_p, gid, qq)
+    except Exception:
+        pass
+    if _random.randint(1, 100) > _tor_p:
         return _S.T.TORTURE_MERCY
     evs = [e for e in _S.EVENTS if e.get("type", "").startswith("折磨")]
     if not evs:

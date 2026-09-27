@@ -173,6 +173,11 @@ def cmd_bomb(gid, qq, arg):
     nmin = cfgi("娱乐配置", "扔炸弹_个数下限", 1)
     nmax = cfgi("娱乐配置", "扔炸弹_个数上限", 2)
     prob = cfgi("娱乐配置", "扔炸弹_成功概率", 70)
+    try:
+        from ..sign import eff_prob as _luck_eff
+        prob = _luck_eff(prob, gid, qq)
+    except Exception:
+        pass
     mute_lo = cfgi("娱乐配置", "扔炸弹_禁言下限", 5)
     mute_hi = cfgi("娱乐配置", "扔炸弹_禁言上限", 10)
     # 解析目标（QQ-only：CQ码 / @QQ / 纯数字，不认昵称）

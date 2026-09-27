@@ -208,7 +208,13 @@ def cmd_choose(gid, qq, n):
 
     if kind == "bonus":
         # 35% 额外复活币：任一到账失败如实告知（禁冒领成功）
-        if random.random() < REVIVE_CHANCE:
+        _rv_p = REVIVE_CHANCE
+        try:
+            from .sign import eff_p01 as _LP01
+            _rv_p = _LP01(_rv_p, gid, qq)
+        except Exception:
+            pass
+        if random.random() < _rv_p:
             _c_ok = ST.coins_add(gid, qq, money) is not None
             _r_ok = ST.acct_add(gid, qq, "revive_coins", 1) is not None
             if not (_c_ok and _r_ok):

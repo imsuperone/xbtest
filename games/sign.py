@@ -36,6 +36,102 @@ def cfg(sec, key, default=""):
 
 DAYS_CN = ("", "一", "二", "三", "四", "五", "六", "日")
 
+# ---- 每日打卡：幸运值 → 当日概率浮动（签到系统归属，第一版） ----
+# 规则：每群独立，每人每天限 1 次；幸运值 1-100 随机；
+# 加成 = (幸运值-50)/50*0.3（百分点）：50→0，100→+0.3，1→约-0.294
+DAILY_LUCK_MAX_BONUS = 0.3
+
+
+def daily_luck_delta_pp(luck):
+    """幸运值 → 当日概率浮动（百分点，如 +0.3 表示 +0.3%）。"""
+    try:
+        v = int(luck)
+    except Exception:
+        return 0.0
+    return (v - 50) / 50.0 * DAILY_LUCK_MAX_BONUS
+
+
+def get_daily_luck(gid, qq):
+    """返回 (幸运值int, 加成float百分点, 日期str)；今日未打卡返回 (None, 0.0, today)。"""
+    today = _today().isoformat()
+    try:
+        a = _acct(gid, qq)
+        d = str(a.get("daily_luck_date", "") or "")
+        if d == today:
+            try:
+                luck = int(float(a.get("daily_luck_value", "0") or 0))
+            except Exception:
+                luck = 0
+            return luck, daily_luck_delta_pp(luck), d
+    except Exception:
+        pass
+    return None, 0.0, today
+
+
+def get_daily_bonus(gid, qq):
+    """今日概率加成（百分点）；未打卡=0.0。供各概率玩法调用。"""
+    try:
+        _luck, delta, _d = get_daily_luck(gid, qq)
+        return float(delta or 0.0)
+    except Exception:
+        return 0.0
+
+
+def eff_prob(base, gid=None, qq=None, bonus=None):
+    """基础概率%(0-100)叠加每日打卡加成，钳制 0-100。"""
+    try:
+        b = float(base)
+    except Exception:
+        return base
+    try:
+        if bonus is None:
+            bonus = get_daily_bonus(gid, qq) if gid is not None and qq is not None else 0.0
+        return max(0.0, min(100.0, b + float(bonus)))
+    except Exception:
+        return b
+
+
+def eff_p01(p, gid=None, qq=None, bonus=None):
+    """0-1 概率叠加每日打卡加成（百分点→小数），钳制 0-1。"""
+    try:
+        v = float(p)
+    except Exception:
+        return p
+    try:
+        if bonus is None:
+            bonus = get_daily_bonus(gid, qq) if gid is not None and qq is not None else 0.0
+        return max(0.0, min(1.0, v + float(bonus) / 100.0))
+    except Exception:
+        return v
+
+
+def cmd_daily_checkin(gid, qq):
+    """每日打卡：每群独立、每人每天限1次；摇 1-100 幸运值，当日概率玩法按此浮动。"""
+    with ST._LOCK:
+        a = _acct(gid, qq)
+        today = _today().isoformat()
+        if str(a.get("daily_luck_date", "") or "") == today:
+            try:
+                luck = int(float(a.get("daily_luck_value", "0") or 0))
+            except Exception:
+                luck = 0
+            delta = daily_luck_delta_pp(luck)
+            sign = "+" if delta >= 0 else ""
+            return (f"📅 你今天已经打卡过了！\n"
+                    f"🍀 今日幸运值：{luck}\n"
+                    f"📈 今日概率加成：{sign}{delta:.2f}%（大部分概率玩法生效，明天再来）")
+        luck = random.randint(1, 100)
+        delta = daily_luck_delta_pp(luck)
+        a.set("daily_luck_date", today)
+        a.set("daily_luck_value", str(luck))
+        if not ST.acct_save(gid, qq):
+            return "打卡系统繁忙，本次未记录，请稍后重试！"
+    sign = "+" if delta >= 0 else ""
+    tip = "鸿运当头" if luck >= 90 else ("好运在线" if luck >= 70 else ("平稳一天" if luck >= 40 else "稳住能赢"))
+    return (f"📅 每日打卡成功！\n"
+            f"🍀 今日幸运值：{luck}（{tip}）\n"
+            f"📈 今日概率加成：{sign}{delta:.2f}%（大部分概率玩法生效）")
+
 
 def _ymd(d):
     return "%d年%d月%d日" % (d.year, d.month, d.day)
@@ -244,6 +340,10 @@ def cmd_draw(gid, qq, amount=1):
         # 预摇奖（纯随机，无 IO）：失败路径不再重摇，结果幂等
         _coin_name = ST.coin_name()
         _rate = cfgi("抽奖配置", "中奖率", 70)
+        try:
+            _rate = eff_prob(_rate, gid, qq)
+        except Exception:
+            pass
         _coin_v = cfgi("抽奖配置", "现金奖", 2000)
         _stam_v = cfgi("抽奖配置", "体力奖", 60)
         _charm_v = cfgi("抽奖配置", "魅力奖", 40)
@@ -537,9 +637,10 @@ _MENU = (
     "❤️ 签到系统\r\n"
     "━━━━━━━━━━━━━━━━\r\n"
     "📅 签到　　　　　🎁 抽奖 数量\r\n"
+    "📅 每日打卡　　　👍 赞我\r\n"
     "💪 购买体力 数量　购买魅力 数量\r\n"
     "🎁 领取新手礼包　👤 我的信息\r\n"
-    "👍 赞我　　📋 打卡\r\n"
+    "📋 打卡\r\n"
     "🏆 个人排行　财富榜　签到榜　体力榜　魅力榜\r\n"
     "━━━━━━━━━━━━━━━━\r\n"
     "💡 发送对应指令即可游玩"
@@ -629,6 +730,9 @@ def handle(gid, qq, raw):
         return None
     if text in ST.wake("签到系统", "签到系统"):
         return _MENU
+    # 每日打卡：精确指令，无模糊词（前后空格已 strip，禁 startswith/禁带参）
+    if text == "每日打卡":
+        return cmd_daily_checkin(gid, qq)
     # 排行优先于签到，避免 “签到榜” 误判为签到
     if text.startswith("个人财富榜") or text.startswith("财富榜"):
         return cmd_rank(gid, "cash", None)
@@ -681,6 +785,7 @@ COMMANDS = (
     "签到排行榜", "签到榜",
     "体力排行榜", "体力榜",
     "魅力排行榜", "魅力榜",
+    "每日打卡",
     "签到", "打卡",
     "我的信息", "个人排行", "我的排行",
     "抽奖",

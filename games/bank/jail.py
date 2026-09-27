@@ -219,6 +219,11 @@ def cmd_jailbreak(gid, qq):
     tili = cfgi("银行配置", "越狱消耗体力", 5)
     meli = cfgi("银行配置", "越狱魅力减少", 5)
     prob = cfgi("银行配置", "越狱成功概率", 25)
+    try:
+        from ..sign import eff_prob as _luck_eff
+        prob = _luck_eff(prob, gid, qq)
+    except Exception:
+        pass
     if a.int("stamina") < tili:
         return f"亲，您的体力不足，无法越狱！越狱需要{tili}体力！"
     if ST.acct_add(gid, qq, "stamina", -tili) is None:

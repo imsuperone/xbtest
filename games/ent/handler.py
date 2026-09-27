@@ -281,8 +281,13 @@ def handle(gid, qq, raw, is_admin=False):
             return err
         choice = {"石头": 0, "剪刀": 1, "布": 2}[m.group(1)]
         names = ["石头", "剪刀", "布"]
-        # 胜率走配置 猜拳成功概率%（需求19 默认50）
+        # 胜率走配置 猜拳成功概率%（需求19 默认50）+ 每日打卡幸运加成
         win_prob = cfgi("娱乐配置", "猜拳成功概率", 50)
+        try:
+            from ..sign import eff_prob as _luck_eff
+            win_prob = _luck_eff(win_prob, gid, qq)
+        except Exception:
+            pass
         r = random.random() * 100
         if r < win_prob:
             ai = (choice + 2) % 3  # 必输给玩家

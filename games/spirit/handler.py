@@ -486,6 +486,11 @@ def cmd_catch(gid, qq, ball):
     eff = int(_SHOP()[ball].get("effect", 0) or 0)
     lv = int(wild.get("level", 1))
     p = max(CATCH_MIN, min(CATCH_MAX, eff - (lv - 10) // CATCH_LV_STEP)) if eff < CATCH_MASTER_EFF else CATCH_MASTER_RATE
+    try:
+        from ..sign import eff_prob as _LP
+        p = _LP(p, gid, qq)
+    except Exception:
+        pass
     sp.pop("wild", None)
     # 预摇奖（纯随机）：失败路径不再重摇
     _caught = random.randint(1, 100) <= p
@@ -629,6 +634,11 @@ def cmd_pvp(gid, qq, target):
     if stake <= 0:
         stake = 200
     pwin = myp / (myp + tap) if (myp + tap) else 0.5
+    try:
+        from ..sign import eff_p01 as _LP01
+        pwin = _LP01(pwin, gid, qq)
+    except Exception:
+        pass
     win = random.random() < pwin
     # 零和原子转账：一次提交，失败双方余额不变（禁先扣后发半成功）
     if win:

@@ -169,6 +169,11 @@ def cmd_starup(gid, qq, wname, st):
     need_cnt = cfgi("设置", f"{cn}星武器消耗同武器数量", lv + 1)
     cost = cfgi("设置", f"{cn}星武器花费", 5555)
     prob = cfgi("设置", f"{cn}星武器概率", 50)
+    try:
+        from ..sign import eff_prob as _LP
+        prob = _LP(prob, gid, qq)
+    except Exception:
+        pass
     need_exp = cfgi("设置", f"{cn}星武器经验", 999)
 
     mat = int(uget(u, wname, "0"))
@@ -212,6 +217,11 @@ def cmd_treasure_up(gid, qq, tname, st):
     need = cfgi("设置", f"{idx}阶宝物消耗宝物数量", stage + 1)
     cost = cfgi("设置", f"{idx}阶宝物花费", 77777)
     prob = cfgi("设置", f"{idx}阶宝物概率", 50)
+    try:
+        from ..sign import eff_prob as _LP2
+        prob = _LP2(prob, gid, qq)
+    except Exception:
+        pass
     have = _safe_int(uget(u, tname, "0"), 0)
     if have < need:
         return _S.T.TUP_NO_ITEM + f"(需{tname}x{need}, 现有{have})"

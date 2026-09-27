@@ -363,7 +363,13 @@ def cmd_fight(gid, qq, target, st):
     # 5星武器狂热: 每把5星+N%概率战力翻倍
     crit = False
     five = sum(1 for w in weapons_of(U(st, qq)) if star_of(U(st, qq), w) >= 5)
-    if five and _random.randint(1, 100) <= five * FIGHT_CRIT_PER_STAR:
+    _crit_p = five * FIGHT_CRIT_PER_STAR
+    try:
+        from ..sign import eff_prob as _LP
+        _crit_p = _LP(_crit_p, gid, qq)
+    except Exception:
+        pass
+    if five and _random.randint(1, 100) <= _crit_p:
         crit = True
         my_p *= FIGHT_CRIT_MULT
 
@@ -374,6 +380,11 @@ def cmd_fight(gid, qq, target, st):
         lines.append(_S.T.FIGHT_CRIT)
     lines.append(_S.T.FIGHT_ENEMY_TEAM.format(team=", ".join(uname(st, s) for s in d_slaves)))
     pwin = my_p / (my_p + ta_p) if (my_p + ta_p) > 0 else 0.5
+    try:
+        from ..sign import eff_p01 as _LP01
+        pwin = _LP01(pwin, gid, qq)
+    except Exception:
+        pass
     lines.append(_S.T.FIGHT_WINRATE.format(pct=int(pwin * 100)))
     win = _random.random() < pwin
 

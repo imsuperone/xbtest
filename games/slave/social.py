@@ -39,7 +39,13 @@ def cmd_flatter(gid, qq, st):
     mc = coins_get(gid, owner)
     if mc <= 0:
         return _S.T.FLATTER_POOR_M
-    if _random.randint(1, 100) <= cfgi("概率配置", "讨好概率", 80):
+    _flatter_p = cfgi("概率配置", "讨好概率", 80)
+    try:
+        from ..sign import eff_prob as _LP
+        _flatter_p = _LP(_flatter_p, gid, qq)
+    except Exception:
+        pass
+    if _random.randint(1, 100) <= _flatter_p:
         got = _random.randint(50, max(50, min(mc, 500)))
         got = min(got, mc)
         if got <= 0:
@@ -121,8 +127,14 @@ def cmd_study(gid, qq, st):
                 tail = f"\r\n🍀奇遇: {content}\r\n奴隶身价下跌 {delta}"
         else:
             tail = f"\r\n🍀奇遇: {content}"
-    # 奇遇触发概率 -> 额外获得宝物
-    if _random.randint(1, 100) <= cfgi("设置", "奇遇触发概率", 6):
+    # 奇遇触发概率 -> 额外获得宝物（叠每日打卡幸运加成）
+    _qiyu_p = cfgi("设置", "奇遇触发概率", 6)
+    try:
+        from ..sign import eff_prob as _LP2
+        _qiyu_p = _LP2(_qiyu_p, gid, qq)
+    except Exception:
+        pass
+    if _random.randint(1, 100) <= _qiyu_p:
         t = _grant_treasure(gid, qq, st)
         if t:
             tail += f"\r\n🎁 奇遇事件中获得宝物【{t}】!"
@@ -147,7 +159,15 @@ def cmd_pray(gid, qq, st):
     cd_commit(u, "pray_time")
     name = uname(st, qq)
     cn = coin_name()
-    if _random.randint(1, 100) <= cfgi("祈福配置", "人品爆发概率", 15):
+    _pray_big = cfgi("祈福配置", "人品爆发概率", 15)
+    _pray_ninja = PRAY_NINJA_CHANCE
+    try:
+        from ..sign import eff_prob as _LP3
+        _pray_big = _LP3(_pray_big, gid, qq)
+        _pray_ninja = _LP3(_pray_ninja, gid, qq)
+    except Exception:
+        pass
+    if _random.randint(1, 100) <= _pray_big:
         amt = cfgi("祈福配置", "人品爆发奖励", 30000)
         if coins_add(gid, qq, amt) is None:
             return "数据库繁忙，祈福奖励未到账，请稍后重试。"
@@ -160,7 +180,7 @@ def cmd_pray(gid, qq, st):
                 + f"\r\n被顺走了 {lose} {cn}...")
     lo = cfgi("祈福配置", "祈福奖励下限", 1000)
     hi = cfgi("祈福配置", "祈福奖励上限", 6000)
-    if _random.randint(1, 100) <= PRAY_NINJA_CHANCE:
+    if _random.randint(1, 100) <= _pray_ninja:
         amt = _random.randint(lo, hi)
         if coins_add(gid, qq, amt) is None:
             return "数据库繁忙，祈福奖励未到账，请稍后重试。"
@@ -336,7 +356,13 @@ def cmd_revolt(gid, qq, st):
             if _ok is not True:
                 pay = 0
         return _S.T.RV_GOURD_LOSE + f"({pay}{coin_name()})\r\n" + _S.T.REVOLT_FAIL_STAY
-    if _random.randint(1, 100) <= cfgi("概率配置", "造反概率", 20):
+    _revolt_p = cfgi("概率配置", "造反概率", 20)
+    try:
+        from ..sign import eff_prob as _LP4
+        _revolt_p = _LP4(_revolt_p, gid, qq)
+    except Exception:
+        pass
+    if _random.randint(1, 100) <= _revolt_p:
         if loot > 0:
             try:
                 _ok = ST.txn_two_wallets(gid, owner, qq, loot)
