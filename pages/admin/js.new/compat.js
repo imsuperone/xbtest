@@ -14,7 +14,17 @@
         var fn = function (hex) {
           try {
             if (window.xbbotApp && typeof window.xbbotApp.setAccent === "function") {
-              window.xbbotApp.setAccent(hex || "#4A90D9", false);
+              var saved = null;
+              try { saved = localStorage.getItem("xbbot_accent"); } catch (e) {}
+              if (saved && /^#[0-9a-fA-F]{6}$/.test(String(saved).trim())) {
+                window.xbbotApp.setAccent(saved.trim());
+                return;
+              }
+              if (String(hex || "").toLowerCase() === "#0b57d0") {
+                window.xbbotApp.setAccent("");
+                return;
+              }
+              window.xbbotApp.setAccent(hex || "#4A90D9");
               return;
             }
           } catch (e) {}
@@ -95,12 +105,56 @@
       });
     }
   } catch (e) {}
-  // 5. Late bridge binding: app.js ran before old modules, so bind now.
+  // 6. Late bridge binding: app.js ran before old modules, so bind now.
   try {
     if (window.xbbotApp) {
       if (typeof window.getBridge === "function") window.xbbotApp.bridge = window.getBridge;
       if (typeof window.callApi === "function") window.xbbotApp.callApi = window.callApi;
       if (typeof window.postFile === "function") window.xbbotApp.postFile = window.postFile;
     }
+  } catch (e) {}
+
+  // 7. New .cat-tab clicks -> old TAB_LOADERS (old bindTabs targets .tabs buttons that no longer exist).
+  function ensureTabLoaded(tab) {
+    try {
+      if (!tab) { return; }
+      if (tab === "logs") {
+        if (typeof loadLogs === "function") { try { loadLogs(false); } catch (e) {} }
+        if (typeof startLogsAutoRefresh === "function") { try { startLogsAutoRefresh(); } catch (e) {} }
+        return;
+      }
+      if (typeof stopLogsAutoRefresh === "function") { try { stopLogsAutoRefresh(); } catch (e) {} }
+      if (tab === "overview") {
+        if (typeof loadOverviewReq === "function") { try { Promise.resolve(loadOverviewReq()).catch(function () {}); } catch (e) {} }
+        if (typeof loadStats === "function") { try { Promise.resolve(loadStats()).catch(function () {}); } catch (e) {} }
+        return;
+      }
+      if (tab === "about") { return; }
+      try {
+        if (typeof TAB_DONE !== "undefined" && typeof TAB_LOADERS !== "undefined" && !TAB_DONE[tab] && TAB_LOADERS[tab]) {
+          TAB_DONE[tab] = true;
+          Promise.resolve(TAB_LOADERS[tab]()).then(function () {}, function () {
+            try { TAB_DONE[tab] = false; } catch (e) {}
+          });
+        }
+      } catch (e) {}
+    } catch (e) {}
+  }
+  try {
+    document.addEventListener("click", function (ev) {
+      var el = ev.target && ev.target.closest ? ev.target.closest(".cat-tab") : null;
+      if (!el) { return; }
+      ensureTabLoaded(el.getAttribute("data-tab"));
+    });
+  } catch (e) {}
+  try {
+    var bootTab = function () {
+      try {
+        var active = document.querySelector(".cat-tab.active");
+        ensureTabLoaded(active ? active.getAttribute("data-tab") : "overview");
+      } catch (e) {}
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootTab);
+    else bootTab();
   } catch (e) {}
 })();
