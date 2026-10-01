@@ -1300,3 +1300,6 @@ tbody tr:hover td { background: var(--m3-sys-color-surface-container); }
   thead th, tbody td { padding: 8px 10px; }
   .log-terminal { min-height: 140px; font-size: 11px; }
 }
+.cat-tab.on { background: var(--m3-sys-color-primary); color: var(--m3-sys-color-on-primary); }
+section.settings-section.on { display: flex; }
+#legacyHidden { display: none !important; }

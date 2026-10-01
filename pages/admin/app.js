@@ -318,4 +318,20 @@
     confirm: uiConfirm,
     prompt: uiPrompt
   };
+
+  // ---- js.new core infra hooks (00_bridge/01_uiutil load separately; lazy delegation, no network here) ----
+  try {
+    if (typeof window.__xbbotBridge !== "undefined" && window.__xbbotBridge) {
+      if (typeof window.__xbbotBridge.getBridge === "function") { window.xbbotApp.bridge = window.__xbbotBridge.getBridge; }
+      if (typeof window.__xbbotBridge.callApi === "function") { window.xbbotApp.callApi = window.__xbbotBridge.callApi; }
+      if (typeof window.__xbbotBridge.postFile === "function") { window.xbbotApp.postFile = window.__xbbotBridge.postFile; }
+    }
+    if (typeof window.xbbotApp.bridge !== "function" && typeof window.getBridge === "function") { window.xbbotApp.bridge = window.getBridge; }
+    if (typeof window.xbbotApp.callApi !== "function" && typeof window.callApi === "function") { window.xbbotApp.callApi = window.callApi; }
+    if (typeof window.xbbotApp.postFile !== "function" && typeof window.postFile === "function") { window.xbbotApp.postFile = window.postFile; }
+    if (typeof window.xbbotApp.downloadJson !== "function" && typeof window.downloadJson === "function") { window.xbbotApp.downloadJson = window.downloadJson; }
+    if (typeof window.xbbotApp.downloadBase64File !== "function" && typeof window.downloadBase64File === "function") { window.xbbotApp.downloadBase64File = window.downloadBase64File; }
+    if (typeof window.xbbotApp.showExportModal !== "function" && typeof window.showExportModal === "function") { window.xbbotApp.showExportModal = window.showExportModal; }
+    if (typeof window.xbbotApp.copyToClipboard !== "function" && typeof window.copyToClipboard === "function") { window.xbbotApp.copyToClipboard = window.copyToClipboard; }
+  } catch (e) {}
 })();
