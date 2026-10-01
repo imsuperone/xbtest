@@ -108,7 +108,7 @@
     }
 
     .wrap {
-      max-width: 1440px;
+      max-width: 1320px;
       margin: 0 auto;
       padding: 14px 16px 64px;
     }
@@ -156,13 +156,13 @@
       gap: 6px;
     }
     .ver {
-      background: var(--panel);
-      color: var(--text-secondary);
+      background: var(--primary-container);
+      color: var(--on-primary-container);
       font-size: 11px;
       padding: 3px 9px;
       border-radius: var(--radius-full);
-      font-weight: 600;
-      border: 1px solid var(--line);
+      font-weight: 700;
+      border: 1px solid transparent;
     }
     .status-badge {
       display: inline-flex;
@@ -215,19 +215,20 @@
 
     /* Tabs Dock */
     .tabs-wrapper {
-      margin-bottom: 16px;
-      background: var(--panel);
-      padding: 5px 8px;
-      border-radius: var(--radius-full);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+      background: transparent;
+      padding: 4px 2px 8px 2px;
+      border: none;
+      box-shadow: none;
       display: flex;
       align-items: center;
       gap: 6px;
       position: relative;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
       transition: all 0.25s;
+    }
+    [data-theme="dark"] .tabs-wrapper {
+      background: transparent !important;
+      border-color: transparent !important;
     }
     [data-theme="dark"] .tabs-wrapper {
       background: #1A1F26 !important;
@@ -306,8 +307,11 @@
       border-radius: var(--radius-xl);
       padding: 18px 20px;
       margin-bottom: 16px;
-      box-shadow: var(--shadow-sm);
+      box-shadow: 0 4px 16px rgba(30, 45, 70, 0.06);
       transition: all 0.2s;
+    }
+    [data-theme="dark"] .panel {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     }
     .m3-page-header {
       display: flex;
@@ -1897,7 +1901,7 @@
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; user-select: text; -webkit-user-select: text; cursor: text; }
     #toast.show #toastTxt { user-select: text; -webkit-user-select: text; cursor: text; }
     #toast.show:hover { opacity: 1; }
-    #toast.ok { background: #146C2E; color: #FFFFFF; }
+    #toast.ok { background: #2E7D32; color: #FFFFFF; }
     #toast.bad { background: #BA1A1A; color: #FFFFFF; }
 
     /* Lightbox */
