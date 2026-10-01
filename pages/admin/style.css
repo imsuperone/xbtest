@@ -137,9 +137,10 @@ body {
    ========================================================================== */
 .category-tabs-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 20px;
-  overflow-x: auto;
+  overflow-x: visible;
   padding: 4px 2px 8px 2px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;

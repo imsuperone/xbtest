@@ -57,6 +57,7 @@
       cur = document.documentElement.getAttribute("data-theme") || "light";
     } catch (e) {}
     applyThemeMode(cur === "dark" ? "light" : "dark");
+    applyAccentColor(getSavedAccent());
     showToast(cur === "dark" ? "已切换浅色模式" : "已切换深色模式");
   }
 
@@ -67,7 +68,9 @@
     applyThemeMode(saved);
   }
 
-  // ---- accent: mixHex + applyAccentColor + initAccentColor ----
+  // ---- accent: xbimg tonal palette (primary + auto-tinted surfaces) ----
+  var _ACCENT_VARS = ["--m3-sys-color-primary", "--m3-sys-color-primary-container", "--m3-sys-color-surface", "--m3-sys-color-surface-container", "--m3-sys-color-surface-container-high", "--m3-sys-color-surface-container-highest", "--m3-seg-ink"];
+
   function clamp01(n) {
     if (n < 0) { return 0; }
     if (n > 1) { return 1; }
@@ -102,28 +105,83 @@
       toHex(a[2] * w + b[2] * (1 - w));
   }
 
-  function applyAccentColor(hex) {
-    var color = String(hex || DEFAULT_ACCENT);
-    if (color.charAt(0) !== "#") { color = "#" + color; }
-    var root = document.documentElement;
+  function _relLum(hex) {
+    var c = [1, 3, 5].map(function (i) {
+      var v = parseInt(hex.substr(i, 2), 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+
+  function _contrastOk(fg, bg) {
+    var l1 = _relLum(fg), l2 = _relLum(bg);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05) >= 3.0;
+  }
+
+  function getSavedAccent() {
     try {
-      root.style.setProperty("--m3-sys-color-primary", color);
-      root.style.setProperty("--m3-sys-color-primary-hover", mixHex(color, "#000000", 0.85));
-      root.style.setProperty("--m3-sys-color-primary-active", mixHex(color, "#000000", 0.75));
-      root.style.setProperty("--m3-sys-color-primary-container", mixHex(color, "#ffffff", 0.25));
-      root.style.setProperty("--m3-sys-color-on-primary-container", mixHex(color, "#000000", 0.35));
-    } catch (e) {}
-    try { localStorage.setItem(ACCENT_KEY, color); } catch (e) {}
+      var s = String(localStorage.getItem(ACCENT_KEY) || "").trim();
+      return /^#[0-9a-fA-F]{6}$/.test(s) ? s : "";
+    } catch (e) { return ""; }
+  }
+
+  function syncAccentPicker() {
     var picker = document.getElementById("accentPicker");
-    if (picker && picker.value !== color) {
-      try { picker.value = color; } catch (e) {}
+    if (!picker) { return; }
+    var saved = getSavedAccent();
+    if (saved) {
+      try { picker.value = saved; } catch (e) {}
+      return;
     }
+    try {
+      var def = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || DEFAULT_ACCENT;
+      picker.value = /^#[0-9a-fA-F]{6}$/.test(def) ? def : DEFAULT_ACCENT;
+    } catch (e) {}
+  }
+
+  function applyAccentColor(hex) {
+    var v = String(hex == null ? "" : hex).trim();
+    var ok = /^#[0-9a-fA-F]{6}$/.test(v);
+    var root = document.documentElement;
+    if (ok) {
+      var dark = (root.getAttribute("data-theme") || "light") === "dark";
+      var tinted = dark ? {
+        "--m3-sys-color-primary": v,
+        "--m3-sys-color-primary-container": mixHex(v, "#1B2C42", 0.45),
+        "--m3-sys-color-surface": mixHex(v, "#111418", 0.12),
+        "--m3-sys-color-surface-container": mixHex(v, "#1A1F26", 0.16),
+        "--m3-sys-color-surface-container-high": mixHex(v, "#232A33", 0.16),
+        "--m3-sys-color-surface-container-highest": mixHex(v, "#2C343F", 0.16)
+      } : {
+        "--m3-sys-color-primary": v,
+        "--m3-sys-color-primary-container": mixHex(v, "#E4EAF2", 0.25),
+        "--m3-sys-color-surface": mixHex(v, "#F4F7FB", 0.08),
+        "--m3-sys-color-surface-container": mixHex(v, "#E8EDF4", 0.12),
+        "--m3-sys-color-surface-container-highest": mixHex(v, "#DFE6EF", 0.12)
+      };
+      for (var k in tinted) {
+        try { root.style.setProperty(k, tinted[k]); } catch (e) {}
+      }
+      try {
+        var segBg = dark ? tinted["--m3-sys-color-surface-container-high"] : "#FFFFFF";
+        root.style.setProperty("--m3-seg-ink", _contrastOk(v, segBg) ? v : (dark ? "#EAE6DF" : "#1E1B16"));
+      } catch (e) {}
+      try { localStorage.setItem(ACCENT_KEY, v); } catch (e) {}
+    } else {
+      for (var i = 0; i < _ACCENT_VARS.length; i++) {
+        try { root.style.removeProperty(_ACCENT_VARS[i]); } catch (e) {}
+      }
+      try { localStorage.removeItem(ACCENT_KEY); } catch (e) {}
+    }
+    syncAccentPicker();
+  }
+
+  function resetAccentColor() {
+    applyAccentColor("");
   }
 
   function initAccentColor() {
-    var saved = null;
-    try { saved = localStorage.getItem(ACCENT_KEY); } catch (e) {}
-    applyAccentColor(saved || DEFAULT_ACCENT);
+    applyAccentColor(getSavedAccent());
     var picker = document.getElementById("accentPicker");
     if (!picker) { return; }
     picker.addEventListener("input", function (ev) {
@@ -134,7 +192,7 @@
       showToast("强调色已更新");
     });
     picker.addEventListener("dblclick", function () {
-      applyAccentColor(DEFAULT_ACCENT);
+      resetAccentColor();
       showToast("强调色已重置");
     });
   }
@@ -278,7 +336,7 @@
       if (themeBtn) { toggleTheme(); return; }
       var accentReset = ev.target.closest ? ev.target.closest("#accentResetBtn") : null;
       if (accentReset) {
-        applyAccentColor(DEFAULT_ACCENT);
+        resetAccentColor();
         showToast("强调色已重置");
         return;
       }
@@ -314,6 +372,7 @@
   window.xbbotApp = {
     switchTab: switchCategoryTab,
     toggleTheme: toggleTheme,
+    setAccent: function (hex) { applyAccentColor(hex); },
     toast: showToast,
     confirm: uiConfirm,
     prompt: uiPrompt
