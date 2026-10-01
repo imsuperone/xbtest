@@ -1,38 +1,38 @@
 
     :root, [data-theme="light"] {
       color-scheme: light;
-      /* Android 16 (Material 3 Expressive) Color Tokens - 纯白通透基底 */
-      --bg: #FFFFFF;
+      /* Android 16 (Material 3 Expressive) Color Tokens - xbimg tonal base */
+      --bg: #F4F7FB;
       --panel: #FFFFFF;
-      --panel-hover: #F8FAFC;
+      --panel-hover: #E8EDF4;
       --panel2: #FFFFFF;
       --panel3: #FFFFFF;
-      --acc: #0B57D0;
-      --acc-hover: #0842A0;
-      --acc-active: #042B6A;
-      --accSoft: rgba(11, 87, 208, 0.08);
-      --accSoft2: rgba(11, 87, 208, 0.16);
-      --accBorder: rgba(11, 87, 208, 0.28);
-      --primary-container: #D3E3FD;
-      --on-primary-container: #041E49;
-      --text: #1F1F1F;
+      --acc: #4A90D9;
+      --acc-hover: #3B7EC2;
+      --acc-active: #2E63A0;
+      --accSoft: rgba(74, 144, 217, 0.10);
+      --accSoft2: rgba(74, 144, 217, 0.18);
+      --accBorder: rgba(74, 144, 217, 0.32);
+      --primary-container: #D9E8F7;
+      --on-primary-container: #0F2B46;
+      --text: #191C20;
       --text-secondary: #444746;
       --muted: #5F6368;
       --muted-soft: #8E918F;
-      --line: #D1D5DB;
+      --line: #C3C6CF;
       --line-subtle: rgba(0, 0, 0, 0.06);
 
       --surface-container-high: #FFFFFF;
       --outline: #74777F;
 
-      --ok: #146C2E;
-      --okSoft: #C4EED0;
-      --warn: #C26100;
-      --warnSoft: #FFF1E5;
+      --ok: #2E7D32;
+      --okSoft: #E8F5E9;
+      --warn: #E65100;
+      --warnSoft: #FFF3E0;
       --bad: #BA1A1A;
       --badSoft: #FFDAD6;
-      --purple: #6750A4;
-      --purpleSoft: #EADDFF;
+      --purple: #6A1B9A;
+      --purpleSoft: #F3E5F5;
 
       --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.05);
       --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.07);
@@ -48,19 +48,19 @@
 
     [data-theme="dark"] {
       color-scheme: dark;
-      --bg: #111318;
-      --panel: #191C20;
-      --panel-hover: #252930;
-      --panel2: #22262B;
-      --panel3: #2C3036;
-      --acc: #A8C7FA;
-      --acc-hover: #C2E7FF;
+      --bg: #111418;
+      --panel: #1A1F26;
+      --panel-hover: #232A33;
+      --panel2: #232A33;
+      --panel3: #2C343F;
+      --acc: #8AB8F0;
+      --acc-hover: #A9C9F5;
       --acc-active: #7FACFA;
-      --accSoft: rgba(168, 199, 250, 0.14);
-      --accSoft2: rgba(168, 199, 250, 0.24);
-      --accBorder: rgba(168, 199, 250, 0.35);
-      --primary-container: #0842A0;
-      --on-primary-container: #D3E3FD;
+      --accSoft: rgba(138, 184, 240, 0.16);
+      --accSoft2: rgba(138, 184, 240, 0.26);
+      --accBorder: rgba(138, 184, 240, 0.38);
+      --primary-container: #1E3A55;
+      --on-primary-container: #D6E8FA;
       --text: #E2E2E6;
       --text-secondary: #C4C7D0;
       --muted: #8E918F;
@@ -68,7 +68,7 @@
       --line: rgba(255, 255, 255, 0.14);
       --line-subtle: rgba(255, 255, 255, 0.06);
 
-      --surface-container-high: #22262B;
+      --surface-container-high: #232A33;
       --outline: #8E918F;
 
       --ok: #6DD58C;
@@ -118,11 +118,11 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 14px;
-      padding: 12px 20px;
+      margin-bottom: 16px;
+      padding: 14px 22px;
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: var(--radius-xl);
+      border-radius: 28px;
       box-shadow: var(--shadow-sm);
       position: sticky;
       top: 10px;
@@ -230,25 +230,11 @@
       transition: all 0.25s;
     }
     [data-theme="dark"] .tabs-wrapper {
-      background: #1C2026 !important;
+      background: #1A1F26 !important;
       border-color: rgba(255, 255, 255, 0.15) !important;
     }
     .tab-nav-btn {
-      width: 30px;
-      height: 30px;
-      background: transparent;
-      border: 1px solid var(--line);
-      color: var(--text);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      padding: 0;
-      flex-shrink: 0;
-      transition: all 0.2s;
-      font-size: 16px;
-      line-height: 1;
-      border-radius: var(--radius-full);
+      display: none;
     }
     .tab-nav-btn:hover {
       color: var(--acc);
@@ -257,8 +243,9 @@
     }
     .tabs {
       display: flex;
-      gap: 4px;
-      overflow-x: auto;
+      flex-wrap: wrap;
+      gap: 8px;
+      overflow: visible;
       scrollbar-width: none;
       scroll-behavior: smooth;
       flex: 1;
@@ -269,9 +256,9 @@
     }
     .tabs::-webkit-scrollbar { display: none; }
     .tabs button {
-      background: transparent;
-      border: 1px solid transparent;
-      padding: 6px 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 10px 18px;
       font-size: 13px;
       color: var(--text-secondary);
       cursor: pointer;
@@ -279,8 +266,8 @@
       font-weight: 600;
       white-space: nowrap;
       transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-      box-shadow: none;
-      height: 32px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      min-height: 32px;
     }
     [data-theme="dark"] .tabs button {
       color: #E2E2E6 !important;
@@ -297,9 +284,9 @@
     }
     [data-theme="dark"] .tabs button.on {
       background: var(--acc) !important;
-      color: #041E49 !important;
+      color: #06263F !important;
       font-weight: 800 !important;
-      box-shadow: 0 2px 10px rgba(168, 199, 250, 0.35) !important;
+      box-shadow: 0 2px 10px rgba(138, 184, 240, 0.35) !important;
     }
 
     .tab { display: none; }
