@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light dark">
   <title>管理控制台 - 小白机器人</title>
-  <link rel="stylesheet" href="./admin.css?v=2026w1001a">
+  <link rel="stylesheet" href="./admin.css?v=2026w1002a">
 </head>
 <body>
   <div class="wrap">
@@ -61,7 +61,7 @@
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;cursor:pointer">
               <span>自定义色：</span>
               <input type="color" id="monetColorInput" value="#0B57D0" style="width:26px;height:26px;padding:0;border:none;border-radius:50%;cursor:pointer;background:transparent">
-              <span id="monetColorHex" style="font-family:monospace;font-size:11.5px;color:var(--text-secondary)">#0B57D0</span>
+              <span id="monetColorHex" style="font-family:monospace;font-size:11.5px;color:var(--muted)">#0B57D0</span>
             </label>
             <button id="monetResetDefault" class="sm ghost" style="margin-left:auto;padding:3px 10px;font-size:11.5px">恢复默认</button>
           </div>
@@ -166,7 +166,7 @@
         <div class="m3-filter-dock">
           <div class="m3-filter-search">
             <span>🏆</span>
-            <span style="font-size:12.5px;font-weight:600;color:var(--text-secondary)">排行维度：</span>
+            <span style="font-size:12.5px;font-weight:600;color:var(--muted)">排行维度：</span>
           </div>
           <div class="m3-filter-chips">
             <select id="rankType" style="min-width:140px">
@@ -556,12 +556,12 @@
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px">
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">WebDAV 地址<input id="wdUrl" placeholder="https://dav.jianguoyun.com/dav/" style="width:100%;margin-top:4px"></label>
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">账号/邮箱<input id="wdUser" placeholder="xxx@qq.com" style="width:100%;margin-top:4px"></label>
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">应用密码<input id="wdPwd" type="password" placeholder="留空保持不变" style="width:100%;margin-top:4px"></label>
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">远程子目录<input id="wdDir" placeholder="留空默认 /xbbot_backups" style="width:100%;margin-top:4px"></label>
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">备份间隔小时<input id="autoHours" type="number" min="1" style="width:100%;margin-top:4px"></label>
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">保留备份数量<input id="autoKeep" type="number" min="1" style="width:100%;margin-top:4px"></label>
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">WebDAV 地址<input id="wdUrl" placeholder="https://dav.jianguoyun.com/dav/" style="width:100%;margin-top:4px"></label>
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">账号/邮箱<input id="wdUser" placeholder="xxx@qq.com" style="width:100%;margin-top:4px"></label>
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">应用密码<input id="wdPwd" type="password" placeholder="留空保持不变" style="width:100%;margin-top:4px"></label>
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">远程子目录<input id="wdDir" placeholder="留空默认 /xbbot_backups" style="width:100%;margin-top:4px"></label>
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">备份间隔小时<input id="autoHours" type="number" min="1" style="width:100%;margin-top:4px"></label>
+          <label style="font-size:12px;font-weight:600;color:var(--muted)">保留备份数量<input id="autoKeep" type="number" min="1" style="width:100%;margin-top:4px"></label>
         </div>
 
         <div style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap">
@@ -632,7 +632,7 @@
           </div>
         </div>
         <div id="imgBrowser"></div>
-        <div style="margin-top:16px; text-align:center; border-top:1px solid var(--line-subtle); padding-top:12px">
+        <div style="margin-top:16px; text-align:center; border-top:1px solid var(--line); padding-top:12px">
           <button id="btnOpenPersistent" class="ghost sm" title="打开 AstrBot 持久化数据目录（与插件 data/ 分离时可见）">🗂️ 打开持久化目录</button>
         </div>
       </div>
@@ -651,10 +651,10 @@
             <div class="m3-subtitle">实时监控插件运行状态与排错排查</div>
           </div>
           <div class="m3-action-bar">
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);cursor:pointer">
               <input type="checkbox" id="logsAutoRefresh" checked style="cursor:pointer"> 自动刷新(3s)
             </label>
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);cursor:pointer">
               <input type="checkbox" id="logsAutoScroll" checked style="cursor:pointer"> 滚动到底部
             </label>
             <select id="logsLevelFilter" style="height:32px;font-size:11.5px;padding:4px 10px">
@@ -767,7 +767,7 @@
           </div>
           <textarea id="cmdModalReply" rows="3" placeholder="留空使用系统默认回复；{回复} 引用引擎回复，可用 {name}/{qq}/{gid}/{time}/{coin}/{at}"></textarea>
           
-          <div id="varsHelp" style="display:none;padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:11.5px">
+          <div id="varsHelp" style="display:none;padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:11.5px">
             <div style="font-weight:600;margin-bottom:6px;color:var(--text)">常用变量（点击快速插入）：</div>
             <div style="display:flex;flex-wrap:wrap;gap:5px">
               <code class="var-tag" data-var="{name}">{name} 昵称</code>
@@ -817,7 +817,7 @@
       <div class="cmd-modal-body" style="padding:22px 26px">
         <div id="appModalContent" style="color:var(--text);font-size:13.5px;line-height:1.6"></div>
         <div id="appModalInputWrap" style="margin-top:14px;display:none">
-          <input id="appModalInput" style="width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:14px;color:var(--text);font-size:13.5px;outline:none">
+          <input id="appModalInput" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:12px;color:var(--text);font-size:13.5px;outline:none">
         </div>
       </div>
       <div class="cmd-modal-footer">
@@ -831,7 +831,7 @@
   <div id="toast"><span id="toastTxt"></span></div>
 
   <!-- 回到顶部：划过半屏出现，全页签通用 -->
-  <button id="backTop" title="回到顶部" style="position:fixed;right:14px;bottom:16px;z-index:60;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:16px;line-height:1;cursor:pointer;display:none;box-shadow:0 2px 10px rgba(0,0,0,0.18)">↑</button>
+  <button id="backTop" title="回到顶部" style="position:fixed;right:14px;bottom:16px;z-index:60;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:16px;line-height:1;cursor:pointer;display:none;box-shadow:var(--shadow-md)">↑</button>
 
   <!-- Android 15 / Material 3 模块化数据与预设导出中心 -->
   <div id="exportHubModal" class="modal-overlay" style="display:none">
@@ -933,7 +933,7 @@
           <div style="font-weight:600;display:flex;align-items:center;gap:6px">
             <span>📊</span> <span id="exportHubSummaryText">已选择：3 个模块</span>
           </div>
-          <div style="font-size:11.5px;color:var(--text-secondary);margin-top:3px">
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">
             🛡️ <strong>安全承诺</strong>：未勾选的模块绝对不会出现在导出包中，绝不多导任何无关数据！
           </div>
         </div>
@@ -961,7 +961,7 @@
       </div>
 
       <div class="m3-modal-body">
-        <div id="importHubMeta" class="card" style="margin-bottom:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);font-size:12.5px">
+        <div id="importHubMeta" class="card" style="margin-bottom:12px;padding:12px 14px;border-radius:20px;border:1px solid var(--line);font-size:12.5px">
           <div id="importHubFileName" style="font-weight:600;color:var(--text)">📄 文件名</div>
           <div id="importHubFileInfo" style="color:var(--muted);font-size:11.5px;margin-top:2px">包版本与时间检测中…</div>
         </div>
@@ -983,16 +983,16 @@
       </div>
     </div>
   </div>
-    <script defer src="./js/00_core.js?v=2026w1001a"></script>
-  <script defer src="./js/01_theme.js?v=2026w1001a"></script>
-  <script defer src="./js/02_export.js?v=2026w1001a"></script>
-  <script defer src="./js/03_import.js?v=2026w1001a"></script>
-  <script defer src="./js/04_media.js?v=2026w1001a"></script>
-  <script defer src="./js/05_config.js?v=2026w1001a"></script>
-  <script defer src="./js/06_users.js?v=2026w1001a"></script>
-  <script defer src="./js/07_spirit.js?v=2026w1001a"></script>
-  <script defer src="./js/08_shop.js?v=2026w1001a"></script>
-  <script defer src="./js/09_views.js?v=2026w1001a"></script>
-  <script defer src="./js/10_ops.js?v=2026w1001a"></script>
+    <script defer src="./js/00_core.js?v=2026w1002a"></script>
+  <script defer src="./js/01_theme.js?v=2026w1002a"></script>
+  <script defer src="./js/02_export.js?v=2026w1002a"></script>
+  <script defer src="./js/03_import.js?v=2026w1002a"></script>
+  <script defer src="./js/04_media.js?v=2026w1002a"></script>
+  <script defer src="./js/05_config.js?v=2026w1002a"></script>
+  <script defer src="./js/06_users.js?v=2026w1002a"></script>
+  <script defer src="./js/07_spirit.js?v=2026w1002a"></script>
+  <script defer src="./js/08_shop.js?v=2026w1002a"></script>
+  <script defer src="./js/09_views.js?v=2026w1002a"></script>
+  <script defer src="./js/10_ops.js?v=2026w1002a"></script>
 </body>
 </html>
