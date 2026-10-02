@@ -238,9 +238,15 @@ function showTextPreview(name, text, truncated, filePath) {
     };
   }
 
-  const doClose = () => {
+  const doClose = async () => {
     if (isDirty) {
-      if (!confirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？")) return;
+      let ok = false;
+      try {
+        if (typeof pageConfirm === "function") ok = await pageConfirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？", "放弃修改");
+        else if (typeof uiConfirm === "function") ok = await uiConfirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？", "放弃修改");
+        else ok = confirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？");
+      } catch (e) { ok = false; }
+      if (!ok) return;
     }
     modal.className = "";
     if (modalBox) modalBox.classList.remove("modal-wide");

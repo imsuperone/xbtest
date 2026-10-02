@@ -1,4 +1,4 @@
-// ---------- Material You (Android 16 Monet) 动态主题色彩引擎 ----------
+// ---------- M3 Accent Color Engine (xbdoc/xbimg parity; keys: xbbot_accent/xbbot_theme) ----------
 function hexToRgb(hex) {
   let c = String(hex || "").replace(/^#/, "").trim();
   if (c.length === 3) c = c.split("").map(x => x + x).join("");
@@ -7,150 +7,140 @@ function hexToRgb(hex) {
   return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
 }
 
-function rgbToHsl(r, g, b) {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h, s, l = (max + min) / 2;
-  if (max === min) {
-    h = s = 0;
-  } else {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-    }
-    h /= 6;
-  }
-  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+function mixHex(hexA, hexB, ratio) {
+  const toRgb = (h) => [1, 3, 5].map((i) => parseInt(h.substr(i, 2), 16));
+  const a = toRgb(hexA), b = toRgb(hexB);
+  const mixed = a.map((v, i) => Math.round(v * ratio + b[i] * (1 - ratio)));
+  return "#" + mixed.map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0")).join("");
 }
 
-let _CURRENT_MONET_COLOR = "#4A90D9";
+const _ACCENT_VARS = ["--m3-sys-color-primary", "--m3-sys-color-on-primary", "--m3-sys-color-primary-container", "--m3-sys-color-surface", "--m3-sys-color-surface-container", "--m3-sys-color-surface-container-high", "--m3-sys-color-surface-container-highest", "--m3-seg-ink", "--acc", "--acc-hover", "--acc-active", "--accSoft", "--accSoft2", "--accBorder", "--primary-container", "--on-primary-container"];
 
-function applyMonetTheme(hex) {
-  if (!hex || !/^#[0-9a-fA-F]{3,6}$/i.test(hex)) hex = "#4A90D9";
-  _CURRENT_MONET_COLOR = hex;
-  try { localStorage.setItem("xbbot_monet_color", hex); } catch (e) {}
-
-  const { r, g, b } = hexToRgb(hex);
-  const { h, s, l } = rgbToHsl(r, g, b);
-  const isDark = document.documentElement.dataset.theme === "dark";
-  const root = document.documentElement;
-
-  if (!isDark) {
-    const isGoogleBlue = hex.toLowerCase() === "#4a90d9";
-    const bgL = "#F4F7FB";
-    const panelL = "#FFFFFF";
-    const panelHoverL = "#E8EDF4";
-    const panel2L = "#FFFFFF";
-    const panel3L = "#DFE6EF";
-    const lineL = "rgba(90, 100, 115, 0.14)";
-    const lineSubtleL = "rgba(90, 100, 115, 0.14)";
-    const priContL = isGoogleBlue ? "#D9E8F7" : `hsl(${h}, ${Math.max(40, Math.min(85, s * 0.75))}%, 90%)`;
-    const onPriContL = "#0F2B46";
-
-    root.style.setProperty("--md-sys-color-primary", hex);
-    root.style.setProperty("--md-sys-color-on-primary", "#FFFFFF");
-    root.style.setProperty("--md-sys-color-primary-container", priContL);
-    root.style.setProperty("--md-sys-color-on-primary-container", onPriContL);
-    root.style.setProperty("--md-sys-color-surface", bgL);
-    root.style.setProperty("--md-sys-color-surface-container", panelL);
-    root.style.setProperty("--md-sys-color-surface-container-high", panel2L);
-    root.style.setProperty("--md-sys-color-surface-container-highest", panel3L);
-    root.style.setProperty("--surface-container-high", panel2L);
-    root.style.setProperty("--outline", "#73777F");
-
-    root.style.setProperty("--bg", bgL);
-    root.style.setProperty("--panel", panelL);
-    root.style.setProperty("--panel-hover", panelHoverL);
-    root.style.setProperty("--panel2", panel2L);
-    root.style.setProperty("--panel3", panel3L);
-    root.style.setProperty("--text", "#191C20");
-    root.style.setProperty("--text-secondary", "#444746");
-    root.style.setProperty("--muted", "#73777F");
-    root.style.setProperty("--line", lineL);
-    root.style.setProperty("--line-subtle", lineSubtleL);
-
-    root.style.setProperty("--acc", hex);
-    root.style.setProperty("--acc-hover", `hsl(${h}, ${s}%, ${Math.max(15, l * 0.85)}%)`);
-    root.style.setProperty("--acc-active", `hsl(${h}, ${s}%, ${Math.max(10, l * 0.70)}%)`);
-    root.style.setProperty("--accSoft", `rgba(${r}, ${g}, ${b}, 0.08)`);
-    root.style.setProperty("--accSoft2", `rgba(${r}, ${g}, ${b}, 0.16)`);
-    root.style.setProperty("--accBorder", `rgba(${r}, ${g}, ${b}, 0.30)`);
-    root.style.setProperty("--primary-container", priContL);
-    root.style.setProperty("--on-primary-container", onPriContL);
-  } else {
-    const isGoogleBlue = hex.toLowerCase() === "#4a90d9";
-    const darkPrimary = isGoogleBlue ? "#8AB8F0" : `hsl(${h}, ${Math.max(45, Math.min(90, s * 0.85))}%, 78%)`;
-    const bgD = "#111418";
-    const panelD = "#1A1F26";
-    const panelHoverD = "#232A33";
-    const panel2D = "#232A33";
-    const panel3D = "#2C343F";
-    const lineD = "rgba(255, 255, 255, 0.09)";
-    const lineSubtleD = "rgba(255, 255, 255, 0.06)";
-    const priContD = isGoogleBlue ? "#1E3A55" : `hsl(${h}, ${Math.max(35, s * 0.8)}%, 24%)`;
-    const onPriContD = isGoogleBlue ? "#D6E8FA" : `hsl(${h}, ${Math.max(35, s * 0.75)}%, 94%)`;
-
-    root.style.setProperty("--md-sys-color-primary", darkPrimary);
-    root.style.setProperty("--md-sys-color-on-primary", "#06263F");
-    root.style.setProperty("--md-sys-color-primary-container", priContD);
-    root.style.setProperty("--md-sys-color-on-primary-container", onPriContD);
-    root.style.setProperty("--md-sys-color-surface", bgD);
-    root.style.setProperty("--md-sys-color-surface-container", panelD);
-    root.style.setProperty("--md-sys-color-surface-container-high", panel2D);
-    root.style.setProperty("--md-sys-color-surface-container-highest", panel3D);
-    root.style.setProperty("--surface-container-high", panel2D);
-    root.style.setProperty("--outline", "#8B9099");
-
-    root.style.setProperty("--bg", bgD);
-    root.style.setProperty("--panel", panelD);
-    root.style.setProperty("--panel-hover", panelHoverD);
-    root.style.setProperty("--panel2", panel2D);
-    root.style.setProperty("--panel3", panel3D);
-    root.style.setProperty("--text", "#E2E2E6");
-    root.style.setProperty("--text-secondary", "#C4C7D0");
-    root.style.setProperty("--muted", "#8B9099");
-    root.style.setProperty("--line", lineD);
-    root.style.setProperty("--line-subtle", lineSubtleD);
-
-    root.style.setProperty("--acc", darkPrimary);
-    root.style.setProperty("--acc-hover", `hsl(${h}, ${s}%, 86%)`);
-    root.style.setProperty("--acc-active", `hsl(${h}, ${s}%, 70%)`);
-    root.style.setProperty("--accSoft", `rgba(${r}, ${g}, ${b}, 0.16)`);
-    root.style.setProperty("--accSoft2", `rgba(${r}, ${g}, ${b}, 0.26)`);
-    root.style.setProperty("--accBorder", `rgba(${r}, ${g}, ${b}, 0.36)`);
-    root.style.setProperty("--primary-container", priContD);
-    root.style.setProperty("--on-primary-container", onPriContD);
-  }
-
-  const inputEl = document.getElementById("monetColorInput");
-  const hexEl = document.getElementById("monetColorHex");
-  if (inputEl) inputEl.value = hex;
-  if (hexEl) hexEl.textContent = hex.toUpperCase();
-
-  document.querySelectorAll(".monet-item").forEach((el) => {
-    if (el.dataset.color && el.dataset.color.toLowerCase() === hex.toLowerCase()) {
-      el.classList.add("on");
-    } else {
-      el.classList.remove("on");
-    }
+function _relLum(hex) {
+  const c = [1, 3, 5].map((i) => {
+    const v = parseInt(hex.substr(i, 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
   });
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 }
+
+function _contrastOk(fg, bg) {
+  const l1 = _relLum(fg), l2 = _relLum(bg);
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05) >= 3.0;
+}
+
+let _CURRENT_ACCENT_COLOR = "#4A90D9";
+
+function applyAccentColor(hex, save) {
+  void save;
+  const v = typeof hex === "string" ? hex.trim() : "";
+  const ok = /^#[0-9a-fA-F]{6}$/.test(v);
+  const root = document.documentElement;
+  if (ok) {
+    _CURRENT_ACCENT_COLOR = v;
+    const dark = (root.getAttribute("data-theme") || root.dataset.theme || "light") === "dark";
+    const tinted = dark ? {
+      "--m3-sys-color-primary": v,
+      "--m3-sys-color-primary-container": mixHex(v, "#1B2C42", 0.45),
+      "--m3-sys-color-surface": mixHex(v, "#111418", 0.12),
+      "--m3-sys-color-surface-container": mixHex(v, "#1A1F26", 0.16),
+      "--m3-sys-color-surface-container-high": mixHex(v, "#232A33", 0.16),
+      "--m3-sys-color-surface-container-highest": mixHex(v, "#2C343F", 0.16),
+    } : {
+      "--m3-sys-color-primary": v,
+      "--m3-sys-color-primary-container": mixHex(v, "#E4EAF2", 0.25),
+      "--m3-sys-color-surface": mixHex(v, "#F4F7FB", 0.08),
+      "--m3-sys-color-surface-container": mixHex(v, "#E8EDF4", 0.12),
+      "--m3-sys-color-surface-container-high": mixHex(v, "#FFFFFF", 0.12),
+      "--m3-sys-color-surface-container-highest": mixHex(v, "#DFE6EF", 0.12),
+    };
+    for (const k in tinted) {
+      try { root.style.setProperty(k, tinted[k]); } catch (e) {}
+    }
+    try {
+      root.style.setProperty("--m3-sys-color-on-primary", _contrastOk("#FFFFFF", v) ? "#FFFFFF" : (dark ? "#06263F" : "#1E1B16"));
+      const segBg = tinted["--m3-sys-color-surface-container-high"];
+      root.style.setProperty("--m3-seg-ink", _contrastOk(v, segBg) ? v : (dark ? "#EAE6DF" : "#1E1B16"));
+    } catch (e) {}
+    try {
+      const { r, g, b } = hexToRgb(v);
+      const accMain = dark ? mixHex(v, "#FFFFFF", 0.35) : v;
+      root.style.setProperty("--acc", accMain);
+      root.style.setProperty("--acc-hover", dark ? mixHex(v, "#FFFFFF", 0.5) : mixHex(v, "#000000", 0.88));
+      root.style.setProperty("--acc-active", dark ? mixHex(v, "#FFFFFF", 0.25) : mixHex(v, "#000000", 0.78));
+      root.style.setProperty("--accSoft", `rgba(${r}, ${g}, ${b}, ${dark ? 0.16 : 0.10})`);
+      root.style.setProperty("--accSoft2", `rgba(${r}, ${g}, ${b}, ${dark ? 0.26 : 0.18})`);
+      root.style.setProperty("--accBorder", `rgba(${r}, ${g}, ${b}, ${dark ? 0.38 : 0.32})`);
+      root.style.setProperty("--primary-container", tinted["--m3-sys-color-primary-container"]);
+      root.style.setProperty("--on-primary-container", dark ? "#D6E8FA" : "#0F2B46");
+    } catch (e) {}
+    try { localStorage.setItem("xbbot_accent", v); } catch (e) {}
+  } else {
+    for (const k of _ACCENT_VARS) {
+      try { root.style.removeProperty(k); } catch (e) {}
+    }
+    try { if (window.localStorage) window.localStorage.removeItem("xbbot_accent"); } catch (e) {}
+  }
+  const picker = document.getElementById("accentPicker");
+  if (picker) {
+    if (ok) {
+      picker.value = v;
+      picker.dataset.custom = "1";
+    } else {
+      delete picker.dataset.custom;
+      try {
+        const def = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9";
+        picker.value = /^#[0-9a-fA-F]{6}$/.test(def) ? def : "#4A90D9";
+      } catch (e) {}
+    }
+  }
+  const hexInput = document.getElementById("accentHex");
+  if (hexInput && document.activeElement !== hexInput) {
+    try {
+      hexInput.value = ok ? v : (getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9");
+    } catch (e) {}
+  }
+  const cur = document.getElementById("accentCurrent");
+  if (cur) {
+    try {
+      cur.style.background = ok ? v : (getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9");
+    } catch (e) {}
+  }
+}
+
+// 旧 Monet 引擎兼容桥：历史调用转发到新 accent 引擎，避免空指针/双引擎冲突
+function applyMonetTheme(hex) {
+  applyAccentColor(hex || "", false);
+}
+
+const _MOON_SVG_PATH = "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z";
+const _SUN_SVG_PATH = "M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z";
 
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
   try { document.documentElement.style.colorScheme = t; } catch (e) {}
   try { localStorage.setItem("xbbot_theme", t); } catch (e) {}
-  const b = document.getElementById("themeBtn");
-  if (b) b.textContent = t === "dark" ? "☀" : "☾";
-  applyMonetTheme(_CURRENT_MONET_COLOR);
+  const icon = document.getElementById("themeIcon");
+  if (icon) {
+    icon.innerHTML = `<path d="${t === "dark" ? _SUN_SVG_PATH : _MOON_SVG_PATH}"/>`;
+  }
+  const legacyBtn = document.getElementById("themeBtn");
+  if (legacyBtn) legacyBtn.textContent = t === "dark" ? "☀" : "☾";
+  applyAccentColor(_CURRENT_ACCENT_COLOR || "", false);
 }
+
+function initAccentColor() {
+  let v = "";
+  try { v = localStorage.getItem("xbbot_accent") || ""; } catch (e) { v = ""; }
+  if (!v) {
+    try { v = localStorage.getItem("xbbot_monet_color") || ""; } catch (e) {}
+  }
+  _CURRENT_ACCENT_COLOR = v;
+  applyAccentColor(v, false);
+}
+
 function initTheme() {
-  let savedColor = "#4A90D9";
   let savedTheme = "";
-  try { savedColor = localStorage.getItem("xbbot_monet_color") || "#4A90D9"; } catch (e) {}
   try { savedTheme = localStorage.getItem("xbbot_theme") || ""; } catch (e) {}
   if (!savedTheme || (savedTheme !== "dark" && savedTheme !== "light")) {
     try {
@@ -163,94 +153,432 @@ function initTheme() {
       savedTheme = "light";
     }
   }
-  _CURRENT_MONET_COLOR = savedColor;
+  initAccentColor();
   applyTheme(savedTheme);
 
-  const b = document.getElementById("themeBtn");
-  if (b) b.addEventListener("click", () => {
-    const newTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-    applyTheme(newTheme);
-  });
-
-  initMonetPalette();
-}
-
-function initMonetPalette() {
-  const btn = document.getElementById("themePaletteBtn");
-  const card = document.getElementById("monetPaletteCard");
-  const closeBtn = document.getElementById("monetPaletteClose");
-  const input = document.getElementById("monetColorInput");
-  const resetBtn = document.getElementById("monetResetDefault");
-
-  if (btn && card) {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const isShow = card.style.display !== "none";
-      card.style.display = isShow ? "none" : "block";
+  const toggleBtn = document.getElementById("themeToggleBtn");
+  if (toggleBtn && !toggleBtn.dataset.bound) {
+    toggleBtn.dataset.bound = "1";
+    toggleBtn.addEventListener("click", () => {
+      const cur = document.documentElement.dataset.theme || "light";
+      const next = cur === "dark" ? "light" : "dark";
+      applyTheme(next);
+      toast(`当前界面已切换为${next === "dark" ? "深色" : "浅色"}模式。`, "ok");
+    });
+  }
+  const legacyBtn = document.getElementById("themeBtn");
+  if (legacyBtn && !legacyBtn.dataset.bound) {
+    legacyBtn.dataset.bound = "1";
+    legacyBtn.addEventListener("click", () => {
+      const cur = document.documentElement.dataset.theme || "light";
+      applyTheme(cur === "dark" ? "light" : "dark");
     });
   }
 
-  if (closeBtn && card) {
-    closeBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      card.style.display = "none";
+  initAccentPicker();
+  initAccentPopover();
+  initRefreshButton();
+}
+
+function initAccentPicker() {
+  const picker = document.getElementById("accentPicker");
+  if (picker && !picker.dataset.bound) {
+    picker.dataset.bound = "1";
+    picker.addEventListener("input", () => applyAccentColor(picker.value, false));
+    picker.addEventListener("change", () => applyAccentColor(picker.value, false));
+    picker.addEventListener("dblclick", () => applyAccentColor("", false));
+  }
+  const resetBtn = document.getElementById("accentResetBtn");
+  if (resetBtn && !resetBtn.dataset.bound) {
+    resetBtn.dataset.bound = "1";
+    resetBtn.addEventListener("click", () => {
+      applyAccentColor("", false);
+      toast("已恢复默认主题颜色。", "ok");
+    });
+  }
+}
+
+function hexToHsv(hex) {
+  const r = parseInt(hex.substr(1, 2), 16) / 255;
+  const g = parseInt(hex.substr(3, 2), 16) / 255;
+  const b = parseInt(hex.substr(5, 2), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  const d = mx - mn;
+  let h = 0;
+  if (d !== 0) {
+    if (mx === r) h = 60 * (((g - b) / d) % 6);
+    else if (mx === g) h = 60 * ((b - r) / d + 2);
+    else h = 60 * ((r - g) / d + 4);
+  }
+  if (h < 0) h += 360;
+  return { h: h, s: mx === 0 ? 0 : d / mx, v: mx };
+}
+
+function hsvToHex(h, s, v) {
+  const c = v * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = v - c;
+  let rp = 0, gp = 0, bp = 0;
+  if (h < 60) { rp = c; gp = x; bp = 0; }
+  else if (h < 120) { rp = x; gp = c; bp = 0; }
+  else if (h < 180) { rp = 0; gp = c; bp = x; }
+  else if (h < 240) { rp = 0; gp = x; bp = c; }
+  else if (h < 300) { rp = x; gp = 0; bp = c; }
+  else { rp = c; gp = 0; bp = x; }
+  const to2 = (n) => Math.round((n + m) * 255).toString(16).padStart(2, "0");
+  return "#" + to2(rp) + to2(gp) + to2(bp);
+}
+
+function initAccentPopover() {
+  const btn = document.getElementById("accentPickerBtn");
+  const picker = document.getElementById("accentPicker");
+  const pop = document.getElementById("accentPopover");
+  if (!btn || !picker || !pop) return;
+  if (btn.dataset.popBound) return;
+  btn.dataset.popBound = "1";
+  const sv = document.getElementById("accentSv");
+  const svDot = document.getElementById("accentSvDot");
+  const hue = document.getElementById("accentHue");
+  const hueDot = document.getElementById("accentHueDot");
+  const hexInput = document.getElementById("accentHex");
+  const current = document.getElementById("accentCurrent");
+  const presets = document.getElementById("accentPresets");
+  let st = { h: 210, s: 0.66, v: 0.85 };
+  let open = false;
+
+  function currentHex() {
+    const v = (picker.value || "").trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) return v;
+    try {
+      const def = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(def)) return def;
+    } catch (e) {}
+    return "#4A90D9";
+  }
+
+  function paint() {
+    const hex = hsvToHex(st.h, st.s, st.v);
+    if (sv) sv.style.background = "linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,transparent),hsl(" + Math.round(st.h) + ",100%,50%)";
+    if (svDot) { svDot.style.left = (st.s * 100) + "%"; svDot.style.top = ((1 - st.v) * 100) + "%"; svDot.style.background = hex; }
+    if (hueDot) { hueDot.style.left = (st.h / 360 * 100) + "%"; hueDot.style.background = "hsl(" + Math.round(st.h) + ",100%,50%)"; }
+    if (hexInput && document.activeElement !== hexInput) hexInput.value = hex;
+    if (current) current.style.background = hex;
+  }
+
+  function commit(fireChange) {
+    const hex = hsvToHex(st.h, st.s, st.v);
+    picker.value = hex;
+    picker.dispatchEvent(new Event("input"));
+    if (fireChange) picker.dispatchEvent(new Event("change"));
+    if (hexInput) hexInput.value = hex;
+    if (current) current.style.background = hex;
+  }
+
+  function place() {
+    pop.hidden = false;
+    const r = btn.getBoundingClientRect();
+    const w = pop.offsetWidth || 240;
+    const hgt = pop.offsetHeight || 260;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let left = r.left + 20 - w / 2;
+    left = Math.max(8, Math.min(left, Math.max(8, vw - w - 8)));
+    let top = r.bottom + 8;
+    if (top + hgt > vh - 8) top = Math.max(8, r.top - hgt - 8);
+    pop.style.left = left + "px";
+    pop.style.top = top + "px";
+  }
+
+  function show() {
+    st = hexToHsv(currentHex());
+    paint();
+    place();
+    open = true;
+  }
+
+  function hide() {
+    pop.hidden = true;
+    open = false;
+  }
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (open) hide();
+    else show();
+  });
+
+  pop.addEventListener("click", (e) => e.stopPropagation());
+
+  function svSet(e) {
+    const r = sv.getBoundingClientRect();
+    st.s = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    st.v = Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / r.height));
+    paint();
+    commit(false);
+  }
+
+  if (sv) {
+    sv.addEventListener("pointerdown", (e) => {
+      try { sv.setPointerCapture(e.pointerId); } catch (err) {}
+      svSet(e);
+      const mv = (ev) => svSet(ev);
+      const up = () => {
+        sv.removeEventListener("pointermove", mv);
+        picker.dispatchEvent(new Event("change"));
+      };
+      sv.addEventListener("pointermove", mv);
+      sv.addEventListener("pointerup", up, { once: true });
+    });
+  }
+
+  function hueSet(e) {
+    const r = hue.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    st.h = ratio * 360;
+    if (st.h >= 360) st.h = 359.9;
+    paint();
+    commit(false);
+  }
+
+  if (hue) {
+    hue.addEventListener("pointerdown", (e) => {
+      try { hue.setPointerCapture(e.pointerId); } catch (err) {}
+      hueSet(e);
+      const mv = (ev) => hueSet(ev);
+      const up = () => {
+        hue.removeEventListener("pointermove", mv);
+        picker.dispatchEvent(new Event("change"));
+      };
+      hue.addEventListener("pointermove", mv);
+      hue.addEventListener("pointerup", up, { once: true });
+    });
+  }
+
+  function applyHexInput() {
+    const v = (hexInput.value || "").trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+      st = hexToHsv(v);
+      paint();
+      picker.value = v;
+      picker.dispatchEvent(new Event("input"));
+      picker.dispatchEvent(new Event("change"));
+      if (current) current.style.background = v;
+    } else {
+      hexInput.value = currentHex();
+    }
+  }
+
+  if (hexInput) {
+    hexInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") applyHexInput();
+      if (e.key === "Escape") hide();
+    });
+    hexInput.addEventListener("blur", applyHexInput);
+    hexInput.addEventListener("click", (e) => e.stopPropagation());
+  }
+
+  if (presets) {
+    presets.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-color]");
+      if (!b) return;
+      const v = b.getAttribute("data-color") || "";
+      if (!/^#[0-9a-fA-F]{6}$/.test(v)) return;
+      st = hexToHsv(v);
+      paint();
+      picker.value = v;
+      picker.dispatchEvent(new Event("input"));
+      picker.dispatchEvent(new Event("change"));
+      if (current) current.style.background = v;
     });
   }
 
   document.addEventListener("click", (e) => {
-    if (card && card.style.display !== "none" && !card.contains(e.target) && e.target !== btn) {
-      card.style.display = "none";
-    }
+    if (!open) return;
+    if (!e.target.closest("#accentPopover") && !e.target.closest("#accentPickerBtn")) hide();
   });
 
-  document.querySelectorAll(".monet-item").forEach((it) => {
-    it.addEventListener("click", () => {
-      const c = it.dataset.color;
-      if (c) {
-        applyMonetTheme(c);
-        toast("已应用主题色：" + (it.querySelector("span")?.textContent || c), "ok");
-      }
-    });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && open) hide();
   });
 
-  if (input) {
-    input.addEventListener("input", (e) => {
-      applyMonetTheme(e.target.value);
-    });
-    input.addEventListener("change", (e) => {
-      applyMonetTheme(e.target.value);
-      toast("已应用自定义主色：" + e.target.value.toUpperCase(), "ok");
-    });
-  }
-
-  if (resetBtn) {
-    resetBtn.addEventListener("click", () => {
-      applyMonetTheme("#4A90D9");
-      toast("已恢复默认谷歌蓝", "ok");
-    });
-  }
+  window.addEventListener("resize", () => { if (open) place(); });
 }
 
-// ---------- toast ----------
+function initRefreshButton() {
+  const btn = document.getElementById("refreshAllBtn");
+  if (!btn || btn.dataset.bound) return;
+  btn.dataset.bound = "1";
+  btn.addEventListener("click", async () => {
+    toast("正在刷新全部数据，请稍候……", "", 2000);
+    try {
+      const jobs = [];
+      try { if (typeof loadOverviewReq === "function") jobs.push(loadOverviewReq().catch(() => {})); } catch (e) {}
+      try { if (typeof loadAnalytics === "function") jobs.push(loadAnalytics().catch(() => {})); } catch (e) {}
+      try {
+        const on = document.querySelector("#mainTabs button.on") || document.querySelector(".tabs button.on");
+        const tab = on && on.dataset ? on.dataset.tab : "";
+        let loader = null;
+        try { loader = (typeof TAB_LOADERS !== "undefined" && TAB_LOADERS) ? TAB_LOADERS[tab] : null; } catch (e) { loader = null; }
+        if (tab && typeof loader === "function") jobs.push(loader().catch(() => {}));
+      } catch (e) {}
+      await Promise.all(jobs);
+      toast("全部数据已刷新完毕。", "ok");
+    } catch (err) {
+      toast("部分数据刷新失败：" + ((err && err.message) || err), "bad");
+    }
+  });
+}
+
+// ---------- toast (xbimg式堆叠 m3-toast + 兼容旧 #toast/#snackbar) ----------
 let _toastT = null;
+let _lastToastText = "";
+let _lastToastTime = 0;
+let _snackT = null;
+function _ensureToastContainer() {
+  let c = document.getElementById("toastContainer");
+  if (!c) {
+    c = document.createElement("div");
+    c.id = "toastContainer";
+    c.className = "toast-container";
+    c.setAttribute("aria-live", "polite");
+    document.body.appendChild(c);
+  }
+  return c;
+}
 function toast(msg, type, duration = 2800) {
-  let el = document.getElementById("toast");
-  let txt = document.getElementById("toastTxt");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "toast";
-    txt = document.createElement("span");
-    txt.id = "toastTxt";
-    el.appendChild(txt);
-    document.body.appendChild(el);
+  const text = String(msg ?? "");
+  const now = Date.now();
+  if (_lastToastText === text && now - _lastToastTime < 1200) return;
+  _lastToastText = text;
+  _lastToastTime = now;
+  const container = _ensureToastContainer();
+  if (container) {
+    const t = document.createElement("div");
+    t.className = "m3-toast" + (type === "ok" ? " okk" : type === "bad" ? " badk" : "");
+    t.textContent = text;
+    container.appendChild(t);
+    setTimeout(() => {
+      t.style.opacity = "0";
+      t.style.transform = "translateY(20px)";
+      t.style.transition = "all 0.3s";
+      setTimeout(() => t.remove(), 300);
+    }, duration || 2800);
   }
-  if (!txt) {
-    txt = el.querySelector("span") || el;
+  try {
+    const el = document.getElementById("toast");
+    const txt = document.getElementById("toastTxt");
+    if (el && txt) {
+      txt.textContent = text;
+      el.className = "show " + (type === "ok" ? "okk" : type === "bad" ? "badk" : "");
+      clearTimeout(_toastT);
+      _toastT = setTimeout(() => { el.className = ""; }, duration || 2800);
+    }
+  } catch (e) {}
+  try {
+    const bar = document.getElementById("snackbar");
+    const btxt = document.getElementById("snackbarText");
+    if (bar && btxt) {
+      btxt.textContent = text;
+      bar.classList.add("show");
+      clearTimeout(_snackT);
+      _snackT = setTimeout(() => bar.classList.remove("show"), duration || 2800);
+    }
+  } catch (e) {}
+}
+
+// ---------- 页内确认框/输入框 (xbimg式，沙盒iframe内原生confirm/prompt会被拦截) ----------
+function _buildConfirmOverlay(message, { okText = "确定", showInput = false, inputPlaceholder = "", inputValue = "" } = {}) {
+  const ov = document.createElement("div");
+  ov.className = "xb-confirm-overlay";
+  const card = document.createElement("div");
+  card.className = "xb-confirm-card";
+  const msg = document.createElement("div");
+  msg.className = "xb-confirm-msg";
+  msg.textContent = message;
+  card.appendChild(msg);
+  let input = null;
+  if (showInput) {
+    input = document.createElement("input");
+    input.type = "text";
+    input.className = "m3-input xb-confirm-input";
+    input.placeholder = inputPlaceholder;
+    input.value = inputValue;
+    card.appendChild(input);
   }
-  txt.textContent = msg;
-  el.className = "show " + (type === "ok" ? "okk" : type === "bad" ? "badk" : "");
-  clearTimeout(_toastT);
-  _toastT = setTimeout(() => { el.className = ""; }, duration || 2800);
+  const actions = document.createElement("div");
+  actions.className = "xb-confirm-actions";
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "m3-btn secondary-btn ghost";
+  cancelBtn.textContent = "取消";
+  const okBtn = document.createElement("button");
+  okBtn.type = "button";
+  okBtn.className = "m3-btn";
+  okBtn.style.cssText = "padding:8px 22px;font-size:14px;";
+  okBtn.textContent = okText;
+  actions.appendChild(cancelBtn);
+  actions.appendChild(okBtn);
+  card.appendChild(actions);
+  ov.appendChild(card);
+  return { ov, okBtn, cancelBtn, input };
+}
+function uiConfirm(message, okText = "确定删除") {
+  return new Promise((resolve) => {
+    const { ov, okBtn, cancelBtn } = _buildConfirmOverlay(message, { okText });
+    document.body.appendChild(ov);
+    let done = false;
+    const finish = (val) => {
+      if (done) return;
+      done = true;
+      document.removeEventListener("keydown", onKey, true);
+      ov.remove();
+      resolve(val);
+    };
+    const onKey = (ev) => { if (ev.key === "Escape") { ev.stopPropagation(); finish(false); } };
+    document.addEventListener("keydown", onKey, true);
+    cancelBtn.addEventListener("click", () => finish(false));
+    okBtn.addEventListener("click", () => finish(true));
+    ov.addEventListener("mousedown", (ev) => { if (ev.target === ov) finish(false); });
+    setTimeout(() => cancelBtn.focus(), 0);
+  });
+}
+function uiPrompt(message, defaultValue = "", placeholder = "") {
+  return new Promise((resolve) => {
+    const { ov, okBtn, cancelBtn, input } = _buildConfirmOverlay(
+      message, { okText: "确定", showInput: true, inputPlaceholder: placeholder, inputValue: defaultValue });
+    document.body.appendChild(ov);
+    let done = false;
+    const finish = (val) => {
+      if (done) return;
+      done = true;
+      document.removeEventListener("keydown", onKey, true);
+      ov.remove();
+      resolve(val);
+    };
+    const onKey = (ev) => {
+      if (ev.key === "Escape") { ev.stopPropagation(); finish(null); }
+      else if (ev.key === "Enter" && document.activeElement === input) { finish((input.value || "").trim() ? input.value.trim() : null); }
+    };
+    document.addEventListener("keydown", onKey, true);
+    cancelBtn.addEventListener("click", () => finish(null));
+    okBtn.addEventListener("click", () => finish((input.value || "").trim() ? input.value.trim() : null));
+    ov.addEventListener("mousedown", (ev) => { if (ev.target === ov) finish(null); });
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+  });
+}
+// 原生 confirm/prompt 桥接：保留原生引用，仅在沙盒拦截时走页内框
+if (typeof window !== "undefined" && !window._nativeConfirm) {
+  try { window._nativeConfirm = window.confirm.bind(window); } catch (e) { window._nativeConfirm = null; }
+  try { window._nativePrompt = window.prompt ? window.prompt.bind(window) : null; } catch (e) { window._nativePrompt = null; }
+}
+async function pageConfirm(message, okText = "确定") {
+  try {
+    if (window.parent && window.parent !== window) return await uiConfirm(message, okText);
+  } catch (e) {}
+  try { return await uiConfirm(message, okText); }
+  catch (e) {
+    if (window._nativeConfirm) return window._nativeConfirm(message);
+    return false;
+  }
 }
 
 // GET->POST 白名单：仅明确读接口允许在 GET 明确不可用时回退 POST。
@@ -372,13 +700,13 @@ function showExportModal({ filename, blob, blobUrl, rawText, base64Data }) {
   const sizeKb = blob ? (blob.size / 1024).toFixed(1) : (rawText ? (new Blob([rawText]).size / 1024).toFixed(1) : "");
   if (content) {
     content.innerHTML = `
-      <div class="card" style="margin:4px 0 10px;padding:12px;border-radius:12px;border:1px solid var(--line);font-size:12.5px">
+      <div class="m3-card" style="margin:4px 0 10px;padding:14px 16px;font-size:12.5px">
         <div style="font-weight:600;color:var(--text);margin-bottom:4px;word-break:break-all;font-size:13px">📄 ${esc(filename)} ${sizeKb ? `<span class="badge badge-primary" style="margin-left:6px">${sizeKb} KB</span>` : ""}</div>
         <div style="color:var(--muted);font-size:11.5px;line-height:1.5">文件已生成完成。若浏览器未自动弹出保存提示，请点击下方按钮手动保存：</div>
       </div>
       <div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap">
-        <a href="${blobUrl}" download="${esc(filename)}" id="btnModalSaveFileLink" class="btn" style="display:inline-flex;align-items:center;gap:5px;padding:8px 18px;background:var(--acc);color:#fff;border-radius:8px;font-weight:600;font-size:13px;text-decoration:none;cursor:pointer">⬇️ 保存文件到电脑</a>
-        ${rawText ? `<button id="btnCopyExportData" class="ghost" style="padding:8px 14px;font-size:12.5px;cursor:pointer">📋 复制全部内容</button>` : ""}
+        <a href="${blobUrl}" download="${esc(filename)}" id="btnModalSaveFileLink" class="m3-btn" style="display:inline-flex;align-items:center;gap:5px;padding:8px 18px;font-size:13px;text-decoration:none;cursor:pointer;pointer-events:auto;z-index:2">⬇️ 保存文件到电脑</a>
+        ${rawText ? `<button id="btnCopyExportData" class="m3-btn secondary-btn ghost" style="padding:8px 14px;font-size:12.5px;cursor:pointer;pointer-events:auto;z-index:2">📋 复制全部内容</button>` : ""}
       </div>
       ${rawText ? `<div style="margin-top:10px"><div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">数据预览（点击文本框可自动全选）：</div><textarea readonly style="width:100%;height:100px;background:var(--panel);color:var(--text);font-family:monospace;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:8px;outline:none;resize:vertical;line-height:1.4" onclick="this.select()">${esc(rawText.slice(0, 5000))}${rawText.length > 5000 ? "\n\n... (数据过长已截断预览，点击上方按钮复制全部数据)" : ""}</textarea></div>` : ""}
     `;
