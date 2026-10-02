@@ -504,23 +504,45 @@
       border-color: transparent !important;
     }
     .tab-nav-btn {
-      display: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      border: 1px solid var(--m3-sys-color-divider);
+      background: var(--m3-sys-color-surface-container);
+      color: var(--m3-sys-color-on-surface);
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      align-self: center;
     }
     .tab-nav-btn:hover {
-      color: var(--acc);
-      background: var(--panel-hover);
-      border-color: var(--acc);
+      background: var(--m3-sys-color-surface-container-highest);
+      border-color: var(--m3-sys-color-outline);
+      color: var(--m3-sys-color-primary);
+    }
+    .tab-nav-btn[disabled] {
+      opacity: 0.35;
+      cursor: default;
+      pointer-events: none;
     }
     .tabs, .category-tabs-bar {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 8px;
-      overflow: visible;
+      overflow-x: auto;
+      overflow-y: hidden;
       scrollbar-width: none;
+      -ms-overflow-style: none;
       scroll-behavior: smooth;
       flex: 1;
-      padding: 4px 2px 8px 2px;
-      margin-bottom: 20px;
+      min-width: 0;
+      padding: 4px 2px 10px 2px;
+      margin-bottom: 0;
       -webkit-overflow-scrolling: touch;
       background: transparent;
       border-radius: var(--radius-full);
@@ -531,8 +553,8 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      flex: 1 1 0;
-      min-width: 150px;
+      flex: 0 0 auto;
+      min-width: 0;
       background: var(--m3-sys-color-surface-container);
       border: 1px solid var(--m3-sys-color-divider);
       padding: 10px 18px;
@@ -2359,10 +2381,14 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
+        overflow: visible;
+        padding-bottom: 8px;
       }
       .tabs button, .cat-tab {
         min-width: 0;
+        width: 100%;
       }
+      .tab-nav-btn { display: none; }
       .tabs button:last-child:nth-child(odd), .cat-tab:last-child:nth-child(odd) {
         grid-column: 1 / -1;
       }
@@ -2396,7 +2422,7 @@
       .hdr-btn-full { display: none; }
       .hdr-btn-short { display: inline; }
       .tabs-wrapper { padding: 3px; border-radius: var(--radius-lg); }
-      .tabs button { padding: 5px 12px; font-size: 12px; height: 30px; }
+      .tabs button { padding: 10px 14px; font-size: 13px; min-height: 44px; }
       .ov-req { grid-template-columns: 1fr !important; }
       .kpi-grid { grid-template-columns: 1fr 1fr !important; }
       .tre-grid { grid-template-columns: 1fr !important; }
@@ -2770,5 +2796,478 @@
       .xb-confirm-overlay { padding: 16px; align-items: flex-end; }
       .xb-confirm-card { max-width: 100%; }
     }
+
+    /* M3 detail-C: ops pages/header/modals (append-only) */
+    /* C组统一权：页头栏 + 弹窗。仅覆盖运维详情页与弹窗，禁触区规则零改动，
+       不改任何 id/class 名。xbdoc 抽屉弹窗 + xbimg 确认框质感对齐。 */
+    .m3-page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--m3-sys-color-divider);
+      max-width: 100%;
+    }
+    .m3-page-header-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    .m3-page-header h2 {
+      font-size: 16px;
+      font-weight: 750;
+      margin: 0;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+    .m3-page-header .m3-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+    .m3-action-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .m3-action-bar .btn.sm,
+    .m3-action-bar .ghost.sm,
+    .m3-action-bar button.sm {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
+      font-size: 12px;
+      line-height: 1;
+      white-space: nowrap;
+      word-break: keep-all;
+      flex-shrink: 0;
+    }
+    .m3-action-bar .msg,
+    .m3-action-bar .hint {
+      white-space: normal;
+      min-width: 0;
+    }
+    /* 备份/根目录：138px 等高卡片，图标居中，文件名置底省略 */
+    #backupBrowser,
+    #imgBrowser {
+      max-width: 100%;
+      min-width: 0;
+    }
+    .fcard,
+    .icard {
+      height: 138px;
+      min-height: 138px;
+      border-radius: var(--m3-radius-medium);
+    }
+    .fcard .fi,
+    .icard .fi {
+      flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .fcard .fn,
+    .icard .nm {
+      margin-top: auto;
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+    }
+    .fcard.selected,
+    .icard.selected {
+      border-color: var(--m3-sys-color-primary) !important;
+      background: var(--m3-sys-color-primary-container) !important;
+      box-shadow: 0 0 0 2px var(--m3-sys-color-primary) !important;
+    }
+    .fcard.selected .fn,
+    .icard.selected .nm {
+      color: var(--m3-sys-color-on-primary-container) !important;
+    }
+    /* 面包屑：透明无底色（与 xbdoc crumbs 对等） */
+    .hint.crumbs,
+    #backupCrumbs,
+    #imgCrumbs {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+    /* 日志终端：质感保留，圆角 12px，等宽字体，行 hover 高亮 */
+    .log-terminal {
+      border-radius: 12px !important;
+      font-family: var(--font-mono) !important;
+      max-width: 100%;
+    }
+    .log-terminal .log-line:hover {
+      background: rgba(255, 255, 255, 0.06) !important;
+    }
+    /* 关于页信息行：与 xbdoc binding-card 一致 */
+    #tab-about .panel > div:not(.m3-page-header) {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #tab-about .panel > div:not(.m3-page-header) > div {
+      background: var(--m3-sys-color-surface-container);
+      border: 1px solid var(--m3-sys-color-divider);
+      border-radius: var(--m3-radius-medium);
+      padding: 16px 20px;
+      transition: background 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s ease;
+      overflow-wrap: anywhere;
+    }
+    #tab-about .panel > div:not(.m3-page-header) > div:hover {
+      background: var(--m3-sys-color-surface-container-highest);
+      border-color: var(--m3-sys-color-outline-variant);
+    }
+    /* 弹窗：与 bottom-sheet 同质感，28px 圆角，header/body/footer 三段，遮罩 blur */
+    #cmdModal,
+    #appModal,
+    #exportHubModal,
+    #importHubModal {
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .cmd-modal-box,
+    .m3-modal-box {
+      border-radius: 28px !important;
+      background: var(--m3-sys-color-surface-container-high);
+      border: 1px solid var(--m3-sys-color-divider);
+      max-width: min(820px, 94vw);
+      width: min(820px, 94vw);
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .cmd-modal-header,
+    .m3-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 24px 16px 24px;
+      border-bottom: 1px solid var(--m3-sys-color-divider);
+      flex-shrink: 0;
+    }
+    .cmd-modal-body,
+    .m3-modal-body {
+      padding: 20px 24px;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.7;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    .cmd-modal-footer,
+    .m3-modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 24px;
+      border-top: 1px solid var(--m3-sys-color-divider);
+      background: var(--m3-sys-color-surface-container-high);
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    /* 运维页内表格横滑兜底（按 tab 作用域，不动既有表格容器类） */
+    #tab-backups table,
+    #tab-imgs table,
+    #tab-logs table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #tab-backups,
+    #tab-imgs,
+    #tab-logs,
+    #tab-about {
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: clip;
+    }
+    #tab-backups img,
+    #tab-imgs img,
+    #tab-about img {
+      max-width: 100%;
+      height: auto;
+    }
+    @media (max-width: 640px) {
+      .m3-page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .m3-action-bar {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      #backupBrowser .grid,
+      #imgBrowser .grid,
+      #imgBrowser #imgList {
+        grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)) !important;
+        gap: 10px !important;
+      }
+      #cmdModal,
+      #appModal,
+      #exportHubModal,
+      #importHubModal {
+        align-items: flex-end !important;
+        padding: 0 !important;
+      }
+      .cmd-modal-box,
+      .m3-modal-box {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 90vh !important;
+        border-radius: 20px 20px 0 0 !important;
+      }
+      .cmd-modal-header,
+      .m3-modal-header,
+      .cmd-modal-footer,
+      .m3-modal-footer {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+      .cmd-modal-body,
+      .m3-modal-body {
+        padding: 14px 12px;
+      }
+      .cmd-modal-footer,
+      .m3-modal-footer {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      #tab-about .panel > div:not(.m3-page-header) > div {
+        padding: 14px 12px;
+      }
+    }
+
+    /* M3 detail-A: tables/filter/kpi (append-only) */
+    .kpi-grid .card {
+      background: var(--m3-sys-color-surface-container);
+      border: 1px solid var(--m3-sys-color-divider);
+      border-radius: 20px;
+      padding: 18px 20px;
+      box-shadow: var(--m3-shadow-card);
+      transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), border-color 0.22s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.22s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .kpi-grid .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--m3-sys-color-outline-variant);
+      box-shadow: var(--m3-shadow-card);
+    }
+    .kpi-grid .card .ic { font-size: 22px; margin-bottom: 2px; }
+    .kpi-grid .card .lab { font-size: 12px; font-weight: 600; color: var(--m3-sys-color-outline); }
+    .kpi-grid .card .num { font-size: 24px; font-weight: 800; color: var(--m3-sys-color-on-surface); line-height: 1.2; }
+    .m3-filter-dock {
+      background: var(--m3-sys-color-surface-container-high);
+      border: 1px solid var(--m3-sys-color-divider);
+      border-radius: 999px;
+      padding: 6px 6px 6px 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .m3-filter-search {
+      position: relative;
+      display: flex;
+      align-items: center;
+      flex: 1 1 220px;
+      min-width: 180px;
+      height: 44px;
+      background: var(--m3-sys-color-surface-container);
+      border: 1px solid var(--m3-sys-color-divider);
+      border-radius: 999px;
+      padding: 0 16px 0 42px;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .m3-filter-search:focus-within {
+      border-color: var(--m3-sys-color-primary);
+      background: var(--m3-sys-color-surface-container-high);
+    }
+    .m3-filter-search > span:first-child {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--m3-sys-color-outline);
+      line-height: 1;
+      pointer-events: none;
+    }
+    .m3-filter-search input {
+      flex: 1;
+      width: 100% !important;
+      height: 100% !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      outline: none !important;
+      padding: 0 !important;
+      font-size: 14px !important;
+      color: var(--m3-sys-color-on-surface) !important;
+    }
+    .m3-filter-search input::placeholder { color: var(--m3-sys-color-outline); }
+    .m3-filter-chips {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .m3-filter-chips select {
+      height: 44px !important;
+      border-radius: 999px !important;
+      padding: 0 30px 0 16px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      background-color: var(--m3-sys-color-surface-container) !important;
+      border: 1px solid var(--m3-sys-color-divider) !important;
+      color: var(--m3-sys-color-on-surface) !important;
+    }
+    .m3-filter-chips select:focus {
+      border-color: var(--m3-sys-color-primary) !important;
+      outline: none !important;
+    }
+    .table-wrap {
+      border-radius: 12px;
+      border: 1px solid var(--m3-sys-color-divider);
+      background: var(--m3-sys-color-surface-container-high);
+      overflow-x: auto;
+    }
+    .table-wrap table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .table-wrap th {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--m3-sys-color-outline);
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--m3-sys-color-divider);
+      white-space: nowrap;
+      background: var(--m3-sys-color-surface-container-high);
+    }
+    .table-wrap td {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--m3-sys-color-on-surface);
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--m3-sys-color-divider);
+      vertical-align: middle;
+    }
+    .table-wrap tbody tr:hover td { background: var(--m3-sys-color-surface-container); }
+    .table-wrap tr:last-child td { border-bottom: none; }
+    #tab-users .table-wrap table { min-width: 1080px; }
+    #tab-users .table-wrap td:last-child { white-space: nowrap; text-align: center; }
+    #tab-users .table-wrap td:last-child button { white-space: nowrap !important; flex-shrink: 0; }
+    #tab-groups .table-wrap th:nth-child(5),
+    #tab-groups .table-wrap th:nth-child(6),
+    #tab-groups .table-wrap td:nth-child(5),
+    #tab-groups .table-wrap td:nth-child(6) { text-align: left; white-space: nowrap; }
+    #tab-groups .table-wrap td .switch,
+    #tab-groups .table-wrap td .m3-switch {
+      margin-left: 0 !important;
+      margin-right: auto !important;
+      justify-self: start;
+      flex-shrink: 0;
+    }
+    @media (max-width: 640px) {
+      .m3-filter-dock { border-radius: 20px; padding: 8px; }
+      .m3-filter-search { flex-basis: 100%; }
+      .m3-filter-chips { width: 100%; }
+      .m3-filter-chips select { flex: 1 1 auto; min-width: 0; }
+    }
+
+/* M3 detail-B: config/cmd/shop/atlas (append-only) — 向 xbdoc/xbimg M3 对齐，零改名、不碰页头/tab/toast/modal/table/filter/kpi */
+#tab-config .cfg-sec {
+  background: var(--panel);
+  border: 1px solid var(--m3-sys-color-divider);
+  border-radius: 28px;
+  box-shadow: var(--shadow-xs);
+}
+#tab-config .cfg-sec:hover { border-color: var(--accBorder); box-shadow: var(--shadow-sm); }
+#tab-config .cfg-sec h3 { border-bottom: 1px solid var(--m3-sys-color-divider); }
+#tab-config .cfg-row { border-bottom: 1px solid var(--m3-sys-color-divider); }
+#tab-config .cfg-row:last-child { border-bottom: none; }
+#tab-config .cfg-lab { font-size: 13.5px; font-weight: 650; }
+#tab-config .cfg-help { font-size: 11.5px; color: var(--muted); }
+#tab-config .cfg-ctrl { justify-content: flex-end; }
+#tab-config .cfg-ctrl .switch { margin-left: auto; }
+#tab-cmds .cmd-block {
+  background: var(--m3-sys-color-surface-container);
+  border: 1px solid var(--m3-sys-color-divider);
+  border-radius: 20px;
+}
+#tab-cmds .cmd-block:hover {
+  background: var(--m3-sys-color-surface-container-highest);
+  border-color: var(--m3-sys-color-outline-variant);
+}
+#tab-cmds .cmd-block[open] { border-color: var(--accBorder); }
+#tab-cmds .cmd-tag {
+  border-radius: 999px;
+  background: var(--m3-sys-color-surface-container);
+  border: 1px solid var(--m3-sys-color-divider);
+  color: var(--text);
+  font-weight: 600;
+}
+#tab-cmds .cmd-tag:hover {
+  background: var(--m3-sys-color-primary-container);
+  color: var(--m3-sys-color-on-primary-container);
+  border-color: var(--m3-sys-color-primary);
+}
+#tab-cmds .cmd-tag.off {
+  opacity: 0.45;
+  text-decoration: line-through;
+  background: var(--m3-sys-color-surface-container);
+  border-color: var(--m3-sys-color-divider);
+  color: var(--text);
+}
+#tab-cmds .cmd-tag.custom { border-style: dashed; }
+#tab-shops .s-fields {
+  background: var(--m3-sys-color-surface-container-high);
+  border: 1px solid var(--m3-sys-color-divider);
+  border-radius: 12px;
+}
+[data-theme="dark"] #tab-shops .s-fields { background: var(--m3-sys-color-surface-container); }
+#tab-shops .s-fields:hover {
+  border-color: var(--accBorder);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+#tab-shops .s-row input, #tab-shops .s-row select { height: 28px; }
+#tab-spirits .tre-card, #tab-spirits .sp-card, #tab-shops .tre-card, #tab-shops .sp-card {
+  background: var(--m3-sys-color-surface-container-high);
+  border: 1px solid var(--m3-sys-color-divider);
+  border-radius: 12px !important;
+}
+[data-theme="dark"] #tab-spirits .tre-card, [data-theme="dark"] #tab-spirits .sp-card,
+[data-theme="dark"] #tab-shops .tre-card, [data-theme="dark"] #tab-shops .sp-card {
+  background: var(--m3-sys-color-surface-container);
+}
+#tab-spirits .tre-card:hover, #tab-spirits .sp-card:hover,
+#tab-shops .tre-card:hover, #tab-shops .sp-card:hover {
+  border-color: var(--accBorder);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+/* .atlas-seg-tabs 已是分段样式，保持不动 */
+@media (prefers-reduced-motion: reduce) {
+  #tab-shops .s-fields:hover, #tab-spirits .tre-card:hover, #tab-spirits .sp-card:hover,
+  #tab-shops .tre-card:hover, #tab-shops .sp-card:hover { transform: none; }
+}
 
   
