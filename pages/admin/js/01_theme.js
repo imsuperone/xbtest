@@ -26,10 +26,10 @@ function rgbToHsl(r, g, b) {
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
-let _CURRENT_MONET_COLOR = "#0B57D0";
+let _CURRENT_MONET_COLOR = "#4A90D9";
 
 function applyMonetTheme(hex) {
-  if (!hex || !/^#[0-9a-fA-F]{3,6}$/i.test(hex)) hex = "#0B57D0";
+  if (!hex || !/^#[0-9a-fA-F]{3,6}$/i.test(hex)) hex = "#4A90D9";
   _CURRENT_MONET_COLOR = hex;
   try { localStorage.setItem("xbbot_monet_color", hex); } catch (e) {}
 
@@ -39,16 +39,16 @@ function applyMonetTheme(hex) {
   const root = document.documentElement;
 
   if (!isDark) {
-    const isGoogleBlue = hex.toLowerCase() === "#0b57d0";
-    const bgL = "#FFFFFF";
+    const isGoogleBlue = hex.toLowerCase() === "#4a90d9";
+    const bgL = "#F4F7FB";
     const panelL = "#FFFFFF";
-    const panelHoverL = "#F8FAFC";
+    const panelHoverL = "#E8EDF4";
     const panel2L = "#FFFFFF";
-    const panel3L = "#FFFFFF";
-    const lineL = "#D1D5DB";
-    const lineSubtleL = "rgba(0, 0, 0, 0.06)";
-    const priContL = isGoogleBlue ? "#D3E3FD" : `hsl(${h}, ${Math.max(40, Math.min(85, s * 0.75))}%, 90%)`;
-    const onPriContL = "#041E49";
+    const panel3L = "#DFE6EF";
+    const lineL = "rgba(90, 100, 115, 0.14)";
+    const lineSubtleL = "rgba(90, 100, 115, 0.14)";
+    const priContL = isGoogleBlue ? "#D9E8F7" : `hsl(${h}, ${Math.max(40, Math.min(85, s * 0.75))}%, 90%)`;
+    const onPriContL = "#0F2B46";
 
     root.style.setProperty("--md-sys-color-primary", hex);
     root.style.setProperty("--md-sys-color-on-primary", "#FFFFFF");
@@ -59,16 +59,16 @@ function applyMonetTheme(hex) {
     root.style.setProperty("--md-sys-color-surface-container-high", panel2L);
     root.style.setProperty("--md-sys-color-surface-container-highest", panel3L);
     root.style.setProperty("--surface-container-high", panel2L);
-    root.style.setProperty("--outline", "#74777F");
+    root.style.setProperty("--outline", "#73777F");
 
     root.style.setProperty("--bg", bgL);
     root.style.setProperty("--panel", panelL);
     root.style.setProperty("--panel-hover", panelHoverL);
     root.style.setProperty("--panel2", panel2L);
     root.style.setProperty("--panel3", panel3L);
-    root.style.setProperty("--text", "#1F1F1F");
+    root.style.setProperty("--text", "#191C20");
     root.style.setProperty("--text-secondary", "#444746");
-    root.style.setProperty("--muted", "#444746");
+    root.style.setProperty("--muted", "#73777F");
     root.style.setProperty("--line", lineL);
     root.style.setProperty("--line-subtle", lineSubtleL);
 
@@ -81,20 +81,20 @@ function applyMonetTheme(hex) {
     root.style.setProperty("--primary-container", priContL);
     root.style.setProperty("--on-primary-container", onPriContL);
   } else {
-    const isGoogleBlue = hex.toLowerCase() === "#0b57d0";
-    const darkPrimary = isGoogleBlue ? "#A8C7FA" : `hsl(${h}, ${Math.max(45, Math.min(90, s * 0.85))}%, 78%)`;
-    const bgD = "#111318";
-    const panelD = "#191C20";
-    const panelHoverD = "#21252C";
-    const panel2D = "#22262B";
-    const panel3D = "#2C3036";
-    const lineD = "rgba(255, 255, 255, 0.12)";
+    const isGoogleBlue = hex.toLowerCase() === "#4a90d9";
+    const darkPrimary = isGoogleBlue ? "#8AB8F0" : `hsl(${h}, ${Math.max(45, Math.min(90, s * 0.85))}%, 78%)`;
+    const bgD = "#111418";
+    const panelD = "#1A1F26";
+    const panelHoverD = "#232A33";
+    const panel2D = "#232A33";
+    const panel3D = "#2C343F";
+    const lineD = "rgba(255, 255, 255, 0.09)";
     const lineSubtleD = "rgba(255, 255, 255, 0.06)";
-    const priContD = isGoogleBlue ? "#0842A0" : `hsl(${h}, ${Math.max(35, s * 0.8)}%, 24%)`;
-    const onPriContD = isGoogleBlue ? "#D3E3FD" : `hsl(${h}, ${Math.max(35, s * 0.75)}%, 94%)`;
+    const priContD = isGoogleBlue ? "#1E3A55" : `hsl(${h}, ${Math.max(35, s * 0.8)}%, 24%)`;
+    const onPriContD = isGoogleBlue ? "#D6E8FA" : `hsl(${h}, ${Math.max(35, s * 0.75)}%, 94%)`;
 
     root.style.setProperty("--md-sys-color-primary", darkPrimary);
-    root.style.setProperty("--md-sys-color-on-primary", "#041E49");
+    root.style.setProperty("--md-sys-color-on-primary", "#06263F");
     root.style.setProperty("--md-sys-color-primary-container", priContD);
     root.style.setProperty("--md-sys-color-on-primary-container", onPriContD);
     root.style.setProperty("--md-sys-color-surface", bgD);
@@ -102,7 +102,7 @@ function applyMonetTheme(hex) {
     root.style.setProperty("--md-sys-color-surface-container-high", panel2D);
     root.style.setProperty("--md-sys-color-surface-container-highest", panel3D);
     root.style.setProperty("--surface-container-high", panel2D);
-    root.style.setProperty("--outline", "#8E918F");
+    root.style.setProperty("--outline", "#8B9099");
 
     root.style.setProperty("--bg", bgD);
     root.style.setProperty("--panel", panelD);
@@ -111,7 +111,7 @@ function applyMonetTheme(hex) {
     root.style.setProperty("--panel3", panel3D);
     root.style.setProperty("--text", "#E2E2E6");
     root.style.setProperty("--text-secondary", "#C4C7D0");
-    root.style.setProperty("--muted", "#8E918F");
+    root.style.setProperty("--muted", "#8B9099");
     root.style.setProperty("--line", lineD);
     root.style.setProperty("--line-subtle", lineSubtleD);
 
@@ -148,9 +148,9 @@ function applyTheme(t) {
   applyMonetTheme(_CURRENT_MONET_COLOR);
 }
 function initTheme() {
-  let savedColor = "#0B57D0";
+  let savedColor = "#4A90D9";
   let savedTheme = "";
-  try { savedColor = localStorage.getItem("xbbot_monet_color") || "#0B57D0"; } catch (e) {}
+  try { savedColor = localStorage.getItem("xbbot_monet_color") || "#4A90D9"; } catch (e) {}
   try { savedTheme = localStorage.getItem("xbbot_theme") || ""; } catch (e) {}
   if (!savedTheme || (savedTheme !== "dark" && savedTheme !== "light")) {
     try {
@@ -225,7 +225,7 @@ function initMonetPalette() {
 
   if (resetBtn) {
     resetBtn.addEventListener("click", () => {
-      applyMonetTheme("#0B57D0");
+      applyMonetTheme("#4A90D9");
       toast("已恢复默认谷歌蓝", "ok");
     });
   }
