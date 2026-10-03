@@ -1,5 +1,11 @@
 # 更新日志
 
+## v2026w1001a
+- 🎯 **每日打卡**：每日打卡上线，幸运值概率浮动接入各概率玩法；
+- 🎨 **WebUI 第二轮 M3 对齐**（对齐 xbdoc / xbimg 设计语言）：expressive tokens 与组件、Monet 调色板 token、顶栏 markup 与 accent SV/Hue 引擎、toast/confirm 统一、M3 tabs/cards/buttons/modal、详情页表格/表单/操作对齐；中途试做的 xbimg 外框仿制已回滚，最终为纯皮肤层改动；
+- 🧭 **后台导航重组**：分类 Tab 分组（数据 / 用户 / 配置 / 商城 / 运维）＋左侧 side-nav，导出/导入入口改图标按钮；
+- 🔢 **前端缓存号**：`?v=` 升到 `2026w1002b`（css/js 变更强制刷缓存）。
+
 ## v2026w0922a
 - 🔒 **H1-H8 并发安全修复**：银行存/取/强取/打劫/赌博、签到送礼/签到/新手礼包 全部 `ST._LOCK` 包裹读-校验-写；`cmd_rob_zone` 金库与钱包同事务 stage+commit；`_call_api` mutating 强制 admin 403；`user_clear` else 分支加锁+commit+缓存清理；`_read_conn` 双检加锁；`cmd_bail` 锁内复检+劫狱冷却锁内写。
 - 🐛 **中危修复**：`cmd_transfer` 改 `txn_two_wallets_acct` 单事务（体力+双钱包原子）；`cmd_start` 冒险扣费改 `txn_coins_acct` 单事务；`_ent_cost`/扔炸弹 改锁内原子扣费；`抽签` 每日检查先于扣费、标记在奖励成功后写；帮派创建/加入/退出/解散 锁内复检 stamina/charm 并构建 updates。
