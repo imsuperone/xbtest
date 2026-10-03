@@ -5,7 +5,7 @@ import time
 from . import state as _S
 from .state import _safe_commit
 from .app_config import cfg, cfgi, save_config
-from .kv import recall_get
+from .kv import recall_get, recall_set
 
 def set_backup_dir(path):
     _S.BACKUP_DIR = path

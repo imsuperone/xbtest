@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """legacy_ini - 旧(NapCat/INI)群/用户ini解析入库（原 migration.py 独立，语义不变）"""
 import configparser
+import json
+import os
 import re
 try:
     from .. import storage as ST
@@ -161,10 +163,6 @@ def _handle_ini_content(content, rel_path=""):
                             _k = str(_k or "").strip()
                             if not _k:
                                 continue
-                            try:
-                                _iv = int(float(str(_v or "0").strip() or "0"))
-                            except Exception:
-                                _iv = 0
                             if _k in _ride_names:
                                 # 坐骑：并入 rides.list（去重）
                                 try:

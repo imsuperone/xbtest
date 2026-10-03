@@ -268,7 +268,7 @@ def save_config():
         try:
             p = os.path.join(get_persistent_data_dir(), "config.json")
         except Exception:
-            p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "config.json")
+            p = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "config.json")
     try:
         # 防截断：内存配置为空时拒绝落盘，避免把有效持久文件清成 {}
         if not isinstance(_S._CONFIG, dict) or not _S._CONFIG:
@@ -312,37 +312,6 @@ def save_config():
             recall_set("sys_coll_json", json.dumps(_coll_mirror, ensure_ascii=False))
     except Exception:
         pass
-
-
-def _sidecar_heal_from_mirror():
-    """sidecar 缺文件自愈：仅 sidecar 文件缺失时才从 kv 镜像回填（文件优先，坏文件不碰）。
-    恢复全量替换语义由 reload_config_from_db 承担，此处只补“无文件”场景。"""
-    try:
-        raw = recall_get("sys_coll_json", "")
-        if not raw:
-            return False
-        db_coll = json.loads(raw)
-        if not isinstance(db_coll, dict) or not db_coll:
-            return False
-        healed = False
-        for sec, kv in db_coll.items():
-            try:
-                if sec not in (getattr(_S, "_COLL_FILES", {}) or {}):
-                    continue
-                if not isinstance(kv, dict) or not kv:
-                    continue
-                if _sidecar_exists(sec):
-                    continue
-                # 直写（禁 coll_merge）：镜像值多为原生纯字符串，
-                # coll_merge 的 JSON 串 coerce 会误杀，缺文件场景直写即等价替换
-                _S._COLL_CACHE[sec] = dict(kv)
-                if _coll_write(sec):
-                    healed = True
-            except Exception:
-                pass
-        return healed
-    except Exception:
-        return False
 
 
 def reload_config_from_db():
