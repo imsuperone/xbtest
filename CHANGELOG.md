@@ -1,5 +1,15 @@
 # 更新日志
 
+## v2026w1004a
+- 🐛 **持久化目录深度修复（真路径 bug）**：`core/storage/db.py` ×4 与 `app_config.py` ×1 用 `dirname(dirname(__file__))` 推导插件根，但文件在 `core/storage/`（深度 3）只上跳到 `core/`——裸跑（无 AstrBot StarTools）时把持久化目录解析成 `core/data` 并复制图片池污染源码树（本轮实测复现），迁移种子源也指向 `core/data/...` 永远落空；统一改为三级 dirname（与 `core/api/*` 同深度文件的既有写法一致）。深度 2 文件（app/config/logger/webdav/ride 等）的两级写法正确、不动。
+- 🐛 **旧库导入修复（真 NameError）**：`core/api/legacy_ini.py` 缺 `import os/json`——文件名/目录的 gid-qq 推断（L39/43/44）与 rides/spirits JSON 解析（L171/183/271/349）全部 NameError，且均被 `except` 静默吞掉，旧 INI 导入实际丢失这部分数据；补导入后恢复。
+- 🐛 **备份跨进程标记修复（真 NameError）**：`core/storage/backup.py` 只导入 `recall_get` 未导入 `recall_set`，备份完成后的 `recall_set("last_backup_ts", ...)` NameError 被 `except: pass` 吞掉——他进程 30 秒内复用备份与相关检测拿不到标记；补导入修复。
+- 🧹 **死代码删除**：`app_config._sidecar_heal_from_mirror`（v2026w0922a 删唯一调用者 `load_config_from_db` 后成为孤儿，全仓零引用）；`01_theme.applyMonetTheme`（旧 Monet 兼容桥，零调用）；`legacy_ini._iv` 死变量（解析结果从未被使用）；`logger.get_logs` 死变量 `lines`；`messaging` 死读取 `old`；`webdav._make_ssl_context` 冗余 `global`（仅改下标不重绑名）；`api/groups` `grp` 死绑定（`ST.group(gid)` 副作用调用保留）；`adventure` 无占位空 f-string ×2；`profile` 未用 `except as e`。
+- 🧹 **未用导入清理**：`backup_cloud`/`version_check` 模块级 `asyncio`（函数内已有局部导入）、`logs.get_req_json`、`stats.get_req_query`（函数内已有局部导入）、`gacha` 未用 `ST`、`weapon_pool` 未用裸 `slave` 三通道导入（实际使用处均为局部 `_sl`）。`stats/settings` 的 `handle_*` 重导出是拆分兼容门面（v2026w0918a），**保留不删**。
+- 📊 **启动基线测量**：`import core.app` 累计约 700ms（本机 Python 3.14 冷测），其中 stdlib（sqlite3/ssl/logging/opcode 等）约占 55%，插件自身约 150ms、`games` eager import 约 300ms；结论与优化路线已写入 `aidocs/AIINFO.md`，eager import 按 AICODE_AUDIT §10 暂不动。
+- 📝 **AI 文档全量重写**：`aiall.md`（逐文件代码地图）、`AIINFO.md`（架构）、`AIREADME.md`（已做/未做）按本轮逐行精读结果重建，修正旧文档中 `admin.js 单体/80 个 py 文件` 等过期描述。
+- 🔢 **版本**：`2026w1004a`（跨日：改动起于 1003 归档到 1004）；同步 `metadata.yaml`、`core/version.py` fallback（原 2026w0919a 过期值）、`index.html`、`FRONTEND_VER`、README；前端缓存破坏号 `?v=` 统一升 `2026w1004a`。
+
 ## v2026w1001a
 - 🎯 **每日打卡**：每日打卡上线，幸运值概率浮动接入各概率玩法；
 - 🎨 **WebUI 第二轮 M3 对齐**（对齐 xbdoc / xbimg 设计语言）：expressive tokens 与组件、Monet 调色板 token、顶栏 markup 与 accent SV/Hue 引擎、toast/confirm 统一、M3 tabs/cards/buttons/modal、详情页表格/表单/操作对齐；中途试做的 xbimg 外框仿制已回滚，最终为纯皮肤层改动；

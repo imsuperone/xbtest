@@ -1,6 +1,13 @@
-# 小白 · AstrBot 插件 `astrbot_plugin_xbbot` v2026w1001a
+# 小白 · AstrBot 插件 `astrbot_plugin_xbbot` v2026w1004a
 
 > 🎮 1:1 深度复刻经典群互动玩法，包含 奴隶 / 签到 / 银行 / 娱乐 / 精灵 / 坐骑 / 帮派 / 冒险 / 超管 全套 28 大系统与 WebUI 现代化管理控制台。
+
+### ✨ v2026w1004a 核心特性与更新：
+- 🐛 **旧库导入修复**：`legacy_ini` 补 `import os/json`（文件名/目录 gid-qq 推断与 rides/spirits JSON 解析此前因 NameError 被 except 静默吞掉，导入数据缺失）；
+- 🐛 **备份跨进程标记修复**：`storage/backup` 补 `recall_set` 导入（备份完成写 `last_backup_ts` KV 此前 NameError 被吞，他进程 30 秒复用与新装检测失效）；
+- 🐛 **持久化目录深度修复**：`core/storage` 内 5 处 `dirname²` 推导插件根只到 `core/`（文件深度 3 应为三级），裸跑会生成 `core/data` 污染源码树；统一改三级 dirname。
+- 🧹 **死码清理**：删孤儿函数 `_sidecar_heal_from_mirror`（7033822 删唯一调用者后遗留）、零调用兼容桥 `applyMonetTheme`、死变量 `_iv`/`lines`/`old`/`grp` 绑定、冗余 `global`、空 f-string、未用 `except as e` 及 `asyncio/get_req_json/get_req_query/ST/slave` 等未用导入；
+- 🔢 版本 `2026w1004a`，前端缓存破坏号同步 `?v=2026w1004a`。
 
 ### ✨ v2026w1001a 核心特性与更新：
 - 🎯 **每日打卡**：幸运值概率浮动接入各概率玩法；
