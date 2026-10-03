@@ -397,11 +397,24 @@ async function uploadImage(file) {
 }
 
 function bindTabs() {
-  const btns = document.querySelectorAll(".tabs button");
+  const btns = document.querySelectorAll("#mainTabs button, #sideNav button");
+  const TAB_GROUPS = {
+    data: ["overview", "rank"],
+    users: ["users", "slave", "spirit_users", "groups"],
+    rules: ["config", "cmds"],
+    mall: ["shops", "spirits"],
+    ops: ["backups", "imgs", "logs", "about"]
+  };
+  const _groupLastTab = {};
+  function tabGroupOf(tab) {
+    for (const g in TAB_GROUPS) if (TAB_GROUPS[g].indexOf(tab) >= 0) return g;
+    return "data";
+  }
   btns.forEach((b) => {
     b.addEventListener("click", () => {
-      btns.forEach((x) => x.classList.remove("on"));
-      b.classList.add("on");
+      _groupLastTab[tabGroupOf(b.dataset.tab)] = b.dataset.tab;
+      document.querySelectorAll("#tabGroups button").forEach((x) => x.classList.toggle("on", x.dataset.group === tabGroupOf(b.dataset.tab)));
+      btns.forEach((x) => x.classList.toggle("on", x.dataset.tab === b.dataset.tab));
       document.querySelectorAll(".tab").forEach((t) => t.classList.remove("on"));
       const el = document.getElementById("tab-" + b.dataset.tab);
       if (el) el.classList.add("on");
@@ -428,36 +441,39 @@ function bindTabs() {
     });
   });
 
-  const tabsContainer = document.getElementById("mainTabs");
-  function updateTabNav() {
-    const prev = document.getElementById("tabNavPrev");
-    const next = document.getElementById("tabNavNext");
-    if (!tabsContainer || !prev || !next) return;
-    const noOverflow = tabsContainer.scrollWidth <= tabsContainer.clientWidth + 2;
-    prev.style.display = noOverflow ? "none" : "";
-    next.style.display = noOverflow ? "none" : "";
-    prev.disabled = tabsContainer.scrollLeft <= 2;
-    next.disabled = tabsContainer.scrollLeft >= tabsContainer.scrollWidth - tabsContainer.clientWidth - 2;
+  function showGroup(g) {
+    if (!TAB_GROUPS[g]) g = "data";
+    document.querySelectorAll("#tabGroups button").forEach((x) => x.classList.toggle("on", x.dataset.group === g));
+    btns.forEach((b) => { b.hidden = b.closest("#mainTabs") ? TAB_GROUPS[g].indexOf(b.dataset.tab) < 0 : false; });
   }
-  document.getElementById("tabNavPrev")?.addEventListener("click", () => {
-    if (tabsContainer) tabsContainer.scrollBy({ left: -160, behavior: "smooth" });
+  document.querySelectorAll("#tabGroups button").forEach((gb) => {
+    gb.addEventListener("click", () => {
+      const g = gb.dataset.group;
+      showGroup(g);
+      const target = _groupLastTab[g] || TAB_GROUPS[g][0];
+      const btn = target && document.querySelector('#mainTabs button[data-tab="' + target + '"]');
+      if (btn) btn.click();
+    });
   });
-  document.getElementById("tabNavNext")?.addEventListener("click", () => {
-    if (tabsContainer) tabsContainer.scrollBy({ left: 160, behavior: "smooth" });
-  });
-  tabsContainer?.addEventListener("wheel", (e) => {
-    if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) {
-      e.preventDefault();
-      tabsContainer.scrollLeft += e.deltaY;
+  document.querySelectorAll("#sideNav .side-group").forEach((grp) => {
+    const title = grp.querySelector(".side-group-title");
+    const first = grp.querySelector("button[data-tab]");
+    if (title && first) {
+      title.style.cursor = "pointer";
+      title.addEventListener("click", () => {
+        const g = tabGroupOf(first.dataset.tab);
+        showGroup(g);
+        const target = _groupLastTab[g] || first.dataset.tab;
+        const btn = document.querySelector('#sideNav button[data-tab="' + target + '"]');
+        if (btn) btn.click();
+      });
     }
-  }, { passive: false });
-  tabsContainer?.addEventListener("scroll", updateTabNav, { passive: true });
-  window.addEventListener("resize", updateTabNav);
-  updateTabNav();
+  });
+  const _initOn = document.querySelector("#sideNav button.on") || document.querySelector("#mainTabs button.on");
+  showGroup(tabGroupOf(_initOn ? _initOn.dataset.tab : "overview"));
   try {
     document.querySelector("#mainTabs button.on")?.scrollIntoView({ inline: "center", block: "nearest" });
   } catch (e) {}
-  updateTabNav();
 }
 function err(m) {
   const e = document.getElementById("footErr");
