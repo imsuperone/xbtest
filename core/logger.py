@@ -156,7 +156,6 @@ def get_logs(limit=200, level="", keyword=""):
         level = ""
     keyword = (keyword or "").strip().lower()
 
-    lines = []
     with _LOCK:
         try:
             # 针对大文件使用块逆向读取，避免全量读入

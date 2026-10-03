@@ -104,7 +104,6 @@ def _strict_tls():
 def _make_ssl_context():
     # 按校验档位缓存 SSLContext：每路径/每请求新建上下文开销大；warning 只打一次
     mode = "strict" if _strict_tls() else "loose"
-    global _SSL_CTX_CACHE
     with _SSL_CTX_LOCK:
         cached = _SSL_CTX_CACHE.get(mode)
         if cached is not None:

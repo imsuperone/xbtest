@@ -12,13 +12,8 @@ except ImportError:
 from .web_utils import _err, get_req_query, get_req_json, plugin_root, read_thumb_uri, read_upload_b64
 try:
     from .. import storage as ST
-    from ...games import slave
 except ImportError:
     from core import storage as ST
-    try:
-        from games import slave
-    except ImportError:
-        import slave  # type: ignore
 
 
 async def handle_gacha_weapons(request):

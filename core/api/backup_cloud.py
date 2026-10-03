@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """云备份 API — WebDAV 测试/备份/文件/恢复/删除（由 backup.py 独立拆出，端点不变）。"""
-import asyncio
 import os
 import time
 try:

@@ -56,7 +56,7 @@ def cmd_myinfo(gid, qq, st):
             f"👥奴隶({len(slaves)}/{cap})：{sl_txt}",
         ]
         return "\r\n".join(lines)
-    except Exception as e:
+    except Exception:
         # 兜底防御：发生未预料异常时依然返回完整版档案格式，杜绝退化为简版
         try:
             name = uname(st, qq) if 'st' in locals() else str(qq)

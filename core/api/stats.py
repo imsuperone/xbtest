@@ -7,7 +7,7 @@ try:
     from ..adapters import json_response
 except ImportError:
     from core.adapters import json_response
-from .web_utils import _err, get_req_query
+from .web_utils import _err
 
 try:
     from .. import storage as ST

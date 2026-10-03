@@ -1,6 +1,5 @@
 """version_check API - 在线版本检测与通道（原 stats.py updater 段独立，端点不变）"""
 # -*- coding: utf-8 -*-
-import asyncio
 import json
 import re
 import time

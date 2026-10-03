@@ -105,7 +105,7 @@ async def handle_groups_toggle(request):
 
         # 同步初始化 group 实体
         try:
-            grp = ST.group(gid)
+            ST.group(gid)  # 副作用：初始化 group 实体并标脏
             ST.save_group(gid)
         except Exception:
             pass

@@ -158,7 +158,6 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
                                     except Exception:
                                         pass
                                 else:
-                                    old = sm.NOTE_NAMES.get(q, "")
                                     sm.NOTE_NAMES[q] = nm
                             except Exception:
                                 pass
