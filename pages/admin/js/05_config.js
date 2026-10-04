@@ -243,14 +243,14 @@ async function openAutoBalanceModal() {
         <input type="radio" name="balanceMode" value="standard" ${activeMode === "standard" ? "checked" : ""} style="margin-top:3px">
         <div>
           <div style="font-weight:600;color:var(--text);font-size:13px">🟢 标准平衡模式（官方推荐 · 经济稳健）</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 300-800 + 连签 50，利率 2%，造反率 35%，祈福爆发 5%。平稳通胀，适合绝大多数群聊。</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 300-800 + 连签 50，利率 1%，造反率 35%，祈福爆发 5%。平稳通胀，适合绝大多数群聊。</div>
         </div>
       </label>
       <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "casual" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="casual" ${activeMode === "casual" ? "checked" : ""} style="margin-top:3px">
         <div>
           <div style="font-weight:600;color:var(--text);font-size:13px">🟡 休闲高福利模式（高爆率 · 活跃社群）</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 800-2000 + 连签 100，利率 3%，造反率 20%，祈福爆发 15%，赌博成功率 60%。低惩罚快节奏，极大激发互动。</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 800-2000 + 连签 100，利率 1%，造反率 20%，祈福爆发 15%，赌博成功率 60%。低惩罚快节奏，极大激发互动。</div>
         </div>
       </label>
       <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "hardcore" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
@@ -293,7 +293,7 @@ async function openAutoBalanceModal() {
       try {
         const r = await getBridge().apiPost("config/auto_balance", { mode });
         if (r && r.ok) {
-          const _summary = mode === "casual" ? "签到800-2000+连签100，利率3%，造反20%" : (mode === "hardcore" ? "签到150-400+连签20，利率1%，造反45%" : "签到300-800+连签50，利率2%，造反35%");
+          const _summary = mode === "casual" ? "签到800-2000+连签100，利率1%，造反20%" : (mode === "hardcore" ? "签到150-400+连签20，利率1%，造反45%" : "签到300-800+连签50，利率1%，造反35%");
           toast(`已成功应用【${mode === "standard" ? "标准平衡" : (mode === "casual" ? "休闲福利" : "硬核博弈")}】数值方案！${_summary}`, "ok");
           modal.className = "";
           try { await refreshBalanceBadges(); } catch (e) {}

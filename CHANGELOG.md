@@ -1,5 +1,12 @@
 # 更新日志
 
+## v2026w1004b
+- 🏷️ **WebUI 更名「小白测试版」**：`index.html` 浏览器 `<title>` 与页头 `<h1>`、README 首段的「管理控制台」统一改为「小白测试版」（CHANGELOG 历史条目保留原样）；
+- 🔢 **存款利率三模式全链路对齐 1%**（前后端同类数值统一口径）：休闲预设 `balance.py` `"存款利率": "2"→"1"`、引擎兜底 `bank.py DEFAULTS` `3→1`、`transactions.py` 存/取两处 `cfgi(..., 2)→1`、`webui_schema.json` default `2→1`、前端 `05_config.js` 模式卡与选模式 toast 文案 `利率2%/3%→1%`（标准/硬核本就 1%，不动）；
+- 🎨 **线条精简**：删 `.m3-page-header` 下边线 ×2（基础块死样式 + M3 块，消除每页页头悬浮横线）、`.side-group` 分组分隔线（含 `:last-child` 补偿规则）、`index.html` 图片浏览孤立 `border-top`；表格行 / cfg 行 / 弹窗头 / atlas 吸顶栏结构线保留；
+- 📱 **移动端 Tab 修复（含运维组）**：`#mainTabs button` 由 `flex:1 1 0 / min-width:0`（窄屏均分压扁、文字顶边）改为 `flex:1 1 auto / min-width:max-content` —— 自然宽度、放得下自动撑满、放不下由已有的 `overflow-x:auto` 容器横滚；≤900px 补子 Tab 与分组 pill `min-height:44px` 触控高；iframe 窄屏实测（390px 运维组）备份管理/根目录浏览/日志/关于 = 103/116/77/77 自然宽、`scrollWidth 401 > clientWidth 353` 横滚、零裁切；
+- 🔢 **版本**：`2026w1004b`（同日序号递增）；`bump_version.py` 同步 metadata / index 四锚点 / `FRONTEND_VER`，`?v=` 12 处手升 `2026w1004b`，README 标题与小节同步。
+
 ## v2026w1004a
 - 🐛 **持久化目录深度修复（真路径 bug）**：`core/storage/db.py` ×4 与 `app_config.py` ×1 用 `dirname(dirname(__file__))` 推导插件根，但文件在 `core/storage/`（深度 3）只上跳到 `core/`——裸跑（无 AstrBot StarTools）时把持久化目录解析成 `core/data` 并复制图片池污染源码树（本轮实测复现），迁移种子源也指向 `core/data/...` 永远落空；统一改为三级 dirname（与 `core/api/*` 同深度文件的既有写法一致）。深度 2 文件（app/config/logger/webdav/ride 等）的两级写法正确、不动。
 - 🐛 **旧库导入修复（真 NameError）**：`core/api/legacy_ini.py` 缺 `import os/json`——文件名/目录的 gid-qq 推断（L39/43/44）与 rides/spirits JSON 解析（L171/183/271/349）全部 NameError，且均被 `except` 静默吞掉，旧 INI 导入实际丢失这部分数据；补导入后恢复。

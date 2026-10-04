@@ -26,7 +26,7 @@ def cmd_deposit(gid, qq, amount):
         have = ST.coins_get(gid, qq)
         if have < amount:
             return f"亲，您的{ST.coin_name()}不足，请重新选择存款数！"
-        rate = cfgi("银行配置", "存款利率", 2)
+        rate = cfgi("银行配置", "存款利率", 1)
         cap = cfgi("银行配置", "利息上限", 50000)
         interest = _settle_interest(a, rate, cap)
         old = a.int("deposit")
@@ -73,7 +73,7 @@ def cmd_withdraw(gid, qq, amount):
             return "请输入正确格式：取款 金额（正整数）"
         if dep < amount:
             return f"存款不足！当前存款：{dep}"
-        rate = cfgi("银行配置", "存款利率", 2)
+        rate = cfgi("银行配置", "存款利率", 1)
         cap = cfgi("银行配置", "利息上限", 50000)
         interest = _settle_interest(a, rate, cap)
         # 利息未到时提示剩余时间与可用强制取款，但仍允许取款（取款成功但无利息，满足测试与需求38的提示）
