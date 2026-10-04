@@ -2971,6 +2971,15 @@
       border-color: var(--m3-sys-color-primary);
       background: var(--m3-sys-color-surface-container-high);
     }
+    /* dock 内搜索框不再自描边/自填充：外层 dock 已是胶囊容器，内外双层描边会在两端挤出双弧怪线；聚焦高亮改由 dock 承担 */
+    .m3-filter-dock .m3-filter-search,
+    .m3-filter-dock .m3-filter-search:focus-within {
+      border-color: transparent;
+      background: transparent;
+    }
+    .m3-filter-dock:focus-within {
+      border-color: var(--m3-sys-color-primary);
+    }
     .m3-filter-search > span:first-child {
       position: absolute;
       left: 14px;

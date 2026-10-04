@@ -23,7 +23,7 @@ const EXPORT_MODULES = [
       await getBridge().apiPost("spirits/save", data);
       try { await loadSpirits(true); } catch (e) {}
     },
-    detect: (d) => (d.kind === "spirits" || d.spirits || d.parts?.atlas) ? (d.parts?.atlas || (d.spirits ? { spirits: d.spirits, maps: d.maps, shop: d.shop } : null)) : null
+    detect: (d) => (d.kind === "spirits" || d.kind === "atlas" || d.spirits || d.parts?.atlas || d.atlas) ? (d.parts?.atlas || d.atlas || (d.spirits ? { spirits: d.spirits, maps: d.maps, shop: d.shop } : null)) : null
   },
   {
     key: "shops",
@@ -46,7 +46,7 @@ const EXPORT_MODULES = [
       await getBridge().apiPost("config/save", { "商城图鉴": p });
       try { await loadShops(); } catch (e) {}
     },
-    detect: (d) => (d.kind === "shops" || d.parts?.shops || d.ride_shop !== undefined) ? (d.parts?.shops || { ride_shop: d.ride_shop, weapon_attrs: d.weapon_attrs, weapon_order: d.weapon_order, pool: d.pool }) : null
+    detect: (d) => (d.kind === "shops" || d.parts?.shops || d.shops || d.ride_shop !== undefined) ? (d.parts?.shops || d.shops || { ride_shop: d.ride_shop, weapon_attrs: d.weapon_attrs, weapon_order: d.weapon_order, pool: d.pool }) : null
   },
   {
     key: "treasures",
@@ -131,6 +131,10 @@ async function exportSingleModule(modKey) {
     toast(`正在读取${mod.title}…`, "");
     const cur = (modKey === "shops" || modKey === "treasures" || modKey === "rules") ? await apiTimeout(getBridge().apiGet("config/get"), 20000, "config/get") : null;
     const data = await mod.gather(cur);
+    // 空包守卫：后端未连接/该模块为空时不落文件，避免产出“导出成功却导不回”的废包
+    if (data == null || (typeof data === "object" && !Array.isArray(data) && !Object.keys(data).length)) {
+      throw new Error("未读取到数据（后端未连接或模块为空），已取消导出");
+    }
     const payload = {
       app: typeof PLUGIN_ID !== "undefined" ? PLUGIN_ID : "astrbot_plugin_xbbot_beta",
       kind: modKey,
@@ -256,8 +260,16 @@ function initExportHubEvents() {
       }
 
       const parts = {};
+      const emptyNames = [];
       for (const m of selectedMods) {
-        parts[m.key] = await m.gather(cur);
+        const v = await m.gather(cur);
+        const isEmpty = v == null || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length) || (Array.isArray(v) && !v.length);
+        if (isEmpty) emptyNames.push(m.title.replace(/^[^\s]+\s*/, ""));
+        else parts[m.key] = v;
+      }
+      if (!Object.keys(parts).length) {
+        toast("所选模块均未读取到数据（后端未连接？），已取消导出", "bad");
+        return;
       }
 
       const payload = {
@@ -274,7 +286,7 @@ function initExportHubEvents() {
         mime: "application/json;charset=utf-8",
         rawText: JSON.stringify(payload, null, 2)
       });
-      toast(`已打包 ${selectedMods.length} 个模块`, "ok");
+      toast(`已打包 ${Object.keys(parts).length} 个模块` + (emptyNames.length ? `（${emptyNames.join("、")}为空已跳过）` : ""), "ok");
       closeExportHub();
     } catch (err) {
       toast("打包导出失败: " + (err.message || err), "bad");

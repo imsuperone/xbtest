@@ -1218,12 +1218,17 @@ async function importSpirits() {
       // BOM 头（Windows 记事本存档常见）先剥，否则 JSON.parse 必炸，导出文件反而导不回
       const txt = (await file.text()).replace(/^\uFEFF/, "");
       const data = JSON.parse(txt);
+      // 兼容导出中心单项包 {atlas:{…}} 与整包 {parts:{atlas:{…}}}：先解包出图鉴节
+      const _d = (data && typeof data === "object" && !Array.isArray(data))
+        ? ((data.parts && data.parts.atlas && typeof data.parts.atlas === "object") ? data.parts.atlas
+          : (data.atlas && typeof data.atlas === "object") ? data.atlas : data)
+        : data;
       // 空图鉴导出的 {spirits:{},maps:{},shop:{}} 全空对象仍合法（旧代码按值真假判空文件直接拒掉）
-      const has = data && typeof data === "object" && !Array.isArray(data)
-        && ("spirits" in data || "maps" in data || "shop" in data);
-      if (!has) throw new Error("JSON需包含 spirits/maps/shop（请用本页导出的文件）");
+      const has = _d && typeof _d === "object" && !Array.isArray(_d)
+        && ("spirits" in _d || "maps" in _d || "shop" in _d);
+      if (!has) throw new Error("JSON需包含 spirits/maps/shop（请用本页或导出中心导出的图鉴文件）");
       const payload = {};
-      ["spirits", "maps", "shop"].forEach((k) => { if (data[k] && typeof data[k] === "object" && !Array.isArray(data[k])) payload[k] = data[k]; });
+      ["spirits", "maps", "shop"].forEach((k) => { if (_d[k] && typeof _d[k] === "object" && !Array.isArray(_d[k])) payload[k] = _d[k]; });
       if (!Object.keys(payload).length) throw new Error("文件中无有效数据");
       const r = await getBridge().apiPost("spirits/save", payload);
       if (r && r.error) throw new Error(r.error);
@@ -1315,9 +1320,13 @@ async function importPreset() {
     try {
       const txt = (await file.text()).replace(/^\uFEFF/, "");
       const data = JSON.parse(txt);
-      if (!data || typeof data !== "object" || data.kind !== "preset" || !data.parts || typeof data.parts !== "object")
-        throw new Error("不是预设包（请用本页“预设打包”导出的文件）");
+      if (!data || typeof data !== "object"
+        || (data.kind !== "preset" && data.kind !== "modular_preset")
+        || !data.parts || typeof data.parts !== "object")
+        throw new Error("不是预设包（请用本页“预设打包”或“导出中心”导出的文件）");
       const parts = data.parts;
+      // 导出中心宝物节键名为 treasures、预设包为 treasure：归一到同一形状后走同一恢复链
+      if (!parts.treasure && parts.treasures && typeof parts.treasures === "object") parts.treasure = parts.treasures;
       const _n = (o) => (o && typeof o === "object" ? Object.keys(o).length : 0);
       const cnt = [];
       if (parts.atlas && typeof parts.atlas === "object") {
@@ -1331,8 +1340,13 @@ async function importPreset() {
         const bits = ["ride_shop", "weapon_attrs", "weapon_order"].filter((k) => parts.shops[k] !== undefined);
         if (bits.length) cnt.push("商城(" + bits.join("/") + ")");
       }
-      if (!cnt.length) throw new Error("包内无有效数据");
-      if (!(await uiConfirm("导入预设将覆盖：" + cnt.join("、") + "。\n先自动存一份配置快照，可回滚，继续？", "恢复预设"))) return;
+      if (!cnt.length) throw new Error("包内无有效数据（仅规则/玩家类模块请用“导入中心”）");
+      // 导出中心整包可能附带规则/玩家节：本页不恢复它们，确认框明示避免“以为导入了”的误导
+      const _extra = [];
+      if (parts.rules) _extra.push("规则");
+      if (parts.users) _extra.push("玩家");
+      const _note = _extra.length ? `包内${_extra.join("/")}数据不在本页恢复范围（请用“导入中心”）。` : "";
+      if (!(await uiConfirm("导入预设将覆盖：" + cnt.join("、") + "。" + _note + "\n先自动存一份配置快照，可回滚，继续？", "恢复预设"))) return;
       try { await getBridge().apiPost("backups/config/snapshot/save", {}); }
       catch (err) {
         if (!(await uiConfirm("快照失败（" + ((err && err.message) || err) + "），无回滚点仍继续？", "恢复预设"))) return;

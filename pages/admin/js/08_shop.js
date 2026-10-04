@@ -1122,17 +1122,20 @@ async function importShops() {
   inp.onchange = async (e) => {
     const file = e.target.files[0]; if (!file) return;
     try {
-      const txt = await file.text(); const data = JSON.parse(txt);
+      // BOM 头先剥（记事本存档常见，不剥 JSON.parse 必炸）
+      const txt = (await file.text()).replace(/^\uFEFF/, ""); const data = JSON.parse(txt);
+      // 导出中心单项包 {kind:"shops", shops:{…}} 先解包；其余格式原样
+      const pkg = (data && data.kind === "shops" && data.shops && typeof data.shops === "object") ? data.shops : data;
       const done = [], failed = [];
       // 新格式：全量商城包
-      if (data && (data.kind === "shop" || data.spirit_shop !== undefined || data.weapon_attrs !== undefined || Array.isArray(data.pool))) {
-        if (data.ride_shop !== undefined) {
-          const r = await getBridge().apiPost("config/save", { "商城图鉴": { "ride_shop": data.ride_shop } });
+      if (pkg && (pkg.kind === "shop" || data.kind === "shops" || pkg.spirit_shop !== undefined || pkg.weapon_attrs !== undefined || Array.isArray(pkg.pool))) {
+        if (pkg.ride_shop !== undefined) {
+          const r = await getBridge().apiPost("config/save", { "商城图鉴": { "ride_shop": pkg.ride_shop } });
           if (r && r.error) throw new Error(r.error);
           done.push("坐骑");
         }
-        if (data.weapon_attrs !== undefined) {
-          let _attrs = data.weapon_attrs;
+        if (pkg.weapon_attrs !== undefined) {
+          let _attrs = pkg.weapon_attrs;
           if (typeof _attrs === "string" && _attrs.trim()) { try { _attrs = JSON.parse(_attrs); } catch (err) { _attrs = null; } }
           if (_attrs && typeof _attrs === "object") {
             const r = await getBridge().apiPost("weapons/pool/attrs", { attrs: _attrs, full: 1 });
@@ -1140,20 +1143,20 @@ async function importShops() {
             done.push("武器属性");
           }
         }
-        if (data.weapon_order !== undefined) {
-          const r = await getBridge().apiPost("config/save", { "商城图鉴": { "weapon_order": data.weapon_order } });
+        if (pkg.weapon_order !== undefined) {
+          const r = await getBridge().apiPost("config/save", { "商城图鉴": { "weapon_order": pkg.weapon_order } });
           if (r && r.error) throw new Error(r.error);
           done.push("武器顺序");
         }
-        if (data.spirit_shop && typeof data.spirit_shop === "object") {
-          const r = await getBridge().apiPost("spirits/save", { shop: data.spirit_shop });
+        if (pkg.spirit_shop && typeof pkg.spirit_shop === "object") {
+          const r = await getBridge().apiPost("spirits/save", { shop: pkg.spirit_shop });
           if (r && r.error) throw new Error(r.error);
           done.push("精灵道具");
         }
-        if (Array.isArray(data.pool) && data.pool.length) {
+        if (Array.isArray(pkg.pool) && pkg.pool.length) {
           const have = new Set();
           try { ["SSR", "SR", "R"].forEach((rar) => ((POOL_WEAPONS && POOL_WEAPONS[rar]) || []).forEach((it) => have.add(rar + "|" + it.name))); } catch (err) {}
-          const missing = data.pool.filter((p) => p && p.name && !have.has((p.rar || "") + "|" + p.name)).length;
+          const missing = pkg.pool.filter((p) => p && p.name && !have.has((p.rar || "") + "|" + p.name)).length;
           if (missing) failed.push(missing + "个武器图片缺失已跳过（属性已恢复，传图后生效）");
         }
         if (!done.length && !failed.length) throw new Error("文件中无有效数据");

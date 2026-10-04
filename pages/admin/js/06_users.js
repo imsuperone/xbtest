@@ -278,7 +278,8 @@ async function importAllUsers() {
   inp.onchange = async (e) => {
     const file = e.target.files[0]; if (!file) return;
     try {
-      const txt = await file.text();
+      // BOM 头（Windows 记事本存档常见）先剥，否则 JSON.parse 必炸
+      const txt = (await file.text()).replace(/^\uFEFF/, "");
       const data = JSON.parse(txt);
       // 兼容单用户与全量
       const payload = data.users ? data : { users: [data] };
