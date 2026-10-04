@@ -3348,4 +3348,38 @@
   .side-nav { display: none; }
 }
 
+/* ===== 真机反馈整改：容器内嵌 input「框中框」修复（2026w1005a）=====
+   根因：admin.css:768 的全局字段规则 input:not([type=checkbox]):not([type=radio])
+   为 (0,2,1)+!important（dark 780 为 (0,3,1)+!important，focus 847 为 (0,4,1)+!important），
+   压过 .m3-filter-search input / .m3-search-pill input / .atlas-search-wrap input 的
+   透明化规则 (0,1,1)，使每个搜索 pill 内部再渲出一层灰底 1px 圆角框（框中框双描边，
+   由 742a08e 引入的回归，393px 与 1100px 均复现）。
+   此处以 (0,4,1)/(0,5,1)+!important 放平容器内 input；:not(:read-only) 保留只读灰态，
+   聚焦反馈交还给外层容器 :focus-within。 */
+.m3-filter-search input:not([type="checkbox"]):not([type="radio"]):not(:read-only),
+.m3-search-pill input:not([type="checkbox"]):not([type="radio"]):not(:read-only),
+.atlas-search-wrap input:not([type="checkbox"]):not([type="radio"]):not(:read-only) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none;
+  border-radius: 0;
+}
+.m3-filter-search input:not([type="checkbox"]):not([type="radio"]):not(:read-only):hover,
+.m3-search-pill input:not([type="checkbox"]):not([type="radio"]):not(:read-only):hover,
+.atlas-search-wrap input:not([type="checkbox"]):not([type="radio"]):not(:read-only):hover,
+.m3-filter-search input:not([type="checkbox"]):not([type="radio"]):not(:read-only):focus,
+.m3-search-pill input:not([type="checkbox"]):not([type="radio"]):not(:read-only):focus,
+.atlas-search-wrap input:not([type="checkbox"]):not([type="radio"]):not(:read-only):focus {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none;
+}
+/* 聚焦反馈移到外层 pill 容器（m3-search-pill 的边框为内联样式，需 !important 才能覆盖） */
+.m3-search-pill:focus-within,
+.atlas-search-wrap:focus-within {
+  border-color: var(--m3-sys-color-primary) !important;
+}
+
   

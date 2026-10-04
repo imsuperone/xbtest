@@ -1,5 +1,9 @@
 # 更新日志
 
+## v2026w1005a
+- 🐛 **搜索框框中框修复（真机反馈）**：`admin.css` 全局字段规则（`:768`，(0,2,1)+`!important`，暗色 780 / 聚焦 847 同源）压过 `.m3-filter-search input` / `.m3-search-pill input` / `.atlas-search-wrap input` 的透明化规则 (0,1,1)，每个搜索 pill 内部再渲出一层灰底 1px 圆角框 —— 手机端肉眼即「莫名其妙的底色和线条」（`742a08e` 引入的回归，393px 与 1100px 均复现）；末尾追加 (0,4,1)/(0,5,1)+`!important` 块放平三类容器内 input 的底色 / 边框 / 阴影（常态 + hover + focus），`:not(:read-only)` 保留只读灰态，聚焦反馈交还外层 `.m3-search-pill` / `.atlas-search-wrap` 的 `:focus-within` 主色描边；393px iframe 计算样式核验（常态与聚焦态均 `transparent` / `border 0` / 无阴影，外层 pill 单框）+ 截图目检。
+- 🔢 **版本**：`2026w1005a`（跨日：改动起于 1004 归档到 1005）；`bump_version.py` 同步 metadata / index 四锚点 / `FRONTEND_VER`，`?v=` 12 处手升，`core/version.py` `_FALLBACK` 同步，README 标题与小节同步 —— 刷前端缓存锚点让真机拉到新 CSS。
+
 ## v2026w1004d
 - 🔃 **前端缓存号全量刷新**：`?v=` 12 处由 `2026w1004c` 升 `2026w1004d` —— 导入导出环路修复、搜索框重排、通知单通道化三轮改动此前均在 w1004c 同一版本号内追加、缓存锚点未变，已部署真机与浏览器会继续沿用旧 JS/CSS；本版单独刷缓存锚点，并同步页头版本号 / 关于页 / 导出 `FRONTEND_VER`，真机页头显示 `v2026w1004d` 即为新构建。
 - 🔢 **版本**：`2026w1004d`（同日序号递增）；`bump_version.py` 同步 metadata / index 四锚点 / `FRONTEND_VER`，`?v=` 12 处手升，`core/version.py` `_FALLBACK` 同步，README 标题与小节同步。
