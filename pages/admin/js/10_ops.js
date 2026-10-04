@@ -67,7 +67,7 @@ async function loadRemoteWebDAVFiles(fromCache) {
           </div>
           <div style="display:flex;gap:6px;align-items:center">
             ${isDb ? `<button class="ghost" data-wdrestore="${esc(f.name)}" style="color:var(--acc);border-color:var(--accBorder);font-size:12px;padding:4px 10px">🔄 快捷恢复</button>` : ""}
-            <button class="ghost" data-wddelete="${esc(f.name)}" style="color:var(--bad);border-color:rgba(239,68,68,0.3);font-size:12px;padding:4px 10px" title="从 WebDAV 云端彻底删除此备份文件">🗑️ 删除</button>
+            <button class="ghost" data-wddelete="${esc(f.name)}" style="color:var(--bad);border-color:rgba(239,68,68,0.3);font-size:12px;padding:4px 10px" title="从 WebDAV 云端删除此备份文件">🗑️ 删除</button>
           </div>
         </div>
       `;
@@ -90,27 +90,27 @@ async function loadRemoteWebDAVFiles(fromCache) {
       btn.addEventListener("click", async () => {
         const fname = btn.dataset.wdrestore;
         const ok = await uiConfirm(
-          `确认从 WebDAV 远端备份【${fname}】恢复数据库？\n\n注意：当前数据与配置将即刻被远端备份覆盖并热重载生效！`,
-          "恢复远端云备份"
+          `确认从 WebDAV 云端备份【${fname}】恢复数据库？\n\n注意：当前数据与配置将被该云端备份覆盖并热重载生效。`,
+          "恢复云端备份"
         );
         if (!ok) return;
         const origText = btn.textContent;
         btn.disabled = true;
         btn.textContent = "⏳ 正在下载并恢复...";
-        toast(`正在从云端拉取 [${fname}] 并执行恢复...`, "ok", 6000);
+        toast(`正在下载云端备份 [${fname}] 并恢复...`, "ok", 6000);
         try {
           const r = await getBridge().apiPost("backup/webdav/restore", { file: fname });
           if (r && r.ok) {
-            toast(`远端备份 [${fname}] 恢复成功！`, "ok", 6000);
+            toast(`云端备份 [${fname}] 恢复成功`, "ok", 6000);
             await loadBackups(BACKUP_DIR);
           } else {
             const err = (r && r.msg) ? r.msg : ((r && r.error) ? r.error : "恢复失败");
             toast(`恢复失败: ${err}`, "bad", 8000);
-            uiAlert(err, "远端恢复失败", "⚠️");
+            uiAlert(err, "云端恢复失败", "⚠️");
           }
         } catch (e) {
           toast(`恢复异常: ${e.message}`, "bad", 8000);
-          uiAlert(e.message || String(e), "远端恢复异常", "⚠️");
+          uiAlert(e.message || String(e), "云端恢复异常", "⚠️");
         } finally {
           btn.disabled = false;
           btn.textContent = origText;
@@ -123,18 +123,18 @@ async function loadRemoteWebDAVFiles(fromCache) {
       btn.addEventListener("click", async () => {
         const fname = btn.dataset.wddelete;
         const ok = await uiConfirm(
-          `确定要从 WebDAV 云端彻底删除备份文件【${fname}】吗？\n\n注意：此操作将直接从云端服务器永久删除该文件，不可逆！`,
+          `确定要从 WebDAV 云端删除备份文件【${fname}】吗？\n\n注意：该文件将从云端服务器永久删除，不可撤销。`,
           "删除云端备份"
         );
         if (!ok) return;
         const origText = btn.textContent;
         btn.disabled = true;
         btn.textContent = "⏳ 删除中...";
-        toast(`正在从云端删除 [${fname}]...`, "ok", 4000);
+        toast(`正在删除云端备份 [${fname}]...`, "ok", 4000);
         try {
           const r = await getBridge().apiPost("backup/webdav/delete", { file: fname });
           if (r && r.ok) {
-            toast(`云端备份 [${fname}] 已删除！`, "ok", 5000);
+            toast(`云端备份 [${fname}] 已删除`, "ok", 5000);
             await loadRemoteWebDAVFiles();
           } else {
             const err = (r && r.msg) ? r.msg : ((r && r.error) ? r.error : "删除失败");
@@ -169,14 +169,14 @@ document.getElementById("btnBackupDelete")?.addEventListener("click", async () =
   const sel = window.BACKUP_SELECTED || "";
   if (!sel) { toast("请先单击选中要删除的备份", "bad"); return; }
   if (!(await uiConfirm("确认删除备份 " + sel + "？", "删除备份"))) return;
-  if (!(await uiConfirm("再次确认删除 \"" + sel + "\"？", "终极确认删除"))) return;
+  if (!(await uiConfirm("再次确认删除 \"" + sel + "\"？", "再次确认删除"))) return;
   try { await getBridge().apiPost("backups/delete", { path: sel }); toast("已删除", "ok"); window.BACKUP_SELECTED=""; await loadBackups(BACKUP_DIR); } catch (err) { toast("删除失败: " + err.message, "bad"); }
 });
 document.getElementById("btnBackupRestore")?.addEventListener("click", async () => {
   const sel = window.BACKUP_SELECTED || "";
   if (!sel) { toast("请先单击选中要恢复的备份", "bad"); return; }
-  if (!(await uiConfirm("确认恢复备份 " + sel + "？当前数据将被覆盖！", "恢复备份"))) return;
-  if (!(await uiConfirm("再次确认恢复 \"" + sel + "\"？覆盖后只能从备份恢复！", "终极确认恢复"))) return;
+  if (!(await uiConfirm("确认恢复备份 " + sel + "？当前数据将被覆盖。", "恢复备份"))) return;
+  if (!(await uiConfirm("再次确认恢复 \"" + sel + "\"？覆盖后只能从备份恢复。", "再次确认恢复"))) return;
   try { await getBridge().apiPost("backups/restore", { path: sel }); toast("已恢复，需重启插件生效", "ok"); } catch (err) { toast("恢复失败: " + err.message, "bad"); }
 });
 document.getElementById("btnBackupExportSel")?.addEventListener("click", async () => {
@@ -198,20 +198,20 @@ document.getElementById("btnBackupExportSel")?.addEventListener("click", async (
     const r = await callApi("backups/export", { path: sel }, "GET");
     if (r && r.data) {
       downloadBase64File(r.data, r.filename || filename);
-      toast("已成功导出备份文件", "ok");
+      toast("已导出备份文件", "ok");
     } else {
       toast("导出失败: " + (r && r.error ? r.error : "无数据"), "bad");
     }
   } catch (err) { toast("导出失败: " + err.message, "bad"); }
 });
 document.getElementById("btnClearAll")?.addEventListener("click", async () => {
-  if (!(await uiConfirm("⚠️ 确认清空所有数据？此操作将删除所有钱包/账户/群数据/备份且不可恢复！", "危险：清空所有数据"))) return;
+  if (!(await uiConfirm("⚠️ 确认清空所有数据？将删除全部钱包、账户、群数据与备份，且不可恢复。", "危险：清空所有数据"))) return;
   const input = await uiPrompt("为防止误操作，请输入“确认删除”以继续：", "", "清空所有数据");
   if (input !== "确认删除") { toast("输入不正确，已取消清空", "bad"); return; }
-  if (!(await uiConfirm("最终确认：真的要彻底清空所有数据吗？", "终极确认清空"))) return;
+  if (!(await uiConfirm("再次确认：清空所有数据？", "再次确认清空"))) return;
   try {
     await getBridge().apiPost("admin/clear", {confirm: "确认删除", confirm2: "确认"});
-    toast("已成功清空所有数据", "ok");
+    toast("已清空所有数据", "ok");
     await loadUsers();
     await loadBackups("");
     if (typeof loadStats === "function") try { await loadStats(); } catch(e) {}
@@ -305,7 +305,7 @@ async function saveBackupCfg() {
         return;
       }
     } catch (readErr) {}
-    say("备份配置已成功保存并校验生效", true);
+    say("备份配置已保存并校验生效", true);
     // 保存保留数量后即时按新值修剪本地+云端旧备份，让“保留 N 份”立即生效
     try {
       const pr = await getBridge().apiPost("backups/prune", {});
@@ -445,12 +445,12 @@ async function openAirdropModal() {
   const okBtn = document.getElementById("appModalOk");
 
   if (icon) icon.textContent = "🎁";
-  if (title) title.textContent = "批量资产空投与福利分发";
+  if (title) title.textContent = "批量资产空投";
   if (inputWrap) inputWrap.style.display = "none";
 
   content.innerHTML = `
     <div style="font-size:12px;color:var(--muted);margin-bottom:12px">
-      一键向全群或指定群所有玩家批量发放货币、体力或抽奖券福利（自动事务写入）：
+      向全群或指定群所有玩家批量发放货币、体力或抽奖券（自动事务写入）：
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div>
@@ -484,7 +484,7 @@ async function openAirdropModal() {
     cancelBtn.onclick = () => { modal.className = ""; };
   }
   if (okBtn) {
-    okBtn.textContent = "🚀 立即发送全员空投";
+    okBtn.textContent = "🚀 发送全员空投";
     okBtn.onclick = async () => {
       const gid = (document.getElementById("dropGid")?.value || "").trim();
       const money = parseInt(document.getElementById("dropMoney")?.value || 0, 10);
@@ -493,11 +493,11 @@ async function openAirdropModal() {
       const reason = document.getElementById("dropReason")?.value || "全员福利空投";
 
       okBtn.disabled = true;
-      okBtn.textContent = "正在分发空投...";
+      okBtn.textContent = "正在发送空投...";
       try {
         const res = await getBridge().apiPost("users/airdrop", { gid, money, stamina, tickets, reason });
         if (res && res.ok) {
-          toast(`🎉 空投发放成功！已成功为 ${res.target_count || 0} 名用户注入资产`, "ok");
+          toast(`空投已发放：已为 ${res.target_count || 0} 名用户注入资产`, "ok");
           modal.className = "";
           await loadUsers();
           await loadAnalytics();
@@ -522,12 +522,12 @@ const origInitNav = typeof initNav === "function" ? initNav : null;
 
 
 async function calibrateSlavePrices() {
-  if (!(await uiConfirm("确认一键校准全群所有玩家的奴隶身价？\n系统将自动检测全库所有身价为 0 或未初始化的用户，并批量匹配为当前配置的初始身价！", "一键校准全员身价"))) return;
-  toast("正在智能校准全员奴隶身价...", "ok");
+  if (!(await uiConfirm("确认校准全群所有玩家的奴隶身价？\n将检测全库中身价为 0 或未初始化的用户，并批量匹配为当前配置的初始身价。", "校准全员身价"))) return;
+  toast("正在校准全员奴隶身价...", "ok");
   try {
     const res = await getBridge().apiPost("slave/calibrate", {});
     if (res && res.ok) {
-      toast(res.msg || `🎉 成功校准 ${res.fixed_count || 0} 名用户的奴隶身价！`, "ok");
+      toast(res.msg || `已校准 ${res.fixed_count || 0} 名用户的奴隶身价`, "ok");
       await loadSlaveUsers();
       if (typeof loadAnalytics === "function") try { await loadAnalytics(); } catch(e) {}
     } else {
@@ -563,12 +563,12 @@ if (document.readyState === "loading") {
 
 // ---------- 数据库健康体检与碎片整理 (Doctor / Vacuum) ----------
 async function runDbDoctor() {
-  toast("正在执行数据库健康体检与碎片整理...", "ok");
+  toast("正在进行数据库体检与碎片整理...", "ok");
   try {
     const res = await getBridge().apiPost("backups/doctor", {});
     if (res && res.ok) {
       const tblInfo = res.tables ? Object.entries(res.tables).map(([k, v]) => `${k}: ${v} 行`).join(" | ") : "";
-      const msg = `🎉 数据库体检与整理完成！\n\n· 完整性健康状态: ${res.integrity}\n· 整理前总大小: ${res.size_before}\n· 整理后总大小: ${res.size_after}\n· 释放碎片空间: ${res.saved}\n· 数据表行数统计: ${tblInfo}`;
+      const msg = `数据库体检与整理完成。\n\n· 完整性状态: ${res.integrity}\n· 整理前总大小: ${res.size_before}\n· 整理后总大小: ${res.size_after}\n· 释放碎片空间: ${res.saved}\n· 数据表行数统计: ${tblInfo}`;
       await uiAlert(msg, "数据库体检报告", "🩺");
       toast(res.msg || "体检完成", "ok");
       if (typeof loadBackups === "function") try { await loadBackups(""); } catch(e){}
@@ -659,7 +659,7 @@ async function loadLogs(isAuto = false) {
       container.innerHTML = `<div class="log-empty" style="color:var(--bad)">拉取日志异常: ${esc(e.message || "网络或服务错误")} (可点击刷新重试)</div>`;
     }
     if (!isAuto) {
-      toast("拉取日志未成功: " + (e.message || "请稍后重试"), "bad");
+      toast("日志拉取失败: " + (e.message || "请稍后重试"), "bad");
     }
     return false;
   }
@@ -751,7 +751,7 @@ function initLogsEvents() {
 
       const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
       triggerDownload(blob, filename, content);
-      toast("日志已成功导出", "ok");
+      toast("日志已导出", "ok");
     } catch (e) {
       toast("导出日志失败: " + e.message, "bad");
     }

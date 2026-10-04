@@ -160,6 +160,46 @@ def txn_two_wallets(gid, src_qq, dst_qq, amount):
             return False
 
 
+def txn_cross_group(src_gid, dst_gid, qq, debit, credit):
+    """跨群原子搬钱（同一 QQ）：源群扣 debit、目标群入 credit，差额即销毁的手续费。
+    同持 _LOCK 一次提交，避免半成功。credit>debit / 同群 / 余额不足返 False；DB 失败返 None；成功返 True。"""
+    debit, credit = int(debit), int(credit)
+    if debit <= 0 or credit < 0 or credit > debit:
+        return False
+    if str(src_gid) == str(dst_gid):
+        return False
+    _ensure_db()
+    with _S._LOCK:
+        if _S._DB is None:
+            return False
+        try:
+            row = _S._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?",
+                                 (int(src_gid), int(qq))).fetchone()
+            src_cur = int(row[0]) if row else 0
+            if src_cur < debit:
+                return False
+            row2 = _S._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?",
+                                  (int(dst_gid), int(qq))).fetchone()
+            dst_cur = int(row2[0]) if row2 else 0
+            if dst_cur + credit > _S.COIN_CAP:
+                return False
+            _S._DB.execute(
+                "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
+                "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
+                (int(src_gid), int(qq), src_cur - debit))
+            _S._DB.execute(
+                "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
+                "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
+                (int(dst_gid), int(qq), dst_cur + credit))
+            if not _safe_commit():
+                _safe_rollback()
+                return None
+            return True
+        except Exception:
+            _safe_rollback()
+            return None
+
+
 def txn_two_wallets_acct(gid, src_qq, dst_qq, amount, acct_updates=None, acct_qq=None):
     """双钱包加指定账户字段的一次性事务。
 
@@ -237,7 +277,7 @@ def txn_two_wallets_acct(gid, src_qq, dst_qq, amount, acct_updates=None, acct_qq
                 touched.dirty = old_dirty
             return None
 
-__all__ = ["coins_add", "coins_get", "rank_batch", "txn_coins_acct", "txn_two_wallets", "txn_two_wallets_acct"]
+__all__ = ["coins_add", "coins_get", "rank_batch", "txn_coins_acct", "txn_two_wallets", "txn_two_wallets_acct", "txn_cross_group"]
 
 
 def rank_batch(gid, field="money", topn=500):

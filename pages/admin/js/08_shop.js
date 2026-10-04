@@ -99,7 +99,7 @@ async function exportImages() {
         mime: outFn.endsWith(".zip") ? "application/zip" : "application/octet-stream",
         base64Data: base64Data
       });
-      toast("已成功导出 " + outFn, "ok");
+      toast("已导出 " + outFn, "ok");
       return;
     }
 
@@ -109,7 +109,7 @@ async function exportImages() {
       mime: "application/json;charset=utf-8",
       rawText: fallbackStr
     });
-    toast("已成功导出 " + outFn, "ok");
+    toast("已导出 " + outFn, "ok");
   } catch (e) {
     toast("导出失败: " + e.message, "bad");
   }
@@ -126,7 +126,7 @@ document.getElementById("btnImgDelete")?.addEventListener("click", async () => {
   const sel = IMG_SELECTED || "";
   if (!sel) { toast("请先单击选中要删除的文件", "bad"); return; }
   if (!(await uiConfirm("确认删除 " + sel + "？", "删除文件"))) return;
-  if (!(await uiConfirm("再次确认删除 \"" + sel + "\"？", "终极确认删除"))) return;
+  if (!(await uiConfirm("再次确认删除 \"" + sel + "\"？", "再次确认删除"))) return;
   try { await getBridge().apiPost("images/delete", { path: sel }); toast("已删除", "ok"); IMG_SELECTED=""; await loadImages(IMG_DIR); } catch (err) { toast("删除失败: " + err.message, "bad"); }
 });
 document.getElementById("btnImgRename")?.addEventListener("click", async () => {

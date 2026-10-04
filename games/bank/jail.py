@@ -257,9 +257,9 @@ def cmd_go_jail(gid, qq):
         lim = 8
     if cnt >= lim:
         return f"亲，您今日主动入狱次数已达上限({lim}次)！"
-    add_stam = cfgi("银行配置", "进监狱增加体力", 10)
+    add_stam = cfgi("银行配置", "进监狱增加体力", 5)
     if add_stam <= 0:
-        add_stam = 10
+        add_stam = 5
     # 先发体力再落狱：体力失败直接返回（狱状态未动）；落狱保存失败则体力已到账、狱状态脏留待下轮落盘（禁倒挂）
     if ST.acct_add(gid, qq, "stamina", add_stam) is None:
         return "数据库繁忙，入狱体力奖励未到账，请稍后重试。"

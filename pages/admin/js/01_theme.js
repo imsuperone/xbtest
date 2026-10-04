@@ -645,7 +645,7 @@ function copyToClipboard(text) {
   try {
     if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
       navigator.clipboard.writeText(text).then(() => {
-        toast("已成功复制到剪贴板！", "ok");
+        toast("已复制到剪贴板", "ok");
       }).catch(() => {
         _execCommandCopy(text);
       });
@@ -669,7 +669,7 @@ function _execCommandCopy(text) {
     const successful = document.execCommand("copy");
     ta.remove();
     if (successful) {
-      toast("已成功复制到剪贴板！", "ok");
+      toast("已复制到剪贴板", "ok");
     } else {
       toast("复制失败，请在下方文本框内手动全选复制", "bad");
     }

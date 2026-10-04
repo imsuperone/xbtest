@@ -73,7 +73,7 @@ function renderSpiritUsersTable() {
 
   const spHint = document.getElementById("spiritUsersHint");
   if (spHint) {
-    spHint.innerHTML = `共 <strong>${RAW_SPIRIT_USERS.length}</strong> 名训练师（当前匹配 <strong>${rows.length}</strong> 名） · 实时统计出战宝可梦与综合战力`;
+    spHint.innerHTML = `共 <strong>${RAW_SPIRIT_USERS.length}</strong> 名训练师（当前匹配 <strong>${rows.length}</strong> 名） · 统计出战精灵与综合战力`;
   }
   let html = "";
   if (!rows.length) html = `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">暂无精灵数据</td></tr>`;
@@ -208,7 +208,7 @@ document.getElementById("btnWebDAVTest")?.addEventListener("click", async () => 
     };
     const res = await getBridge().apiPost("backup/webdav/test", payload);
     if (res && res.ok) {
-      const succMsg = res.msg || "WebDAV 连接与鉴权成功！";
+      const succMsg = res.msg || "WebDAV 连接与鉴权成功";
       if (msgEl) { msgEl.textContent = "✅ " + succMsg; msgEl.className = "msg ok"; }
       toast("WebDAV 测试成功: " + succMsg, "ok", 6000);
       await loadRemoteWebDAVFiles();
@@ -267,7 +267,7 @@ document.getElementById("btnWebDAVBackupNow")?.addEventListener("click", async (
   try {
     const res = await getBridge().apiPost("backup/webdav/upload", payload);
     if (res && res.ok) {
-      const succMsg = res.msg || "已成功上传至 WebDAV 远端！";
+      const succMsg = res.msg || "已上传至 WebDAV 云端";
       if (msgEl) { msgEl.textContent = "✅ " + succMsg; msgEl.className = "msg ok"; }
       toast("WebDAV 云备份成功: " + succMsg, "ok", 6000);
       await loadBackups(BACKUP_DIR);

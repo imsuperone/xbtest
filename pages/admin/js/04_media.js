@@ -277,7 +277,7 @@ function showTextPreview(name, text, truncated, filePath) {
       try {
         const res = await callApi("images/text/save", { path: filePath, text: newText }, "POST");
         if (res && res.ok) {
-          toast("文件保存成功！", "ok");
+          toast("文件已保存", "ok");
           isDirty = false;
           modal.className = "";
           if (modalBox) modalBox.classList.remove("modal-wide");
@@ -397,7 +397,7 @@ async function uploadImage(file) {
 }
 
 function bindTabs() {
-  const btns = document.querySelectorAll("#mainTabs button, #sideNav button");
+  const btns = document.querySelectorAll("#mainTabs button, #sideNav button[data-tab]");
   const TAB_GROUPS = {
     data: ["overview", "rank"],
     users: ["users", "slave", "spirit_users", "groups"],
@@ -474,6 +474,32 @@ function bindTabs() {
   try {
     document.querySelector("#mainTabs button.on")?.scrollIntoView({ inline: "center", block: "nearest" });
   } catch (e) {}
+}
+// 侧栏收起/展开（仅桌面侧栏可见时生效；状态存 xbbot_side_collapse）
+function initSideNavCollapse() {
+  const nav = document.getElementById("sideNav");
+  const toggle = document.getElementById("sideNavToggle");
+  if (!nav || !toggle) return;
+  nav.querySelectorAll("button[data-tab]").forEach((b) => {
+    const raw = b.textContent.trim();
+    const i = raw.indexOf(" ");
+    if (i > 0) b.innerHTML = raw.slice(0, i) + '<span class="side-nav-label">' + raw.slice(i + 1) + "</span>";
+    b.title = raw;
+  });
+  const apply = (col) => {
+    nav.classList.toggle("collapsed", col);
+    toggle.textContent = col ? "»" : "«";
+    toggle.title = col ? "展开导航" : "收起导航";
+    toggle.setAttribute("aria-label", toggle.title);
+  };
+  let col = false;
+  try { col = localStorage.getItem("xbbot_side_collapse") === "1"; } catch (e) {}
+  apply(col);
+  toggle.addEventListener("click", () => {
+    const next = !nav.classList.contains("collapsed");
+    apply(next);
+    try { localStorage.setItem("xbbot_side_collapse", next ? "1" : "0"); } catch (e) {}
+  });
 }
 function err(m) {
   const e = document.getElementById("footErr");

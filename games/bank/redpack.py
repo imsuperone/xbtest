@@ -105,7 +105,7 @@ def cmd_recv_red(gid, qq, pwd):
             if pwd in _grabbed or a.get("redpack_code") == pwd:
                 return "你已经抢过这个红包了！"
             cost_tili = cfgi("银行配置", "红包_抢体力", 1)
-            gain_meili = cfgi("银行配置", "红包_抢魅力", 10)
+            gain_meili = cfgi("银行配置", "红包_抢魅力", 1)
             base_meili = cfgi("银行配置", "红包_基本魅力", 1)
             if a.int("stamina") < cost_tili:
                 return f"体力不足，抢红包需要{cost_tili}体力！"

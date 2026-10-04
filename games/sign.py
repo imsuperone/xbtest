@@ -209,7 +209,7 @@ def cmd_sign(gid, qq):
             base = base_cfg
         else:
             base = _rng("金钱", "money", 800, 2000)
-        tili = _rng("体力", "stamina", 50, 100)
+        tili = _rng("体力", "stamina", 40, 80)
         meili = _rng("魅力", "charm", 15, 30)
         juan = _rng("奖券", "lottery_tickets", 3, 8)
         bonus = cfgi("签到配置", "连签加成", 100)
@@ -345,8 +345,8 @@ def cmd_draw(gid, qq, amount=1):
         except Exception:
             pass
         _coin_v = cfgi("抽奖配置", "现金奖", 2000)
-        _stam_v = cfgi("抽奖配置", "体力奖", 60)
-        _charm_v = cfgi("抽奖配置", "魅力奖", 40)
+        _stam_v = cfgi("抽奖配置", "体力奖", 30)
+        _charm_v = cfgi("抽奖配置", "魅力奖", 20)
         _outcomes = []
         _streak = lose_streak
         for _i in range(amount):
@@ -415,7 +415,7 @@ def cmd_gift(gid, qq, kind, amount):
     if amount > 999:
         return f"亲，{kind_cn}单次购买数量上限为999！"
     key = "stamina" if kind == "stamina" else "charm"
-    price = cfgi("签到配置", "体力价格" if kind == "stamina" else "魅力价格", 30 if kind == "stamina" else 3)
+    price = cfgi("签到配置", "体力价格" if kind == "stamina" else "魅力价格", 60 if kind == "stamina" else 30)
     total = price * amount
     # 读-校验-写全程持 _LOCK（RLock 可重入）：防锁外读余额/存款/属性绝对值回写造成丢更新
     with ST._LOCK:
@@ -481,9 +481,13 @@ def cmd_newbie(gid, qq):
 def cmd_like(gid, qq):
     a = _acct(gid, qq)
     today = _today().isoformat()
-    if a.get("like_date", "") == today:
+    # 全局每日一次：名片赞是 QQ 资料卡全局动作，日期闸门跨群共享（kv 按 QQ 存）；
+    # A 群赞过后 B 群当天直接提示已赞，不再二次触发。旧行仍读本群 like_date 兼容当日旧档。
+    gkey = "like_date_%s" % qq
+    if ST.recall_get(gkey, "") == today or a.get("like_date", "") == today:
         return "您今日已经点过赞，明天再来~"
     a.set("like_date", today)
+    ST.recall_set(gkey, today)
     n = cfgi("点赞配置", "点赞数", 5)
     try:
         n = max(1, min(int(n), 10))  # OneBot send_like 单次上限 10

@@ -89,7 +89,7 @@ const EXPORT_MODULES = [
   {
     key: "rules",
     title: "⚙️ 玩法规则与数值",
-    desc: "包含28大系统玩法数值与自定义指令回复（零玩家数据）",
+    desc: "包含28大系统玩法数值与自定义指令回复（不含玩家数据）",
     defaultChecked: false,
     gather: (cfg) => {
       const clean = {}, EX = new Set(["备份配置", "webdav_secret", "商城图鉴"]);
@@ -274,7 +274,7 @@ function initExportHubEvents() {
         mime: "application/json;charset=utf-8",
         rawText: JSON.stringify(payload, null, 2)
       });
-      toast(`已成功打包 ${selectedMods.length} 个独立模块`, "ok");
+      toast(`已打包 ${selectedMods.length} 个模块`, "ok");
       closeExportHub();
     } catch (err) {
       toast("打包导出失败: " + (err.message || err), "bad");

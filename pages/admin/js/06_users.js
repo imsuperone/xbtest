@@ -97,7 +97,7 @@ function renderUserTable() {
         <td>${inp("ma", u.charm, 52)}</td>
         <td>${inp("jj", u.lottery_tickets || 0, 52)}</td>
         <td><span class="badge badge-success">${u.sign || 0}次</span></td>
-        <td style="white-space:nowrap;text-align:center"><button data-save="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" class="sm">保存</button> <button class="ghost sm" data-export="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}">导出</button> <button class="ghost sm del" data-clear="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" title="彻底清除该用户全部数据（含奴隶、精灵与礼包资格）">清除</button></td>
+        <td style="white-space:nowrap;text-align:center"><button data-save="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" class="sm">保存</button> <button class="ghost sm" data-export="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}">导出</button> <button class="ghost sm del" data-clear="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" title="清除该用户全部数据（含奴隶、精灵与礼包资格）">清除</button></td>
       </tr>`;
     })
     .join("");
@@ -114,13 +114,13 @@ async function clearUserSingle(qq, gid) {
   if (_CLEARING_USERS.has(ckey)) return;
   // iframe 沙箱下原生 confirm 会被拦截导致按钮“无效”，统一用自研 uiConfirm（规则六二次确认）
   const ok = await uiConfirm(
-    `确定要彻底清除用户【${qq}】（群: ${gid}）的所有数据吗？\n\n` +
+    `确定清除用户【${qq}】（群: ${gid}）的全部数据吗？\n\n` +
     `将一并清除以下内容：\n` +
     `1. 钱包货币、银行存款、体力、魅力、奖券与签到记录\n` +
     `2. 奴隶系统：解除奴隶身份，且其名下持有的奴隶将全部释放自由\n` +
     `3. 精灵系统：拥有的所有精灵、出战骑乘状态与背包道具全部清除\n` +
     `4. 重置新手礼包与精灵领养状态（该用户可重新领取新手礼包）\n\n` +
-    `此操作立即生效且不可逆，是否确定清除？`,
+    `此操作立即生效且不可撤销，是否继续？`,
     "危险操作确认"
   );
   if (!ok) return;
@@ -135,7 +135,7 @@ async function clearUserSingle(qq, gid) {
       // 清除是破坏性操作，只允许 POST；禁止降级为可被预取的 GET。
     }
     if (res && (res.ok || res.saved || res.cleared)) {
-      toast(res.msg || `用户 ${qq} 数据已彻底清除`, "ok");
+      toast(res.msg || `用户 ${qq} 数据已清除`, "ok");
       await loadUsers();
       if (typeof loadSlaveUsers === "function") try { await loadSlaveUsers(); } catch(e) {}
       if (typeof loadSpiritUsers === "function") try { await loadSpiritUsers(); } catch(e) {}
@@ -152,7 +152,7 @@ async function clearUserSingle(qq, gid) {
 async function clearUserManual() {
   const curGid = (document.getElementById("userGidFilter")?.value || (typeof USER_GID_FILTER !== "undefined" ? USER_GID_FILTER : "") || "").trim();
   // iframe 下原生 prompt 会被拦截，统一用 uiPrompt
-  const qq = await uiPrompt("请输入要彻底清除数据的用户 QQ 号：", "", "清除单用户");
+  const qq = await uiPrompt("请输入要清除数据的用户 QQ 号：", "", "清除单用户");
   if (qq === null || qq === undefined) return;
   if (!String(qq).trim() || !/^\d{5,12}$/.test(String(qq).trim())) { if (String(qq).trim()) toast("QQ 号格式不正确", "bad"); return; }
   const targetQq = String(qq).trim();
@@ -191,7 +191,7 @@ async function cleanLeftUsers() {
   const ok = await uiConfirm(
     `⚠️ 确认清理【${scopeText}】的退群人员？
 
-系统将自动对比群聊实时成员列表，彻底删除已退群人员的钱包货币、奴隶身价关系、精灵背包与全部档案数据！`,
+将对比群聊实时成员列表，删除已退群人员的钱包货币、奴隶身价关系、精灵背包与全部档案数据。`,
     "清理退群人员"
   );
   if (!ok) return;
@@ -201,7 +201,7 @@ async function cleanLeftUsers() {
     // POST：GET 有副作用，禁走读通道（预取/重试误触发批量删除）
     const res = await callApi("users/clean_left", {}, "POST");
     if (res && res.ok) {
-      toast(`清理完成！已清理 ${res.cleaned_count || 0} 名退群人员数据`, "ok");
+      toast(`清理完成：已清理 ${res.cleaned_count || 0} 名退群人员数据`, "ok");
       await loadUsers();
       if (typeof loadSlaveUsers === "function") try { await loadSlaveUsers(); } catch(e) {}
       if (typeof loadSpiritUsers === "function") try { await loadSpiritUsers(); } catch(e) {}
@@ -247,7 +247,7 @@ async function exportAllUsers() {
         rawText: jsonStr,
         base64Data: base64Data
       });
-      toast(`已成功全量导出 ${usersList.length} 名用户数据`, "ok");
+      toast(`已导出 ${usersList.length} 名用户数据`, "ok");
       return;
     }
 
@@ -257,7 +257,7 @@ async function exportAllUsers() {
         mime: "application/json;charset=utf-8",
         base64Data: base64Data
       });
-      toast("已成功全量导出用户数据", "ok");
+      toast("已导出用户数据", "ok");
       return;
     }
 
@@ -267,7 +267,7 @@ async function exportAllUsers() {
       mime: "application/json;charset=utf-8",
       rawText: fallbackStr
     });
-    toast("已成功全量导出用户数据", "ok");
+    toast("已导出用户数据", "ok");
   } catch (err) {
     toast("导出失败: " + err.message, "bad");
   }
@@ -326,6 +326,7 @@ const CMD_NUMS = {
   "强制取款": [["银行配置", "存款利率", "存款利率%", "int"], ["银行配置", "利息上限", "利息上限", "int"]],
   "转账": [["银行配置", "转账最小金额", "最小金额", "int"], ["银行配置", "转账接收额度", "接收额度", "int"],
     ["银行配置", "转账消耗体力", "消耗体力", "int"]],
+  "跨群转账": [["银行配置", "跨群转账手续费", "手续费%", "int"], ["银行配置", "转账最小金额", "最小金额", "int"]],
   "发红包": [["银行配置", "红包_最小金额", "最小金额", "int"], ["银行配置", "红包_最大金额", "最大金额", "int"],
     ["银行配置", "红包_发体力", "发体力", "int"], ["银行配置", "红包_间隔时间", "间隔(秒)", "int"]],
   "抢红包": [["银行配置", "红包_抢体力", "抢体力", "int"], ["银行配置", "红包_抢魅力", "抢魅力", "int"],
@@ -352,7 +353,7 @@ const CMD_NUMS = {
   "保护": [["设置", "保护费用", "保护费用", "int"], ["设置", "保护时长小时", "保护时长(时)", "int"],
     ["间隔配置", "保护间隔", "保护间隔(分)", "int"]],
   "我要学习": [["设置", "奇遇触发概率", "奇遇概率%", "int"], ["间隔配置", "学习间隔", "学习间隔(分)", "int"]],
-  "讨好": [["概率配置", "讨好概率", "讨好概率%", "int"], ["间隔配置", "讨好间隔", "讨好间隔(分)", "int"]],
+  "讨好": [["概率配置", "讨好概率", "讨好概率%", "int"], ["间隔配置", "讨好间隔", "讨好间隔(分)", "int"], ["费用配置", "讨好消耗魅力", "消耗魅力", "int"]],
   "造反": [["概率配置", "造反概率", "造反概率%", "int"], ["间隔配置", "造反间隔", "造反间隔(分)", "int"]],
   "十连抽": [["设置", "十连抽花费", "十连抽花费", "int"]],
   "三十连抽": [["设置", "三十连抽花费", "三十连抽花费", "int"]],
@@ -395,6 +396,7 @@ const CMD_DEFAULT_REPLY = {
   "取款": "取款成功！获得利息：{利息}，本次取款：{金额}，还剩存款：{剩余}",
   "强制取款": "强制取款成功！因未到取款时间，本次没有利息。本次取款：{金额}",
   "转账": "转账成功！您已向 {目标} 转入{金额}货币！",
+  "跨群转账": "跨群转账成功！本群支出{支出}货币，目标群到账{到账}货币，手续费{手续费}（20%）已由系统回收",
   "发红包": "发红包啦！发了{金额}货币点，大家快抢吧！红包口令为：{口令}",
   "抢红包": "恭喜！你抢到了 {金额}货币，魅力+{魅力}！",
   "赌博": "赌博成功！你获得了{赢得}货币，净赚{净赚}！",

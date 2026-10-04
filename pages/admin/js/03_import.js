@@ -134,7 +134,7 @@ function initImportHubEvents() {
       // 1. 自动快照保护（接口路径：backups/config/snapshot/save）
       if (doSnapshot) {
         try {
-          await getBridge().apiPost("backups/config/snapshot/save", { note: `智能导入前自动快照_${Date.now()}` }).catch(() => null);
+          await getBridge().apiPost("backups/config/snapshot/save", { note: `导入前自动快照_${Date.now()}` }).catch(() => null);
         } catch (_se) {}
       }
 
@@ -149,7 +149,7 @@ function initImportHubEvents() {
         }
       }
 
-      toast(`已成功安全导入：${applied.join("、")}`, "ok");
+      toast(`已导入：${applied.join("、")}`, "ok");
       closeImportHub();
     } catch (err) {
       toast("导入失败: " + (err.message || err), "bad");
@@ -390,7 +390,7 @@ function bindGroupsAdd() {
     try {
       const r = await getBridge().apiPost("groups/toggle", { gid, enabled: true });
       if (r && r.ok === false) { toast("添加失败: " + (r.msg || JSON.stringify(r)), "bad"); return; }
-      toast("已成功添加群 " + gid, "ok");
+      toast("已添加群 " + gid, "ok");
       inp.value = "";
       await loadGroups();
     } catch(e) { toast("添加失败: " + e.message, "bad"); }
@@ -538,6 +538,7 @@ function initBackTop() {
 async function main() {
   initTheme();
   bindTabs();
+  try { initSideNavCollapse(); } catch (e) {}
   try { initBackTop(); } catch (e) {}
   try { bindShopOrderOnce(); } catch (e) {}
   try { if (typeof initExportHubEvents === "function") initExportHubEvents(); } catch (e) {}

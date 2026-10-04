@@ -42,6 +42,11 @@ def handle(gid, qq, raw):
         return cmd_force_withdraw(gid, qq, n)
     if text.startswith("取款"):
         return cmd_withdraw(gid, qq, n)
+    if text.startswith("跨群转账"):
+        nums = re.findall(r"(\d+)", text)
+        if len(nums) < 2:
+            return "亲，跨群转账格式为：【跨群转账 群号 金额】！"
+        return cmd_cross_transfer(gid, qq, nums[0], int(nums[-1]))
     if text.startswith("转账"):
         if not target:
             return "请指定转账目标，格式：【转账 @QQ 金额】"
@@ -99,7 +104,7 @@ __all__ = ["handle", "COMMANDS", "WAKE", "can_handle"]
 
 
 COMMANDS = (
-    "存款", "强制取款", "取款", "转账", "赌博", "打劫银行", "打劫",
+    "存款", "强制取款", "取款", "转账", "跨群转账", "赌博", "打劫银行", "打劫",
     "发红包", "抢红包", "劫狱", "保释", "自我保释",
     "进监狱", "出狱", "越狱",
 )

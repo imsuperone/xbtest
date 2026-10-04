@@ -14,18 +14,54 @@ try:
                                 WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WAGE_FLOOR,
                                 WORK_PCT_CAP,
                                 REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
-                                TREASURE_GOURD_NAME)
+                                TREASURE_GOURD_NAME,
+                                CHARM_PROB_STEP, CHARM_PROB_BONUS, CHARM_PROB_CAP)
 except ImportError:
     from games.config.slave import (STUDY_FEE_LO, STUDY_FEE_HI, STUDY_EXP_LO, STUDY_EXP_HI,  # type: ignore
                                     PRAY_LOSE_CHANCE, PRAY_LOSE_LO, PRAY_LOSE_HI, PRAY_NINJA_CHANCE,
                                     WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WAGE_FLOOR,
                                     WORK_PCT_CAP,
                                     REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
-                                    TREASURE_GOURD_NAME)
+                                    TREASURE_GOURD_NAME,
+                                    CHARM_PROB_STEP, CHARM_PROB_BONUS, CHARM_PROB_CAP)
 from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgi, cn_fmt, cn_parse, coins_add, coins_get, slaves_of, treasures_of, uget, uset
 from .combat import _has_treasure_type, _treasure_names, _treasure_pct_total, battle_power
 from .nick import uname
 from .profile import coin_name
+def _charm_bonus(gid, qq):
+    """魅力→成功率加成：每满 CHARM_PROB_STEP 点 +CHARM_PROB_BONUS%，封顶 CHARM_PROB_CAP%。"""
+    try:
+        charm = int(ST.acct(gid, qq).int("charm") or 0)
+    except Exception:
+        return 0
+    if charm <= 0:
+        return 0
+    try:
+        return int(min(CHARM_PROB_CAP, (charm // CHARM_PROB_STEP) * CHARM_PROB_BONUS))
+    except Exception:
+        return 0
+
+
+def _charm_note(paid):
+    return f"\r\n魅力-{paid}" if paid > 0 else ""
+
+
+def _charge_charm(gid, qq, cost):
+    """结算讨好魅力消耗（成败都扣，魅力=讨好燃料）。
+    在结果已定的结算点扣费：DB 忙走重试路径时不双扣；扣费失败降级为未扣（奖励已定，禁倒挂）。"""
+    if cost <= 0:
+        return 0
+    try:
+        paid = min(int(cost), max(0, ST.acct(gid, qq).int("charm")))
+        if paid <= 0:
+            return 0
+        if ST.acct_add(gid, qq, "charm", -paid) is None:
+            return 0
+        return paid
+    except Exception:
+        return 0
+
+
 def cmd_flatter(gid, qq, st):
     u = U(st, qq)
     owner = uget(u, "owner")
@@ -39,17 +75,25 @@ def cmd_flatter(gid, qq, st):
     mc = coins_get(gid, owner)
     if mc <= 0:
         return _S.T.FLATTER_POOR_M
+    charm_cost = cfgi("费用配置", "讨好消耗魅力", 5)
+    try:
+        charm_cost = int(charm_cost)
+    except Exception:
+        charm_cost = 5
     _flatter_p = cfgi("概率配置", "讨好概率", 80)
     try:
         from ..sign import eff_prob as _LP
         _flatter_p = _LP(_flatter_p, gid, qq)
     except Exception:
         pass
+    # 魅力加成进成功率（w1004c：魅力=奴隶玩法硬通货）
+    _flatter_p = max(0, min(100, _flatter_p + _charm_bonus(gid, qq)))
     if _random.randint(1, 100) <= _flatter_p:
         got = _random.randint(50, max(50, min(mc, 500)))
         got = min(got, mc)
         if got <= 0:
-            return "你各种撒娇打泼，主人仍不为所动，你什么都没有讨到~"
+            return ("你各种撒娇打泼，主人仍不为所动，你什么都没有讨到~"
+                    + _charm_note(_charge_charm(gid, qq, charm_cost)))
         # 原子双钱包：失败不推进 CD、不发奖励（禁半成功）
         try:
             _ok = ST.txn_two_wallets(gid, owner, qq, got)
@@ -60,8 +104,9 @@ def cmd_flatter(gid, qq, st):
         if _ok is not True:
             return _S.T.FLATTER_POOR_M
         cd_commit(u, "flatter_time")
-        return _S.T.FLATTER_OK.format(got=got)
-    return "你各种撒娇打泼，主人仍不为所动，你什么都没有讨到~"
+        return _S.T.FLATTER_OK.format(got=got) + _charm_note(_charge_charm(gid, qq, charm_cost))
+    return ("你各种撒娇打泼，主人仍不为所动，你什么都没有讨到~"
+            + _charm_note(_charge_charm(gid, qq, charm_cost)))
 
 
 
@@ -362,6 +407,8 @@ def cmd_revolt(gid, qq, st):
         _revolt_p = _LP4(_revolt_p, gid, qq)
     except Exception:
         pass
+    # 魅力加成进成功率（w1004c）
+    _revolt_p = max(0, min(100, _revolt_p + _charm_bonus(gid, qq)))
     if _random.randint(1, 100) <= _revolt_p:
         if loot > 0:
             try:

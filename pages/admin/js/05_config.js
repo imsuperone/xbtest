@@ -26,7 +26,7 @@ async function loadOverviewReq() {
         `<input data-ov-sec="${esc(sec)}" data-ov-key="${esc(key)}" type="${type === "int" ? "number" : "text"}" value="${esc(v)}">` +
         `<small>${esc(tip)}</small></div>`;
     }).join("") +
-      `<div class="ov-field"><label style="visibility:hidden">.</label><button id="btnOvReqSave">保存必要配置</button></div>`;
+      `<div class="ov-field"><label class="ov-field-spacer">.</label><button id="btnOvReqSave">保存必要配置</button></div>`;
     const b = document.getElementById("btnOvReqSave");
     if (b) b.addEventListener("click", saveOverviewReq);
   } catch (e) {
@@ -211,7 +211,7 @@ async function openAutoBalanceModal() {
   const okBtn = document.getElementById("appModalOk");
 
   if (icon) icon.textContent = "🎯";
-  if (title) title.textContent = "游戏奖励 / 惩罚 / 概率 · 智能数值平衡";
+  if (title) title.textContent = "数值平衡预设";
   if (inputWrap) inputWrap.style.display = "none";
 
   // 档位以 balance_state 逐档推断为准：出厂种子实为休闲数值但标记缺省 standard，
@@ -225,7 +225,7 @@ async function openAutoBalanceModal() {
       if (st.mismatch > 0) {
         const _names = (st.mismatches || []).map((x) => x.key).join("、");
         const _mlabel = ((typeof BALANCE_MODE_META !== "undefined" && BALANCE_MODE_META[activeMode]) || {}).label || activeMode;
-        _driftInfo = `<div style="font-size:12px;color:var(--warn);background:var(--warnSoft);border:1px solid var(--warn);border-radius:8px;padding:8px 10px;margin-bottom:12px">⚠️ 当前数值已偏离${_mlabel}（${st.mismatch}项不符${_names ? "：" + esc(_names) : ""}），可重选一键覆盖，或去指令页逐项手调。</div>`;
+        _driftInfo = `<div style="font-size:12px;color:var(--warn);background:var(--warnSoft);border:1px solid var(--warn);border-radius:8px;padding:8px 10px;margin-bottom:12px">⚠️ 当前数值与「${_mlabel}」不一致（${st.mismatch} 项不符${_names ? "：" + esc(_names) : ""}）。可重选预设覆盖，或在指令页逐项调整。</div>`;
       }
     } else {
       const cfg = await getBridge().apiGet("config/get");
@@ -236,28 +236,28 @@ async function openAutoBalanceModal() {
 
   content.innerHTML = `
     <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
-      系统基于<strong>群博弈论与经济学精算模型</strong>，为你自动推算并一键匹配最佳货币奖励、惩罚倍率、抽奖爆率与奴隶身价成长曲线：
+      选择预设方案，统一调整货币奖励、惩罚倍率、抽奖爆率与奴隶身价等数值：
     </div>${_driftInfo}
     <div style="display:flex;flex-direction:column;gap:10px">
       <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "standard" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="standard" ${activeMode === "standard" ? "checked" : ""} style="margin-top:3px">
         <div>
-          <div style="font-weight:600;color:var(--text);font-size:13px">🟢 标准平衡模式（官方推荐 · 经济稳健）</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 300-800 + 连签 50，利率 1%，造反率 35%，祈福爆发 5%。平稳通胀，适合绝大多数群聊。</div>
+          <div style="font-weight:600;color:var(--text);font-size:13px">🟢 标准平衡（推荐 · 经济稳健）</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 300-800 + 连签 50，利率 1%，造反率 35%，祈福爆发 5%。数值平稳，适合多数群聊。</div>
         </div>
       </label>
       <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "casual" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="casual" ${activeMode === "casual" ? "checked" : ""} style="margin-top:3px">
         <div>
-          <div style="font-weight:600;color:var(--text);font-size:13px">🟡 休闲高福利模式（高爆率 · 活跃社群）</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 800-2000 + 连签 100，利率 1%，造反率 20%，祈福爆发 15%，赌博成功率 60%。低惩罚快节奏，极大激发互动。</div>
+          <div style="font-weight:600;color:var(--text);font-size:13px">🟡 休闲高福利（高爆率 · 活跃社群）</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 800-2000 + 连签 100，利率 1%，造反率 20%，祈福爆发 15%，赌博成功率 60%。低惩罚、节奏快，适合活跃社群。</div>
         </div>
       </label>
       <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "hardcore" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="hardcore" ${activeMode === "hardcore" ? "checked" : ""} style="margin-top:3px">
         <div>
-          <div style="font-weight:600;color:var(--text);font-size:13px">🔴 硬核博弈模式（高对抗 · 惩罚严酷）</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 150-400 + 连签 20，利率 1%，造反率 45%，祈福爆发 2%。高风险高回报，适合重度对抗型群友。</div>
+          <div style="font-weight:600;color:var(--text);font-size:13px">🔴 硬核博弈（高对抗 · 惩罚重）</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 150-400 + 连签 20，利率 1%，造反率 45%，祈福爆发 2%。高风险高回报，适合对抗型社群。</div>
         </div>
       </label>
     </div>
@@ -283,30 +283,30 @@ async function openAutoBalanceModal() {
   if (_closeBtn) _closeBtn.onclick = () => { modal.className = ""; };
   modal.onclick = (e) => { if (e.target === modal) modal.className = ""; };
   if (okBtn) {
-    okBtn.textContent = "⚡ 一键智能匹配生效";
+    okBtn.textContent = "应用该预设";
     okBtn.disabled = false;
     okBtn.onclick = async () => {
       const sel = content.querySelector("input[name='balanceMode']:checked");
       const mode = sel ? sel.value : "standard";
       okBtn.disabled = true;
-      okBtn.textContent = "正在调优并落盘...";
+      okBtn.textContent = "正在应用...";
       try {
         const r = await getBridge().apiPost("config/auto_balance", { mode });
         if (r && r.ok) {
           const _summary = mode === "casual" ? "签到800-2000+连签100，利率1%，造反20%" : (mode === "hardcore" ? "签到150-400+连签20，利率1%，造反45%" : "签到300-800+连签50，利率1%，造反35%");
-          toast(`已成功应用【${mode === "standard" ? "标准平衡" : (mode === "casual" ? "休闲福利" : "硬核博弈")}】数值方案！${_summary}`, "ok");
+          toast(`已应用「${mode === "standard" ? "标准平衡" : (mode === "casual" ? "休闲福利" : "硬核博弈")}」数值方案：${_summary}`, "ok");
           modal.className = "";
           try { await refreshBalanceBadges(); } catch (e) {}
           await loadConfig();
           if (typeof loadCommands === "function") try { await loadCommands(); } catch(e) {}
         } else {
-          toast("调优失败: " + (r && (r.error || r.msg) ? (r.error || r.msg) : "未知错误"), "bad");
+          toast("应用失败: " + (r && (r.error || r.msg) ? (r.error || r.msg) : "未知错误"), "bad");
         }
       } catch(err) {
-        toast("调优失败: " + err.message, "bad");
+        toast("应用失败: " + err.message, "bad");
       } finally {
         okBtn.disabled = false;
-        okBtn.textContent = "⚡ 一键智能匹配生效";
+        okBtn.textContent = "应用该预设";
       }
     };
   }

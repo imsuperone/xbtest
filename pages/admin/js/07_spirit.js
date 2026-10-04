@@ -388,7 +388,7 @@ async function renderAtlas(curCfg){
         }
       }
       h += `<div style="margin-top:8px"><button class="ghost sm" id="btnAtlasAddMap">＋ 添加地图</button></div>`;
-      h += `<div class="hint" style="margin-top:6px">地图+属性一键保存/恢复，只动精灵范围</div></div>`;
+      h += `<div class="hint" style="margin-top:6px">地图与属性合并保存、恢复，仅影响精灵范围</div></div>`;
       html += h;
     }
     else html += `<div class="card" style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px"><div style="color:var(--muted)">未知分类</div></div>`;

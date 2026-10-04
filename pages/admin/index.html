@@ -5,19 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light dark">
   <title>小白测试版 - 小白机器人</title>
-  <link rel="stylesheet" href="./admin.css?v=2026w1004b">
+  <link rel="stylesheet" href="./admin.css?v=2026w1004c">
 </head>
 <body>
   <div class="wrap">
     <header class="top-bar">
       <div class="top-bar-brand">
         <div class="brand-text">
-          <h1>小白测试版 <span class="version-tag" data-ver="2026w1004b">v2026w1004b</span></h1>
+          <h1>小白测试版 <span class="version-tag" data-ver="2026w1004c">v2026w1004c</span></h1>
         </div>
       </div>
       <div class="top-bar-actions" style="position:relative">
         <button id="btnOpenExportHub" class="m3-icon-btn" title="模块化数据导出中心" type="button">📦</button>
-        <button id="btnOpenImportHub" class="m3-icon-btn" title="智能选择性导入" type="button">📤</button>
+        <button id="btnOpenImportHub" class="m3-icon-btn" title="选择性导入" type="button">📤</button>
         <span class="accent-picker-wrap"><button type="button" id="accentPickerBtn" class="m3-accent-picker" title="调整主题颜色"></button><input type="color" id="accentPicker" value="#4A90D9" hidden /><div class="accent-popover" id="accentPopover" hidden><div class="accent-sv" id="accentSv"><div class="accent-sv-dot" id="accentSvDot"></div></div><div class="accent-hue" id="accentHue"><div class="accent-hue-dot" id="accentHueDot"></div></div><div class="accent-pop-row"><input type="text" class="accent-hex" id="accentHex" value="#4A90D9" maxlength="7" spellcheck="false" autocomplete="off" /><span class="accent-current" id="accentCurrent"></span></div><div class="accent-presets" id="accentPresets"><button type="button" data-color="#4A90D9" style="background:#4A90D9" title="#4A90D9"></button><button type="button" data-color="#1A73E8" style="background:#1A73E8" title="#1A73E8"></button><button type="button" data-color="#7B1FA2" style="background:#7B1FA2" title="#7B1FA2"></button><button type="button" data-color="#C2185B" style="background:#C2185B" title="#C2185B"></button><button type="button" data-color="#E53935" style="background:#E53935" title="#E53935"></button><button type="button" data-color="#F9A825" style="background:#F9A825" title="#F9A825"></button><button type="button" data-color="#388E3C" style="background:#388E3C" title="#388E3C"></button><button type="button" data-color="#00796B" style="background:#00796B" title="#00796B"></button><button type="button" data-color="#00838F" style="background:#00838F" title="#00838F"></button><button type="button" data-color="#455A64" style="background:#455A64" title="#455A64"></button><button type="button" data-color="#5D4037" style="background:#5D4037" title="#5D4037"></button><button type="button" data-color="#212121" style="background:#212121" title="#212121"></button></div></div></span>
         <button id="accentResetBtn" class="m3-icon-btn" title="恢复默认主题色" type="button">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -66,6 +66,9 @@
 
     <div class="layout">
       <aside class="side-nav" id="sideNav">
+        <div class="side-nav-head">
+          <button type="button" id="sideNavToggle" title="收起导航" aria-label="收起导航">«</button>
+        </div>
         <div class="side-group">
           <div class="side-group-title">📊 数据</div>
           <button data-tab="overview" class="on">📊 总览</button>
@@ -103,7 +106,7 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>📊 全群数据总览</h2>
-            <div class="m3-subtitle">实时呈现全群资金体量、资产沉淀与核心系统运行指标</div>
+            <div class="m3-subtitle">汇总全群资金体量、资产沉淀与核心系统运行指标</div>
           </div>
           <div class="m3-action-bar">
             <button id="btnDbDoctorOv" class="ghost" style="color:var(--ok);border-color:var(--okSoft);font-weight:600">🩺 数据库体检与整理</button>
@@ -148,7 +151,7 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>⚡ 必要核心配置（快捷编辑）</h2>
-            <div class="m3-subtitle">展示运行最核心必须填写的项，更多细节请到「配置」Tab</div>
+            <div class="m3-subtitle">仅展示运行必需的配置项，更多细节见「配置」Tab</div>
           </div>
         </div>
         <div id="ovReq" class="ov-req"></div>
@@ -162,7 +165,7 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>🏆 全服荣誉排行榜</h2>
-            <div class="m3-subtitle">多维度实时天梯排位、身价财富榜单</div>
+            <div class="m3-subtitle">财富、签到、体力、魅力与存款多维榜单</div>
           </div>
           <div class="m3-action-bar">
             <button id="btnRank" class="ghost">🔄 刷新数据</button>
@@ -201,7 +204,7 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>👤 用户资产与名录</h2>
-            <div class="m3-subtitle">全群成员资产数据微调、多维检索与生命周期治理</div>
+            <div class="m3-subtitle">全群成员资产微调、多维检索与退群清理</div>
           </div>
           <div class="m3-action-bar">
             <button id="btnUsersAirdrop" class="btn sm tonal">🎁 批量空投福利</button>
@@ -209,7 +212,7 @@
             <button id="btnUsersExport" class="ghost sm">📥 导出</button>
             <button id="btnUsersImport" class="ghost sm">📤 导入</button>
             <button id="btnUsersCleanLeft" class="ghost sm del">🧹 清理退群人员</button>
-            <button id="btnUserClearManual" class="ghost sm del" title="输入指定 QQ 彻底清空单用户全部数据（含奴隶、精灵与重领礼包资格）">🗑️ 清除单用户</button>
+            <button id="btnUserClearManual" class="ghost sm del" title="按 QQ 清空单个用户全部数据（含奴隶、精灵与重领礼包资格）">🗑️ 清除单用户</button>
           </div>
         </div>
 
@@ -274,7 +277,7 @@
             <div class="m3-subtitle" id="slaveHint">各群用户身价与主奴武装关系</div>
           </div>
           <div class="m3-action-bar">
-            <button id="btnSlaveCalibrate" class="btn sm tonal">⚖️ 一键校准全员身价</button>
+            <button id="btnSlaveCalibrate" class="btn sm tonal">⚖️ 校准全员身价</button>
             <button id="btnSlaveRefresh" class="ghost sm">🔄 刷新</button>
           </div>
         </div>
@@ -320,7 +323,7 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>🐾 精灵系统 · 用户情况</h2>
-            <div class="m3-subtitle">实时展示各群精灵训练师、出战宝可梦与综合战力统计</div>
+            <div class="m3-subtitle">展示各群精灵训练师、出战精灵与综合战力统计</div>
           </div>
           <div class="m3-action-bar">
             <button id="btnSpiritUsersRefresh" class="ghost sm">🔄 刷新数据</button>
@@ -343,7 +346,7 @@
           </div>
         </div>
 
-        <div class="hint" id="spiritUsersHint">实时展示各群精灵训练师、出战宝可梦与综合战力统计。</div>
+        <div class="hint" id="spiritUsersHint">展示各群训练师、出战精灵与综合战力统计。</div>
 
         <div class="table-wrap">
           <table>
@@ -407,11 +410,11 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>⚙️ 必要核心配置</h2>
-            <div class="m3-subtitle">展示系统网络、私聊、维护与备份等核心配置项，玩法数值请到「指令与玩法」Tab 调整</div>
+            <div class="m3-subtitle">展示网络、私聊、维护与备份等核心配置项，玩法数值请在「指令与玩法」Tab 调整</div>
           </div>
           <div class="m3-action-bar">
             <button id="btnSave" class="btn sm">💾 保存配置</button>
-            <button id="btnAutoBalance2" class="ghost sm tonal">🎯 数值智能平衡</button>
+            <button id="btnAutoBalance2" class="ghost sm tonal">🎯 数值平衡预设</button>
             <span id="activeBalanceBadge1" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
             <button id="btnReset" class="ghost sm">↩️ 恢复默认值</button>
             <button id="btnResetAll" class="ghost sm del">🧹 全部设置恢复默认</button>
@@ -438,12 +441,12 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>🎮 指令与玩法设置</h2>
-            <div class="m3-subtitle">统筹管理28大系统触发词、冷却限制、收益系数与自定义指令</div>
+            <div class="m3-subtitle">统一管理 28 大系统的触发词、冷却限制、收益系数与自定义指令</div>
           </div>
           <div class="m3-action-bar">
             <button class="ghost sm" id="btnCmdExpandAll" type="button">全部展开</button>
             <button class="ghost sm" id="btnCmdCollapseAll" type="button">全部收起</button>
-            <button class="sm tonal" id="btnAutoBalance" type="button">🎯 数值智能平衡</button>
+            <button class="sm tonal" id="btnAutoBalance" type="button">🎯 数值平衡预设</button>
             <span id="activeBalanceBadge2" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
             <button class="btn sm" id="btnCmdAddCustomTop" type="button">＋ 自定义指令</button>
           </div>
@@ -467,10 +470,10 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>🛒 综合商业广场</h2>
-            <div class="m3-subtitle">坐骑商城、抽奖武器池与精灵道具配置，各存各的互不干扰</div>
+            <div class="m3-subtitle">坐骑商城、抽奖武器池与精灵道具三项配置相互独立，分别保存</div>
           </div>
           <div class="m3-action-bar">
-            <button id="btnShopSave" class="btn sm" title="保存当前商城页的改动（坐骑/武器属性/精灵道具，各存各的）">💾 全部保存</button>
+            <button id="btnShopSave" class="btn sm" title="保存当前商城页的改动（坐骑、武器属性、精灵道具各自独立保存）">💾 全部保存</button>
             <button id="btnShopLoad" class="ghost sm">🔄 加载</button>
             <button id="btnShopExport" class="ghost sm">📥 导出</button>
             <button id="btnShopImport" class="ghost sm">📤 导入</button>
@@ -478,7 +481,7 @@
           </div>
         </div>
 
-        <div class="hint">坐骑商城（改价/增删/绑图，点保存坐骑）/ 抽奖武器池（改名/稀有度/删/传即时生效，属性点保存）/ 精灵道具（点保存道具）；各存各的，互不干扰；顶部全部保存可一键存三栏。</div>
+        <div class="hint">坐骑商城（改价、增删、绑图后点「保存坐骑」）；抽奖武器池（改名、稀有度、删除、上传即时生效，属性点需保存）；精灵道具（点「保存道具」）。三栏各自独立保存，顶部「全部保存」可同时保存三栏。</div>
 
         <div class="responsive-shop-grid">
           <div>
@@ -497,11 +500,11 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>📖 精灵与藏宝图鉴</h2>
-            <div class="m3-subtitle">管理全服精灵物种、藏宝图及全量图鉴预设包打包与恢复</div>
+            <div class="m3-subtitle">管理全服精灵物种与藏宝图，支持图鉴预设包的打包与恢复</div>
           </div>
           <div class="m3-action-bar">
-            <button id="btnPresetExport" class="btn sm tonal" title="图鉴＋宝物＋商城打成一个预设包">📦 预设打包</button>
-            <button id="btnPresetImport" class="ghost sm" title="恢复预设包（先自动快照，可回滚）">📥 预设恢复</button>
+            <button id="btnPresetExport" class="btn sm tonal" title="将图鉴、宝物与商城打包为一个预设包">📦 预设打包</button>
+            <button id="btnPresetImport" class="ghost sm" title="恢复预设包（恢复前自动创建快照，可回滚）">📥 预设恢复</button>
             <button id="btnSpiritExport" class="ghost sm">📥 导出</button>
             <button id="btnSpiritImport" class="ghost sm">📤 导入</button>
             <span class="msg" id="spiritMsg" style="font-size:12px;color:var(--ok)"></span>
@@ -545,10 +548,10 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>☁️ WebDAV 与自动备份配置</h2>
-            <div class="m3-subtitle">支持坚果云、Alist、NAS 等多协议全自动云归档与异地容灾</div>
+            <div class="m3-subtitle">支持坚果云、Alist、NAS 等协议，自动云归档与异地容灾</div>
           </div>
         </div>
-        <div class="hint">WebDAV 地址与账号只在此处填写保存（坚果云请用应用密码）。地址/账号/密码存独立文件，不进备份与快照；密码框留空=保持不变。</div>
+        <div class="hint">WebDAV 地址与账号仅在此处填写保存（坚果云请使用应用密码）。地址、账号与密码存于独立文件，不进入备份与快照；密码框留空表示保持不变。</div>
         
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px">
           <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:var(--radius-md);border:1px solid var(--line)">
@@ -582,7 +585,7 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>☁️ WebDAV 云端备份归档与快捷恢复</h2>
-            <div class="m3-subtitle">查看云端已归档历史冷备，支持一键下载或直接恢复</div>
+            <div class="m3-subtitle">查看云端归档的历史备份，可下载或直接恢复</div>
           </div>
           <div class="m3-action-bar">
             <button id="btnWebDAVRefreshFiles" class="ghost sm">🔄 刷新远端列表</button>
@@ -598,7 +601,7 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>📦 旧库数据导入（合并式，兼容新旧格式）</h2>
-            <div class="m3-subtitle">从旧版数据库文件平滑迁移数据；<strong>合并</strong>只新增缺失记录、不覆盖现有数据（含红包/记忆不迁）。整库回滚请用备份列表的“恢复”（<strong>替换式</strong>）。</div>
+            <div class="m3-subtitle">从旧版数据库文件迁移数据；<strong>合并</strong>仅新增缺失记录，不覆盖现有数据（红包与记忆不迁移）。整库回滚请用备份列表的“恢复”（<strong>替换式</strong>）。</div>
           </div>
           <div class="m3-action-bar">
             <button id="btnLegacyPick" class="ghost sm">📤 导入旧库文件</button>
@@ -615,7 +618,7 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>📁 根目录文件浏览器</h2>
-            <div class="m3-subtitle">安全查看与管理插件数据目录中的资源、图片与素材</div>
+            <div class="m3-subtitle">查看与管理插件数据目录中的资源、图片与素材</div>
           </div>
           <div class="m3-action-bar">
             <button id="btnImgUp" class="btn sm">📤 上传文件</button>
@@ -654,7 +657,7 @@
               <h2>📜 插件运行日志</h2>
               <span class="status-badge" id="logsLiveBadge"><span class="status-dot"></span> 实时监听</span>
             </div>
-            <div class="m3-subtitle">实时监控插件运行状态与排错排查</div>
+            <div class="m3-subtitle">实时监控插件运行状态，辅助问题排查</div>
           </div>
           <div class="m3-action-bar">
             <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);cursor:pointer">
@@ -705,8 +708,8 @@
           <div>👤 作者：<b>Light</b></div>
           <div>📦 插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
           <div>🔗 仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
-          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w1004b</b></div>
-          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w1004b</b></div>
+          <div>🏷️ 当前版本：<b id="aboutVersion">v2026w1004c</b></div>
+          <div>🧩 前端版本：<b id="aboutFrontendVer">v2026w1004c</b></div>
         </div>
       </div>
     </div>
@@ -851,7 +854,7 @@
           <div class="m3-icon-circle">📦</div>
           <div>
             <h2 style="margin:0;font-size:16.5px;font-weight:600">模块化数据导出中心</h2>
-            <div style="color:var(--muted);font-size:12px;margin-top:2px">按项目精准勾选，绝不多导无关内容，绝不少导关联数据</div>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px">按项目勾选，仅导出所选内容</div>
           </div>
         </div>
         <button id="exportHubClose" class="iconBtn" style="border:none;background:transparent;font-size:16px" title="关闭">✕</button>
@@ -860,12 +863,12 @@
       <div class="m3-modal-body">
         <!-- 快捷场景 Pills -->
         <div style="margin-bottom:14px">
-          <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">⚡ 快速组合方案：</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:600">⚡ 快捷组合：</div>
           <div class="preset-pills" style="display:flex;gap:6px;flex-wrap:wrap">
             <button type="button" class="preset-pill" data-preset="atlas_gear">🎯 纯图鉴与装备包</button>
             <button type="button" class="preset-pill" data-preset="game_rules">⚙️ 纯玩法规则与指令</button>
             <button type="button" class="preset-pill" data-preset="users_only">👤 纯玩家数据与经济</button>
-            <button type="button" class="preset-pill" data-preset="full_all">⚡ 全系统完整综合包</button>
+            <button type="button" class="preset-pill" data-preset="full_all">⚡ 全系统完整包</button>
             <button type="button" class="preset-pill ghost" data-preset="reset_none">🔄 清空勾选</button>
           </div>
         </div>
@@ -915,9 +918,9 @@
                 <input type="checkbox" id="chkExpGameRules">
                 <span class="hub-mod-title">⚙️ 玩法规则与自定义指令 (Rules & Commands)</span>
               </label>
-              <button type="button" class="hub-solo-btn" id="btnSoloExportRules" title="只导出28大系统玩法参数和指令回复，零玩家数据">仅导出本项</button>
+              <button type="button" class="hub-solo-btn" id="btnSoloExportRules" title="只导出 28 大系统的玩法参数与指令回复，不含玩家数据">仅导出本项</button>
             </div>
-            <div class="hub-mod-desc">包含奴隶身价、打劫倍率、银行与娱乐28节数值配置，以及自定义指令别名、回复词与权限（零用户私人数据）。</div>
+            <div class="hub-mod-desc">包含奴隶身价、打劫倍率、银行与娱乐28节数值配置，以及自定义指令别名、回复词与权限（不含用户私人数据）。</div>
           </div>
 
           <!-- 模块 5: 玩家数据与经济 -->
@@ -935,7 +938,7 @@
 
         <!-- 数据库备份覆盖范围提示：.db 自含玩家资产+玩法规则，图鉴/商城 sidecar 需此处补齐 -->
         <div style="font-size:11.5px;color:var(--muted);line-height:1.7;margin-top:10px">
-          💡 数据库备份（.db）已自含<strong>全部配置</strong>（含图鉴/商城 sidecar 镜像）与<strong>玩家资产</strong>；本中心用于按模块单项迁移分享；图片二进制需单独导出。
+          💡 数据库备份（.db）已包含<strong>全部配置</strong>（含图鉴/商城 sidecar 镜像）与<strong>玩家资产</strong>；本中心用于按模块单项迁移分享；图片二进制需单独导出。
         </div>
 
         <!-- 实时汇总与安全保证横幅 -->
@@ -944,7 +947,7 @@
             <span>📊</span> <span id="exportHubSummaryText">已选择：3 个模块</span>
           </div>
           <div style="font-size:11.5px;color:var(--muted);margin-top:3px">
-            🛡️ <strong>安全承诺</strong>：未勾选的模块绝对不会出现在导出包中，绝不多导任何无关数据！
+            🛡️ 未勾选的模块不会出现在导出包中。
           </div>
         </div>
       </div>
@@ -963,8 +966,8 @@
         <div style="display:flex;align-items:center;gap:10px">
           <div class="m3-icon-circle">📥</div>
           <div>
-            <h2 style="margin:0;font-size:16.5px;font-weight:600">智能选择性导入与检查</h2>
-            <div style="color:var(--muted);font-size:12px;margin-top:2px">自动识别文件内包含的项目，自由勾选要导入的部分</div>
+            <h2 style="margin:0;font-size:16.5px;font-weight:600">选择性导入与检查</h2>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px">自动识别文件包含的项目，勾选需要导入的部分</div>
           </div>
         </div>
         <button id="importHubClose" class="iconBtn" style="border:none;background:transparent;font-size:16px" title="关闭">✕</button>
@@ -976,14 +979,14 @@
           <div id="importHubFileInfo" style="color:var(--muted);font-size:11.5px;margin-top:2px">包版本与时间检测中…</div>
         </div>
 
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px">请勾选需要导入应用的项目：</div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px">请勾选需要导入的项目：</div>
         <div id="importHubModulesList" style="display:flex;flex-direction:column;gap:8px">
           <!-- 动态渲染检测到的模块列表 -->
         </div>
 
         <div style="margin-top:14px;padding:10px 14px;background:var(--okSoft);color:var(--ok);border-radius:12px;font-size:12px;display:flex;align-items:center;gap:8px">
           <input type="checkbox" id="importHubSnapshotChk" checked style="width:16px;height:16px">
-          <label for="importHubSnapshotChk" style="cursor:pointer;font-weight:600">🛡️ 导入前自动创建当前配置快照（若不满意可随时一键回滚）</label>
+          <label for="importHubSnapshotChk" style="cursor:pointer;font-weight:600">🛡️ 导入前自动创建当前配置快照（可随时回滚）</label>
         </div>
       </div>
 
@@ -993,16 +996,16 @@
       </div>
     </div>
   </div>
-    <script defer src="./js/00_core.js?v=2026w1004b"></script>
-  <script defer src="./js/01_theme.js?v=2026w1004b"></script>
-  <script defer src="./js/02_export.js?v=2026w1004b"></script>
-  <script defer src="./js/03_import.js?v=2026w1004b"></script>
-  <script defer src="./js/04_media.js?v=2026w1004b"></script>
-  <script defer src="./js/05_config.js?v=2026w1004b"></script>
-  <script defer src="./js/06_users.js?v=2026w1004b"></script>
-  <script defer src="./js/07_spirit.js?v=2026w1004b"></script>
-  <script defer src="./js/08_shop.js?v=2026w1004b"></script>
-  <script defer src="./js/09_views.js?v=2026w1004b"></script>
-  <script defer src="./js/10_ops.js?v=2026w1004b"></script>
+    <script defer src="./js/00_core.js?v=2026w1004c"></script>
+  <script defer src="./js/01_theme.js?v=2026w1004c"></script>
+  <script defer src="./js/02_export.js?v=2026w1004c"></script>
+  <script defer src="./js/03_import.js?v=2026w1004c"></script>
+  <script defer src="./js/04_media.js?v=2026w1004c"></script>
+  <script defer src="./js/05_config.js?v=2026w1004c"></script>
+  <script defer src="./js/06_users.js?v=2026w1004c"></script>
+  <script defer src="./js/07_spirit.js?v=2026w1004c"></script>
+  <script defer src="./js/08_shop.js?v=2026w1004c"></script>
+  <script defer src="./js/09_views.js?v=2026w1004c"></script>
+  <script defer src="./js/10_ops.js?v=2026w1004c"></script>
 </body>
 </html>

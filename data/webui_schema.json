@@ -230,6 +230,11 @@
       "赎身花费倍率": {
         "type": "float",
         "default": 1.1
+      },
+      "讨好消耗魅力": {
+        "type": "int",
+        "default": 5,
+        "desc": "每次讨好消耗的魅力（成败都扣）；魅力每100点令讨好/造反成功率+2%，封顶+20%"
       }
     }
   },
@@ -357,11 +362,11 @@
       },
       "体力下限": {
         "type": "int",
-        "default": 50
+        "default": 40
       },
       "体力上限": {
         "type": "int",
-        "default": 100
+        "default": 80
       },
       "魅力下限": {
         "type": "int",
@@ -381,11 +386,11 @@
       },
       "体力价格": {
         "type": "int",
-        "default": 30
+        "default": 60
       },
       "魅力价格": {
         "type": "int",
-        "default": 3
+        "default": 30
       }
     }
   },
@@ -402,11 +407,11 @@
       },
       "体力奖": {
         "type": "int",
-        "default": 60
+        "default": 30
       },
       "魅力奖": {
         "type": "int",
-        "default": 40
+        "default": 20
       }
     }
   },
@@ -550,13 +555,18 @@
         "type": "int",
         "default": 999999999
       },
+      "跨群转账手续费": {
+        "type": "int",
+        "default": 20,
+        "description": "跨群转账手续费百分比（0-100），手续费由系统回收"
+      },
       "越狱消耗体力": {
         "type": "int",
         "default": 3
       },
       "进监狱增加体力": {
         "type": "int",
-        "default": 10
+        "default": 5
       },
       "越狱魅力减少": {
         "type": "int",
@@ -694,7 +704,7 @@
       },
       "猜拳奖励魅力": {
         "type": "int",
-        "default": 5
+        "default": 1
       },
       "猜拳成功概率": {
         "type": "int",
@@ -714,7 +724,7 @@
       },
       "猜数奖励魅力": {
         "type": "int",
-        "default": 6
+        "default": 2
       },
       "猜数消耗体力": {
         "type": "int",

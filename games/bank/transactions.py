@@ -193,6 +193,70 @@ def cmd_transfer(gid, qq, target, amount):
 
 
 
+def _gid_known(dest_gid):
+    """目标群是否为本机器人已知群（groups/wallet/accounts 三表并集，与超管群列表同口径）。
+    防群号打错把钱搬进黑洞；异常按未知处理，不裸抛。"""
+    try:
+        if ST._DB is None:
+            return False
+        with ST._LOCK:
+            for _t in ("groups", "wallet", "accounts"):
+                if ST._DB.execute(
+                        "SELECT 1 FROM %s WHERE gid=? LIMIT 1" % _t,
+                        (int(dest_gid),)).fetchone():
+                    return True
+    except Exception:
+        return False
+    return False
+
+
+def cmd_cross_transfer(gid, qq, dest_gid, amount):
+    """跨群转账：把自己的余额从本群搬进自己在目标群的钱包，手续费销毁（回收通胀）。"""
+    if not str(dest_gid).isdigit() or int(dest_gid) <= 0 or amount <= 0:
+        return "亲，跨群转账格式为：【跨群转账 群号 金额】！"
+    if str(dest_gid) == str(gid):
+        return "亲，目标群不能是当前群，同群请直接使用【转账】！"
+    if not _gid_known(dest_gid):
+        return "亲，目标群不存在或本机器人不在该群，请核对群号！"
+    min_amt = cfgi("银行配置", "转账最小金额", 50)
+    if amount < min_amt:
+        return f"亲，跨群转账最小金额为{min_amt}{ST.coin_name()}！"
+    pct = cfgi("银行配置", "跨群转账手续费", 20)
+    try:
+        pct = max(0, min(int(pct), 100))
+    except Exception:
+        pct = 20
+    fee = int(amount) * pct // 100
+    credit = int(amount) - fee
+    if credit <= 0:
+        return f"亲，手续费{pct}%后到账为0，请提高转账金额或降低手续费！"
+    cap = cfgi("银行配置", "转账接收额度", getattr(ST, "COIN_CAP", 100000000000))
+    if ST.coins_get(gid, qq) < amount:
+        return "亲，您的账户余额不足，跨群转账失败！"
+    # 源群扣全款 + 目标群入 credit，差额（手续费）销毁：单事务原子，无半成功
+    try:
+        with ST._LOCK:
+            if ST.coins_get(gid, qq) < amount:
+                return "亲，您的账户余额不足，跨群转账失败！"
+            dst_cur = ST.coins_get(dest_gid, qq)
+            if dst_cur + credit > cap:
+                return "亲，对方钱包已达接收额度上限，无法转入！"
+            ok = ST.txn_cross_group(gid, dest_gid, qq, amount, credit)
+            if ok is None:
+                return "亲，银行系统繁忙，跨群转账未成功，请稍后重试！"
+            if not ok:
+                return "亲，您的账户余额不足或目标钱包已达上限，跨群转账失败！"
+    except Exception:
+        try:
+            ST._safe_rollback()
+        except Exception:
+            pass
+        return "亲，银行系统繁忙，跨群转账未成功，请稍后重试！"
+    return (f"跨群转账成功！\r\n本群支出{amount}{ST.coin_name()}，"
+            f"目标群到账{credit}{ST.coin_name()}\r\n"
+            f"手续费{fee}{ST.coin_name()}（{pct}%）已由系统回收")
+
+
 def cmd_gamble(gid, qq, amount):
     a = _acct(gid, qq)
     if _check_jail(a):
@@ -251,7 +315,9 @@ def cmd_gamble(gid, qq, amount):
                 # 失败：-amount 魅力 -meli
                 new_money = cur - amount
                 cur_mei = a2.int("charm")
-                a2.set("charm", str(cur_mei - meli))
+                # 魅力扣减钳位：配置负数不倒扣、不越过 0（防负魅力）
+                meli_eff = max(0, min(int(meli), cur_mei))
+                a2.set("charm", str(cur_mei - meli_eff))
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_money))
                 ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
                 jail = random.random() < 0.5
@@ -271,9 +337,9 @@ def cmd_gamble(gid, qq, amount):
                 except Exception:
                     pass
                 if jail:
-                    return (f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli}！\r\n"
+                    return (f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli_eff}！\r\n"
                             f"赌博时被抓了！被关监狱{jail_mins}分钟！")
-                return f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli}……愿赌服输~"
+                return f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli_eff}……愿赌服输~"
     except Exception:
         # 主路径半截写入必须先回滚；失败不得重新随机或拆单收费。
         try:
