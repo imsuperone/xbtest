@@ -423,11 +423,9 @@ function initRefreshButton() {
   });
 }
 
-// ---------- toast (xbimg式堆叠 m3-toast + 兼容旧 #toast/#snackbar) ----------
-let _toastT = null;
+// ---------- toast (xbimg式堆叠 m3-toast；旧 #toast/#snackbar 元素保留但不再驱动) ----------
 let _lastToastText = "";
 let _lastToastTime = 0;
-let _snackT = null;
 function _ensureToastContainer() {
   let c = document.getElementById("toastContainer");
   if (!c) {
@@ -458,26 +456,8 @@ function toast(msg, type, duration = 2800) {
       setTimeout(() => t.remove(), 300);
     }, duration || 2800);
   }
-  try {
-    const el = document.getElementById("toast");
-    const txt = document.getElementById("toastTxt");
-    if (el && txt) {
-      txt.textContent = text;
-      el.className = "show " + (type === "ok" ? "okk" : type === "bad" ? "badk" : "");
-      clearTimeout(_toastT);
-      _toastT = setTimeout(() => { el.className = ""; }, duration || 2800);
-    }
-  } catch (e) {}
-  try {
-    const bar = document.getElementById("snackbar");
-    const btxt = document.getElementById("snackbarText");
-    if (bar && btxt) {
-      btxt.textContent = text;
-      bar.classList.add("show");
-      clearTimeout(_snackT);
-      _snackT = setTimeout(() => bar.classList.remove("show"), duration || 2800);
-    }
-  } catch (e) {}
+  // 只走堆叠通道：旧 #toast（右下同位）与 #snackbar（黑底反色，手机端同在底部）
+  // 曾与堆叠层同时渲染，同一条消息出现三份、层间叠出怪底色与描边线，已停用驱动（元素保留兼容）。
 }
 
 // ---------- 页内确认框/输入框 (xbimg式，沙盒iframe内原生confirm/prompt会被拦截) ----------
