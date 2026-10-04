@@ -2663,6 +2663,8 @@
       .bottom-sheet-footer .m3-btn { flex: 1; }
       .toast-container, #toastContainer { left: 16px; right: 16px; align-items: center; }
       .m3-toast, #toast { max-width: calc(100vw - 32px); }
+      /* 手机端通知近乎通栏：999px 胶囊圆角会把多行文字两端挤成大圆弧，改常规 16px 圆角 */
+      .m3-toast, #toast, .m3-snackbar, #snackbar { border-radius: 16px; }
       .m3-snackbar, #snackbar { max-width: calc(100vw - 32px); }
       .xb-confirm-overlay { padding: 16px; align-items: flex-end; }
       .xb-confirm-card { max-width: 100%; }
@@ -2945,12 +2947,14 @@
     .kpi-grid .card .lab { font-size: 12px; font-weight: 600; color: var(--m3-sys-color-outline); }
     .kpi-grid .card .num { font-size: 24px; font-weight: 800; color: var(--m3-sys-color-on-surface); line-height: 1.2; }
     .m3-filter-dock {
-      background: var(--m3-sys-color-surface-container-high);
-      border: 1px solid var(--m3-sys-color-divider);
-      border-radius: 999px;
-      padding: 6px 6px 6px 8px;
+      /* dock 只做排版行（容器去饰）：搜索/筛选各自成 pill，避免“容器 pill + 控件 pill”双层描边怪线 */
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 8px;
       flex-wrap: wrap;
     }
@@ -2971,14 +2975,10 @@
       border-color: var(--m3-sys-color-primary);
       background: var(--m3-sys-color-surface-container-high);
     }
-    /* dock 内搜索框不再自描边/自填充：外层 dock 已是胶囊容器，内外双层描边会在两端挤出双弧怪线；聚焦高亮改由 dock 承担 */
-    .m3-filter-dock .m3-filter-search,
-    .m3-filter-dock .m3-filter-search:focus-within {
-      border-color: transparent;
+    /* 仅当标签用的 search（排行榜“排行维度”）透明化，不渲染成无内容大色块 */
+    .m3-filter-search.m3-filter-label {
       background: transparent;
-    }
-    .m3-filter-dock:focus-within {
-      border-color: var(--m3-sys-color-primary);
+      border-color: transparent;
     }
     .m3-filter-search > span:first-child {
       position: absolute;
@@ -3065,7 +3065,7 @@
       flex-shrink: 0;
     }
     @media (max-width: 640px) {
-      .m3-filter-dock { border-radius: 20px; padding: 8px; }
+      .m3-filter-dock { padding: 0; }
       .m3-filter-search { flex-basis: 100%; }
       .m3-filter-chips { width: 100%; }
       .m3-filter-chips select { flex: 1 1 auto; min-width: 0; }
