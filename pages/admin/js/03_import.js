@@ -537,7 +537,7 @@ function initBackTop() {
 
 async function main() {
   initTheme();
-  // 主题色/深浅色的权威值在服务端配置里（沙箱 iframe 禁 localStorage）；
+  // 主题色/深浅色的权威值在服务端配置里（无本地副本）；
   // 不 await —— 首屏揭幕与其余初始化并行，loadUiPrefs 内部负责揭开 data-boot。
   try { loadUiPrefs(); } catch (e) {}
   bindTabs();

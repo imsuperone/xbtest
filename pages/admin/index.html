@@ -6,9 +6,9 @@
   <meta name="color-scheme" content="light dark">
   <title>小白测试版 - 小白机器人</title>
   <link rel="stylesheet" href="./admin.css?v=26w1005f">
-  <!-- 主题色/深浅色存在服务端 config 的「UI偏好」节，需等 config/get 回来才套用；
-       AstrBot 沙箱 iframe 禁 localStorage（稳定版 app.js 已注明），首帧先挂起，
-       避免"先见默认色、再跳成已存色"。回填后由 revealUiPrefs() 揭开，3s 兜底。 -->
+  <!-- 主题色/深浅色存在服务端 config 的「UI偏好」节（唯一真相源，无本地副本），
+       需等 config/get 回来才套用；首帧先挂起，避免"先见默认色、再跳成已存色"。
+       回填后由 revealUiPrefs() 揭开，3s 兜底。 -->
   <style>
     html[data-boot] { visibility: hidden; background: #f4f6f8; }
     @media (prefers-color-scheme: dark) { html[data-boot] { background: #0f1115; } }

@@ -1,4 +1,5 @@
-// ---------- M3 Accent Color Engine (xbdoc/xbimg parity; keys: xbbot_accent/xbbot_theme) ----------
+// ---------- M3 Accent Color Engine (xbdoc/xbimg parity) ----------
+// 主题色/深浅色的唯一真相源是服务端配置（见下方 UI 偏好小节），不写 localStorage。
 function hexToRgb(hex) {
   let c = String(hex || "").replace(/^#/, "").trim();
   if (c.length === 3) c = c.split("").map(x => x + x).join("");
@@ -72,18 +73,14 @@ function applyAccentColor(hex, save) {
       root.style.setProperty("--primary-container", tinted["--m3-sys-color-primary-container"]);
       root.style.setProperty("--on-primary-container", dark ? "#D6E8FA" : "#0F2B46");
     } catch (e) {}
-    try { localStorage.setItem("xbbot_accent", v); } catch (e) {}
   } else {
     // 恢复默认：必须同时清空内存态 _CURRENT_ACCENT_COLOR。
-    // 否则 applyTheme() 每次切换浅/深色都会用旧色重新写回 inline + 重新持久化，
+    // 否则 applyTheme() 每次切换浅/深色都会用旧色重新写回 inline，
     // 表现为「恢复默认后再切换，又变回第一次改的主题色 / 切换持久化卡住」。
     _CURRENT_ACCENT_COLOR = "";
     for (const k of _ACCENT_VARS) {
       try { root.style.removeProperty(k); } catch (e) {}
     }
-    try { if (window.localStorage) window.localStorage.removeItem("xbbot_accent"); } catch (e) {}
-    // 旧版遗留键：留着会在下次冷启动被 initAccentColor 当兜底复活
-    try { if (window.localStorage) window.localStorage.removeItem("xbbot_monet_color"); } catch (e) {}
   }
   const picker = document.getElementById("accentPicker");
   if (picker) {
@@ -118,7 +115,6 @@ const _SUN_SVG_PATH = "M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
   try { document.documentElement.style.colorScheme = t; } catch (e) {}
-  try { localStorage.setItem("xbbot_theme", t); } catch (e) {}
   const icon = document.getElementById("themeIcon");
   if (icon) {
     icon.innerHTML = `<path d="${t === "dark" ? _SUN_SVG_PATH : _MOON_SVG_PATH}"/>`;
@@ -128,18 +124,12 @@ function applyTheme(t) {
   applyAccentColor(_CURRENT_ACCENT_COLOR || "", false);
 }
 
-function initAccentColor() {
-  let v = "";
-  try { v = localStorage.getItem("xbbot_accent") || ""; } catch (e) { v = ""; }
-  if (!v) {
-    try { v = localStorage.getItem("xbbot_monet_color") || ""; } catch (e) {}
-  }
-  // 不在此预写 _CURRENT_ACCENT_COLOR：由 applyAccentColor 统一维护（非法值/空值会被清成 ""）
-  applyAccentColor(v, false);
-}
+// 取色回填交给服务端配置（loadUiPrefs → applyUiPrefs）。
+// initTheme() 里的 applyTheme() 已经会按新主题重算一遍 primary，无需单独初始化。
 
 // ---------- UI 偏好（主题色 + 深浅色）服务端持久化 ----------
-// AstrBot 用沙箱 iframe 载本页，localStorage 被禁：只存本地刷新即丢（稳定版 app.js:150 早已注明）。
+// AstrBot 用沙箱 iframe 载本页，localStorage 不可用：本地缓存这条路走不通
+// （稳定版 app.js:150 早已注明），所以服务端配置是唯一真相源，不留任何本地副本。
 // 落 config 的「UI偏好」节：config/save 逐节 setdefault+update、缺键不动，不碰玩法配置；
 // 该节不在 config/schema 里，配置页按 schema.groups 渲染，不会被误渲染出来。
 function revealUiPrefs() {
@@ -192,20 +182,12 @@ async function loadUiPrefs() {
 }
 
 function initTheme() {
-  let savedTheme = "";
-  try { savedTheme = localStorage.getItem("xbbot_theme") || ""; } catch (e) {}
-  if (!savedTheme || (savedTheme !== "dark" && savedTheme !== "light")) {
-    try {
-      if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-        savedTheme = "dark";
-      } else {
-        savedTheme = "light";
-      }
-    } catch (e) {
-      savedTheme = "light";
-    }
-  }
-  initAccentColor();
+  // 没有本地缓存可读（服务端是唯一真相源，由 loadUiPrefs() 回填）；
+  // 首帧先按系统深浅色给个合理初值，随后被服务端值覆盖。
+  let savedTheme = "light";
+  try {
+    savedTheme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+  } catch (e) {}
   applyTheme(savedTheme);
 
   const toggleBtn = document.getElementById("themeToggleBtn");
