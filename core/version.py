@@ -13,7 +13,7 @@ beta 快照制（正式版仍走 semver）：`YYwMMDDx`（2 位年＋w＋月日�
 """
 import os as _os
 
-_FALLBACK = "26w1005d"
+_FALLBACK = "26w1005e"
 _CACHE = ""
 
 
@@ -67,7 +67,7 @@ def parse_version_tuple(v_str):
         try:
             year = int(m.group(1))
             if year < 100:
-                year += 2000            # 26w1005d → 2026，保证比 2026w1005c 大
+                year += 2000            # 26w1005e → 2026，保证比 2026w1005c 大
             seq = 0
             for _ch in m.group(4).lower():
                 seq = seq * 26 + (ord(_ch) - 96)
