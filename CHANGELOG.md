@@ -1,6 +1,6 @@
 # 更新日志
 
-## v26w1005e
-- 🎨 **调色盘按钮重做**：顶栏取色按钮原先是一个纯色空心圆、没有任何图标，现在改为 **外圈彩虹取色环 + 内圈当前主题色 + 调色板图标**，既一眼看出是"选颜色"，也仍然能直接看到当前取色。图标取 `--m3-sys-color-on-primary`，与按钮底色成对（黄色等浅底自动转深色字），换色 / 换深浅色都跟随；配套 hover 轻抬、active 内缩、focus-visible 描边。
-- 🧩 **压过全局按钮样式**：规则选择器升级为 `button.m3-accent-picker`，避免被全局 `button:hover`（棕色阴影 + `brightness(0.96)` 滤镜）和 `button:active` 覆盖，深浅色两套主题下 hover 表现一致；并显式声明 `inline-flex` 居中，不依赖各端全局 `button` 规则。
-- 🔁 **调色逻辑与 xbdoc / xbimg 三端对齐**：三个插件的调色盘按钮外观、内嵌 SVG 图标、取色派生逻辑统一；xbdoc / xbimg 同步移除 4 个 surface 系染色（只染 `primary` / `primary-container`），分段控件字色改为按 CSS 中性默认底算对比度。
+## v26w1005f
+- 🔐 **主题色 / 深浅色改存服务端**：AstrBot 用沙箱 iframe 载插件页，`localStorage` 被禁（稳定版 `pages/admin/app.js` 的「沙箱 iframe 禁止 localStorage, 仅内存切换」注释早已注明），此前主题色与深浅色只写本地，**刷新即恢复默认**。现统一落配置 `UI偏好` 节：`config/save` 逐节 `setdefault+update`、缺键不动，不碰玩法配置；该节不在 `config/schema` 内，配置页按 `schema.groups` 渲染不会被误显示。顶栏取色 / 切换后 600ms 防抖写入，启动时 `config/get` 立即回填。
+- 🎞️ **首帧挂起，不再「先见默认色、再跳成已存色」**：`<head>` 内联脚本先置 `data-boot` 挂起首屏，主题色与深浅色回填完成后揭幕，并有 3s 兜底超时；沙箱外（直接开页）localStorage 仍作快速路径，不额外等待。
+- 🧭 **首次使用自动补写**：服务端尚无 `主题模式` 时，回填完成后把当前解析值回写一次，保证第一次会话就能留住。

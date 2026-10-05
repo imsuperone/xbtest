@@ -138,6 +138,59 @@ function initAccentColor() {
   applyAccentColor(v, false);
 }
 
+// ---------- UI 偏好（主题色 + 深浅色）服务端持久化 ----------
+// AstrBot 用沙箱 iframe 载本页，localStorage 被禁：只存本地刷新即丢（稳定版 app.js:150 早已注明）。
+// 落 config 的「UI偏好」节：config/save 逐节 setdefault+update、缺键不动，不碰玩法配置；
+// 该节不在 config/schema 里，配置页按 schema.groups 渲染，不会被误渲染出来。
+function revealUiPrefs() {
+  try { document.documentElement.removeAttribute("data-boot"); } catch (e) {}
+}
+
+let _uiPrefTimer = null;
+function persistUiPrefs() {
+  if (_uiPrefTimer) clearTimeout(_uiPrefTimer);
+  _uiPrefTimer = setTimeout(() => {
+    _uiPrefTimer = null;
+    const picker = document.getElementById("accentPicker");
+    const payload = { "UI偏好": {
+      "主题色": (picker && picker.dataset.custom) ? picker.value : "",
+      "主题模式": document.documentElement.dataset.theme === "dark" ? "dark" : "light"
+    } };
+    try {
+      const p = getBridge().apiPost("config/save", payload);
+      if (p && typeof p.catch === "function") p.catch((e) => { console.warn("[xbbot] 保存 UI 偏好失败:", e); });
+    } catch (e) {
+      console.warn("[xbbot] 保存 UI 偏好失败:", e);
+    }
+  }, 600);
+}
+
+// 返回 true = 服务端还没记过深浅色，调用方需回写一次，否则沙箱里下次刷新仍是默认
+function applyUiPrefs(sec) {
+  const s = (sec && typeof sec === "object") ? sec : {};
+  let needSeed = false;
+  if (s["主题模式"] === "dark" || s["主题模式"] === "light") {
+    applyTheme(s["主题模式"]);   // 内部会用 _CURRENT_ACCENT_COLOR 先套一遍，取色随后覆盖
+  } else {
+    needSeed = true;             // 节还不存在（首次升级）也要回种，不能直接返回
+  }
+  if (Object.prototype.hasOwnProperty.call(s, "主题色")) {
+    applyAccentColor(String(s["主题色"] || "").trim(), false);
+  }
+  return needSeed;
+}
+
+async function loadUiPrefs() {
+  try {
+    const cfg = await getBridge().apiGet("config/get");
+    if (applyUiPrefs((cfg || {})["UI偏好"])) persistUiPrefs();
+  } catch (e) {
+    console.warn("[xbbot] 读取 UI 偏好失败:", e);
+  } finally {
+    revealUiPrefs();
+  }
+}
+
 function initTheme() {
   let savedTheme = "";
   try { savedTheme = localStorage.getItem("xbbot_theme") || ""; } catch (e) {}
@@ -162,6 +215,7 @@ function initTheme() {
       const cur = document.documentElement.dataset.theme || "light";
       const next = cur === "dark" ? "light" : "dark";
       applyTheme(next);
+      persistUiPrefs();
       toast(`当前界面已切换为${next === "dark" ? "深色" : "浅色"}模式。`, "ok");
     });
   }
@@ -171,6 +225,7 @@ function initTheme() {
     legacyBtn.addEventListener("click", () => {
       const cur = document.documentElement.dataset.theme || "light";
       applyTheme(cur === "dark" ? "light" : "dark");
+      persistUiPrefs();
     });
   }
 
@@ -184,14 +239,15 @@ function initAccentPicker() {
   if (picker && !picker.dataset.bound) {
     picker.dataset.bound = "1";
     picker.addEventListener("input", () => applyAccentColor(picker.value, false));
-    picker.addEventListener("change", () => applyAccentColor(picker.value, false));
-    picker.addEventListener("dblclick", () => applyAccentColor("", false));
+    picker.addEventListener("change", () => { applyAccentColor(picker.value, false); persistUiPrefs(); });
+    picker.addEventListener("dblclick", () => { applyAccentColor("", false); persistUiPrefs(); });
   }
   const resetBtn = document.getElementById("accentResetBtn");
   if (resetBtn && !resetBtn.dataset.bound) {
     resetBtn.dataset.bound = "1";
     resetBtn.addEventListener("click", () => {
       applyAccentColor("", false);
+      persistUiPrefs();
       toast("已恢复默认主题颜色。", "ok");
     });
   }
