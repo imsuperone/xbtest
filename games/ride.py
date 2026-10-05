@@ -22,8 +22,8 @@ except ImportError:
 RIDE_TYPE = "坐骑"
 
 _PLUGIN_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_IMG_BASE = os.path.join(_PLUGIN_BASE, "data", "games", "img", "rides")
-_IMG_BASE_LEGACY = os.path.join(_PLUGIN_BASE, "data", "img", "rides")
+_IMG_BASE = os.path.join(_PLUGIN_BASE, "data", "img", "rides")           # 新包内布局（图片归 img 目录）
+_IMG_BASE_LEGACY = os.path.join(_PLUGIN_BASE, "data", "games", "img", "rides")  # 迁移前旧包内布局
 _IMG_BASE_V2 = os.path.join(_PLUGIN_BASE, "data", "games", "ride", "img")
 # 兼容 Linux 部署的多种数据目录布局 + 旧中文目录
 _ALT_IMG_BASES = [
@@ -49,6 +49,8 @@ def _alias_img_path(p):
         pairs = (("坐骑图标", "rides"), ("rides", "坐骑图标"),
                  ("data/gacha_img", "data/img/gacha"), ("data\\gacha_img", "data\\img\\gacha"),
                  ("data/img/gacha", "data/gacha_img"), ("data\\img\\gacha", "data\\gacha_img"),
+                 ("data/games/img/rides", "data/img/rides"), ("data\\games\\img\\rides", "data\\img\\rides"),
+                 ("data/img/rides", "data/games/img/rides"), ("data\\img\\rides", "data\\games\\img\\rides"),
                  ("data/img/rides", "data/games/ride/img"), ("data\\img\\rides", "data\\games\\ride\\img"),
                  ("data/games/ride/img", "data/games/img/rides"), ("data\\games\\ride\\img", "data\\games\\img\\rides"),
                  ("data/games/img/rides", "data/games/ride/img"), ("data\\games\\img\\rides", "data\\games\\ride\\img"),

@@ -16,8 +16,10 @@ data/*.db-journal
 data/*.db-wal
 data/*.db-shm
 data/backups/
-# 运行时播种的武器图池（dev 裸跑生成，不入库）
-data/img/
+# data/img/ 下除内置图库 nuli|rides 外的运行时目录（武器池 gacha、上传等）不入库
+data/img/*
+!data/img/nuli/
+!data/img/rides/
 
 # Distribution / packaging
 .Python

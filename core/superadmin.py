@@ -600,6 +600,7 @@ def _cmd_imgtest():
         base = os.path.dirname(os.path.abspath(__file__))
         roots = [os.path.join(base, "..", "data", "img", "gacha", "SSR"),
                  os.path.join(base, "..", "data", "gacha_img", "SSR"),
+                 os.path.join(base, "..", "data", "img", "nuli", "SSR"),
                  os.path.join(base, "..", "data", "img", "rides"),
                  os.path.join(base, "..", "data", "img")]
         for r in roots:

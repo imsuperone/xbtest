@@ -359,16 +359,20 @@ async def handle_images_thumb(request, plugin_base=""):
     base = _img_base(plugin_base)
     fp = _safe_path(rel, base)
     if not fp or not os.path.isfile(fp):
-        # 兼容旧路径与层级差异：data/img/ <-> data/games/img/
+        # 兼容旧路径与层级差异：data/img/ <-> data/games/img/（目录迁移前后双向）
         candidates = []
         clean_rel = rel.replace("\\", "/")
         if clean_rel.startswith("data/img/"):
             candidates.append(clean_rel.replace("data/img/", "data/games/img/"))
         elif clean_rel.startswith("data/games/img/"):
             candidates.append(clean_rel.replace("data/games/img/", "data/img/"))
-        # 纯文件名回退探测
+        # 纯文件名回退探测（新布局置前，旧包内布局兜底）
         base_name = os.path.basename(clean_rel)
         if base_name:
+            candidates.append(f"data/img/rides/{base_name}")
+            candidates.append(f"data/img/nuli/SSR/{base_name}")
+            candidates.append(f"data/img/nuli/SR/{base_name}")
+            candidates.append(f"data/img/nuli/R/{base_name}")
             candidates.append(f"data/games/img/rides/{base_name}")
             candidates.append(f"data/games/img/nuli/SSR/{base_name}")
             candidates.append(f"data/games/img/nuli/SR/{base_name}")

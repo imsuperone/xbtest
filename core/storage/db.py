@@ -191,7 +191,9 @@ def _auto_migrate_and_heal(cand, base):
             _has_new = os.path.isdir(_dst_new) and bool(os.listdir(_dst_new))
             _has_old = os.path.isdir(_dst_old) and bool(os.listdir(_dst_old))
             if not _has_new and not _has_old:
-                _src = os.path.join(base, "data", "games", "img", "nuli")
+                _src = os.path.join(base, "data", "img", "nuli")
+                if not os.path.isdir(_src):  # 兼容迁移前的旧包内布局
+                    _src = os.path.join(base, "data", "games", "img", "nuli")
                 if os.path.isdir(_src):
                     shutil.copytree(_src, _dst_new, dirs_exist_ok=True)
         except Exception:

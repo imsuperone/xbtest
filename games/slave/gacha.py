@@ -10,13 +10,14 @@ from .nick import uname
 from .profile import coin_name
 
 def _gacha_dirs(rar):
-    """抽奖池候选目录（持久化旧位优先保用户池 → 持久新位 → 包内 data/games/img/nuli）"""
+    """抽奖池候选目录（持久化旧位优先保用户池 → 持久新位 → 包内 data/img/nuli）"""
     cands = []
     try:
         cands.append(_os.path.join(_S.DATA_DIR, "img", "gacha", rar))
         cands.append(_os.path.join(_S.DATA_DIR, "gacha_img", rar))
         cands.append(_os.path.join(_S.DATA_DIR, "img", "nuli", rar))
-        cands.append(_os.path.join(_S._BASE, "data", "games", "img", "nuli", rar))
+        cands.append(_os.path.join(_S._BASE, "data", "img", "nuli", rar))
+        cands.append(_os.path.join(_S._BASE, "data", "games", "img", "nuli", rar))  # 旧包内布局
     except Exception:
         pass
     out = []

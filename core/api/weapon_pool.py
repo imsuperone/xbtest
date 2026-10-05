@@ -98,7 +98,9 @@ def _pool_dir(rar):
         pers = ST.get_persistent_data_dir(base) if hasattr(ST, "get_persistent_data_dir") else ""
     except Exception:
         pers = ""
-    _seed_pkg = _os.path.join(base, "data", "games", "img", "nuli", rar)
+    _seed_pkg = _os.path.join(base, "data", "img", "nuli", rar)
+    if not _os.path.isdir(_seed_pkg):  # 兼容旧包内布局
+        _seed_pkg = _os.path.join(base, "data", "games", "img", "nuli", rar)
     _seed_old = _os.path.join(pers or _os.path.join(base, "data"), "img", "gacha", rar)
     _seed_new = _os.path.join(pers or _os.path.join(base, "data"), "img", "nuli", rar)
     d = _seed_old if _os.path.isdir(_seed_old) else (_seed_new if _os.path.isdir(_seed_new) else _seed_pkg)
