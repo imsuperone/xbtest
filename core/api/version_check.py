@@ -53,13 +53,16 @@ def _parse_version_tuple(v_str):
     except Exception:
         pass
     s = str(v_str or "").strip()
-    m0 = re.match(r"^(\d{4})[wW](\d{2})(\d{2})([a-zA-Z]+)$", s)
+    m0 = re.match(r"^(\d{2,4})[wW](\d{2})(\d{2})([a-zA-Z]+)$", s)
     if m0:
         try:
+            _year = int(m0.group(1))
+            if _year < 100:
+                _year += 2000
             _seq = 0
             for _ch in m0.group(4).lower():
                 _seq = _seq * 26 + (ord(_ch) - 96)
-            return (2, int(m0.group(1) + m0.group(2) + m0.group(3)), _seq)
+            return (2, int("%04d" % _year + m0.group(2) + m0.group(3)), _seq)
         except Exception:
             pass
     m = re.findall(r"\d+", s)

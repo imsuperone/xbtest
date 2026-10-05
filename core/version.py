@@ -7,12 +7,13 @@
 常驻校验；升版用 `dev_xbbot_beta/bump_version.py` 机械执行，打包用 `dev_xbbot_beta/pack.py`。
 两脚本常驻插件目录外，永不进发布包。）
 
-beta 快照制（正式版仍走 semver）：`YYYYwMMDDx`（年＋w＋月日＋序号字母，同日递增 a→b…c，
-跨日归 a）。快照恒大于任何 semver（epoch 2），快照之间按日期＋序号比。
+beta 快照制（正式版仍走 semver）：`YYwMMDDx`（2 位年＋w＋月日＋序号字母，同日递增 a→b…c，
+跨日归 a）。2026-10 由 4 位年 `YYYYwMMDDx` 改制，历史 4 位年版本仍可解析。
+快照恒大于任何 semver（epoch 2），快照之间按日期＋序号比。
 """
 import os as _os
 
-_FALLBACK = "2026w1005c"
+_FALLBACK = "26w1005d"
 _CACHE = ""
 
 
@@ -56,18 +57,21 @@ def get_version(plugin_base=""):
 
 
 def parse_version_tuple(v_str):
-    """比较元组：快照 `YYYYwMMDDS` → (2, 日期, 序号)，恒大于 semver；
+    """比较元组：快照 `YYwMMDDS`（2 位年，兼容旧 4 位年）→ (2, 日期, 序号)，恒大于 semver；
     semver 走纪元比较 (epoch, major, minor, patch)：0.10~0.68 为旧纪元 0，其余为 1。
     保证 0.7.0+ 恒大于历史 0.68.x。原 `core/api/updater._parse_version_tuple` 已委托至此。"""
     import re as _re
     s = str(v_str or "").strip()
-    m = _re.match(r"^(\d{4})[wW](\d{2})(\d{2})([a-zA-Z]+)$", s)
+    m = _re.match(r"^(\d{2,4})[wW](\d{2})(\d{2})([a-zA-Z]+)$", s)
     if m:
         try:
+            year = int(m.group(1))
+            if year < 100:
+                year += 2000            # 26w1005d → 2026，保证比 2026w1005c 大
             seq = 0
             for _ch in m.group(4).lower():
                 seq = seq * 26 + (ord(_ch) - 96)
-            return (2, int(m.group(1) + m.group(2) + m.group(3)), seq)
+            return (2, int("%04d" % year + m.group(2) + m.group(3)), seq)
         except Exception:
             pass
     m = _re.findall(r"\d+", s)

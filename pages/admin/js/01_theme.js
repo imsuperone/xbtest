@@ -39,27 +39,25 @@ function applyAccentColor(hex, save) {
   if (ok) {
     _CURRENT_ACCENT_COLOR = v;
     const dark = (root.getAttribute("data-theme") || root.dataset.theme || "light") === "dark";
+    // 方案A：只染「强调系」（主色 + primary-container）。
+    // 四个 surface 系（页面底 / 卡片 / 面板 / 最高层）不再随主题色变化，
+    // 整页保持中性灰，只有按钮、徽章、选中态取色 —— 之前整页被染脏的主因。
     const tinted = dark ? {
       "--m3-sys-color-primary": v,
       "--m3-sys-color-primary-container": mixHex(v, "#1B2C42", 0.45),
-      "--m3-sys-color-surface": mixHex(v, "#111418", 0.12),
-      "--m3-sys-color-surface-container": mixHex(v, "#1A1F26", 0.16),
-      "--m3-sys-color-surface-container-high": mixHex(v, "#232A33", 0.16),
-      "--m3-sys-color-surface-container-highest": mixHex(v, "#2C343F", 0.16),
     } : {
       "--m3-sys-color-primary": v,
       "--m3-sys-color-primary-container": mixHex(v, "#E4EAF2", 0.25),
-      "--m3-sys-color-surface": mixHex(v, "#F4F7FB", 0.08),
-      "--m3-sys-color-surface-container": mixHex(v, "#E8EDF4", 0.12),
-      "--m3-sys-color-surface-container-high": mixHex(v, "#FFFFFF", 0.12),
-      "--m3-sys-color-surface-container-highest": mixHex(v, "#DFE6EF", 0.12),
     };
     for (const k in tinted) {
       try { root.style.setProperty(k, tinted[k]); } catch (e) {}
     }
     try {
       root.style.setProperty("--m3-sys-color-on-primary", _contrastOk("#FFFFFF", v) ? "#FFFFFF" : (dark ? "#06263F" : "#1E1B16"));
-      const segBg = tinted["--m3-sys-color-surface-container-high"];
+      // surface 已不参与染色，分段控件底色取 CSS 中性默认值做对比度判定
+      let segBg = "";
+      try { segBg = getComputedStyle(root).getPropertyValue("--m3-sys-color-surface-container-high").trim(); } catch (e) { segBg = ""; }
+      if (!/^#[0-9a-fA-F]{6}$/.test(segBg)) segBg = dark ? "#232A33" : "#FFFFFF";
       root.style.setProperty("--m3-seg-ink", _contrastOk(v, segBg) ? v : (dark ? "#EAE6DF" : "#1E1B16"));
     } catch (e) {}
     try {
@@ -76,10 +74,16 @@ function applyAccentColor(hex, save) {
     } catch (e) {}
     try { localStorage.setItem("xbbot_accent", v); } catch (e) {}
   } else {
+    // 恢复默认：必须同时清空内存态 _CURRENT_ACCENT_COLOR。
+    // 否则 applyTheme() 每次切换浅/深色都会用旧色重新写回 inline + 重新持久化，
+    // 表现为「恢复默认后再切换，又变回第一次改的主题色 / 切换持久化卡住」。
+    _CURRENT_ACCENT_COLOR = "";
     for (const k of _ACCENT_VARS) {
       try { root.style.removeProperty(k); } catch (e) {}
     }
     try { if (window.localStorage) window.localStorage.removeItem("xbbot_accent"); } catch (e) {}
+    // 旧版遗留键：留着会在下次冷启动被 initAccentColor 当兜底复活
+    try { if (window.localStorage) window.localStorage.removeItem("xbbot_monet_color"); } catch (e) {}
   }
   const picker = document.getElementById("accentPicker");
   if (picker) {
@@ -130,7 +134,7 @@ function initAccentColor() {
   if (!v) {
     try { v = localStorage.getItem("xbbot_monet_color") || ""; } catch (e) {}
   }
-  _CURRENT_ACCENT_COLOR = v;
+  // 不在此预写 _CURRENT_ACCENT_COLOR：由 applyAccentColor 统一维护（非法值/空值会被清成 ""）
   applyAccentColor(v, false);
 }
 

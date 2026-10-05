@@ -1,5 +1,6 @@
 # 更新日志
 
-## v2026w1005c
-- 🗜️ **包内图片压缩（省 53%）**：`data/img/` 52 张内置图走「PNG 量化 256 色 + JPG q85」，1.49MB → 463KB（省 69%），zip 1.92MB → 约 0.90MB；尺寸/文件名/扩展名不变（含 `老八脑!.png` 等中文与 `!`，代码按 `.png/.jpg` 过滤依赖原扩展名），38 张带真透明的图透明通道保留，`rides/老八.jpg` 已是最优跳过；仅写入比原图更小的结果，写前校验可重开 + 尺寸一致 + 透明不丢；1:1 目检无肉眼差异（4x 放大才见量化痕迹），gacha 运行时池未动。
-- 🔢 **版本**：`2026w1005c`；`bump_version.py` 同步 metadata / index 四锚点 / `FRONTEND_VER`，`?v=` 12 处手升，`core/version.py` `_FALLBACK` 同步，README 标题同步。
+## v26w1005d
+- 🎨 **主题色只染「强调系」（方案 A）**：选色不再改 16 个变量，只改 `--m3-sys-color-primary` / `primary-container` 及 `--acc*` 系；**4 个 surface 系（页面底 / 卡片 / 面板 / 最高层）不再随选色变化**，整页保持中性灰，只有按钮、徽章、选中态取色。之前整页被染脏、"改太多太丑"的主因即 surface 染色。分段控件选中色改为按 CSS 中性默认底算对比度（不再依赖被染的 surface）。
+- 🐛 **修「恢复默认后再切换又变回旧主题色」**：`applyAccentColor("")` 的恢复默认分支只清了 inline 样式和 `localStorage.xbbot_accent`，**没有清内存态 `_CURRENT_ACCENT_COLOR`**；而 `applyTheme()` 每次切换浅/深色末尾会 `applyAccentColor(_CURRENT_ACCENT_COLOR)`，于是把旧色重新写回 inline 并重新持久化 → 表现为"切换持久化卡住、恢复默认后一切换又变回第一次改的颜色、刷新也还在"。现恢复默认分支同步置空 `_CURRENT_ACCENT_COLOR`，并顺手 `removeItem` 掉旧版遗留键 `xbbot_monet_color`（留着会在下次冷启动被 `initAccentColor` 当兜底复活）；`initAccentColor` 不再预写内存态，统一由 `applyAccentColor` 维护。
+- 🔢 **版本号改制 `26w1005d`（2 位年，去掉 20 前缀）**：格式门禁 `^\d{2}w\d{4}[a-z]$`，历史 4 位年仍可解析且单调成立（年份归一 2000+）。同步改 `bump_version.py`（SNAP_RE / snapshot_tuple / next_snapshot 输出 `%02d`）、`test_beta.py`（SNAP_RE + 硬编码扫描）、`pack.py` `DOC_VER_RE`、`core/version.py`（`_FALLBACK` + `parse_version_tuple`）、`core/api/version_check.py` 本地兜底正则，否则新号会退化成 semver 解析、被更新检查判成降级。
