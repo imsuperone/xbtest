@@ -137,7 +137,12 @@ function revealUiPrefs() {
 }
 
 let _uiPrefTimer = null;
+// 首屏竞态护栏：loadUiPrefs 的 config/get 还在半路时用户已动过换肤，
+// 服务端旧值回压会覆盖这次点击（debounce 随后 POST 的又是被覆盖后的值=点击丢失）。
+// 用户一碰偏好就置位，loadUiPrefs 据此跳过回压。
+let _uiPrefTouched = false;
 function persistUiPrefs() {
+  _uiPrefTouched = true;
   if (_uiPrefTimer) clearTimeout(_uiPrefTimer);
   _uiPrefTimer = setTimeout(() => {
     _uiPrefTimer = null;
@@ -173,6 +178,7 @@ function applyUiPrefs(sec) {
 async function loadUiPrefs() {
   try {
     const cfg = await getBridge().apiGet("config/get");
+    if (_uiPrefTouched) return;   // 拉取期间用户已动过：本地是新值，不再回压旧值
     if (applyUiPrefs((cfg || {})["UI偏好"])) persistUiPrefs();
   } catch (e) {
     console.warn("[xbbot] 读取 UI 偏好失败:", e);
@@ -220,7 +226,7 @@ function initAccentPicker() {
   const picker = document.getElementById("accentPicker");
   if (picker && !picker.dataset.bound) {
     picker.dataset.bound = "1";
-    picker.addEventListener("input", () => applyAccentColor(picker.value, false));
+    picker.addEventListener("input", () => { _uiPrefTouched = true; applyAccentColor(picker.value, false); });
     picker.addEventListener("change", () => { applyAccentColor(picker.value, false); persistUiPrefs(); });
     picker.addEventListener("dblclick", () => { applyAccentColor("", false); persistUiPrefs(); });
   }

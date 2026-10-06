@@ -1,4 +1,4 @@
-# 小白 · AstrBot 插件 `astrbot_plugin_xbbot` v26w1006a
+# 小白 · AstrBot 插件 `astrbot_plugin_xbbot` v26w1006b
 
 > 🎮 1:1 深度复刻经典群互动玩法，包含 奴隶 / 签到 / 银行 / 娱乐 / 精灵 / 坐骑 / 帮派 / 冒险 / 超管 全套 28 大系统与 WebUI 小白测试版。
 

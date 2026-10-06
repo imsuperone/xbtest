@@ -169,11 +169,15 @@ document.getElementById("btnBackupNow")?.addEventListener("click", async () => {
   toast("正在打包并生成本地数据冷备...", "ok", 3000);
   try {
     const r = await getBridge().apiPost("backups/restore", { path: "__backup_now__" });
-    toast("本地冷备已生成: " + (r && r.path ? r.path : "成功"), "ok", 4000);
+    if (r && r.ok && r.path) {
+      toast("本地冷备已生成: " + r.path, "ok", 4000);
+    } else {
+      toast("备份失败: " + ((r && (r.error || r.msg)) || "服务端未返回路径"), "bad", 5000);
+    }
     await loadBackups("");
   } catch (e) {
     await loadBackups("");
-    toast("备份指令已下发，列表已刷新", "ok", 3000);
+    toast("备份失败: " + ((e && e.message) || e || "请求异常"), "bad", 5000);
   } finally {
     if (btn) {
       btn.disabled = false;

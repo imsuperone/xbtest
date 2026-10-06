@@ -1,5 +1,13 @@
 # 更新日志
 
+## v26w1006b
+- 🛡️ **非幂等 POST 不再重放**：`apiPost` 此前对 403/500 等响应也会换前缀重试，同一写操作最多被打 7 次（5 前缀 + 兜底）。现新增 `_fetchJsonOnce` 统一判定：只有 404（前缀没对上）才继续试下一个，端点已命中即返回其响应；网络层失败保持原行为。`apiGet` 幂等不受影响。
+- 🐛 **备份失败不再假报成功**：「立即备份」失败分支曾弹成功 toast（"备份指令已下发"）。现校验 `r.ok && r.path`，失败显示服务端错误与请求异常。
+- 🛡️ **手工快照不被自动快照挤掉**：配置快照上限 5 份，换肤/平衡等高频自动保存会把用户手动存的快照挤出索引并删行。现引入 `cfgsnap__manual` 手动名单，`_snap_index_save` 手动优先占位、自动快照只占剩余配额；手动接口保存时入名单，超限时按同一口径清理。
+- 🐛 **首屏换肤不再被服务端旧值覆盖**：`loadUiPrefs` 的 `config/get` 回压会覆盖用户在响应到达前的点击（debounce 随后 POST 被覆盖后的值=点击丢失）。现用户一碰偏好即置 `_uiPrefTouched`，回压前检查并跳过。
+- 🛡️ **弹窗文案恒转义**：`_formatModalText` 的「富文本直通」分支只摘 `on*=` 属性，文件名/URL 含 `<div` 等即直插标签。经全量核查 50+ 处调用方与后端文案无一传 HTML，分支整体移除。
+- 🧹 **`?v=` 缓存号纳入升版脚本**：`bump_version.py` 现同步 index.html 的 12 处 `?v=`，消除漏改导致浏览器吃旧 JS 的手工步骤。
+
 ## v26w1006a
 - 🐛 **文本预览关闭确认不再吞稿**：`pageConfirm` 此前落到 03_import 的 `#appModal` 版确认框，会把正在编辑的预览内容整个清掉——取消也丢稿，还留下 `modal-wide` 残留把后续弹窗撑宽。现 01_theme 的 overlay 版改名 `overlayConfirm` 专门服务 `pageConfirm`，独立浮层不碰 `#appModal`。
 - 🧹 **消除 uiConfirm/uiPrompt 双定义**：`01_theme.js` 与 `03_import.js` 曾各定义一对同名函数（后加载者胜出），overlay 版整层死代码、按钮文案参数被当成标题。现 `uiConfirm/uiPrompt` 只由 03_import 定义，overlay 侧只留 `overlayConfirm`，死掉的 `uiPrompt` overlay 版与 `.xb-confirm-input` 样式一并删除。

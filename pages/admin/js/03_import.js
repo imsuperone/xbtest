@@ -174,14 +174,9 @@ window.initImportHubEvents = initImportHubEvents;
 window._analyzeImportPackage = _analyzeImportPackage;
 function _formatModalText(msg) {
   if (!msg) return "";
-  if (msg.includes("<div") || msg.includes("<strong") || msg.includes("<span") || msg.includes("<br")) {
-    // 富文本直通（内部弹窗自拼）：先摘事件处理器属性，防后端文案（文件名/URL）带入的注入
-    try {
-      return String(msg).replace(/on\w+\s*=/gi, "on_=");
-    } catch (e) {
-      return "";
-    }
-  }
+  // 恒转义：已全量核查 50+ 处 uiAlert/uiConfirm/uiPrompt 调用与后端文案，
+  // 无一传 HTML——旧「富文本直通」分支只有摘 on* 属性，是纯注入面（文件名/URL
+  // 只要含 <div/<strong/<span/<br 即可直插标签），直接移除。
   return esc(String(msg))
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/^· (.*?)$/gm, "• $1")

@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "26w1006a";
+const FRONTEND_VER = "26w1006b";
 
 let _WORKING_API_PREFIX = null;
 
@@ -27,6 +27,28 @@ function cleanEndpointAndParams(endpoint, params) {
 
 // 传文件类读接口不加超时（备份/镜像导出按体积走，服务端自有熔断；加了会误杀大文件下载）
 const _NO_TIMEOUT_GET = /^(backups\/export|images\/export|user\/export|users\/export)/;
+
+// 前缀探测的单次响应处理：2xx 返回数据；404 = 前缀没对上（可换下一个前缀）；
+// 其余非 2xx（401/403/500…）说明请求已被路由处理，直接把结果交给调用方。
+// 尤其非幂等 POST 禁止重放——旧逻辑 403/500 时换前缀 + 兜底再打，
+// 同一写操作会被执行多次（5 个前缀 + 兜底最多 7 次）。
+// 网络层失败保持旧行为：换下一个前缀继续试。
+async function _fetchJsonOnce(url, opts, markPrefix) {
+  let r;
+  try { r = await fetch(url, opts); }
+  catch (err) { return { hit: false }; }
+  if (r.ok) {
+    try {
+      if (markPrefix !== null) _WORKING_API_PREFIX = markPrefix;
+      return { hit: true, data: await r.json() };
+    } catch (err) { return { hit: false }; }
+  }
+  if (r.status !== 404) {
+    try { return { hit: true, data: await r.json() }; }
+    catch (err) { return { hit: true, data: { ok: false, error: "HTTP " + r.status } }; }
+  }
+  return { hit: false };
+}
 
 // 直连探测单航班（并发探测共用一个 promise，防首屏 3 并发各跑 5 前缀=15 次 fetch 的惊群）
 let _PREFIX_PROBE_P = null;
@@ -131,47 +153,27 @@ function getBridge() {
     async apiPost(endpoint, data) {
       const { ep } = cleanEndpointAndParams(endpoint);
       const _run = async () => {
+      const opts = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data || {})
+      };
       if (_WORKING_API_PREFIX !== null) {
-        try {
-          const r = await fetch(_WORKING_API_PREFIX + ep, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data || {})
-          });
-          if (r.ok) return await r.json();
-        } catch (err) {}
+        const out = await _fetchJsonOnce(_WORKING_API_PREFIX + ep, opts, null);
+        if (out.hit) return out.data;
       } else if (_PREFIX_PROBE_P) {
         try { await _PREFIX_PROBE_P; } catch (e) {}
         if (_WORKING_API_PREFIX !== null) {
-          try {
-            const r = await fetch(_WORKING_API_PREFIX + ep, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(data || {})
-            });
-            if (r.ok) return await r.json();
-          } catch (err) {}
+          const out = await _fetchJsonOnce(_WORKING_API_PREFIX + ep, opts, null);
+          if (out.hit) return out.data;
         }
       }
       const prefixes = [`/api/plugins/${PLUGIN_ID}/`, `/${PLUGIN_ID}/`, `api/`, `./api/`, ``];
       for (const p of prefixes) {
-        try {
-          const r = await fetch(p + ep, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data || {})
-          });
-          if (r.ok) {
-            _WORKING_API_PREFIX = p;
-            return await r.json();
-          }
-        } catch (err) {}
+        const out = await _fetchJsonOnce(p + ep, opts, p);
+        if (out.hit) return out.data;
       }
-      const r = await fetch(ep, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data || {})
-      });
+      const r = await fetch(ep, opts);
       return await r.json();
       };
       return apiTimeout(_run(), 30000, ep);
