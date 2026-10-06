@@ -2616,7 +2616,6 @@
     }
     [data-theme="dark"] .xb-confirm-card { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
     .xb-confirm-msg { font-size: 15px; font-weight: 600; line-height: 1.6; margin-bottom: 16px; word-break: break-all; }
-    .xb-confirm-input { width: 100%; margin-bottom: 16px; }
     .xb-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
     /* 搜索框（与 xbdoc .m3-search-box 对等：44px pill、左侧 icon、focus primary 边框） */
     .m3-search-box { position: relative; display: flex; align-items: center; }

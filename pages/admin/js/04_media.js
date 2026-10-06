@@ -243,7 +243,7 @@ function showTextPreview(name, text, truncated, filePath) {
       let ok = false;
       try {
         if (typeof pageConfirm === "function") ok = await pageConfirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？", "放弃修改");
-        else if (typeof uiConfirm === "function") ok = await uiConfirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？", "放弃修改");
+        else if (typeof overlayConfirm === "function") ok = await overlayConfirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？", "放弃修改");
         else ok = confirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？");
       } catch (e) { ok = false; }
       if (!ok) return;

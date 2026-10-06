@@ -602,8 +602,11 @@ function toast(msg, type, duration) {
   arm(life);
 }
 
-// ---------- 页内确认框/输入框 (xbimg式，沙盒iframe内原生confirm/prompt会被拦截) ----------
-function _buildConfirmOverlay(message, { okText = "确定", showInput = false, inputPlaceholder = "", inputValue = "" } = {}) {
+// ---------- 页内确认框 (xbimg式，沙盒iframe内原生confirm/prompt会被拦截) ----------
+// 全局名 uiConfirm/uiPrompt 由 03_import.js 的 #appModal 版定义（后加载者胜出），
+// 这里的 overlay 版改名 overlayConfirm 专供 pageConfirm——#appModal 在用的场景（如
+// 文本预览）必须走独立 overlay，否则确认框会把正在编辑的 modal 内容清掉（丢稿）。
+function _buildConfirmOverlay(message, { okText = "确定" } = {}) {
   const ov = document.createElement("div");
   ov.className = "xb-confirm-overlay";
   const card = document.createElement("div");
@@ -612,15 +615,6 @@ function _buildConfirmOverlay(message, { okText = "确定", showInput = false, i
   msg.className = "xb-confirm-msg";
   msg.textContent = message;
   card.appendChild(msg);
-  let input = null;
-  if (showInput) {
-    input = document.createElement("input");
-    input.type = "text";
-    input.className = "m3-input xb-confirm-input";
-    input.placeholder = inputPlaceholder;
-    input.value = inputValue;
-    card.appendChild(input);
-  }
   const actions = document.createElement("div");
   actions.className = "xb-confirm-actions";
   const cancelBtn = document.createElement("button");
@@ -636,9 +630,9 @@ function _buildConfirmOverlay(message, { okText = "确定", showInput = false, i
   actions.appendChild(okBtn);
   card.appendChild(actions);
   ov.appendChild(card);
-  return { ov, okBtn, cancelBtn, input };
+  return { ov, okBtn, cancelBtn };
 }
-function uiConfirm(message, okText = "确定删除") {
+function overlayConfirm(message, okText = "确定删除") {
   return new Promise((resolve) => {
     const { ov, okBtn, cancelBtn } = _buildConfirmOverlay(message, { okText });
     document.body.appendChild(ov);
@@ -658,40 +652,12 @@ function uiConfirm(message, okText = "确定删除") {
     setTimeout(() => cancelBtn.focus(), 0);
   });
 }
-function uiPrompt(message, defaultValue = "", placeholder = "") {
-  return new Promise((resolve) => {
-    const { ov, okBtn, cancelBtn, input } = _buildConfirmOverlay(
-      message, { okText: "确定", showInput: true, inputPlaceholder: placeholder, inputValue: defaultValue });
-    document.body.appendChild(ov);
-    let done = false;
-    const finish = (val) => {
-      if (done) return;
-      done = true;
-      document.removeEventListener("keydown", onKey, true);
-      ov.remove();
-      resolve(val);
-    };
-    const onKey = (ev) => {
-      if (ev.key === "Escape") { ev.stopPropagation(); finish(null); }
-      else if (ev.key === "Enter" && document.activeElement === input) { finish((input.value || "").trim() ? input.value.trim() : null); }
-    };
-    document.addEventListener("keydown", onKey, true);
-    cancelBtn.addEventListener("click", () => finish(null));
-    okBtn.addEventListener("click", () => finish((input.value || "").trim() ? input.value.trim() : null));
-    ov.addEventListener("mousedown", (ev) => { if (ev.target === ov) finish(null); });
-    setTimeout(() => { input.focus(); input.select(); }, 0);
-  });
-}
-// 原生 confirm/prompt 桥接：保留原生引用，仅在沙盒拦截时走页内框
+// 原生 confirm 桥接：保留原生引用，仅在页内框异常时兜底
 if (typeof window !== "undefined" && !window._nativeConfirm) {
   try { window._nativeConfirm = window.confirm.bind(window); } catch (e) { window._nativeConfirm = null; }
-  try { window._nativePrompt = window.prompt ? window.prompt.bind(window) : null; } catch (e) { window._nativePrompt = null; }
 }
 async function pageConfirm(message, okText = "确定") {
-  try {
-    if (window.parent && window.parent !== window) return await uiConfirm(message, okText);
-  } catch (e) {}
-  try { return await uiConfirm(message, okText); }
+  try { return await overlayConfirm(message, okText); }
   catch (e) {
     if (window._nativeConfirm) return window._nativeConfirm(message);
     return false;
