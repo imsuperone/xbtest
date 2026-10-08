@@ -1,24 +1,24 @@
-# 小白测试版 · AstrBot 插件 `astrbot_plugin_xbbot_beta` v26w1008d
+# 小白测试版 `astrbot_plugin_xbbot_beta` v26w1009a
 
-深度复刻经典群互动玩法的 AstrBot 插件：奴隶、签到、银行、娱乐、精灵、坐骑、帮派、冒险、超管等 28 大系统，附带全功能 WebUI 管理大屏。
+> 深度复刻经典群互动玩法的 AstrBot 插件，附全功能 WebUI 管理大屏。
 
-本插件基于 [AstrBot](https://github.com/AstrBotDevs/AstrBot) —— 开源的一站式 Agent 聊天机器人平台，支持主流 IM 平台与多种大模型接入，内置 WebUI 与插件扩展体系。使用文档见 [docs.astrbot.app](https://docs.astrbot.app)。
+## 简介
 
-- 项目主页：https://github.com/imsuperone/xbtest
+包含奴隶、签到、银行、娱乐、精灵、坐骑、帮派、冒险、超管等 28 大系统，覆盖群内互动与数值养成，数据以 SQLite 落地。
+
+本插件基于 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 开发。AstrBot 是一款开源的多平台聊天机器人框架，可接入 QQ、Telegram 等消息平台与多家大模型服务，自带 Web 管理界面，使用文档见 [docs.astrbot.app](https://docs.astrbot.app)。
+
 - 插件 ID：`astrbot_plugin_xbbot_beta`
-- 当前版本：`v26w1008d`（要求 AstrBot `>=3.4.0`，平台 `aiocqhttp`）
+- 当前版本：`v26w1009a`
+- 运行要求：AstrBot `>=3.4.0`，平台 `aiocqhttp`
+- 仓库：https://github.com/imsuperone/xbtest
 
 ## 安装
 
-1. 在 AstrBot 插件管理器「安装插件」中填入仓库地址 `https://github.com/imsuperone/xbtest`，一键安装；
-2. 安装后在 AstrBot 后台进入「小白测试版」页面，使用 WebUI 管理大屏进行玩法配置。
+1. AstrBot 插件管理器「安装插件」填入 `https://github.com/imsuperone/xbtest`；
+2. 安装后在后台「小白测试版」页面使用 WebUI。
 
 ## 测试版说明
 
-- 插件名 `astrbot_plugin_xbbot_beta`，显示名「小白测试版」，网页路由为 `/astrbot_plugin_xbbot_beta/...`；
 - 数据目录独立（`plugin_data/astrbot_plugin_xbbot_beta`），与正式版互不读写；
-- 不要与正式版同时启用；切换后建议重启 AstrBot，保证模块状态干净。
-
-## 更新日志
-
-见 [CHANGELOG.md](./CHANGELOG.md)。
+- 请勿与正式版同时启用，切换后建议重启 AstrBot。
