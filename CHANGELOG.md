@@ -1,5 +1,13 @@
 # 更新日志
 
+## v26w1008d
+- 🔧 **WebUI 管理接口 403 修复**：`_call_api` mutating 门在宿主 `view_handler` 不传 `request` 时补「上下文代理绑定探测」（`astrbot.api.web.request` 未绑定则访问属性抛异常→仍失败关闭 403；绑定后交 `_web_admin_explicit_deny` 显式非管理员标记），宿主 dashboard 会话内 config/save、groups/toggle 等写操作恢复正常，非管理员仍 403。
+- 🔧 **维护门超管豁免**：`router.maintenance_gate(gid, raw, store, is_admin=False)` 增超管放行（开启/关闭维护、维护信息等超管指令维护中可用）；总开关/群组开关（含 WebUI 关群/总开关）仍全员静默含超管，语义不变。
+- 🔧 **复活币排行昵称单源**：`adventure.cmd_rank` 改走 `sign._rank_name`（分群昵称→卡片→群档案→账户名），显示 `昵称(QQ)`，与 `_render_rank` 格式对齐。
+- 🔧 **携带精灵空名提示**：`spirit.cmd_ride` 空名分支有精灵显「当前携带精灵：【x】发送【携带精灵 名称】更换！」、无精灵显用法提示，对齐 `cmd_active`。
+- 📝 **数值平衡偏移定案**：审计批次（1006a→1008c）零 PRESETS 改动（与 2026w1004c 逐字节一致）；跨版本档位差异来自 1004c「体力魅力平衡整改」等既发版预设调整，属版本行为差异，重新一键平衡即可对齐，非本批回归。
+- 🧪 **门禁**：STRICT 7/7、routes 64/64/37、parity GATE 9 引擎 lost=0、V8+L2/L4 冒烟、compileall 0。未做真机回归。
+
 ## v26w1008c
 - 🧹 **死代码清理（AST 全仓零引用扫描）**：删除 `api/stats.py` 尾部三段「兼容重导出」块（16 行，全仓零消费——五元组与导入链均指向 logs/groups/version_check 原模块）；`api/settings.py` 重导出瘦身只留 `PRESETS`/`_BALANCE_SIG_KEYS`（app/superadmin 兼容导入链的实际消费对，删零消费的 2 个 handle 再导出）；删除零引用常量 `TREASURE_TYPES`（shop.py，前端 07_spirit.js 有独立同名实现不受影响）、`NOTE_NAMES_REV`（slave_state.py）、`T_GOURD_EFFECT`/`T_CHARM_EFFECT`（text_slave.py）、`API_URL`（version_check.py，已被按通道动态拼 URL 取代）。
 - 🧹 **扫描结论**：775 个函数/类定义 0 死亡（含字符串注册表匹配）；JS 407 个声明 0 死亡；无注释掉的代码块。

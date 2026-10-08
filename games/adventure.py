@@ -324,13 +324,14 @@ def cmd_rank(gid, qq):
     lst.sort(reverse=True)
     lines = ["---复活币排行---"]
     for i, (rv, q) in enumerate(lst[:10], 1):
+        # 昵称链单源 sign._rank_name（分群昵称→卡片→群档案→账户名），格式对齐 _render_rank
         disp = str(q)
         try:
+            from . import sign as _sign
             from . import slave as SL
-            try:
-                disp = SL.display_name(gid, str(q))
-            except Exception:
-                disp = SL.NOTE_NAMES.get(str(q), str(q))
+            _nm = _sign._rank_name(SL, gid, str(q))
+            if _nm:
+                disp = "%s(%s)" % (_nm, q)
         except Exception:
             pass
         lines.append("%d. %s　%d个" % (i, disp, rv))

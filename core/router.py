@@ -554,12 +554,16 @@ def _cmd_need_admin(raw, store):
 
 
 # ==================== maintenance 单源 + superadmin 去重 ====================
-def maintenance_gate(gid, raw, store):
+def maintenance_gate(gid, raw, store, is_admin=False):
     """维护统一门单源（app._dispatch 与 handle 共用，零语义差）。
 
     返回：None=放行；str=回复维护信息；_PROTO_SILENT=维护中静默。
+    超管豁免：维护不忽略超管（开关维护/超管业务均放行）；
+    忽略超管的是总开关/群组开关（handle 内，含 WebUI 关群/总开关）——二者勿混。
     """
     try:
+        if is_admin:
+            return None
         if not _proto_active(store, gid):
             return None
         if _proto_mentioned(store, raw):
@@ -623,9 +627,10 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
         except Exception:
             pass
     # 维护开关（全局＋本群）：单源 maintenance_gate，与 app._dispatch 同语义。
-    # 开则全员（含超管）不再执行业务；仅被@时回一条维护通知，其余完全静默。
+    # 开则普通用户不再执行业务，仅被@时回一条维护通知，其余完全静默；超管豁免。
+    # （忽略超管的是上方总开关/群组开关，WebUI 关群/总开关才静默超管。）
     try:
-        _mg = maintenance_gate(gid, raw, store)
+        _mg = maintenance_gate(gid, raw, store, is_admin)
         if _mg is _PROTO_SILENT:
             return None
         if isinstance(_mg, str):

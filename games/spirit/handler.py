@@ -532,6 +532,11 @@ def cmd_cancel_active(gid, qq):
 
 def cmd_ride(gid, qq, name):
     sp = _spirits(gid, qq)
+    if not str(name or "").strip():
+        # 空名分支：查现状而非误报“没有该精灵”（对齐 cmd_active 用法提示）
+        if sp.get("ride"):
+            return f"当前携带精灵：【{sp['ride']}】\r\n发送【携带精灵 名称】更换！"
+        return "亲，您还没有设置携带精灵，发送【携带精灵 名称】进行设置！"
     if not _wsp(sp, name):
         return "亲，您没有该精灵，无法携带！"
     sp["ride"] = name

@@ -499,10 +499,11 @@ class XbBot(Star):
                 is_admin = bool(event.is_admin())
             except Exception:
                 is_admin = False
-            # 维护统一门（单源 core.router.maintenance_gate，与管线同语义，对超管同样生效）：
-            # 开则全员不再执行业务（含测试菜单/超管列表/迎新），仅被@时回一条维护通知。
+            # 维护统一门（单源 core.router.maintenance_gate，与管线同语义）：
+            # 开则普通用户不再执行业务（测试菜单/超管列表/迎新），仅被@时回一条维护通知；超管豁免
+            # （维护不忽略超管；忽略超管的是总开关/群组开关）。
             try:
-                _mg = _router_layer.maintenance_gate(gid, raw, ST) if _HAS_CORE else None
+                _mg = _router_layer.maintenance_gate(gid, raw, ST, is_admin) if _HAS_CORE else None
                 if _mg is not None:
                     try:
                         event.stop_event()
@@ -597,10 +598,18 @@ class XbBot(Star):
         """page_* 统一薄委托：双通道导入 handler 后按模式组装参数调用，异常归一 _err"""
         try:
             # 管理 API 服务端收口：AstrBot 宿主 dashboard 会话是鉴权边界（宿主契约未在本仓提供，
-            # 见 AICODE_AUDIT §10）。mutating 请求对象缺失时失败关闭直接 403；
-            # 有对象时仅做显式非管理员标记检查，缺标记交宿主会话判定。
+            # 见 AICODE_AUDIT §10）。宿主 view_handler 从不传 request（仅绑在 astrbot.api.web.request
+            # 上下文代理），缺失时代理解析（同 _get_req 单源）＋绑定探测：代理未绑定时访问属性抛
+            # RuntimeError → 仍失败关闭 403；绑定后仅做显式非管理员标记检查，缺标记交宿主会话判定。
             if func_name in _XB_MUTATING_HANDLERS:
                 _deny_req = request if request is not None else (args[0] if args else None)
+                if _deny_req is None:
+                    try:
+                        from astrbot.api.web import request as _proxy_req
+                        getattr(_proxy_req, "method")  # 绑定探测：未绑定代理访问属性即抛
+                        _deny_req = _proxy_req
+                    except Exception:
+                        _deny_req = None
                 if _deny_req is None:
                     return _err("forbidden: admin required", 403)
                 if _web_admin_explicit_deny(_deny_req):
