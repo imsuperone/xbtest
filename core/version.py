@@ -13,7 +13,7 @@ beta 快照制（正式版仍走 semver）：`YYwMMDDx`（2 位年＋w＋月日�
 """
 import os as _os
 
-_FALLBACK = "26w1008b"
+_FALLBACK = "26w1008c"
 _CACHE = ""
 
 

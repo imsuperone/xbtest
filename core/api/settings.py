@@ -224,6 +224,6 @@ async def handle_cfg_save(request, plugin_base=""):
 
 # ==================== 拆分门面（balance 已独立，老路径兼容） ====================
 try:
-    from .balance import PRESETS, _BALANCE_SIG_KEYS, handle_balance_state, handle_config_auto_balance  # type: ignore
+    from .balance import PRESETS, _BALANCE_SIG_KEYS  # type: ignore
 except ImportError:
     pass

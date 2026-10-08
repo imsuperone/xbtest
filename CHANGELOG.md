@@ -1,5 +1,10 @@
 # 更新日志
 
+## v26w1008c
+- 🧹 **死代码清理（AST 全仓零引用扫描）**：删除 `api/stats.py` 尾部三段「兼容重导出」块（16 行，全仓零消费——五元组与导入链均指向 logs/groups/version_check 原模块）；`api/settings.py` 重导出瘦身只留 `PRESETS`/`_BALANCE_SIG_KEYS`（app/superadmin 兼容导入链的实际消费对，删零消费的 2 个 handle 再导出）；删除零引用常量 `TREASURE_TYPES`（shop.py，前端 07_spirit.js 有独立同名实现不受影响）、`NOTE_NAMES_REV`（slave_state.py）、`T_GOURD_EFFECT`/`T_CHARM_EFFECT`（text_slave.py）、`API_URL`（version_check.py，已被按通道动态拼 URL 取代）。
+- 🧹 **扫描结论**：775 个函数/类定义 0 死亡（含字符串注册表匹配）；JS 407 个声明 0 死亡；无注释掉的代码块。
+- 🧪 **门禁**：STRICT 7/7、routes 64/64/37、parity GATE 9 引擎 lost=0、V8+L2/L4 冒烟、compileall 0、复扫 0 死函数/0 死常量。未做真机回归。
+
 ## v26w1008b
 - 🔧 **指令索引大一统（V8/L3）**：六族正则索引退役留墓碑，`config._collect_commands` 改逐文件 AST 读 `COMMANDS` 单源（常量须先于表定义）；8 张引擎表并入 V8 词（slave11/bank3/ent20/spirit9/ride1/guild8/adventure1）与 superadmin 联合表（静态 6 + `_ADMIN_CMDS` 27 = 33）；`router._matches_engine` 重写为三段单索引（唤醒前缀 → 系统三件套 → 引擎 COMMANDS 前缀），删 `_ENGINE_CMDS` 双层缓存；奇偶门禁 9 引擎 lost=0。
 - 🔧 **自定义指令配置单源（L2）**：`_custom_idx` 携带 `ent` 入口载荷，`_custom_cmd`（路由匹配）与 `dispatch._is_pure_custom`（回复后处理）只走索引——未升 `_CONFIG_VER` 不回读配置节，消除同一条消息读两遍并重排序。

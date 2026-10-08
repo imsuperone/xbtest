@@ -264,22 +264,3 @@ async def handle_analytics_overview(request):
         return json_response(result)
     except Exception as e:
         return _err(f"analytics failed: {e}", 500)
-
-
-
-# ==================== 拆分门面（logs/groups/version_check 已独立，老路径兼容） ====================
-try:
-    from .logs import handle_logs_get, handle_logs_clear, export_logs  # type: ignore
-except ImportError:
-    pass
-try:
-    from .groups import handle_groups_list, handle_groups_toggle, handle_groups_delete  # type: ignore
-except ImportError:
-    pass
-try:
-    from .version_check import (  # type: ignore
-        GITHUB_REPO, GITHUB_REPO_XBTEST, API_URL, UPDATE_CHANNELS,
-        check_latest_version, handle_version_check, handle_version_channel,
-    )
-except ImportError:
-    pass

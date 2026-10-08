@@ -18,7 +18,6 @@ except ImportError:
 # ==================== 在线版本检测（原 updater.py 并入） ====================
 GITHUB_REPO = "imsuperone/xb"
 GITHUB_REPO_XBTEST = "imsuperone/xbtest"  # BETA 通道：快照版跟踪仓
-API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 UPDATE_CHANNELS = ("正式", "BETA")
 
 _LAST_CHECK_RES = {}

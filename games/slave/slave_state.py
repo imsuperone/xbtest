@@ -41,7 +41,6 @@ GACHA_DIR = _os.path.join(DATA_DIR, "img", "gacha")
 EVENTS_JSON = _os.path.join(DATA_DIR, "events.json")
 NOTE_NAMES = {}   # qq -> card/nickname (由适配层注入，跨群最新兜底，仅兼容展示)
 NOTE_NAMES_BY_GROUP = {}
-NOTE_NAMES_REV = {}
 _KNOWN = {}       # gid -> set(qq) 记录本群出现过的成员(@目标/发送者/已开户), 用于判断"是否存在人"
 EVENTS = []
 import types as _types
