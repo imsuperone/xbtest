@@ -347,13 +347,34 @@ async def handle_images_rename(request, plugin_base=""):
     return await asyncio.to_thread(_work)
 
 
-async def handle_images_thumb(request, plugin_base=""):
-    """单张图片缩略图（base64 data URI，≤200KB，用于管理页预览，列表不批量下发）"""
-    p = await get_req_json(request, default={})
-    rel = str((p.get("path") or p.get("file") or "") if isinstance(p, dict) else "").strip()
-    if not rel:
-        rel = get_req_query(request, "path", "") or get_req_query(request, "file", "")
-    rel = str(rel).strip()
+async def handle_image_preview(request, plugin_base=""):
+    """统一单图预览入口（?path= 图片目录缩略图 / ?name= 抽奖武器池，原 images/thumb 与 weapons/pool/img 合一）。
+    body 只读一次（get_req_json 非必缓存），name/path 同源复用该次结果。"""
+    try:
+        body = await get_req_json(request, default={})
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    name = str(get_req_query(request, "name", "") or body.get("name") or "").strip()
+    if name:
+        try:
+            from .weapon_pool import pool_preview
+            st, payload = await asyncio.to_thread(pool_preview, name)
+        except Exception as e:
+            return _err(f"pool img failed: {e}", 500)
+        if st == "not found":
+            return _err("not found", 404)
+        if st != "ok":
+            return _err("too large or unreadable", 400)
+        return json_response({"ok": True, "name": name, "thumb": payload})
+    path = str(get_req_query(request, "path", "") or get_req_query(request, "file", "")
+               or body.get("path") or body.get("file") or "").strip()
+    return await _thumb_path(path, plugin_base)
+
+
+async def _thumb_path(rel, plugin_base=""):
+    """图片目录单张缩略图主体（原 handle_images_thumb 的 rel 解析之后部分，兼容探测与错误码原样保留）"""
     if not rel:
         return _err("path required", 400)
     base = _img_base(plugin_base)
@@ -554,7 +575,8 @@ async def handle_images_copy(request, plugin_base=""):
     return await asyncio.to_thread(_work)
 
 
-async def handle_images_export(request, plugin_base=""):
+async def export_images(request, plugin_base=""):
+    """导出图片目录（zip）或单文件（base64）；/export?kind=images 分发目标（原 handle_images_export 改名）"""
     rel = get_req_query(request, "path", "") or get_req_query(request, "file", "")
     if not rel:
         try:

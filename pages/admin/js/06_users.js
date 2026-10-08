@@ -199,7 +199,7 @@ async function cleanLeftUsers() {
   try {
     // 清理退群：调 users/clean_left（曾误调 users/export，res.ok 恒真致“清理0人”假成功）
     // POST：GET 有副作用，禁走读通道（预取/重试误触发批量删除）
-    const res = await callApi("users/clean_left", {}, "POST");
+    const res = await getBridge().apiPost("users/clean_left", {});
     if (res && res.ok) {
       toast(`清理完成：已清理 ${res.cleaned_count || 0} 名退群人员数据`, "ok");
       await loadUsers();
@@ -217,8 +217,8 @@ async function exportAllUsers() {
   const filename = `xbbot_users_all_${Date.now()}.json`;
   toast("正在导出全量用户数据...", "ok");
   try {
-    // 单次 callApi（GET空结果不再回退POST，失败兜底在callApi内）
-    const res = await callApi("users/export", {}, "GET");
+    // 单次 apiGet（读接口 GET,POST 双方法直连，无回退重放）
+    const res = await getBridge().apiGet("users/export");
     if (!res) throw new Error("接口无响应");
     if (res.error || res.msg) throw new Error(res.error || res.msg);
 

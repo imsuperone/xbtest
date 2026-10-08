@@ -885,7 +885,7 @@ function bindSpiritMapCards(root) {
       const p = b.dataset.spView;
       if (!p) return;
       try {
-        const r = await getBridge().apiPost("images/thumb", { path: p });
+        const r = await getBridge().apiPost("images/preview", { path: p });
         const thumb = r && (r.thumb || (r.data && r.data.thumb));
         if (r && r.error) throw new Error(r.error);
         if (thumb) showLightbox(thumb, String(p).split("/").pop());
@@ -973,7 +973,7 @@ function openSpiritAddModal(defMap) {
     let p = window._spAddImgPath || _SP_ADD_SRC || "";
     if (!p) { toast("请先选一张图片", "bad"); return; }
     try {
-      const r = await getBridge().apiPost("images/thumb", { path: p });
+      const r = await getBridge().apiPost("images/preview", { path: p });
       const thumb = r && (r.thumb || (r.data && r.data.thumb));
       if (thumb) showLightbox(thumb, String(p).split("/").pop());
       else toast("无预览", "bad");

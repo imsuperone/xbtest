@@ -128,7 +128,6 @@ MENU = (
     "🗑️ 丢弃坐骑 名称　🔄 切换坐骑 名称\r\n"
     "🎉 设置欢迎坐骑 名称\r\n"
     "👀 查看欢迎坐骑　🔁 回收欢迎坐骑 名称\r\n"
-    "💠 携带精灵 名称（精灵当欢迎坐骑）\r\n"
     "━━━━━━━━━━━━━━\r\n"
     "💡 发送对应指令即可游玩"
 )
@@ -459,7 +458,7 @@ def cmd_view_welcome(gid, qq):
     r = _rides(gid, qq)
     w = r.get("welcome")
     if not w:
-        return "亲，您还没有设置欢迎坐骑！\r\n发送【携带精灵 名称】可将您的其他精灵设置为欢迎坐骑！"
+        return "亲，您还没有设置欢迎坐骑！\r\n发送【设置欢迎坐骑 名称】可设置欢迎坐骑！"
     return (f"您当前欢迎坐骑为：「{w}」\r\n"
             "发送【设置欢迎坐骑 名称】可更换当前欢迎坐骑！")
 
@@ -468,7 +467,7 @@ def cmd_recycle_welcome(gid, qq, name):
     r = _rides(gid, qq)
     w = name or r.get("welcome", "")
     if not r.get("welcome"):
-        return "亲，您并没有设置欢迎坐骑，无需回收！\r\n发送【设置欢迎坐骑 名称】或【携带精灵 名称】可设置欢迎坐骑！"
+        return "亲，您并没有设置欢迎坐骑，无需回收！\r\n发送【设置欢迎坐骑 名称】可设置欢迎坐骑！"
     if w and r.get("welcome") != w:
         return f"亲，该坐骑不是当前的欢迎坐骑，无法回收！当前欢迎坐骑为：【{r['welcome']}】"
     r["welcome"] = ""
@@ -559,24 +558,6 @@ def check_welcome(gid, qq):
         return None
 
 
-def cmd_ride_spirit(gid, qq, name):
-    """携带精灵: 把精灵设为欢迎坐骑(需拥有该精灵)"""
-    if not name:
-        return "亲，您的格式有误，携带精灵格式为：【携带精灵 名称】！"
-    a = _u(gid, qq)
-    try:
-        sp = json.loads(a.get("spirits", "{}") or "{}")
-        own = any((it.get("name") == name) for it in sp.get("list", []))
-    except Exception:
-        own = False
-    if not own:
-        return "亲，您没有该精灵，无法携带！"
-    r = _rides(gid, qq)
-    r["welcome"] = name
-    _save(gid, qq, r)
-    return f"已将精灵「{name}」设置为欢迎坐骑！"
-
-
 # ---- 统一入口 ----
 def handle(gid, qq, raw):
     text = (raw or "").strip()
@@ -604,24 +585,12 @@ def handle(gid, qq, raw):
         return cmd_switch(gid, qq, text[4:].strip())
     if text.startswith("回收欢迎坐骑"):
         return cmd_recycle_welcome(gid, qq, text[6:].strip())
-    if text.startswith("携带精灵"):
-        return cmd_ride_spirit(gid, qq, text[4:].strip())
     return None
 
 
 COMMANDS = (
     "购买坐骑", "查看坐骑", "丢弃坐骑", "设置欢迎坐骑",
-    "切换坐骑", "回收欢迎坐骑", "携带精灵", "坐骑商城", "我的坐骑",
+    "切换坐骑", "回收欢迎坐骑", "坐骑商城", "我的坐骑",
+    # V8 并入：原正则刮词域（与 handle 分支对应）
+    "查看欢迎坐骑",
 )
-WAKE = "坐骑系统"
-
-
-def can_handle(gid, qq, raw):
-    try:
-        rt_n = str(raw or "").strip().replace(" ", "")
-        for c in COMMANDS:
-            if c and rt_n.startswith(str(c).replace(" ", "")):
-                return True
-    except Exception:
-        pass
-    return False

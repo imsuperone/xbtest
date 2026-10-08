@@ -61,7 +61,8 @@ async def handle_logs_clear(request=None):
         return _err(f"清空日志异常: {e}", 500)
 
 
-async def handle_logs_export(request=None):
+async def export_logs(request, plugin_base=""):
+    """导出插件运行日志文本（/export?kind=logs 分发目标，原 handle_logs_export 改名；plugin_base 不使用，签名与兄弟实现对齐）"""
     try:
         log_path = logger.get_log_file_path()
 

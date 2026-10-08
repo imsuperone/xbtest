@@ -208,10 +208,6 @@ async def handle_cfg_save(request, plugin_base=""):
                 ST.save_config()
             except Exception:
                 pass
-            try:
-                ST.sync_astrbot_config(ST._CONFIG)
-            except Exception:
-                pass
             if _coll_failed and not _mem_saved:
                 return _err("save failed: %s" % "、".join(_coll_failed), 500)
             _resp = {"saved": True, "备份配置": ST._CONFIG.get("备份配置", {}), "webdav_secrets": "updated" if _secrets_changed else "kept"}

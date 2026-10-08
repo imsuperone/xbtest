@@ -190,12 +190,12 @@ document.getElementById("btnBackupExportSel")?.addEventListener("click", async (
     const _b = getBridge();
     if (_b && typeof _b.download === "function") {
       try {
-        await _b.download("backups/export", { path: sel, raw: "1" }, filename);
+        await _b.download("export", { kind: "backup", path: sel, raw: "1" }, filename);
         toast("已触发下载: " + filename, "ok");
         return;
       } catch (e) {}
     }
-    const r = await callApi("backups/export", { path: sel }, "GET");
+    const r = await getBridge().apiGet("export", { kind: "backup", path: sel });
     if (r && r.data) {
       downloadBase64File(r.data, r.filename || filename);
       toast("已导出备份文件", "ok");
@@ -631,8 +631,8 @@ async function loadLogs(isAuto = false) {
     const kw = (document.getElementById("logsSearch")?.value || "").trim();
     const params = { limit: "500", level: lvl, keyword: kw };
 
-    // 单次 callApi（GET空结果不再回退POST，防双倍请求；失败仅一次POST兜底在callApi内）
-    const res = await callApi("logs", params, "GET");
+    // 单次 apiGet（读接口 GET,POST 双方法直连，无回退重放，防双倍请求）
+    const res = await getBridge().apiGet("logs", params);
 
     const data = (res && (res.result || res.data || res)) || {};
     const logsList = Array.isArray(data.logs) ? data.logs : (Array.isArray(res) ? res : []);
@@ -731,7 +731,7 @@ function initLogsEvents() {
       let filename = `xb_logs_${new Date().toISOString().slice(0, 10)}.log`;
 
       try {
-        const res = await callApi("logs/export", {}, "POST");
+        const res = await getBridge().apiGet("export", { kind: "logs" });
         if (res && res.content) {
           content = res.content;
           if (res.filename) filename = res.filename;
@@ -761,7 +761,7 @@ function initLogsEvents() {
     if (!ok) return;
     try {
       toast("正在清空日志…", "ok");
-      const res = await callApi("logs/clear", {}, "POST");
+      const res = await getBridge().apiPost("logs/clear", {});
       if (res && (res.status === "error" || res.error)) {
         throw new Error(res.error || "清空失败");
       }

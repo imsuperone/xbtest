@@ -415,13 +415,9 @@ async def handle_config_auto_balance(request):
         except Exception:
             pass
 
-        # 3. 落盘与同步
+        # 3. 落盘
         try:
             ST.save_config()
-        except Exception:
-            pass
-        try:
-            ST.sync_astrbot_config(ST._CONFIG)
         except Exception:
             pass
 

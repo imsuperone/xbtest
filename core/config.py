@@ -3,6 +3,7 @@
 负责配置归一、Schema 加载、指令索引收集。
 被 main.XbBot 与 router 层复用，保持单一来源 store._CONFIG。
 """
+import ast
 import json
 import os
 import re
@@ -137,17 +138,32 @@ def _load_wake_items(base_dir=""):
             return {}
 
 
-# 指令索引正则（与 main._collect_commands 保持一致）
-_CMD_RE1 = re.compile(r'\b(?:text|m)\s*\.startswith\(\s*\(?([^)]*)\)')
-_CMD_RE1_TUPLE = re.compile(r'\b(?:text|m)\s*\.startswith\(\s*\(([^)]*)\)')
-_CMD_RE2 = re.compile(r'\b(?:text|m)\s*==\s*["\']([^"\']+)["\']')
-_CMD_RE3 = re.compile(r'(?:\btext\s*in\s*\(|(?<![A-Za-z0-9_])m\s+in\s*\()([^)]*)\)')
-_CMD_RE_TBL_NEED = re.compile(r'_need\s*=\s*\(([^)]*)\)')
-_CMD_RE_TBL_ADMIN = re.compile(r'_ADMIN_CMDS\s*=\s*\(([^)]*)\)', re.S)
-_CMD_RE_TBL_EXACT = re.compile(r'_ROUTE_EXACT\s*=\s*\{(.*?)\}', re.S)
+# V8：六族指令刮词正则（startswith / == / in / _need / _ADMIN_CMDS / _ROUTE_EXACT）已退役——
+# 词表唯一来源 = 各引擎模块级 COMMANDS（AST 静态求值）+ 唤醒词配置，见 _collect_commands。
+
+
+def _cmds_static(node, consts):
+    """静态求值模块级词表表达式：字面量 / 常量名引用 / 加法拼接（superadmin：静态词 + _ADMIN_CMDS）。
+    常量须定义在 COMMANDS 之前（与模块执行语义一致）；不可静态求值时返回 None，由调用方记日志。"""
+    try:
+        v = ast.literal_eval(node)
+        if isinstance(v, (list, tuple)):
+            return [str(x) for x in v]
+    except Exception:
+        pass
+    if isinstance(node, ast.Name):
+        return consts.get(node.id)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _cmds_static(node.left, consts)
+        right = _cmds_static(node.right, consts)
+        if left is not None and right is not None:
+            return list(left) + list(right)
+    return None
 
 
 def _collect_commands(base_dir="", store=None):
+    """显式指令表（V8 单源）：各引擎模块级 COMMANDS + 唤醒词（schema 默认 ∪ store 当前值）。
+    不再刮源码正文——一个接口一个实现，正则六族已退役。"""
     out = {}
     try:
         if not base_dir:
@@ -166,7 +182,7 @@ def _collect_commands(base_dir="", store=None):
         for name in ("slave", "sign", "bank", "ent", "spirit", "ride", "guild", "adventure"):
             _one = os.path.join(eng_dir, name + ".py")
             if not os.path.isfile(_one) and os.path.isdir(os.path.join(eng_dir, name)):
-                # 已拆包的系统：串联包内全部模块源码再采集（与单文件语义一致）
+                # 已拆包的系统：逐文件取其模块级 COMMANDS（词表在 handler 单文件，与单文件语义一致）
                 _targets.append((name, sorted(
                     os.path.join(eng_dir, name, f) for f in os.listdir(os.path.join(eng_dir, name))
                     if f.endswith(".py"))))
@@ -177,90 +193,49 @@ def _collect_commands(base_dir="", store=None):
             _sup = os.path.join(eng_dir, "superadmin.py")  # 旧位兼容
         _targets.append(("superadmin", [_sup]))
         for name, _files in _targets:
-            src = ""
+            # V8：AST 读模块级 COMMANDS（字面量/常量名/加法拼接静态求值；包内多文件取首个可求值者）
+            consts = {}
+            cmds = None
+            seen = False
             for p in _files:
                 if not p or not os.path.isfile(p):
                     continue
                 try:
                     with open(p, encoding="utf-8") as _rf:
-                        src += "\n" + _rf.read()
+                        _tree = ast.parse(_rf.read())
                 except Exception:
                     continue
-            if not src:
-                continue
-            # 去掉 # 注释（整行+行尾，字符串内 # 保留），避免注释中文被收录
-            _lines = []
-            for _ln in src.splitlines():
-                if _ln.lstrip().startswith("#"):
-                    continue
-                _q1 = _q2 = False
-                _cut = None
-                _prev = ""
-                for _i, _ch in enumerate(_ln):
-                    if _ch == "'" and not _q2 and _prev != "\\":
-                        _q1 = not _q1
-                    elif _ch == '"' and not _q1 and _prev != "\\":
-                        _q2 = not _q2
-                    elif _ch == "#" and not _q1 and not _q2:
-                        _cut = _i
-                        break
-                    _prev = _ch
-                if _cut is not None:
-                    _ln = _ln[:_cut]
-                _lines.append(_ln)
-            src = "\n".join(_lines)
-            cmds = []
-
-            # 采集噪音：否定守卫元组里的路由前缀（非独立指令）+ 单字选项（作开关会误伤所有同字开头消息）
-            # 来源：bank.py:1077（我要/自我）、ent.py:1124/1127（开始/加入/退出）、adventure.py:317（一/二/三）
-            _CMD_NOISE = {"我要", "自我", "开始", "加入", "退出"}
-
-            def _add(_c):
-                _c = _c.strip()
-                # 规范键：去内部空格（查询坐骑/查询 坐骑系同一指令），一词一开关，禁一词多开关
-                _canon = _c.replace(" ", "")
-                if len(_canon) < 2 or _canon in _CMD_NOISE:
-                    return
-                if _canon and re.search(r"[\u4e00-\u9fff]", _canon) and _canon not in cmds:
-                    cmds.append(_canon)
-            # RE1 单串+元组：body 内再抽所有引号串，兼容 text.startswith(("a","b"))
-            try:
-                for _body in _CMD_RE1.findall(src):
-                    for _c in re.findall(r'["\']([^"\']+)["\']', _body):
-                        _add(_c)
-            except Exception:
-                pass
-            try:
-                for _body in _CMD_RE1_TUPLE.findall(src):
-                    for _c in re.findall(r'["\']([^"\']+)["\']', _body):
-                        _add(_c)
-            except Exception:
-                pass
-            for c in _CMD_RE2.findall(src):
-                _add(c)
-            for body in _CMD_RE3.findall(src):
-                for c in re.findall(r'["\']([^"\']+)["\']', body):
-                    _add(c)
-            # 表驱动：_need / _ROUTE_EXACT / _ADMIN_CMDS 等元组/字典变量赋值的字符串元素
-            try:
-                for _body in _CMD_RE_TBL_NEED.findall(src):
-                    for _c in re.findall(r'["\']([^"\']+)["\']', _body):
-                        _add(_c)
-            except Exception:
-                pass
-            try:
-                for _body in _CMD_RE_TBL_ADMIN.findall(src):
-                    for _c in re.findall(r'["\']([^"\']+)["\']', _body):
-                        _add(_c)
-            except Exception:
-                pass
-            try:
-                for _body in _CMD_RE_TBL_EXACT.findall(src):
-                    for _c in re.findall(r'["\']([^"\']+)["\']', _body):
-                        _add(_c)
-            except Exception:
-                pass
-            out[name] = cmds
+                for _node in _tree.body:
+                    if not isinstance(_node, ast.Assign):
+                        continue
+                    for _t in _node.targets:
+                        if not isinstance(_t, ast.Name):
+                            continue
+                        if _t.id == "COMMANDS":
+                            if not seen:
+                                seen = True
+                                cmds = _cmds_static(_node.value, consts)
+                        elif _t.id not in consts:
+                            try:
+                                _v = ast.literal_eval(_node.value)
+                                if isinstance(_v, (list, tuple)):
+                                    consts[_t.id] = [str(x) for x in _v]
+                            except Exception:
+                                pass
+            if seen and not cmds:
+                try:
+                    from .logger import error as _log_err_cmds
+                except ImportError:
+                    try:
+                        from core.logger import error as _log_err_cmds  # type: ignore
+                    except Exception:
+                        _log_err_cmds = None
+                try:
+                    if _log_err_cmds:
+                        _log_err_cmds(f"_collect_commands: {name}.COMMANDS 静态求值失败（仅支持字面量/常量名/加法拼接）")
+                except Exception:
+                    pass
+            out[name] = [c for c in (cmds or []) if str(c)]
         # 唤醒词显式展示（77KB schema 按 path+mtime 缓存，miss/VER 失效时才重解析；当前值仍实时读 store）
         try:
             wc = _load_wake_items(base_dir)

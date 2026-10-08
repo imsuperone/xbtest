@@ -809,16 +809,7 @@ COMMANDS = (
     "领养精灵", "查看地图", "查看精灵", "购买", "精灵冒险",
     "使用精灵球", "出战精灵", "携带精灵", "丢弃精灵",
     "我的精灵", "精灵商城", "精灵背包", "精灵对战", "精灵排行", "羁绊",
+    # V8 并入：原正则刮词域（与 handle 分支对应）
+    "出战状态", "回收出战精灵", "我的背包", "挑战", "查看出战精灵",
+    "精灵列表", "精灵地图", "进化", "领取精灵礼包",
 )
-WAKE = "精灵系统"
-
-
-def can_handle(gid, qq, raw):
-    try:
-        rt_n = str(raw or "").strip().replace(" ", "")
-        for c in COMMANDS:
-            if c and rt_n.startswith(str(c).replace(" ", "")):
-                return True
-    except Exception:
-        pass
-    return False

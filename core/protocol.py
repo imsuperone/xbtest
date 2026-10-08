@@ -1,16 +1,11 @@
 # -*- coding: utf-8 -*-
 """core/protocol.py — 引擎与路由的显式契约（新增，不破坏旧 handle 签名）。
 
-目标：替代 config._collect_commands 正则扫源码 + router 隐式 None 语义。
-
-- NotHandled：引擎“不处理”的显式哨兵，区别于 None（静默）/ ""（空回复）。
-- 维护门单源：maintenance_active / is_mentioned，
-  app._dispatch 与 router.handle 共用，语义与旧两处内联一致。
+- 维护判定原语：maintenance_active / is_mentioned —— 统一门 maintenance_gate
+  单源在 core/router（app._dispatch 与 router.handle 共用）。
+- engine_commands：引擎显式 COMMANDS 表读取（V8 正则索引已退役，此表即唯一词表来源）。
 """
-from typing import Any, Optional, Tuple, Union
-
-Reply = Union[str, Tuple[str, list]]
-NOT_HANDLED = object()
+from typing import Any
 
 
 def is_mentioned(store: Any, raw: str) -> bool:
@@ -39,28 +34,11 @@ def maintenance_active(store: Any, gid: str) -> bool:
     return False
 
 
-def maintenance_gate(store: Any, gid: str, raw: str) -> Optional[str]:
-    """router/app 共用的维护统一门。
-
-    返回：None=未命中维护（继续业务）；str=应回复的维护信息；
-    特殊哨兵 _SILENT 表示维护中但不应回复（调用方直接 return None）。
-    """
-    if not maintenance_active(store, gid):
-        return None
-    if is_mentioned(store, raw):
-        try:
-            return store.cfg("维护配置", "维护信息", "🚧 维护中")
-        except Exception:
-            return "🚧 维护中"
-    return _SILENT
-
-
-_SILENT = object()
-SILENT = _SILENT
+SILENT = object()  # 维护中静默哨兵（core.router.maintenance_gate 的返回值之一）
 
 
 def engine_commands(mod: Any) -> tuple:
-    """引擎显式指令表：优先读模块级 COMMANDS，回退空元组（调用方再走正则索引）。"""
+    """引擎显式指令表：读模块级 COMMANDS（元组或 callable），缺失回退空元组。"""
     try:
         cmds = getattr(mod, "COMMANDS", None)
         if callable(cmds):
@@ -70,10 +48,3 @@ def engine_commands(mod: Any) -> tuple:
     except Exception:
         pass
     return ()
-
-
-def norm_cmd(s: Any) -> str:
-    try:
-        return str(s or "").replace(" ", "")
-    except Exception:
-        return ""

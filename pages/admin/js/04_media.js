@@ -103,7 +103,7 @@ function renderImages(d) {
       const card = thumbCards[_thumbIdx++];
       const p = card.dataset.selpath;
       try {
-        const res = await getBridge().apiGet("images/thumb", { path: p });
+        const res = await getBridge().apiGet("images/preview", { path: p });
         if (res && res.thumb) {
           card.dataset.imgsrc = res.thumb;
           const imgEl = card.querySelector("img");
@@ -124,7 +124,7 @@ function renderImages(d) {
     if (["json","md","markdown","txt","text","yaml","yml","ini","cfg","toml","csv","log"].includes(ext)) {
       try {
         toast("正在载入文本预览…", "ok", 1200);
-        const res = await callApi("images/text", { path: p }, "GET");
+        const res = await getBridge().apiGet("images/text", { path: p });
         if (res && !res.error && typeof res.text === "string") {
           showTextPreview(name || p, res.text, !!res.truncated, p);
         } else {
@@ -144,7 +144,7 @@ function renderImages(d) {
     }
     try {
       toast("正在载入大图预览…", "ok", 1200);
-      const res = await callApi("images/thumb", { path: p }, "GET");
+      const res = await getBridge().apiGet("images/preview", { path: p });
       if (res && res.thumb) {
         card.dataset.imgsrc = res.thumb;
         const imgEl = card.querySelector("img");
@@ -242,9 +242,8 @@ function showTextPreview(name, text, truncated, filePath) {
     if (isDirty) {
       let ok = false;
       try {
-        if (typeof pageConfirm === "function") ok = await pageConfirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？", "放弃修改");
-        else if (typeof overlayConfirm === "function") ok = await overlayConfirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？", "放弃修改");
-        else ok = confirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？");
+        // 文本编辑器占用 #appModal，须走独立 overlay 版（uiConfirm 会清掉编辑内容丢稿），见 01_theme 注释
+        ok = await pageConfirm("文件已修改但尚未保存，确定要放弃修改并关闭吗？", "放弃修改");
       } catch (e) { ok = false; }
       if (!ok) return;
     }
@@ -275,7 +274,7 @@ function showTextPreview(name, text, truncated, filePath) {
       okBtn.disabled = true;
       okBtn.textContent = "正在保存…";
       try {
-        const res = await callApi("images/text/save", { path: filePath, text: newText }, "POST");
+        const res = await getBridge().apiPost("images/text/save", { path: filePath, text: newText });
         if (res && res.ok) {
           toast("文件已保存", "ok");
           isDirty = false;

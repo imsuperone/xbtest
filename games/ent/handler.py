@@ -598,23 +598,15 @@ def _play(gid, qq, text):
                 return f"→ {text} 奖励{coin}{S.coin_name()}"
             return None
 
-__all__ = ["_play", "handle", "COMMANDS", "WAKE", "can_handle"]
+__all__ = ["_play", "handle", "COMMANDS"]
 
 
 COMMANDS = (
     "抽签", "扔炸弹", "开始接龙", "开始急转弯", "开始猜字谜",
     "开始猜数", "开始答题", "退出猜数", "开始二四点", "二四点", "猜拳",
+    # V8 并入：原正则刮词域（与 handle 分支对应）
+    "加入二四点", "加入字谜", "加入急转弯", "加入接龙", "加入猜字谜",
+    "加入猜数", "加入答题", "当前接龙", "我加入接龙", "接龙词",
+    "接龙进度", "查接龙", "结束接龙", "退出二四点", "退出字谜",
+    "退出急转弯", "退出接龙", "退出猜字谜", "退出答题", "重置接龙",
 )
-WAKE = "娱乐系统"
-
-
-def can_handle(gid, qq, raw):
-    # ent 保留自由作答：can_handle 仅快速谓词，真入口仍由 router 特许直调 handle
-    try:
-        rt_n = str(raw or "").strip().replace(" ", "")
-        for c in COMMANDS:
-            if c and rt_n.startswith(str(c).replace(" ", "")):
-                return True
-    except Exception:
-        pass
-    return False

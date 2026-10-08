@@ -312,6 +312,9 @@ def save_config():
             recall_set("sys_coll_json", json.dumps(_coll_mirror, ensure_ascii=False))
     except Exception:
         pass
+    # 宿主原生配置页同步：每次落盘后统一回写 slim schema（防 904 键旧残留污染原生页，
+    # 见 sync_astrbot_config 注释）。调用方只管 save_config，不再各自补 sync。
+    sync_astrbot_config(_S._CONFIG)
 
 
 def reload_config_from_db():
@@ -363,4 +366,4 @@ def _sidecar_restore_from_mirror():
 
 # ==================== 9. 备份 ====================
 
-__all__ = ["cfg", "cfg_dict", "cfg_scope", "cfgf", "cfgi", "coin_name", "reload_config_from_db", "save_config", "set_astrbot_config", "set_config", "set_config_path", "set_ini", "sync_astrbot_config", "wake"]
+__all__ = ["cfg", "cfg_dict", "cfg_scope", "cfgf", "cfgi", "coin_name", "reload_config_from_db", "save_config", "set_astrbot_config", "set_config", "set_config_path", "set_ini", "wake"]

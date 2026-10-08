@@ -147,7 +147,8 @@ async def handle_backups_delete(request, plugin_base=""):
         return _err(f"delete failed: {e}", 500)
 
 
-async def handle_backups_export(request, plugin_base=""):
+async def export_backup(request, plugin_base=""):
+    """导出数据库备份（默认最新 .db，含 is_raw 检测；/export?kind=backup 分发目标，原 handle_backups_export 改名）"""
     rel = get_req_query(request, "path", "") or get_req_query(request, "file", "")
     if not rel:
         try:

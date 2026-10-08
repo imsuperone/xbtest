@@ -3,20 +3,12 @@
 import inspect
 import json
 import os
+# json_response / error_response 单源 core.adapters（SDK 收口，astrbot 缺失时自带降级替身）：
+# 相对优先、顶层绝对回退，与全仓既有范式一致，不再叠第三、四级兜底
 try:
     from ..adapters import json_response, _orig_error_response
 except ImportError:
-    try:
-        from core.adapters import json_response, _orig_error_response  # type: ignore
-    except ImportError:
-        try:
-            from astrbot.api.web import json_response, error_response as _orig_error_response
-        except Exception:
-            def json_response(data, *args, **kwargs):
-                return data
-
-            def _orig_error_response(msg, code=500):
-                return {"error": msg, "code": code}
+    from core.adapters import json_response, _orig_error_response  # type: ignore
 
 
 def _err(msg, code=500):

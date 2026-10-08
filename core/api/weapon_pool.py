@@ -329,11 +329,6 @@ async def handle_pool_attrs(request):
                 ST.save_config()
             except Exception:
                 pass
-            try:
-                st_cfg = dict(ST._CONFIG or {})
-                ST.sync_astrbot_config(st_cfg)
-            except Exception:
-                pass
             return json_response({"ok": True, "count": len(clean)})
         except Exception as e:
             return _err(f"pool attrs failed: {e}", 500)
@@ -500,36 +495,17 @@ async def handle_pool_delete(request):
 
 
 
-async def handle_pool_img(request):
-    """抽奖武器单张预览（按需取缩略图，列表不再批量下发）"""
-    try:
-        data = await get_req_json(request, default={})
-    except Exception:
-        data = {}
-    name = ""
-    if isinstance(data, dict):
-        name = str(data.get("name", "") or "").strip()
-    if not name:
-        try:
-            name = (get_req_query(request, "name", "") or "").strip()
-        except Exception:
-            name = ""
-    if not name:
-        return _err("name required", 400)
-
-    def _work():
-        try:
-            _, src = _pool_find(name)
-            if not src:
-                return _err("not found", 404)
-            thumb = _pool_thumb(src)
-            if not thumb:
-                return _err("too large or unreadable", 400)
-            return json_response({"ok": True, "name": name, "thumb": thumb})
-        except Exception as e:
-            return _err(f"pool img failed: {e}", 500)
-
-    return await asyncio.to_thread(_work)
+def pool_preview(name):
+    """抽奖武器单图预览核心（原 handle_pool_img 的 _work 抽出，供 images.handle_image_preview 统一入口复用）。
+    同步实现，调用方自行 asyncio.to_thread；异常上抛由调用方归一 500。
+    返回 (st, payload)：st ∈ {"ok"(payload=缩略 data URI), "not found", "too large or unreadable"}"""
+    _, src = _pool_find(name)
+    if not src:
+        return "not found", ""
+    thumb = _pool_thumb(src)
+    if not thumb:
+        return "too large or unreadable", ""
+    return "ok", thumb
 
 
 

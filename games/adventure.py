@@ -362,17 +362,6 @@ def handle(gid, qq, raw):
     return None
 
 
-COMMANDS = ("冒险", "adventure", "选择", "当前冒险", "结束冒险")
-WAKE = "冒险系统"
-
-
-def can_handle(gid, qq, raw):
-    # adventure 保留数字选择：can_handle 仅快速谓词，真入口仍由 router 特许直调 handle
-    try:
-        rt_n = str(raw or "").strip().replace(" ", "")
-        for c in COMMANDS:
-            if c and rt_n.startswith(str(c).replace(" ", "")):
-                return True
-    except Exception:
-        pass
-    return False
+COMMANDS = ("冒险", "adventure", "选择", "当前冒险", "结束冒险",
+            # V8 并入：原正则刮词域（与 handle 分支对应）
+            "复活币排行")

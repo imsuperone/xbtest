@@ -85,8 +85,8 @@ async function exportImages() {
   const defaultFn = (filename === "root" ? `xbbot_root_${Date.now()}.zip` : `${filename}.zip`);
   toast("正在打包导出文件/目录，请稍候...", "ok");
   try {
-    // 单次 callApi（GET空结果不再回退POST，失败兜底在callApi内）
-    const r = await callApi("images/export", { path: p }, "GET");
+    // 单次 apiGet（读接口 GET,POST 双方法直连，无回退重放）
+    const r = await getBridge().apiGet("export", { kind: "images", path: p });
     if (!r) throw new Error("接口无响应");
     if (r.error || r.msg) throw new Error(r.error || r.msg);
 
@@ -340,7 +340,7 @@ function renderPoolBox(forceOpen=false){
       const rar = d.dataset.poolGroup;
       ((POOL_WEAPONS && POOL_WEAPONS[rar]) || []).forEach((it) => {
         if (it.thumb) return;
-        getBridge().apiPost("weapons/pool/img", { name: it.name }).then((r) => {
+        getBridge().apiPost("images/preview", { name: it.name }).then((r) => {
           const thumb = r && (r.thumb || (r.data && r.data.thumb));
           if (!thumb || (r && r.error)) return;
           it.thumb = thumb;
@@ -365,7 +365,7 @@ function renderPoolBox(forceOpen=false){
       const cached = (() => { try { for (const r of ["SSR", "SR", "R"]) { const f = ((POOL_WEAPONS && POOL_WEAPONS[r]) || []).find((x) => x.name === nm); if (f && f.thumb) return f.thumb; } } catch (err) {} return ""; })();
       if (cached) { showLightbox(cached, nm); return; }
       try {
-        const r = await getBridge().apiPost("weapons/pool/img", { name: nm });
+        const r = await getBridge().apiPost("images/preview", { name: nm });
         const thumb = r && (r.thumb || (r.data && r.data.thumb));
         if (r && r.error) throw new Error(r.error);
         if (thumb) showLightbox(thumb, nm);
@@ -766,7 +766,7 @@ function renderShopRideBox(forceOpen = false) {
     const p = b.dataset.rideView;
     if (!p) return;
     try {
-      const r = await getBridge().apiPost("images/thumb", { path: p });
+      const r = await getBridge().apiPost("images/preview", { path: p });
       const thumb = r && (r.thumb || (r.data && r.data.thumb));
       if (r && r.error) throw new Error(r.error);
       if (thumb) showLightbox(thumb, p.split("/").pop());
@@ -844,7 +844,7 @@ function openRideAddModal() {
     const p = (document.getElementById("rideAddImg")?.value || "").trim();
     if (!p) { toast("请先选一张图片", "bad"); return; }
     try {
-      const r = await getBridge().apiPost("images/thumb", { path: p });
+      const r = await getBridge().apiPost("images/preview", { path: p });
       const thumb = r && (r.thumb || (r.data && r.data.thumb));
       if (thumb) showLightbox(thumb, p.split("/").pop());
       else toast("无预览", "bad");

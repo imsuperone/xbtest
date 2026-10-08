@@ -458,7 +458,7 @@ def _maint_on(gid=None):
     import copy as _copy
     cur = _copy.deepcopy(cur)
     cur.setdefault("维护配置", {})["维护开关"] = "真"
-    ST.set_config(cur); ST.save_config(); ST.sync_astrbot_config(cur)
+    ST.set_config(cur); ST.save_config()
     return "已开启全局维修模式。"
 
 def _maint_off(gid=None):
@@ -474,7 +474,7 @@ def _maint_off(gid=None):
     import copy as _copy
     cur = _copy.deepcopy(cur)
     cur.setdefault("维护配置", {})["维护开关"] = "假"
-    ST.set_config(cur); ST.save_config(); ST.sync_astrbot_config(cur)
+    ST.set_config(cur); ST.save_config()
     return "已关闭全局维修模式。"
 
 def _maint_msg(msg):
@@ -485,52 +485,23 @@ def _maint_msg(msg):
     import copy as _copy
     cur = _copy.deepcopy(cur)
     cur.setdefault("维护配置", {})["维护信息"] = msg
-    ST.set_config(cur); ST.save_config(); ST.sync_astrbot_config(cur)
+    ST.set_config(cur); ST.save_config()
     return f"已设置维护信息：{msg}"
 
 def _version():
-    """本地版本：读 version.py 单源，回退链 metadata→main→FALLBACK。"""
+    """本地版本：读 version.py 单源（get_version 恒有值，无兜底链）。"""
     try:
-        try:
-            from .version import get_version as _gv
-        except ImportError:
-            from core.version import get_version as _gv  # type: ignore
-        v = _gv()
-        if v:
-            return f"小白测试版版本：{v}"
-    except Exception:
-        pass
-    try:
-        _base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        for _cand in (os.path.join(_base, "metadata.yaml"),):
-            try:
-                with open(_cand, encoding="utf-8") as _vf:
-                    for _ln in _vf:
-                        if _ln.strip().startswith("version:"):
-                            _v = _ln.split(":", 1)[1].strip().strip('"').strip("'")
-                            if _v:
-                                return f"小白测试版版本：{_v}"
-            except Exception:
-                pass
-    except Exception:
-        pass
-    try:
-        from .version import get_version as _gv
-        return f"小白测试版版本：{_gv()}"
-    except Exception:
-        try:
-            from core.version import get_version as _gv2  # type: ignore
-            return f"小白测试版版本：{_gv2()}"
-        except Exception:
-            pass
-    return "小白测试版版本：unknown"
+        from .version import get_version
+    except ImportError:
+        from core.version import get_version  # type: ignore
+    return f"小白测试版版本：{get_version()}"
 
 
 
 # ---- 统一入口（测试指令仅超管，WebUI可配但不显示于MENU，已删 个人信息） ----
 # 注意：凡 handle() 响应的别名必须同步进本表；非超管命中一律静默 None（BY DESIGN，见 AIINFO）
 # 超管指令一律精确单触发词，禁冗余别名/模糊词
-_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份", "维护信息", "查看维护", "版本", "检查更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表", "测试图片", "webdav测试", "开启维护", "关闭维护", "当前数值")
+_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份", "维护信息", "查看维护", "检查更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表", "测试图片", "webdav测试", "开启维护", "关闭维护", "当前数值")
 
 
 def _cmd_current_values():
@@ -642,10 +613,7 @@ def handle(gid, qq, raw, is_admin=False):
     if not text:
         return None
     if not is_admin:
-        # 全静默：非超管命中任何超管指令（含版本/更新查询）无任何提示
-        for c in _ADMIN_CMDS:
-            if text.startswith(c):
-                return None
+        # 全静默：非超管任何输入均无提示（BY DESIGN，见 AIINFO）
         return None
     if text == "版本":
         return _version()
@@ -747,14 +715,11 @@ def handle(gid, qq, raw, is_admin=False):
     # 当前数值：超管精确指令，无模糊唤醒（BY DESIGN 同超管静默规则）
     if text == "当前数值":
         return _cmd_current_values()
-    # 测试指令（WebUI 指令-超管系统可见，聊天不显示，仅 main._dispatch 处理）
-    if text.startswith("测试testxb"):
-        return None
-    if text == "超管列表":
-        return None
+    # 测试testxb / 超管列表由 app._dispatch 入口直收（聊天不显示，BY DESIGN），此处无需分支
     return None
 
 
-# COMMANDS 已并入 protocol.engine_commands 统一读取；此处仅保留模块级声明供反射。
-COMMANDS = ("超管", "系统开关", "群开关", "维护", "空投", "版本")
-WAKE = "超管系统"
+# COMMANDS 已并入 protocol.engine_commands 统一读取；此处保留模块级声明供反射。
+# V8 联合表：静态前缀词 + _ADMIN_CMDS（超管精确词单源）——模块级常量拼接，
+# engine_commands 与 _collect_commands（AST 静态求值）同读此表，正则刮词已退役。
+COMMANDS = ("超管", "系统开关", "群开关", "维护", "空投", "版本") + _ADMIN_CMDS

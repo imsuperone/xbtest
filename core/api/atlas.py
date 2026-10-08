@@ -212,8 +212,6 @@ async def handle_spirits_save(request):
         return _err("no data (want spirits/maps/shop)", 400)
     try:
         ST.save_config()
-        st_cfg = dict(ST._CONFIG or {})
-        ST.sync_astrbot_config(st_cfg)
     except Exception:
         pass
     return json_response({"saved": True, "keys": saved})

@@ -100,23 +100,13 @@ def handle(gid, qq, raw):
         pass
     return None
 
-__all__ = ["handle", "COMMANDS", "WAKE", "can_handle"]
+__all__ = ["handle", "COMMANDS"]
 
 
 COMMANDS = (
     "存款", "强制取款", "取款", "转账", "跨群转账", "赌博", "打劫银行", "打劫",
     "发红包", "抢红包", "劫狱", "保释", "自我保释",
     "进监狱", "出狱", "越狱",
+    # V8 并入：原正则刮词域（与 handle 分支对应）
+    "我要进监狱", "我要出狱", "我要越狱",
 )
-WAKE = "银行系统"
-
-
-def can_handle(gid, qq, raw):
-    try:
-        rt_n = str(raw or "").strip().replace(" ", "")
-        for c in COMMANDS:
-            if c and rt_n.startswith(str(c).replace(" ", "")):
-                return True
-    except Exception:
-        pass
-    return False

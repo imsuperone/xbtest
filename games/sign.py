@@ -279,47 +279,6 @@ def days_cn(chain):
     return str(c)
 
 
-def cmd_personal(gid, qq):
-    """个人信息: 优先委派 slave 引擎返回全量档案；兜底返回美化版个人档案"""
-    try:
-        from . import slave as _sl
-        return _sl.cmd_myinfo(gid, qq, _sl.state(gid))
-    except Exception:
-        pass
-    try:
-        import slave as _sl2
-        return _sl2.cmd_myinfo(gid, qq, _sl2.state(gid))
-    except Exception:
-        pass
-    a = _acct(gid, qq)
-    money = ST.coins_get(gid, qq)
-    dep = a.int("deposit")
-    tili = a.int("stamina")
-    meili = a.int("charm")
-    jq = a.int("lottery_tickets")
-    sign_c = a.int("sign_count")
-    coin = ST.coin_name()
-    disp = str(qq)
-    try:
-        from . import slave as _sl_name
-        try:
-            disp = _sl_name.display_name(gid, str(qq))
-        except Exception:
-            disp = _sl_name.NOTE_NAMES.get(str(qq), str(qq)) or str(qq)
-    except Exception:
-        pass
-    lines = [
-        f"📋【{disp}】的档案",
-        f"💰资产：{money}{coin}｜🏦存款：{dep}｜💎身价：500",
-        f"🔋体力：{tili}｜💄魅力：{meili}｜🎫奖券：{jq}｜📖经验：0",
-        f"👑主人：木有主人｜无人保护｜📅总签{sign_c}·连签{a.int('consecutive_days')}天",
-        "⚔️武器：木有武器",
-        "🎁宝物：木有宝物",
-        "👥奴隶(0/2)：木有奴隶",
-    ]
-    return "\r\n".join(lines)
-
-
 def cmd_draw(gid, qq, amount=1):
     """抽奖: 消耗奖券(默认1张), 支持多连抽（如抽奖52）；先全量预摇奖，再一次事务
     扣券+发奖+写连败 streak（禁逐抽部分结算、禁失败后重摇）"""
@@ -740,7 +699,7 @@ def handle(gid, qq, raw):
     # 排行优先于签到，避免 “签到榜” 误判为签到
     if text.startswith("个人财富榜") or text.startswith("财富榜"):
         return cmd_rank(gid, "cash", None)
-    if text.startswith("签到排行榜") or text.startswith("签到榜"):
+    if text.startswith("签到榜"):
         return cmd_rank(gid, "sign", None)
     if text.startswith("体力排行榜") or text.startswith("体力榜"):
         return cmd_rank(gid, "stamina", None)
@@ -748,9 +707,6 @@ def handle(gid, qq, raw):
         return cmd_rank(gid, "charm", None)
     if text == "签到" or text.startswith("签到 ") or text == "打卡" or text.startswith("打卡 "):
         return cmd_sign(gid, qq)
-    if text == "我的信息" or text.startswith("我的信息 "):
-        # 支持 我的信息 @QQ 查询他人（走 slave 档案更全，故此处仅返回自身；跨引擎查询由 slave 处理）
-        return cmd_personal(gid, qq)
     if text in ("个人排行", "我的排行"):
         return cmd_mine_rank(gid, qq)
     if text.startswith("抽奖"):
@@ -782,39 +738,17 @@ def handle(gid, qq, raw):
     return None
 
 
-# 显式指令注册表（protocol.engine_commands 优先读此表，正则索引仅回退）。
+# 显式指令注册表（V8 起为唯一词表来源：engine_commands 与 _collect_commands 同读此表）。
 # 与 handle 内分支逐字对应，增删指令时两处同改。
 COMMANDS = (
     "个人财富榜", "财富榜",
-    "签到排行榜", "签到榜",
+    "签到榜",
     "体力排行榜", "体力榜",
     "魅力排行榜", "魅力榜",
     "每日打卡",
     "签到", "打卡",
-    "我的信息", "个人排行", "我的排行",
+    "个人排行", "我的排行",
     "抽奖",
     "领取新手礼包", "领取新人礼包",
     "赞我", "购买体力", "购买魅力",
 )
-WAKE = "签到系统"
-
-
-def can_handle(gid, qq, raw):
-    """自由函数式 can_handle：供 router 纯指令引擎快速谓词（零语义差）。"""
-    try:
-        from core.protocol import norm_cmd as _nc
-    except ImportError:
-        try:
-            from ..core.protocol import norm_cmd as _nc  # type: ignore
-        except Exception:
-            _nc = None
-    try:
-        rt = str(raw or "").strip()
-        rt_n = _nc(rt) if _nc else rt.replace(" ", "")
-        for c in COMMANDS:
-            _cn = _nc(c) if _nc else str(c).replace(" ", "")
-            if _cn and rt_n.startswith(_cn):
-                return True
-    except Exception:
-        pass
-    return False

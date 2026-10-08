@@ -257,11 +257,35 @@ async def run_business(gid, qq, raw, is_admin, executor, handle_fn, ride):
 
 
 def _is_pure_custom(raw, ST):
+    """纯自定义判定（L2 单源）：触发词序与入口载荷取自 router._custom_idx（与路由匹配同一索引），
+    不再每条消息读配置节并现场重排序；仅索引缺席/无词（裸 store、构建失败）时现场排序兜底。"""
     try:
+        rt = raw.strip()
+        try:
+            try:
+                from .router import _custom_idx
+            except ImportError:
+                from core.router import _custom_idx  # type: ignore
+            _idx = _custom_idx(ST)
+        except Exception:
+            _idx = None
+        # 最长优先（与 router 索引同序）：重叠触发词时短词不得截胡长词，误判会漏名字前缀
+        if _idx is not None and (_idx.get("cmds") or ()):
+            _keys = _idx.get("cmds") or ()
+            _ent = _idx.get("ent") or {}
+            for t in _keys:
+                if rt.startswith(t):
+                    if t not in _ent:
+                        return False
+                    e = _ent[t]
+                    ev = e if isinstance(e, dict) else {"reply": str(e)}
+                    if not str(ev.get("command", "") or "").strip() and str(ev.get("reply", "") or "").strip():
+                        return True
+                    return False
+            return False
+        # 索引缺席/无词：退回现场全量排序（仅此路径读配置节，与旧实现逐行等价）
         sec = ST._CONFIG.get("自定义指令配置") if hasattr(ST, "_CONFIG") else {}
         if isinstance(sec, dict):
-            rt = raw.strip()
-            # 最长优先（与 router 索引同序）：重叠触发词时短词不得截胡长词，误判会漏名字前缀
             for t in sorted((str(t) for t in sec.keys() if str(t)), key=len, reverse=True):
                 e = sec[t]
                 if rt.startswith(t):

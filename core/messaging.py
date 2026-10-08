@@ -224,21 +224,37 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
     return raw
 
 
+def resolve_display_name(qq, gid="", slave_mod=None):
+    """展示名解析单源（L4）：分群昵称 → 跨群 NOTE_NAMES 兜底 → qq 原文。
+    分群链优先、全局仅兜底（防B群沿用A群昵称）；router._render_vars 的变量渲染与
+    _name_prefix 的发送前缀共用本链，两处不再各解析一遍。slave_mod 沿 bind() 惯例可注入。"""
+    q = str(qq)
+    sm = slave_mod
+    if sm is None:
+        return q
+    nm = ""
+    try:
+        try:
+            nm = sm.display_name(gid, q, "") or ""
+        except TypeError:
+            # 老签名无 default 参数：miss 返回 qq，视作未命中继续走全局兜底
+            nm = sm.display_name(gid, q)
+            if nm is None or nm == q:
+                nm = ""
+        if nm:
+            return nm
+    except Exception:
+        pass
+    try:
+        return sm.NOTE_NAMES.get(q, "") or q
+    except Exception:
+        return q
+
+
 def _name_prefix(qq, reply, slave_mod=None, gid=""):
     sm = slave_mod or _slave
     try:
-        nm = ""
-        if sm is not None:
-            try:
-                # 分群链优先，全局仅兜底（防B群沿用A群昵称）
-                nm = sm.display_name(gid, str(qq), "") or sm.NOTE_NAMES.get(str(qq), "") or str(qq)
-            except Exception:
-                try:
-                    nm = sm.NOTE_NAMES.get(str(qq), "") or str(qq)
-                except Exception:
-                    nm = str(qq)
-        else:
-            nm = str(qq)
+        nm = resolve_display_name(qq, gid=gid, slave_mod=sm)
         prefix = f"[{nm}]"
         def _already_has_name(s):
             head = s[:120]

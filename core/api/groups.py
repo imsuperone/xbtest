@@ -80,8 +80,6 @@ async def handle_groups_toggle(request):
         ST._CONFIG["总开关配置"]["总开关"] = "真" if enabled else "假"
         try: ST.save_config()
         except Exception: pass
-        try: ST.sync_astrbot_config(ST._CONFIG)
-        except Exception: pass
         return json_response({"ok": True, "total_enabled": enabled})
 
     if not gid or not gid.isdigit():
@@ -92,8 +90,6 @@ async def handle_groups_toggle(request):
             ST._CONFIG.setdefault("群组开关配置", {})
             ST._CONFIG["群组开关配置"][gid] = "真" if enabled else "假"
             try: ST.save_config()
-            except Exception: pass
-            try: ST.sync_astrbot_config(ST._CONFIG)
             except Exception: pass
             try: ST.recall_set(f"group_switch_{gid}", "1" if enabled else "0")
             except Exception: pass
@@ -131,8 +127,6 @@ async def handle_groups_delete(request):
             if isinstance(sec, dict) and gid in sec:
                 sec.pop(gid, None)
             try: ST.save_config()
-            except Exception: pass
-            try: ST.sync_astrbot_config(ST._CONFIG)
             except Exception: pass
             try: ST.recall_set(f"group_switch_{gid}", "1")
             except Exception: pass

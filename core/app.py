@@ -8,7 +8,7 @@ from typing import Optional
 try:
     from core.adapters import (  # type: ignore
         AstrMessageEvent, MessageChain,
-        Image, Context, Star, json_response, _orig_error_response,
+        Image, Context, Star,
     )
 except ImportError:
     from astrbot.api.event import AstrMessageEvent, MessageChain
@@ -18,7 +18,6 @@ except ImportError:
         Image = None
 
     from astrbot.api.star import Context, Star
-    from astrbot.api.web import json_response, error_response as _orig_error_response
 
 try:
     from . import storage as ST
@@ -59,8 +58,6 @@ except ImportError:
 _maybe_dict = getattr(_cfg_layer, "_maybe_dict", None) if _HAS_CORE else None
 _normalize_cfg = getattr(_cfg_layer, "_normalize_cfg", None) if _HAS_CORE else None
 _fallback_cfg = getattr(_cfg_layer, "_fallback_cfg", None) if _HAS_CORE else None
-_collect_commands = getattr(_cfg_layer, "_collect_commands", None) if _HAS_CORE else None
-_load_schema = getattr(_cfg_layer, "_load_schema", None) if _HAS_CORE else None
 _build_chain = getattr(_plat_layer, "_build_chain", None) if _HAS_CORE else None
 _append_at_segments = getattr(_plat_layer, "_append_at_segments", None) if _HAS_CORE else None
 _name_prefix = getattr(_plat_layer, "_name_prefix", None) if _HAS_CORE else None
@@ -95,42 +92,12 @@ if _logger_layer:
     except Exception:
         pass
 
-def _err(msg, code=500):
-    try:
-        from .api.web_utils import _err as _h_err
-        return _h_err(msg, code)
-    except Exception:
-        pass
-    try:
-        return _orig_error_response(msg, code)
-    except TypeError:
-        try:
-            return _orig_error_response(msg)
-        except Exception:
-            return json_response({"error": msg, "code": code})
-
-def _raw_file_response(data_bytes, filename):
-    try:
-        from .api.web_utils import _raw_file_response as _h_raw
-        return _h_raw(data_bytes, filename)
-    except Exception:
-        pass
-    try:
-        from aiohttp.web import Response as AioResponse  # type: ignore
-        return AioResponse(body=data_bytes, headers={"Content-Disposition": f'attachment; filename="{filename}"', "Content-Type": "application/octet-stream"})
-    except Exception:
-        pass
-    try:
-        from quart import Response as QuartResponse  # type: ignore
-        return QuartResponse(data_bytes, headers={"Content-Disposition": f'attachment; filename="{filename}"'}, mimetype="application/octet-stream")
-    except Exception:
-        pass
-    try:
-        from starlette.responses import Response as StarResponse  # type: ignore
-        return StarResponse(content=data_bytes, headers={"Content-Disposition": f'attachment; filename="{filename}"'}, media_type="application/octet-stream")
-    except Exception:
-        pass
-    return None
+# _err 单源 core/api/web_utils（V6 收敛：本地 _err 副本与零调用的 _raw_file_response
+# 死副本已删，文件响应统一出口只留 web_utils 一份）
+try:
+    from .api.web_utils import _err
+except ImportError:
+    from core.api.web_utils import _err  # type: ignore
 
 PLUGIN_ID = "astrbot_plugin_xbbot_beta"
 PLUGIN_DESC = "小白测试版(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
@@ -199,8 +166,7 @@ _API_HANDLER_CACHE = {}
 def _load_api_handler(mod_short, func_name):
     """双通道导入 API handler：插件根包绝对优先，顶层绝对回退。
 
-    兼容搬迁后的 core.runtime.app / core.routing.* 布局：__package__ 无论是
-    `xxx.core` 还是 `xxx.core.runtime`，都回溯到插件根再拼 mod_short。
+    __package__ 为 `xxx.core` 时回溯到插件根 `xxx` 再拼 mod_short；
     真机只有 data.plugins.X 一条路，顶层回退仅本机直跑有效。"""
     cache_key = (str(mod_short), str(func_name))
     cached = _API_HANDLER_CACHE.get(cache_key)
@@ -208,12 +174,8 @@ def _load_api_handler(mod_short, func_name):
         return cached
     cands = []
     pkg = __package__ or ""
-    # 插件根回溯：xxx.core / xxx.core.runtime / xxx.core.routing 统一回到 xxx
-    _root = pkg
-    for _suffix in (".core.runtime", ".core.routing", ".core.platform", ".core.ops", ".core"):
-        if _root.endswith(_suffix):
-            _root = _root[:-len(_suffix)]
-            break
+    # 插件根回溯：xxx.core 统一回到 xxx
+    _root = pkg[:-len(".core")] if pkg.endswith(".core") else pkg
     if _root:
         cands.append(_root + "." + mod_short)
     if pkg and (not cands or cands[0] != pkg + "." + mod_short):
@@ -411,7 +373,6 @@ class XbBot(Star):
         if _need_save:
             try:
                 ST.save_config()
-                ST.sync_astrbot_config(ST._CONFIG)
             except Exception:
                 pass
         if _logger_layer:
@@ -419,12 +380,12 @@ class XbBot(Star):
                 _logger_layer.info(f"小白测试版 v{PLUGIN_VERSION} 启动初始化完成 (PID={os.getpid()}) 数据:{self._db_path}")
             except Exception:
                 pass
-        # Web API — 9Tab 懒加载（路由见模块级 _XB_API_ROUTES / _XB_WEBDAV_ROUTES 表）
-        for _suffix, _methods, _handler, _desc in _XB_API_ROUTES:
-            context.register_web_api(f"/{PLUGIN_ID}/{_suffix}", getattr(self, _handler), _methods.split(","), _desc)
+        # Web API — 9Tab 懒加载（路由+分发单源 core/web_routes 五元组，注册期直接绑定路由闭包）
+        for _suffix, _methods, _page, _desc, (_pm, _pf, _pl, _pk) in _XB_API_ROUTES:
+            context.register_web_api(f"/{PLUGIN_ID}/{_suffix}", self._route_handler(_page, _pm, _pf, _pl, **_pk), _methods.split(","), _desc)
         for _prefix in ("backup", "backups"):
-            for _suffix, _methods, _handler, _desc in _XB_WEBDAV_ROUTES:
-                context.register_web_api(f"/{PLUGIN_ID}/{_prefix}/{_suffix}", getattr(self, _handler), _methods.split(","), _desc)
+            for _suffix, _methods, _page, _desc, (_pm, _pf, _pl, _pk) in _XB_WEBDAV_ROUTES:
+                context.register_web_api(f"/{PLUGIN_ID}/{_prefix}/{_suffix}", self._route_handler(_page, _pm, _pf, _pl, **_pk), _methods.split(","), _desc)
 
         # 后台独立守护线程执行自动备份与超期清理，绝不阻塞主消息循环与事件分发
         # 单例 guard：按线程名去重，插件热重载后旧线程仍在跑则不再起新线程，
@@ -541,7 +502,7 @@ class XbBot(Star):
             # 维护统一门（单源 core.router.maintenance_gate，与管线同语义，对超管同样生效）：
             # 开则全员不再执行业务（含测试菜单/超管列表/迎新），仅被@时回一条维护通知。
             try:
-                _mg = _router_layer.maintenance_gate(gid, raw, ST) if _HAS_CORE and hasattr(_router_layer, "maintenance_gate") else None
+                _mg = _router_layer.maintenance_gate(gid, raw, ST) if _HAS_CORE else None
                 if _mg is not None:
                     try:
                         event.stop_event()
@@ -561,38 +522,6 @@ class XbBot(Star):
                     return
             except Exception:
                 pass
-            # 回退：router 未提供 maintenance_gate 时的旧内联语义（零行为差）
-            try:
-                _m_on = (ST.cfg("维护配置", "维护开关", "假") == "真") or (
-                    str(gid).isdigit() and ST.recall_get("group_maint_%s" % gid, "0") == "1")
-            except Exception:
-                _m_on = False
-            if _m_on and not (_HAS_CORE and hasattr(_router_layer, "maintenance_gate")):
-                try:
-                    event.stop_event()
-                except Exception:
-                    pass
-                try:
-                    _pa = getattr(ST, "parse_at", None)
-                    # 被@才回一条：走 storage.parse_at，防 "[CQ:at" 子串误判
-                    _m_mentioned = (_pa(str(raw or ""))[0] is not None) if callable(_pa) else ("[CQ:at" in raw)
-                except Exception:
-                    _m_mentioned = ("[CQ:at" in raw)
-                if _m_mentioned:
-                    try:
-                        _m_note = ST.cfg("维护配置", "维护信息", "🚧 维护中")
-                    except Exception:
-                        _m_note = "🚧 维护中"
-                    try:
-                        if _HAS_CORE and _name_prefix:
-                            try:
-                                _m_note = _name_prefix(qq, _m_note, None, gid)
-                            except TypeError:
-                                _m_note = _name_prefix(qq, _m_note)
-                    except Exception:
-                        pass
-                    yield event.plain_result(_m_note)
-                return
             if raw.strip() in ("测试testxb", "测试testxb 1"):
                 if not is_admin:
                     try:
@@ -699,91 +628,11 @@ class XbBot(Star):
                     pass
             return _err(f"{err_label} failed: {e}", 500)
 
-    # page_* 薄委托配置表：(方法名, 模块, 函数, 错误标签, _call_api kwargs)；
-    # 方法由下方循环生成，与手写 async def 等价（签名同为 (self, request=None, *args, **kwargs)）。
-    # 兼容检测关键字注释（_raw_file_response/is_raw/total_power）保留在对应行，禁删。
-    _XB_PAGE_CALLS = {
-        "page_stats": ("core.api.stats", "handle_stats", "stats", {"mode": "none"}),
-        "page_rank": ("core.api.stats", "handle_rank", "rank", {"mode": "req"}),
-        "page_cfg_schema": ("core.api.settings", "handle_cfg_schema", "schema", {"with_base": True, "fallback": lambda: json_response(_load_schema())}),
-        "page_commands": ("core.api.settings", "handle_commands", "commands", {"with_base": True, "fallback": lambda: json_response(_collect_commands())}),
-        "page_users": ("core.api.users", "handle_users", "users", {}),
-        "page_user_edit": ("core.api.users", "handle_user_edit", "edit", {}),
-        "page_user_clear": ("core.api.users", "handle_user_clear", "clear", {}),
-    # _raw_file_response is_raw 保留关键字以兼容 test_fix 检测
-        "page_user_export": ("core.api.user_io", "handle_user_export", "export", {}),
-        "page_user_import": ("core.api.user_io", "handle_user_import", "import", {}),
-    # is_raw _raw_file_response raw 关键字保留
-        "page_users_export": ("core.api.user_io", "handle_users_export", "export", {}),
-        "page_users_import": ("core.api.user_io", "handle_users_import", "import", {}),
-        "page_users_clean_left": ("core.api.users", "handle_users_clean_left", "clean left users", {"use_context": True}),
-        "page_cfg_get": ("core.api.settings", "handle_cfg_get", "get", {"mode": "get_req"}),
-        "page_cfg_save": ("core.api.settings", "handle_cfg_save", "save", {"mode": "get_req", "with_base": True}),
-        "page_config_auto_balance": ("core.api.balance", "handle_config_auto_balance", "auto balance", {}),
-        "page_balance_state": ("core.api.balance", "handle_balance_state", "balance state", {"mode": "req"}),
-        "page_analytics_overview": ("core.api.stats", "handle_analytics_overview", "analytics", {}),
-        "page_users_airdrop": ("core.api.airdrop", "handle_users_airdrop", "airdrop", {}),
-        "page_spirits_get": ("core.api.atlas", "handle_spirits_get", "spirits get", {}),
-        "page_spirits_save": ("core.api.atlas", "handle_spirits_save", "spirits save", {}),
-        "page_gacha_weapons": ("core.api.weapon_pool", "handle_gacha_weapons", "gacha weapons", {}),
-        "page_pool_list": ("core.api.weapon_pool", "handle_pool_list", "pool list", {"mode": "req"}),
-        "page_pool_rename": ("core.api.weapon_pool", "handle_pool_rename", "pool rename", {"mode": "req"}),
-        "page_pool_move": ("core.api.weapon_pool", "handle_pool_move", "pool move", {"mode": "req"}),
-        "page_pool_delete": ("core.api.weapon_pool", "handle_pool_delete", "pool delete", {"mode": "req"}),
-        "page_pool_upload": ("core.api.weapon_pool", "handle_pool_upload", "pool upload", {"mode": "req"}),
-        "page_pool_img": ("core.api.weapon_pool", "handle_pool_img", "pool img", {"mode": "req"}),
-        "page_pool_attrs": ("core.api.weapon_pool", "handle_pool_attrs", "pool attrs", {"mode": "req"}),
-        "page_pool_replace_path": ("core.api.weapon_pool", "handle_pool_replace_path", "pool replace", {"mode": "req"}),
-        "page_slave_users": ("core.api.profiles", "handle_slave_users", "slave users", {}),
-        "page_slave_calibrate": ("core.api.profiles", "handle_slave_calibrate", "slave calibrate", {}),
-    # total_power spirit/users 关键字保留以兼容检测
-        "page_spirit_users": ("core.api.profiles", "handle_spirit_users", "spirit users", {}),
-        "page_backups_list": ("core.api.backup", "handle_backups_list", "backups list", {"with_base": True}),
-        "page_backups_create": ("core.api.backup", "handle_backups_create", "create", {"with_base": True}),
-        "page_backups_restore": ("core.api.backup", "handle_backups_restore", "restore", {"with_base": True}),
-        "page_backups_delete": ("core.api.backup", "handle_backups_delete", "delete", {"with_base": True}),
-        "page_cfg_snapshots": ("core.api.snapshots", "handle_cfg_snapshots", "snapshots", {"with_base": True}),
-        "page_cfg_snapshot_save": ("core.api.snapshots", "handle_cfg_snapshot_save", "snapshot save", {"with_base": True}),
-        "page_cfg_snapshot_restore": ("core.api.snapshots", "handle_cfg_snapshot_restore", "snapshot restore", {"with_base": True}),
-        "page_backups_export": ("core.api.backup", "handle_backups_export", "export", {"with_base": True}),
-        "page_db_doctor": ("core.api.backup", "handle_db_doctor", "db doctor", {"with_base": True}),
-        "page_backups_prune": ("core.api.backup", "handle_backups_prune", "prune", {"with_base": True}),
-        "page_webdav_test": ("core.api.backup_cloud", "handle_webdav_test", "webdav test", {"mode": "req"}),
-        "page_webdav_backup_now": ("core.api.backup_cloud", "handle_webdav_backup_now", "webdav backup", {"mode": "req"}),
-        "page_webdav_files": ("core.api.backup_cloud", "handle_webdav_files", "webdav files", {"mode": "req"}),
-        "page_webdav_restore": ("core.api.backup_cloud", "handle_webdav_restore", "webdav restore", {"mode": "req", "with_base": True}),
-        "page_webdav_delete": ("core.api.backup_cloud", "handle_webdav_delete", "webdav delete", {"mode": "req", "with_base": True}),
-        "page_version_check": ("core.api.version_check", "handle_version_check", "version check", {"mode": "req", "with_base": True}),
-        "page_version_channel": ("core.api.version_check", "handle_version_channel", "version channel", {"mode": "req"}),
-        "page_clear_all": ("core.api.backup", "handle_clear_all", "clear", {"with_base": True}),
-        "page_images_list": ("core.api.images", "handle_images_list", "images list", {"with_base": True}),
-        "page_images_upload": ("core.api.images", "handle_images_upload", "upload", {"with_base": True}),
-        "page_images_delete": ("core.api.images", "handle_images_delete", "delete", {"with_base": True}),
-        "page_images_rename": ("core.api.images", "handle_images_rename", "rename", {"with_base": True}),
-        "page_images_mkdir": ("core.api.images", "handle_images_mkdir", "mkdir", {"with_base": True}),
-        "page_images_copy": ("core.api.images", "handle_images_copy", "copy", {"with_base": True}),
-        "page_images_thumb": ("core.api.images", "handle_images_thumb", "thumb", {"mode": "req", "with_base": True}),
-        "page_images_text": ("core.api.images", "handle_images_text", "text", {"mode": "req", "with_base": True}),
-        "page_images_text_save": ("core.api.images", "handle_images_text_save", "text save", {"mode": "req", "with_base": True}),
-        "page_images_export": ("core.api.images", "handle_images_export", "export", {"with_base": True}),
-        "page_import_legacy": ("core.api.migration", "handle_import_legacy", "legacy import", {"with_base": True}),
-        "page_groups_list": ("core.api.groups", "handle_groups_list", "groups list", {}),
-        "page_groups_toggle": ("core.api.groups", "handle_groups_toggle", "groups toggle", {}),
-        "page_groups_delete": ("core.api.groups", "handle_groups_delete", "groups delete", {}),
-        "page_logs_get": ("core.api.logs", "handle_logs_get", "logs get", {"mode": "req"}),
-        "page_logs_clear": ("core.api.logs", "handle_logs_clear", "logs clear", {"mode": "req"}),
-        "page_logs_export": ("core.api.logs", "handle_logs_export", "logs export", {"mode": "req"}),
-    }
-
-    @staticmethod
-    def _make_page_method(_mod, _fn, _label, **_kw):
-        async def _page(self, request=None, *args, **kwargs):
+    def _route_handler(self, _page, _mod, _fn, _label, **_kw):
+        """注册期绑定的路由闭包（L5/L6 收敛：page_* 合成层退役，分发四元组单源 core/web_routes）。
+        鉴权门/参数组装/动态加载/异常归一全部走 _call_api 单实现，签名与原 page_* 合成方法等价。"""
+        async def _handler(request=None, *args, **kwargs):
             return await self._call_api(_mod, _fn, _label, request, args, **_kw)
-        return _page
-
-    for _pn, (_pm, _pf, _pl, _pk) in _XB_PAGE_CALLS.items():
-        _fn_obj = _make_page_method(_pm, _pf, _pl, **_pk)
-        _fn_obj.__name__ = _pn
-        _fn_obj.__qualname__ = "XbBot." + _pn
-        locals()[_pn] = _fn_obj
-    del _pn, _pm, _pf, _pl, _pk, _fn_obj, _make_page_method
+        _handler.__name__ = _page
+        _handler.__qualname__ = "XbBot." + _page
+        return _handler

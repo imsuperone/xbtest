@@ -658,81 +658,10 @@ function overlayConfirm(message, okText = "确定删除") {
     setTimeout(() => cancelBtn.focus(), 0);
   });
 }
-// 原生 confirm 桥接：保留原生引用，仅在页内框异常时兜底
-if (typeof window !== "undefined" && !window._nativeConfirm) {
-  try { window._nativeConfirm = window.confirm.bind(window); } catch (e) { window._nativeConfirm = null; }
-}
+// 异常即取消（与 uiConfirm 缺 #appModal 时同语义）；沙盒 iframe 内原生 confirm 本就被拦截，不留原生桥
 async function pageConfirm(message, okText = "确定") {
   try { return await overlayConfirm(message, okText); }
-  catch (e) {
-    if (window._nativeConfirm) return window._nativeConfirm(message);
-    return false;
-  }
-}
-
-// GET->POST 白名单：仅明确读接口允许在 GET 明确不可用时回退 POST。
-// 写/删/恢复/修剪/清空类端点永远禁止回退（禁非原子 fallback 与 GET 副作用）。
-const _GET_POST_FALLBACK_ALLOW = new Set([
-  "stats", "rank", "config/get", "config/schema", "config/balance_state",
-  "analytics/overview", "commands", "users",
-  "user/export", "users/export",
-  "images/list", "images/thumb", "images/export",
-  "spirits", "gacha/weapons", "weapons/pool", "weapons/pool/img",
-  "backups/list", "backups/config/snapshots", "backups/export",
-  "version/check", "version/channel",
-  "logs", "logs/export",
-  "slave/users", "spirit/users", "groups/list",
-  "images/text",
-  "backup/webdav/test", "backups/webdav/test",
-  "backup/webdav/files", "backups/webdav/files",
-]);
-
-function _shouldFallbackPost(cleanEp, res, err) {
-  if (!_GET_POST_FALLBACK_ALLOW.has(cleanEp)) return false;
-  if (err) {
-    const msg = String((err && err.message) || err || "");
-    // 仅网络异常/404/405 触发；超时/取消 AbortError 不重放
-    if (/abort/i.test(msg)) return false;
-    return true;
-  }
-  if (!res) return true;
-  const msg = String((res && res.message) || "");
-  const code = res && (res.code !== undefined ? res.code : res.status);
-  if (/未找到|not found|404|405|method not allowed/i.test(msg)) return true;
-  if (code === 404 || code === 405 || code === "404" || code === "405") return true;
-  return false;
-}
-
-// 请求 API 封装（GET 参数拼 URL；仅白名单读接口在 404/405/网络异常时回退 POST）
-async function callApi(endpoint, data = {}, method = "GET") {
-  const _b = getBridge();
-  const cleanEp = String(endpoint || "").replace(/^\/+/, "").split("?")[0];
-  const cleanData = {};
-  if (data && typeof data === "object") {
-    Object.keys(data).forEach((k) => {
-      if (data[k] !== undefined && data[k] !== null) {
-        cleanData[k] = String(data[k]);
-      }
-    });
-  }
-  if (method === "GET") {
-    let res = null;
-    let err = null;
-    try {
-      res = await _b.apiGet(cleanEp, cleanData);
-    } catch (e) {
-      err = e;
-    }
-    // 空数组/空对象是合法结果，直接返回；仅白名单+明确不可用才回退 POST，避免双倍请求
-    if (_shouldFallbackPost(cleanEp, res, err)) {
-      res = await _b.apiPost(cleanEp, cleanData);
-      return res;
-    }
-    if (err) throw err;
-    return res;
-  } else {
-    return await _b.apiPost(cleanEp, cleanData);
-  }
+  catch (e) { return false; }
 }
 
 function copyToClipboard(text) {

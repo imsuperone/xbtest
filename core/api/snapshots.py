@@ -226,10 +226,6 @@ async def handle_cfg_snapshot_restore(request, plugin_base=""):
         except Exception:
             pass
         try:
-            ST.sync_astrbot_config(ST._CONFIG)
-        except Exception:
-            pass
-        try:
             if hasattr(ST, "wd_cfg_backup"):
                 ST.wd_cfg_backup((ST._CONFIG.get("备份配置") or {}) if isinstance(ST._CONFIG.get("备份配置"), dict) else None)
         except Exception:

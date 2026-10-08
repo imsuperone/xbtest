@@ -269,7 +269,7 @@ async def handle_analytics_overview(request):
 
 # ==================== 拆分门面（logs/groups/version_check 已独立，老路径兼容） ====================
 try:
-    from .logs import handle_logs_get, handle_logs_clear, handle_logs_export  # type: ignore
+    from .logs import handle_logs_get, handle_logs_clear, export_logs  # type: ignore
 except ImportError:
     pass
 try:

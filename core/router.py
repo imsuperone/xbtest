@@ -8,21 +8,12 @@ try:
     from .protocol import (  # type: ignore
         SILENT as _PROTO_SILENT, maintenance_active as _proto_active,
         is_mentioned as _proto_mentioned, engine_commands as _proto_cmds,
-        norm_cmd as _proto_norm,
     )
 except ImportError:
-    try:
-        from core.protocol import (  # type: ignore
-            SILENT as _PROTO_SILENT, maintenance_active as _proto_active,
-            is_mentioned as _proto_mentioned, engine_commands as _proto_cmds,
-            norm_cmd as _proto_norm,
-        )
-    except Exception:
-        _PROTO_SILENT = object()
-        _proto_active = None
-        _proto_mentioned = None
-        _proto_cmds = None
-        _proto_norm = None
+    from core.protocol import (  # type: ignore
+        SILENT as _PROTO_SILENT, maintenance_active as _proto_active,
+        is_mentioned as _proto_mentioned, engine_commands as _proto_cmds,
+    )
 _REPLY_OVERRIDE_SEC = "指令回复配置"
 _DEFAULT_MARKERS = ("{回复}", "{默认}", "默认", "默认回复")
 _CUSTOM_SEC = "自定义指令配置"
@@ -72,26 +63,21 @@ def _render_vars(tpl, gid, qq, store):
         import datetime as _dt
         name = qq
         try:
-            from ..games import slave as _sl  # type: ignore
+            # 显示名解析单源（L4）：与 messaging._name_prefix 同一条链，此处不再自己解析
             try:
-                name = _sl.display_name(gid, str(qq))
+                from .messaging import resolve_display_name as _rdn  # type: ignore
+            except ImportError:
+                from core.messaging import resolve_display_name as _rdn  # type: ignore
+            try:
+                from ..games import slave as _sl  # type: ignore
             except Exception:
-                name = str(qq)
-            if name == str(qq):
-                # 本群无记录才回退全局，防B群沿用A群昵称
                 try:
-                    name = _sl.NOTE_NAMES.get(str(qq), str(qq))
+                    import slave as _sl  # type: ignore
                 except Exception:
-                    pass
+                    _sl = None
+            name = _rdn(qq, gid=gid, slave_mod=_sl)
         except Exception:
-            try:
-                import slave as _sl2  # type: ignore
-                try:
-                    name = _sl2.display_name(gid, str(qq))
-                except Exception:
-                    name = _sl2.NOTE_NAMES.get(str(qq), str(qq))
-            except Exception:
-                pass
+            name = str(qq)
         coin = ""
         try:
             coin = store.coin_name() if hasattr(store, "coin_name") else "金币"
@@ -118,11 +104,7 @@ _GUARD_CACHE_TTL = 5.0  # 5s 缓存，千群每消息 18次kv/config读→命中
 _GUARD_CACHE_MAX = 5000  # 无界增长防护：千群×9系统键超限淘汰最旧一半
 _GUARD_BATCH_TTL = 2.0  # 同 gid 批量复用：2s 内9引擎守卫共享一次计算，突发消息0重复计算
 _GUARD_BATCH_CACHE = {}  # gid -> (ts, {engine: blocked_msg_or_None})
-_ENGINE_CMDS = {}
-_ENGINE_CMDS_VER = None
-_ENGINE_MT_CACHE = {"t": 0.0, "mt": 0.0}
-_ENGINE_MT_TTL = 10.0  # mtime 探测节流：10 秒内复用，避免每消息 10 次 stat
-_CUSTOM_IDX = {"ver": -1, "cmds": (), "dis": (), "ovr": (), "adm": (), "_fp": None}
+_CUSTOM_IDX = {"ver": -1, "cmds": (), "dis": (), "ovr": (), "adm": (), "ent": {}, "_fp": None}
 
 
 # ==================== guards（原 router/guards.py 并入） ====================
@@ -238,102 +220,35 @@ def _batch_guard_map(gid, is_admin, store):
 
 
 # ==================== commands（原 router/commands.py 并入） ====================
-import os
-
-
-def _engine_cache_ver(store=None):
-    try:
-        ver = getattr(store, "_CONFIG_VER", 0) if store is not None else 0
-    except Exception:
-        ver = 0
-    try:
-        _now = _t_guard.time()
-        if _now - _ENGINE_MT_CACHE.get("t", 0.0) < _ENGINE_MT_TTL:
-            return (_ENGINE_MT_CACHE.get("mt", 0.0), ver)
-        base = os.path.dirname(os.path.abspath(__file__))
-        eng_dir = os.path.join(base, "games")
-        if not os.path.isdir(eng_dir):
-            try:
-                eng_dir = os.path.join(os.path.dirname(base), "games")
-            except Exception:
-                pass
-        max_mt = 0.0
-        _watch = [os.path.join(eng_dir, _n + ".py")
-                  for _n in ("sign", "spirit", "ride", "guild", "adventure")]
-        for _pkg in ("slave", "bank", "ent", "ride", "guild", "adventure"):
-            _pd = os.path.join(eng_dir, _pkg)
-            if os.path.isdir(_pd):
-                _watch.extend(os.path.join(_pd, f) for f in os.listdir(_pd) if f.endswith(".py"))
-        _watch.append(os.path.join(base, "superadmin.py"))  # base 即 core/，超管与其同级（曾误拼 core/superadmin.py 永不存在）
-        for _p in _watch:
-            try:
-                _mt = os.path.getmtime(_p)
-                if _mt > max_mt:
-                    max_mt = _mt
-            except Exception:
-                pass
-        _ENGINE_MT_CACHE["t"] = _now
-        _ENGINE_MT_CACHE["mt"] = max_mt
-    except Exception:
-        max_mt = _ENGINE_MT_CACHE.get("mt", 0.0)
-    return (max_mt, ver)
-
-
-def _get_engine_cmds(engine, store=None):
-    global _ENGINE_CMDS_VER  # 合并单文件后裸重绑必须声明 global，否则读到 UnboundLocalError 被吞错
-    try:
-        cur_ver = _engine_cache_ver(store)
-    except Exception:
-        cur_ver = None
-    try:
-        if _ENGINE_CMDS_VER != cur_ver or engine not in _ENGINE_CMDS:
-            try:
-                from .config import _collect_commands
-                base = os.path.dirname(os.path.abspath(__file__))
-                all_cmds = _collect_commands(base, store)
-                if all_cmds:
-                    _ENGINE_CMDS.clear()
-                    _ENGINE_CMDS.update(all_cmds)
-                    _ENGINE_CMDS_VER = cur_ver
-            except Exception:
-                pass
-            # 注：曾有第二遍同参重扫回退（_cc2），与首遍完全等价，删（零语义差）
-    except Exception:
-        pass
-    return _ENGINE_CMDS.get(engine, [])
+# V8：mtime/version 化指令缓存与 _collect_commands 重扫层已退役——
+# 词表唯一来源是各引擎模块级 COMMANDS（_proto_cmds 直读）+ 唤醒词（store.wake 实时）。
 
 
 def _matches_engine(raw, engine, store=None, _mod=None):
+    """引擎闸门（V8 单索引）：唤醒词前缀 → 系统三件套 → 显式 COMMANDS 前缀。
+    正则索引已退役：词表唯一来源 = 各引擎 COMMANDS（_proto_cmds 直读）+ store.wake 实时唤醒词。"""
     if not raw:
         return False
     rt = str(raw).strip()
+    rt_n = _norm_cmd(rt)
     sysname = _SYS_ENG.get(engine, engine)
     if store and hasattr(store, "wake"):
         try:
-            wakes = store.wake(sysname + "系统", sysname + "系统")
-            if rt in wakes:
-                return True
+            # 前缀匹配：旧实现唤醒词经刮词索引本就是 startswith，语义保持
+            for w in store.wake(sysname + "系统", sysname + "系统"):
+                if w and rt_n.startswith(_norm_cmd(w)):
+                    return True
         except Exception:
             pass
     if rt in (sysname + "系统", sysname + "菜单", sysname + "帮助"):
         return True
-    # 显式注册表优先：引擎声明 COMMANDS 即免正则索引（config._collect_commands 仅回退）
     try:
-        if _mod is not None and _proto_cmds is not None:
-            _explicit = _proto_cmds(_mod)
-            if _explicit:
-                rt_n0 = _norm_cmd(rt)
-                for c in _explicit:
-                    if c and rt_n0.startswith(_norm_cmd(c)):
-                        return True
-                # 显式表未命中仍继续走正则索引（兼容唤醒词扩展），不直接返回
+        if _mod is not None:
+            for c in _proto_cmds(_mod):
+                if c and rt_n.startswith(_norm_cmd(c)):
+                    return True
     except Exception:
         pass
-    cmds = _get_engine_cmds(engine, store)
-    rt_n = _norm_cmd(rt)
-    for c in cmds:
-        if c and rt_n.startswith(_norm_cmd(c)):
-            return True
     return False
 
 
@@ -406,7 +321,7 @@ def _custom_fp(store):
 
 
 def _custom_idx(store):
-    """自定义/禁用/回复覆盖三表统一索引：按触发词长度降序预排，配置版本变更时重建。
+    """自定义/禁用/回复覆盖三表统一索引（自定义表随带入口载荷 ent）：按触发词长度降序预排，配置版本变更时重建。
     每消息三遍全量遍历 O(3C) → 一次索引命中，C=50 时约省 0.1-0.3ms。"""
     try:
         ver = getattr(store, "_CONFIG_VER", -1)
@@ -428,11 +343,13 @@ def _custom_idx(store):
             return _CUSTOM_IDX
     except Exception:
         pass
-    cmds, dis, ovr, adm = (), (), (), ()
+    cmds, dis, ovr, adm, ent = (), (), (), (), {}
     try:
         sec = store._CONFIG.get(_CUSTOM_SEC) if hasattr(store, "_CONFIG") else None
         if isinstance(sec, dict):
             cmds = tuple(sorted((str(t) for t in sec.keys() if str(t)), key=len, reverse=True))
+            # 入口载荷随索引走：命中从索引取，路由匹配与回复后处理不再回读配置节（L2 单源）
+            ent = {str(t): v for t, v in sec.items() if str(t)}
     except Exception:
         pass
     try:
@@ -454,7 +371,7 @@ def _custom_idx(store):
     except Exception:
         pass
     try:
-        _CUSTOM_IDX["ver"], _CUSTOM_IDX["cmds"], _CUSTOM_IDX["dis"], _CUSTOM_IDX["ovr"], _CUSTOM_IDX["adm"] = ver, cmds, dis, ovr, adm
+        _CUSTOM_IDX["ver"], _CUSTOM_IDX["cmds"], _CUSTOM_IDX["dis"], _CUSTOM_IDX["ovr"], _CUSTOM_IDX["adm"], _CUSTOM_IDX["ent"] = ver, cmds, dis, ovr, adm, ent
         try:
             _CUSTOM_IDX["_fp"] = fp
         except Exception:
@@ -467,29 +384,41 @@ def _custom_idx(store):
 
 
 def _custom_cmd(raw, store):
+    """自定义指令匹配（L2 单源）：命中前只走 _custom_idx 索引（cmds 序 + ent 载荷），
+    不再每条消息先回读自定义指令配置节；索引缺席/无词时才现场读配置兜底（逐行等价）。"""
     try:
-        sec = store._CONFIG.get(_CUSTOM_SEC) if hasattr(store, "_CONFIG") else None
-        if not isinstance(sec, dict):
-            return None, raw
         raw = str(raw or "").strip()
         hit = None
+        sec = None
         try:
-            _cmds = _custom_idx(store).get("cmds") or ()
+            _idx = _custom_idx(store)
+            _cmds = _idx.get("cmds") or ()
+            _ent = _idx.get("ent") or {}
         except Exception:
-            _cmds = ()
+            _cmds, _ent = (), {}
         if _cmds:
             for t in _cmds:
                 if raw.startswith(t):
                     hit = t
                     break
         else:
+            sec = store._CONFIG.get(_CUSTOM_SEC) if hasattr(store, "_CONFIG") else None
+            if not isinstance(sec, dict):
+                return None, raw
             for t in sec.keys():
                 t = str(t)
                 if t and raw.startswith(t) and (hit is None or len(t) > len(hit)):
                     hit = t
         if hit is None:
             return None, raw
-        e = sec[hit]
+        if hit in _ent:
+            e = _ent[hit]
+        else:
+            if sec is None:
+                sec = store._CONFIG.get(_CUSTOM_SEC) if hasattr(store, "_CONFIG") else None
+            if not isinstance(sec, dict):
+                return None, raw
+            e = sec[hit]
         e = e if isinstance(e, dict) else {"reply": str(e)}
         cmd = str(e.get("command", "") or "").strip()
         reply = str(e.get("reply", "") or "").strip()
@@ -631,30 +560,9 @@ def maintenance_gate(gid, raw, store):
     返回：None=放行；str=回复维护信息；_PROTO_SILENT=维护中静默。
     """
     try:
-        if _proto_active is not None:
-            _on = bool(_proto_active(store, gid))
-        else:
-            _on = False
-            try:
-                _on = bool(store) and store.cfg("维护配置", "维护开关", "假") == "真"
-            except Exception:
-                pass
-            try:
-                _on = _on or (gid and str(gid).isdigit() and bool(store)
-                              and store.recall_get("group_maint_%s" % gid, "0") == "1")
-            except Exception:
-                pass
-        if not _on:
+        if not _proto_active(store, gid):
             return None
-        if _proto_mentioned is not None:
-            _hit = bool(_proto_mentioned(store, raw))
-        else:
-            try:
-                _pa = getattr(store, "parse_at", None) if store is not None else None
-                _hit = (_pa(str(raw or ""))[0] is not None) if callable(_pa) else ("[CQ:at" in str(raw or ""))
-            except Exception:
-                _hit = ("[CQ:at" in str(raw or ""))
-        if _hit:
+        if _proto_mentioned(store, raw):
             try:
                 return store.cfg("维护配置", "维护信息", "🚧 维护中")
             except Exception:
@@ -814,7 +722,7 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
 __all__ = ["_MAIN_MENU", "_SYS_ENG", "_resolve_reply", "_norm_cmd",
            "apply_reply_override", "_sys_off", "_cfg_sys_off", "_guard",
            "clear_guard_cache", "_batch_guard_map", "maintenance_gate",
-           "_engine_cache_ver", "_get_engine_cmds", "_matches_engine",
+           "_matches_engine",
            "_multi_reply", "_render_vars",
            "_custom_fp", "_custom_idx", "_custom_cmd", "_cmd_disabled", "_cmd_need_admin",
            "handle"]

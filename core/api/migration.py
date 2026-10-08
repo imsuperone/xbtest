@@ -64,7 +64,7 @@ _SQLITE_MAGIC = b"SQLite format 3\x00"
 
 
 def _unwrap_backup_export(data):
-    """备份导出 JSON 包裹解包：backups/export 返回 {ok,path,data:b64,size,filename}，
+    """备份导出 JSON 包裹解包：/export?kind=backup 返回 {ok,path,data:b64,size,filename}，
     用户把该文件直接当旧库回导时，拆出内层 SQLite bytes。非包裹返回 None（调用方走原分支）。
     判定：顶层 JSON dict 含 data 字段且 base64 解码后具 SQLite 魔数（禁按扩展名猜，避免误拆用户列表 json）。"""
     try:
@@ -361,7 +361,7 @@ def _heal_spirits_adopted():
 def _import_file_data(filename, data):
     """重活（线程池）：落临时文件 → 按 zip/db/ini/json 分发入库"""
     try:
-        # 备份导出回导：backups/export 落盘的 {ok,path,data:b64} JSON 常被改名 .db 直接回导，
+        # 备份导出回导：/export?kind=backup 落盘的 {ok,path,data:b64} JSON 常被改名 .db 直接回导，
         # 先拆出内层 SQLite（仅魔数命中才拆，用户列表 json 不受影响），扩展名同步归 .db。
         try:
             _uw = _unwrap_backup_export(data)

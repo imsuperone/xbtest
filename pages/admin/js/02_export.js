@@ -109,13 +109,13 @@ const EXPORT_MODULES = [
     defaultChecked: false,
     gather: async () => {
       try {
-        const res = await callApi("users/export", {}, "GET");
+        const res = await getBridge().apiGet("users/export");
         return (res && (res.users || res.result?.users)) || [];
       } catch (e) { return []; }
     },
     apply: async (data) => {
       if (Array.isArray(data)) {
-        await callApi("users/import", { users: data }, "POST");
+        await getBridge().apiPost("users/import", { users: data });
         try { await loadUsers(); } catch (e) {}
       }
     },
