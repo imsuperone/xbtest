@@ -90,54 +90,28 @@ async def handle_backups_list(request, plugin_base=""):
     return no_cache_response(json_response({"dir": str(rel or ""), "dirs": dirs, "files": files, "sidecar": sidecar}))
 
 
+async def handle_backups_create(request, plugin_base=""):
+    """立即生成本地备份（一接口一语义；原 backups/restore 的 __backup_now__ 哨兵已退役）"""
+    dst = await asyncio.to_thread(lambda: ST.backup_user_data(force=True))
+    if dst:
+        return json_response({"ok": True, "path": os.path.relpath(dst, _backup_base(plugin_base)).replace(os.sep, "/")})
+    return _err("backup failed", 500)
+
+
 async def handle_backups_restore(request, plugin_base=""):
     p = await get_req_json(request, default={})
     rel = str((p.get("path") or p.get("file") or "") if isinstance(p, dict) else "").strip()
     if not rel:
         rel = get_req_query(request, "path", "") or get_req_query(request, "file", "")
     rel = str(rel).strip()
-    if rel == "__backup_now__":
-        dst = await asyncio.to_thread(lambda: ST.backup_user_data(force=True))
-        if dst:
-            return json_response({"ok": True, "path": os.path.relpath(dst, _backup_base(plugin_base)).replace(os.sep, "/")})
-        return _err("backup failed", 500)
     if not rel:
         return _err("path required", 400)
     src = _safe_backup(rel, _backup_base(plugin_base))
     if not src or not os.path.isfile(src) or not src.endswith(".db"):
         return _err("backup not found (need .db)", 404)
-
-    def _work():
-        import sqlite3
-        cur_db = ST._DB
-        with ST._LOCK:
-            if hasattr(ST, "flush_all") and ST.flush_all() is False:
-                raise RuntimeError("flush before restore failed")
-            try:
-                cur_db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-            except Exception:
-                pass
-            cur_db.commit()
-            if hasattr(ST, "close_read_conn"):
-                ST.close_read_conn()
-            src_conn = sqlite3.connect(src)
-            try:
-                src_conn.backup(cur_db)
-            finally:
-                src_conn.close()
-            cur_db.commit()
-            ST._ACC_CACHE.clear()
-            ST._GROUP_CACHE.clear()
-            try:
-                ST._KV_CACHE.clear()
-            except Exception:
-                pass
-            try:
-                ST.reload_config_from_db()
-            except Exception:
-                pass
     try:
-        await asyncio.to_thread(_work)
+        # 恢复序列的唯一实现，本地与 WebDAV 共用（storage.restore_db_from）
+        await asyncio.to_thread(ST.restore_db_from, src)
         return json_response({"ok": True, "path": rel, "msg": "备份恢复成功！数据已实时加载生效。"})
     except Exception as e:
         return _err(f"restore failed: {e}", 500)

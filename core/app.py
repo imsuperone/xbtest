@@ -739,6 +739,7 @@ class XbBot(Star):
     # total_power spirit/users 关键字保留以兼容检测
         "page_spirit_users": ("core.api.profiles", "handle_spirit_users", "spirit users", {}),
         "page_backups_list": ("core.api.backup", "handle_backups_list", "backups list", {"with_base": True}),
+        "page_backups_create": ("core.api.backup", "handle_backups_create", "create", {"with_base": True}),
         "page_backups_restore": ("core.api.backup", "handle_backups_restore", "restore", {"with_base": True}),
         "page_backups_delete": ("core.api.backup", "handle_backups_delete", "delete", {"with_base": True}),
         "page_cfg_snapshots": ("core.api.snapshots", "handle_cfg_snapshots", "snapshots", {"with_base": True}),

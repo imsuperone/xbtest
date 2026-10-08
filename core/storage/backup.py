@@ -4,7 +4,7 @@ import os
 import time
 from . import state as _S
 from .state import _safe_commit
-from .app_config import cfg, cfgi, save_config
+from .app_config import cfg, cfgi, reload_config_from_db, save_config
 from .kv import recall_get, recall_set
 
 def set_backup_dir(path):
@@ -504,4 +504,38 @@ def clean_old_backups(max_keep=None):
 def maybe_auto_backup():
     return backup_user_data(force=False)
 
-__all__ = ["backup_user_data", "clean_old_backups", "maybe_auto_backup", "set_backup_dir"]
+
+def restore_db_from(src_path):
+    """从 src_path 恢复入库（唯一恢复实现：flush→checkpoint→sqlite backup→清缓存→reload）。
+
+    本地备份恢复与 WebDAV 远端恢复共用；API 层禁止再复制该序列（一接口一实现）。
+    内部持 _LOCK 完成全部状态改写，调用方自行放入线程池。
+    """
+    import sqlite3
+    from .db import close_read_conn, flush_all
+    cur_db = _S._DB
+    with _S._LOCK:
+        if flush_all() is False:
+            raise RuntimeError("flush before restore failed")
+        try:
+            cur_db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        except Exception:
+            pass
+        cur_db.commit()
+        src_conn = sqlite3.connect(src_path)
+        try:
+            close_read_conn()
+            src_conn.backup(cur_db)
+        finally:
+            src_conn.close()
+        cur_db.commit()
+        _S._ACC_CACHE.clear()
+        _S._GROUP_CACHE.clear()
+        if _S._KV_CACHE is not None:
+            with _S._KV_CACHE_LOCK:
+                _S._KV_CACHE.clear()
+        # reload 内部自带 try/except（app_config），不会外抛
+        reload_config_from_db()
+
+
+__all__ = ["backup_user_data", "clean_old_backups", "maybe_auto_backup", "set_backup_dir", "restore_db_from"]

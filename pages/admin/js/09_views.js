@@ -168,7 +168,7 @@ document.getElementById("btnBackupNow")?.addEventListener("click", async () => {
   }
   toast("正在打包并生成本地数据冷备...", "ok", 3000);
   try {
-    const r = await getBridge().apiPost("backups/restore", { path: "__backup_now__" });
+    const r = await getBridge().apiPost("backups/create", {});
     if (r && r.ok && r.path) {
       toast("本地冷备已生成: " + r.path, "ok", 4000);
     } else {

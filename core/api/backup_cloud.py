@@ -50,7 +50,7 @@ async def handle_webdav_backup_now(request, plugin_base=""):
     def _worker():
         dst = None
         base = _backup_base(plugin_base)
-        if target_path and target_path != "__backup_now__":
+        if target_path:
             real_p = _safe_backup(target_path, base)
             if real_p and os.path.isfile(real_p) and (real_p.endswith(".db") or real_p.endswith(".json")):
                 dst = real_p
@@ -102,7 +102,6 @@ async def handle_webdav_files(request):
 async def handle_webdav_restore(request, plugin_base=""):
     """从 WebDAV 远端备份快捷热恢复（完全异步下载，主锁内原子无损热加载）"""
     import asyncio
-    import sqlite3
     try:
         from .. import webdav as _wd
     except ImportError:
@@ -133,40 +132,9 @@ async def handle_webdav_restore(request, plugin_base=""):
     except Exception as e:
         return _err(f"校验下载文件失败: {e}", 400)
 
-    # 3. 恢复入库（原子事务持锁备份与缓存清空）
+    # 3. 恢复入库（唯一实现 storage.restore_db_from，与本地恢复共用）+ 云端文件本地留痕
     def _do_restore():
-        cur_db = ST._DB
-        with ST._LOCK:
-            if hasattr(ST, "flush_all") and ST.flush_all() is False:
-                raise RuntimeError("flush before restore failed")
-            try:
-                cur_db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-            except Exception:
-                pass
-            cur_db.commit()
-            src_conn = sqlite3.connect(dl_res)
-            try:
-                if hasattr(ST, "close_read_conn"):
-                    ST.close_read_conn()
-                src_conn.backup(cur_db)
-            finally:
-                src_conn.close()
-            cur_db.commit()
-            ST._ACC_CACHE.clear()
-            ST._GROUP_CACHE.clear()
-            try:
-                if hasattr(ST, "_KV_CACHE_LOCK"):
-                    with ST._KV_CACHE_LOCK:
-                        ST._KV_CACHE.clear()
-                else:
-                    ST._KV_CACHE.clear()
-            except Exception:
-                pass
-            try:
-                ST.reload_config_from_db()
-            except Exception:
-                pass
-        # 恢复后尝试将刚下载的云端备份放入今日备份目录，方便本地留痕
+        ST.restore_db_from(dl_res)
         try:
             today_dir = os.path.join(_backup_base(plugin_base), time.strftime("%Y-%m-%d"))
             os.makedirs(today_dir, exist_ok=True)
