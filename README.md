@@ -1,24 +1,46 @@
-# 小白测试版 `astrbot_plugin_xbbot_beta` v26w1009b
+# 小白测试版 v26w1009c
 
 > 深度复刻经典群互动玩法的 AstrBot 插件，附全功能 WebUI 管理大屏。
 
 ## 简介
 
-包含奴隶、签到、银行、娱乐、精灵、坐骑、帮派、冒险、超管等 28 大系统，覆盖群内互动与数值养成，数据以 SQLite 落地。
+小白测试版包含奴隶、签到、银行、娱乐、精灵、坐骑、帮派、冒险、超管等 28 大系统，覆盖群内互动与数值养成，数据以 SQLite 落地。本插件为测试版本，数据目录与正式版完全隔离。
 
 本插件基于 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 开发。AstrBot 是一个松耦合、异步、支持多消息平台部署，具有易用的插件系统和完善的大语言模型（LLM）接入功能的聊天机器人及开发框架，使用文档见 [docs.astrbot.app](https://docs.astrbot.app)。
 
 - 插件 ID：`astrbot_plugin_xbbot_beta`
-- 当前版本：`v26w1009b`
+- 当前版本：`v26w1009c`
 - 运行要求：AstrBot `>=3.4.0`，平台 `aiocqhttp`
 - 仓库：https://github.com/imsuperone/xbtest
 
+## 功能
+
+- 奴隶：买卖、折磨、赎身、造反、打工等玩法。
+- 签到：每日打卡、抽奖与各类排行榜。
+- 银行：存取款、转账、红包与监狱玩法。
+- 娱乐：接龙、猜谜、二四点等群内小游戏。
+- 精灵：领养、培养、对战与冒险。
+- 坐骑：购买、切换与欢迎坐骑。
+- 帮派：创建、贡献、帮战与福利。
+- 冒险：文字冒险与复活币排行。
+- 超管：系统开关、群开关、维护与空投。
+- WebUI 管理台：集中配置全部系统。
+
 ## 安装
 
-1. AstrBot 插件管理器「安装插件」填入 `https://github.com/imsuperone/xbtest`；
-2. 安装后在后台「小白测试版」页面使用 WebUI。
+1. AstrBot 后台 → 插件 → 从链接安装 `https://github.com/imsuperone/xbtest`；
+2. 重启 AstrBot，在后台「小白测试版」页面使用 WebUI。
 
-## 测试版说明
+## 指令
 
-- 数据目录独立（`plugin_data/astrbot_plugin_xbbot_beta`），与正式版互不读写；
+| 指令 | 说明 |
+| :--- | :--- |
+| `菜单` / `主菜单` / `系统菜单` | 打开主菜单，查看各系统玩法 |
+| `<系统名>菜单` / `<系统名>帮助` | 查看单个系统的菜单与帮助 |
+| `超管` | 超管功能菜单（仅管理员） |
+| `版本` | 查看插件版本 |
+
+## 说明
+
+- 数据目录独立（`plugin_data/astrbot_plugin_xbbot_beta`），与正式版互不读写。
 - 请勿与正式版同时启用，切换后建议重启 AstrBot。
