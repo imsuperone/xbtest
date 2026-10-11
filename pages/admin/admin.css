@@ -2391,6 +2391,19 @@
       }
       .card-row-split { flex-direction: column; align-items: flex-start; gap: 10px; }
       .m3-switch-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .card-row-split:has(> .switch),
+      .card-row-split:has(> .m3-switch),
+      .m3-switch-row:has(> .switch),
+      .m3-switch-row:has(> .m3-switch) {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+      #tab-groups table th,
+      #tab-groups table td {
+        padding: 8px 10px;
+        font-size: 12px;
+      }
     }
 
     /* Dark mode hotfix: palette persistence & atlas visibility (v2026w0914k) */
