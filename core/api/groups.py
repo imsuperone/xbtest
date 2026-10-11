@@ -13,7 +13,17 @@ except ImportError:
 
 
 # ==================== 群组开关（原 groups.py 并入） ====================
-async def handle_groups_list(request=None):
+async def handle_groups_list(request=None, context=None):
+    bot_groups = {}
+    try:
+        try:
+            from .. import messaging as _msg_mod
+        except ImportError:
+            from core import messaging as _msg_mod  # type: ignore
+        bot_groups = await asyncio.wait_for(_msg_mod.fetch_bot_groups(context=context), timeout=2.5)
+    except Exception:
+        bot_groups = {}
+
     def _work():
         _lock = getattr(ST, "_LOCK", None)
         if _lock is not None:
@@ -35,6 +45,9 @@ async def handle_groups_list(request=None):
             except Exception:
                 pass
             gids = set(counts.keys())
+            for bgid in (bot_groups or {}).keys():
+                if str(bgid).isdigit():
+                    gids.add(str(bgid))
             try:
                 sec = ST._CONFIG.get("群组开关配置") if hasattr(ST, "_CONFIG") and isinstance(ST._CONFIG, dict) else {}
                 if isinstance(sec, dict):
@@ -51,7 +64,23 @@ async def handle_groups_list(request=None):
                     _maint = ST.recall_get("group_maint_%s" % gid, "0") == "1"
                 except Exception:
                     _maint = False
-                out.append({"gid": str(gid), "enabled": enabled, "maintenance": _maint, "member_count": int(counts.get(str(gid), 0)), "is_test": str(gid) == "999999"})
+                gname = str((bot_groups or {}).get(str(gid)) or "").strip()
+                try:
+                    cached_name = str(ST.recall_get("group_name_%s" % gid, "") or "").strip()
+                    if gname and gname != cached_name:
+                        ST.recall_set("group_name_%s" % gid, gname)
+                    elif not gname and cached_name:
+                        gname = cached_name
+                except Exception:
+                    pass
+                out.append({
+                    "gid": str(gid),
+                    "group_name": gname,
+                    "enabled": enabled,
+                    "maintenance": _maint,
+                    "member_count": int(counts.get(str(gid), 0)),
+                    "is_test": str(gid) == "999999",
+                })
             total_enabled = ST.cfg("总开关配置", "总开关", "真") == "真"
             return {"total_enabled": total_enabled, "groups": out}
         finally:

@@ -1,4 +1,4 @@
-# 小白测试版 v26w1009c
+# 小白测试版 v26w1011a
 
 > 深度复刻经典群互动玩法的 AstrBot 插件，附全功能 WebUI 管理大屏。
 
@@ -9,7 +9,7 @@
 本插件基于 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 开发。AstrBot 是一个松耦合、异步、支持多消息平台部署，具有易用的插件系统和完善的大语言模型（LLM）接入功能的聊天机器人及开发框架，使用文档见 [docs.astrbot.app](https://docs.astrbot.app)。
 
 - 插件 ID：`astrbot_plugin_xbbot_beta`
-- 当前版本：`v26w1009c`
+- 当前版本：`v26w1011a`
 - 运行要求：AstrBot `>=3.4.0`，平台 `aiocqhttp`
 - 仓库：https://github.com/imsuperone/xbtest
 
@@ -23,7 +23,7 @@
 - 坐骑：购买、切换与欢迎坐骑。
 - 帮派：创建、贡献、帮战与福利。
 - 冒险：文字冒险与复活币排行。
-- 超管：系统开关、群开关、维护与空投。
+- 超管：系统开关、群开关（支持自动获取群昵称）、维护与空投。
 - WebUI 管理台：集中配置全部系统。
 
 ## 安装

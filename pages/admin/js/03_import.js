@@ -421,20 +421,25 @@ function renderGroupsTable() {
   const kw = (document.getElementById("groupsSearch")?.value || "").trim().toLowerCase();
   let groups = [...RAW_GROUPS];
   if (kw) {
-    groups = groups.filter(g => String(g.gid).toLowerCase().includes(kw) || (g.enabled ? "开启" : "关闭").includes(kw));
+    groups = groups.filter(g =>
+      String(g.gid).toLowerCase().includes(kw) ||
+      String(g.group_name || "").toLowerCase().includes(kw) ||
+      (g.enabled ? "开启" : "关闭").includes(kw)
+    );
   }
   if (!groups.length) {
-    box.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">暂无匹配的群聊数据<br><small>可上方手动输入群号添加</small></td></tr>`;
+    box.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">暂无匹配的群聊数据<br><small>可上方手动输入群号添加</small></td></tr>`;
     return;
   }
   box.innerHTML = groups.map(g => {
     const gid = g.gid;
+    const gname = (g.group_name || "").trim() || (g.is_test ? "本地测试群" : "未命名群聊");
     const on = g.enabled !== false;
     const badge = on ? `<span class="badge badge-success">开启</span>` : `<span class="badge badge-bad">关闭</span>`;
     const testMark = g.is_test ? ` <small style="color:var(--muted)">(测试)</small>` : "";
     const maint = g.maintenance === true;
     const maintBadge = maint ? `<span class="badge badge-bad">维修中</span>` : `<span style="color:var(--muted)">—</span>`;
-    return `<tr><td><code>${esc(gid)}</code>${testMark}</td><td>${g.member_count || 0}</td><td>${badge}</td><td>${maintBadge}</td><td><label class="switch" title="本群维修开关"><input type="checkbox" data-maint-gid="${esc(gid)}" ${maint ? "checked" : ""}><span class="slider-toggle"></span></label></td><td><label class="switch" title="群聊开关"><input type="checkbox" data-gid="${esc(gid)}" ${on ? "checked" : ""}><span class="slider-toggle"></span></label></td></tr>`;
+    return `<tr><td style="font-weight:600">${esc(gname)}</td><td><code>${esc(gid)}</code>${testMark}</td><td>${g.member_count || 0}</td><td>${badge}</td><td>${maintBadge}</td><td><label class="switch" title="本群维修开关"><input type="checkbox" data-maint-gid="${esc(gid)}" ${maint ? "checked" : ""}><span class="slider-toggle"></span></label></td><td><label class="switch" title="群聊开关"><input type="checkbox" data-gid="${esc(gid)}" ${on ? "checked" : ""}><span class="slider-toggle"></span></label></td></tr>`;
   }).join("");
   box.querySelectorAll("input[data-gid]").forEach(inp => {
     inp.addEventListener("change", async () => {
@@ -442,7 +447,7 @@ function renderGroupsTable() {
       const on = inp.checked;
       inp.disabled = true;
       const row = inp.closest("tr");
-      const badgeCell = row ? row.cells[2] : null;
+      const badgeCell = row ? row.cells[3] : null;
       try {
         const r = await getBridge().apiPost("groups/toggle", { gid, enabled: on });
         if (r && r.ok === false) throw new Error(r.msg || "切换失败");

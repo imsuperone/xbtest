@@ -470,3 +470,89 @@ async def fetch_group_member_qqs(gid, bot=None, context=None):
             except Exception:
                 pass
     return None
+
+
+_GROUPS_CACHE = {"ts": 0.0, "data": {}}
+
+
+async def fetch_bot_groups(bot=None, context=None):
+    """通过 OneBot / AstrBot 适配器拉取机器人加入的群聊名称映射 {gid: group_name}（带 30s 缓存）。"""
+    import time as _time
+    now = _time.time()
+    if _GROUPS_CACHE["data"] and (now - float(_GROUPS_CACHE["ts"] or 0)) < 30.0:
+        return dict(_GROUPS_CACHE["data"])
+
+    bots = []
+    if bot is not None:
+        bots.append(bot)
+    if _LATEST_BOT is not None and _LATEST_BOT not in bots:
+        bots.append(_LATEST_BOT)
+    if context is not None:
+        try:
+            pm = getattr(context, "platform_manager", None)
+            if pm is not None:
+                for inst in list(getattr(pm, "platform_insts", None) or []):
+                    if inst is not None and inst not in bots:
+                        bots.append(inst)
+                    try:
+                        gc = getattr(inst, "get_client", None)
+                        c = gc() if callable(gc) else None
+                        if c is not None and c not in bots:
+                            bots.append(c)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        for attr in ("platform_adapters", "_platform_adapters", "get_platform_adapters", "get_bots", "bots"):
+            try:
+                val = getattr(context, attr, None)
+                if callable(val):
+                    val = val()
+                if isinstance(val, (list, tuple, set)):
+                    for cand in val:
+                        if cand is not None and cand not in bots:
+                            bots.append(cand)
+                elif isinstance(val, dict):
+                    for cand in val.values():
+                        if cand is not None and cand not in bots:
+                            bots.append(cand)
+            except Exception:
+                pass
+
+    cands = []
+    for b in bots:
+        if b not in cands:
+            cands.append(b)
+        for sub in ("bot", "client", "api", "_bot", "_client"):
+            sub_obj = getattr(b, sub, None)
+            if sub_obj is not None and sub_obj not in cands:
+                cands.append(sub_obj)
+
+    out = {}
+    for cand in cands:
+        for act in ("get_group_list", "getGroupList"):
+            try:
+                info = None
+                if hasattr(cand, "call_action") and callable(cand.call_action):
+                    info = await cand.call_action(act)
+                elif hasattr(cand, "call_api") and callable(cand.call_api):
+                    info = await cand.call_api(act)
+                elif hasattr(cand, act) and callable(getattr(cand, act)):
+                    info = await getattr(cand, act)()
+                if info is not None:
+                    data = (info.get("data") if isinstance(info, dict) else None) or info or []
+                    if isinstance(data, list):
+                        for g in data:
+                            if isinstance(g, dict):
+                                gid = str(g.get("group_id") or g.get("gid") or "").strip()
+                                gname = str(g.get("group_name") or g.get("name") or "").strip()
+                                if gid.isdigit():
+                                    out[gid] = gname or out.get(gid, "")
+                        if out:
+                            break
+            except Exception:
+                pass
+    if out:
+        _GROUPS_CACHE["ts"] = now
+        _GROUPS_CACHE["data"] = dict(out)
+    return out

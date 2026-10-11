@@ -77,7 +77,7 @@ _XB_API_ROUTES = [
     ("slave/calibrate", "POST", "page_slave_calibrate", "一键校准全员身价", ("core.api.profiles", "handle_slave_calibrate", "slave calibrate", {})),
     # total_power spirit/users 关键字保留以兼容检测
     ("spirit/users", "GET", "page_spirit_users", "精灵用户列表", ("core.api.profiles", "handle_spirit_users", "spirit users", {})),
-    ("groups/list", "GET", "page_groups_list", "群聊列表", ("core.api.groups", "handle_groups_list", "groups list", {})),
+    ("groups/list", "GET", "page_groups_list", "群聊列表", ("core.api.groups", "handle_groups_list", "groups list", {"use_context": True})),
     ("groups/toggle", "POST", "page_groups_toggle", "切换群聊/总开关", ("core.api.groups", "handle_groups_toggle", "groups toggle", {})),
     ("groups/delete", "POST", "page_groups_delete", "删除群聊配置", ("core.api.groups", "handle_groups_delete", "groups delete", {})),
     ("admin/clear", "POST", "page_clear_all", "清空所有数据（三重确认）", ("core.api.backup", "handle_clear_all", "clear", {"with_base": True})),

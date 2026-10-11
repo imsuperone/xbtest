@@ -480,6 +480,18 @@ class XbBot(Star):
             gid = str(event.get_group_id() or "")
             if not gid:
                 return
+            try:
+                _grp = getattr(getattr(event, "message_obj", None), "group", None)
+                _gname = str(getattr(_grp, "group_name", "") or "").strip() if _grp is not None else ""
+                if not _gname:
+                    _raw_m = getattr(getattr(event, "message_obj", None), "raw_message", None)
+                    if isinstance(_raw_m, dict):
+                        _gname = str(_raw_m.get("group_name") or "").strip()
+                if _gname and _gname != gid:
+                    if ST.recall_get(f"group_name_{gid}", "") != _gname:
+                        ST.recall_set(f"group_name_{gid}", _gname)
+            except Exception:
+                pass
             qq = str(event.get_sender_id() or "")
             if not qq:
                 return
