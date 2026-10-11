@@ -3050,7 +3050,10 @@
       border: 1px solid var(--m3-sys-color-divider);
       background: var(--m3-sys-color-surface-container-high);
       overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
     }
+    .table-wrap::-webkit-scrollbar { display: none; width: 0; height: 0; }
     .table-wrap table { width: 100%; border-collapse: separate; border-spacing: 0; }
     .table-wrap th {
       font-size: 12px;
@@ -3248,6 +3251,8 @@
   top: 16px;
   max-height: calc(100vh - 32px);
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   background: var(--m3-sys-color-surface-container-high);
   border: 1px solid var(--m3-sys-color-divider);
   border-radius: var(--m3-radius-large);
@@ -3258,6 +3263,7 @@
   gap: 4px;
   transition: width 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
+.side-nav::-webkit-scrollbar { display: none; }
 .side-nav-head {
   display: flex;
   align-items: center;
