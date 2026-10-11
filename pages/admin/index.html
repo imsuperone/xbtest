@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light dark">
   <title>小白测试版 - 小白机器人</title>
-  <link rel="stylesheet" href="./admin.css?v=26w1011b">
-  <!-- 主题色/深浅色存在服务端 config 的「UI偏好」节（唯一真相源，无本地副本），
-       需等 config/get 回来才套用；首帧先挂起，避免"先见默认色、再跳成已存色"。
-       回填后由 revealUiPrefs() 揭开，3s 兜底。 -->
+  <link rel="stylesheet" href="./admin.css?v=26w1011c">
+  <!-- 主题色/深浅色优先读取本地缓存实现首帧零阻塞渲染，未缓存时最多挂起 150ms -->
   <style>
     html[data-boot] { visibility: hidden; background: #f4f6f8; }
     @media (prefers-color-scheme: dark) { html[data-boot] { background: #0f1115; } }
@@ -16,8 +14,18 @@
   <script>
     (function () {
       var d = document.documentElement;
+      try {
+        var t = localStorage.getItem("xbbot_ui_theme");
+        var a = localStorage.getItem("xbbot_ui_accent");
+        var mode = (t === "dark" || t === "light") ? t : ((window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light");
+        d.dataset.theme = mode;
+        if (a && /^#[0-9a-fA-F]{6}$/.test(a)) {
+          d.style.setProperty("--m3-sys-color-primary", a);
+        }
+        if (t !== null) return;
+      } catch (e) {}
       d.setAttribute("data-boot", "");
-      setTimeout(function () { d.removeAttribute("data-boot"); }, 3000);
+      setTimeout(function () { d.removeAttribute("data-boot"); }, 150);
     })();
   </script>
 </head>
@@ -26,7 +34,7 @@
     <header class="top-bar">
       <div class="top-bar-brand">
         <div class="brand-text">
-          <h1>小白测试版 <span class="version-tag" data-ver="26w1011b">v26w1011b</span></h1>
+          <h1>小白测试版 <span class="version-tag" data-ver="26w1011c">v26w1011c</span></h1>
         </div>
       </div>
       <div class="top-bar-actions" style="position:relative">
@@ -1008,16 +1016,16 @@
       </div>
     </div>
   </div>
-    <script defer src="./js/00_core.js?v=26w1011b"></script>
-  <script defer src="./js/01_theme.js?v=26w1011b"></script>
-  <script defer src="./js/02_export.js?v=26w1011b"></script>
-  <script defer src="./js/03_import.js?v=26w1011b"></script>
-  <script defer src="./js/04_media.js?v=26w1011b"></script>
-  <script defer src="./js/05_config.js?v=26w1011b"></script>
-  <script defer src="./js/06_users.js?v=26w1011b"></script>
-  <script defer src="./js/07_spirit.js?v=26w1011b"></script>
-  <script defer src="./js/08_shop.js?v=26w1011b"></script>
-  <script defer src="./js/09_views.js?v=26w1011b"></script>
-  <script defer src="./js/10_ops.js?v=26w1011b"></script>
+    <script defer src="./js/00_core.js?v=26w1011c"></script>
+  <script defer src="./js/01_theme.js?v=26w1011c"></script>
+  <script defer src="./js/02_export.js?v=26w1011c"></script>
+  <script defer src="./js/03_import.js?v=26w1011c"></script>
+  <script defer src="./js/04_media.js?v=26w1011c"></script>
+  <script defer src="./js/05_config.js?v=26w1011c"></script>
+  <script defer src="./js/06_users.js?v=26w1011c"></script>
+  <script defer src="./js/07_spirit.js?v=26w1011c"></script>
+  <script defer src="./js/08_shop.js?v=26w1011c"></script>
+  <script defer src="./js/09_views.js?v=26w1011c"></script>
+  <script defer src="./js/10_ops.js?v=26w1011c"></script>
 </body>
 </html>

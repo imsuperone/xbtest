@@ -37,6 +37,7 @@ function applyAccentColor(hex, save) {
   const v = typeof hex === "string" ? hex.trim() : "";
   const ok = /^#[0-9a-fA-F]{6}$/.test(v);
   const root = document.documentElement;
+  try { localStorage.setItem("xbbot_ui_accent", ok ? v : ""); } catch (e) {}
   if (ok) {
     _CURRENT_ACCENT_COLOR = v;
     const dark = (root.getAttribute("data-theme") || root.dataset.theme || "light") === "dark";
@@ -114,6 +115,7 @@ const _SUN_SVG_PATH = "M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5
 
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("xbbot_ui_theme", (t === "dark" || t === "light") ? t : ""); } catch (e) {}
   try { document.documentElement.style.colorScheme = t; } catch (e) {}
   const icon = document.getElementById("themeIcon");
   if (icon) {

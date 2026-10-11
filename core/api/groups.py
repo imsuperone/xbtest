@@ -1,28 +1,58 @@
 """groups API - 群聊开关/总开关/维修标记（原 stats.py 并入段独立，端点不变）"""
 # -*- coding: utf-8 -*-
 import asyncio
+import time
 try:
     from ..adapters import json_response
 except ImportError:
     from core.adapters import json_response
-from .web_utils import _err, get_req_json
+from .web_utils import _err, get_req_json, get_req_query
 try:
     from .. import storage as ST
 except ImportError:
     from core import storage as ST  # type: ignore
 
 
-# ==================== 群组开关（原 groups.py 并入） ====================
-async def handle_groups_list(request=None, context=None):
-    bot_groups = {}
+_BOT_GROUPS_CACHE = {}
+_BOT_GROUPS_TS = 0.0
+_BOT_GROUPS_REFRESHING = False
+
+
+async def _refresh_bot_groups(context=None, timeout=2.5):
+    global _BOT_GROUPS_CACHE, _BOT_GROUPS_TS, _BOT_GROUPS_REFRESHING
+    if _BOT_GROUPS_REFRESHING:
+        return _BOT_GROUPS_CACHE
+    _BOT_GROUPS_REFRESHING = True
     try:
         try:
             from .. import messaging as _msg_mod
         except ImportError:
             from core import messaging as _msg_mod  # type: ignore
-        bot_groups = await asyncio.wait_for(_msg_mod.fetch_bot_groups(context=context), timeout=2.5)
+        fetched = await asyncio.wait_for(_msg_mod.fetch_bot_groups(context=context), timeout=timeout)
+        if isinstance(fetched, dict) and fetched:
+            _BOT_GROUPS_CACHE = dict(fetched)
+        _BOT_GROUPS_TS = time.monotonic()
     except Exception:
-        bot_groups = {}
+        _BOT_GROUPS_TS = time.monotonic()
+    finally:
+        _BOT_GROUPS_REFRESHING = False
+    return _BOT_GROUPS_CACHE
+
+
+# ==================== 群组开关（原 groups.py 并入） ====================
+async def handle_groups_list(request=None, context=None):
+    force_refresh = str(get_req_query(request, "refresh", "")).strip().lower() in ("1", "true", "yes")
+    now = time.monotonic()
+    if force_refresh:
+        await _refresh_bot_groups(context=context, timeout=2.5)
+    elif not _BOT_GROUPS_CACHE and _BOT_GROUPS_TS == 0.0:
+        await _refresh_bot_groups(context=context, timeout=2.0)
+    elif (now - _BOT_GROUPS_TS) > 60.0 and not _BOT_GROUPS_REFRESHING:
+        try:
+            asyncio.create_task(_refresh_bot_groups(context=context, timeout=2.5))
+        except Exception:
+            pass
+    bot_groups = dict(_BOT_GROUPS_CACHE)
 
     def _work():
         _lock = getattr(ST, "_LOCK", None)

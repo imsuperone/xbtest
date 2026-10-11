@@ -399,13 +399,13 @@ function bindGroupsAdd() {
 
 let RAW_GROUPS = [];
 
-async function loadGroups() {
+async function loadGroups(forceRefresh) {
   bindGroupsAdd();
   const box = document.getElementById("groupsBody");
   if (!box) return;
   box.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--muted)">加载中...</td></tr>`;
   try {
-    const data = await getBridge().apiGet("groups/list");
+    const data = await getBridge().apiGet("groups/list", forceRefresh ? { refresh: "1" } : undefined);
     if (!data || data.error) throw new Error((data && (data.error || data.msg)) || "群聊列表接口异常");
     RAW_GROUPS = data.groups || data || [];
     renderGroupsTable();
@@ -483,7 +483,7 @@ function renderGroupsTable() {
     });
   });
 }
-document.getElementById("btnGroupsRefresh")?.addEventListener("click", () => loadGroups());
+document.getElementById("btnGroupsRefresh")?.addEventListener("click", () => loadGroups(true));
 
 // 各页签加载器(零延迟即时响应)
 const TAB_LOADERS = {
@@ -559,7 +559,7 @@ async function main() {
     if (_b && typeof _b.ready === "function") {
       await Promise.race([
         _b.ready(),
-        new Promise(r => setTimeout(r, 300))
+        new Promise(r => setTimeout(r, 60))
       ]);
     }
   } catch (e) {}

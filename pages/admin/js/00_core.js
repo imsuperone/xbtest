@@ -1,8 +1,35 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "26w1011b";
+const FRONTEND_VER = "26w1011c";
 
 let _WORKING_API_PREFIX = null;
+const _GET_DEDUP_CACHE = {};
+const _GET_DEDUP_TTL_MS = 2500;
+const _DEDUP_ENDPOINTS = { "config/get": true, "config/schema": true };
+
+function _invalidateGetDedup() {
+  for (const k of Object.keys(_GET_DEDUP_CACHE)) {
+    delete _GET_DEDUP_CACHE[k];
+  }
+}
+
+function _withGetDedup(ep, cleanParams, fetcher) {
+  const hasParams = cleanParams && Object.keys(cleanParams).length > 0;
+  if (hasParams || !_DEDUP_ENDPOINTS[ep]) return fetcher();
+  const now = Date.now();
+  const hit = _GET_DEDUP_CACHE[ep];
+  if (hit && (now - hit.ts) < _GET_DEDUP_TTL_MS && hit.promise) {
+    return hit.promise;
+  }
+  const p = Promise.resolve(fetcher()).catch((err) => {
+    if (_GET_DEDUP_CACHE[ep] && _GET_DEDUP_CACHE[ep].promise === p) {
+      delete _GET_DEDUP_CACHE[ep];
+    }
+    throw err;
+  });
+  _GET_DEDUP_CACHE[ep] = { ts: now, promise: p };
+  return p;
+}
 
 function cleanEndpointAndParams(endpoint, params) {
   let ep = String(endpoint || "").replace(/^\/+/, "");
@@ -60,7 +87,16 @@ function _warmPrefixOnce() {
     for (const p of prefixes) {
       try {
         const r = await fetch(p + probe + "?_warm=1");
-        if (r.ok) { _WORKING_API_PREFIX = p; break; }
+        if (r.ok) {
+          _WORKING_API_PREFIX = p;
+          try {
+            const data = await r.json();
+            if (data && typeof data === "object" && !_GET_DEDUP_CACHE["config/get"]) {
+              _GET_DEDUP_CACHE["config/get"] = { ts: Date.now(), promise: Promise.resolve(data) };
+            }
+          } catch (e) {}
+          break;
+        }
       } catch (e) {}
     }
   })().finally(() => { _PREFIX_PROBE_P = null; });
@@ -87,14 +123,19 @@ function getBridge() {
     return {
       apiGet(endpoint, params) {
         const { ep, params: cleanParams } = cleanEndpointAndParams(endpoint, params);
-        const _p = (cleanParams && Object.keys(cleanParams).length > 0)
-          ? rawBridge.apiGet(ep, cleanParams)
-          : rawBridge.apiGet(ep);
-        // 读超时 30s（传文件类排除）；写操作另有服务端熔断，此处只治读 hung
-        return _NO_TIMEOUT_GET.test(ep) ? _p : apiTimeout(_p, 30000, ep);
+        return _withGetDedup(ep, cleanParams, () => {
+          const _p = (cleanParams && Object.keys(cleanParams).length > 0)
+            ? rawBridge.apiGet(ep, cleanParams)
+            : rawBridge.apiGet(ep);
+          // 读超时 30s（传文件类排除）；写操作另有服务端熔断，此处只治读 hung
+          return _NO_TIMEOUT_GET.test(ep) ? _p : apiTimeout(_p, 30000, ep);
+        });
       },
       apiPost(endpoint, data) {
         const { ep } = cleanEndpointAndParams(endpoint);
+        if (ep.startsWith("config/") || ep.startsWith("backups/") || ep.startsWith("groups/")) {
+          _invalidateGetDedup();
+        }
         // 写超时 30s：黑洞 POST 不再 eternal hang（调用方 disabled 按钮可解开）
         return apiTimeout(rawBridge.apiPost(ep, data || {}), 30000, ep);
       },
@@ -115,43 +156,48 @@ function getBridge() {
   return {
     apiGet(endpoint, params) {
       const { ep, params: cleanParams } = cleanEndpointAndParams(endpoint, params);
-      const _run = async () => {
-      let fullEp = ep;
-      if (cleanParams && Object.keys(cleanParams).length > 0) {
-        fullEp += "?" + new URLSearchParams(cleanParams).toString();
-      }
-      if (_WORKING_API_PREFIX !== null) {
-        try {
-          const r = await fetch(_WORKING_API_PREFIX + fullEp);
-          if (r.ok) return await r.json();
-        } catch (err) {}
-      } else if (_PREFIX_PROBE_P) {
-        try { await _PREFIX_PROBE_P; } catch (e) {}
+      return _withGetDedup(ep, cleanParams, () => {
+        const _run = async () => {
+        let fullEp = ep;
+        if (cleanParams && Object.keys(cleanParams).length > 0) {
+          fullEp += "?" + new URLSearchParams(cleanParams).toString();
+        }
         if (_WORKING_API_PREFIX !== null) {
           try {
             const r = await fetch(_WORKING_API_PREFIX + fullEp);
             if (r.ok) return await r.json();
           } catch (err) {}
-        }
-      }
-      const prefixes = [`/api/plugins/${PLUGIN_ID}/`, `/${PLUGIN_ID}/`, `api/`, `./api/`, ``];
-      for (const p of prefixes) {
-        try {
-          const r = await fetch(p + fullEp);
-          if (r.ok) {
-            _WORKING_API_PREFIX = p;
-            return await r.json();
+        } else if (_PREFIX_PROBE_P) {
+          try { await _PREFIX_PROBE_P; } catch (e) {}
+          if (_WORKING_API_PREFIX !== null) {
+            try {
+              const r = await fetch(_WORKING_API_PREFIX + fullEp);
+              if (r.ok) return await r.json();
+            } catch (err) {}
           }
-        } catch (err) {}
-      }
-      const r = await fetch(fullEp);
-      return await r.json();
-      };
-      const _p = _run();
-      return _NO_TIMEOUT_GET.test(ep) ? _p : apiTimeout(_p, 30000, ep);
+        }
+        const prefixes = [`/api/plugins/${PLUGIN_ID}/`, `/${PLUGIN_ID}/`, `api/`, `./api/`, ``];
+        for (const p of prefixes) {
+          try {
+            const r = await fetch(p + fullEp);
+            if (r.ok) {
+              _WORKING_API_PREFIX = p;
+              return await r.json();
+            }
+          } catch (err) {}
+        }
+        const r = await fetch(fullEp);
+        return await r.json();
+        };
+        const _p = _run();
+        return _NO_TIMEOUT_GET.test(ep) ? _p : apiTimeout(_p, 30000, ep);
+      });
     },
     async apiPost(endpoint, data) {
       const { ep } = cleanEndpointAndParams(endpoint);
+      if (ep.startsWith("config/") || ep.startsWith("backups/") || ep.startsWith("groups/")) {
+        _invalidateGetDedup();
+      }
       const _run = async () => {
       const opts = {
         method: "POST",
