@@ -246,7 +246,7 @@ def cmd_jailbreak(gid, qq):
 
 
 def cmd_go_jail(gid, qq):
-    """我要进监狱: 主动入狱10分钟，增加体力，每日限N次（银行配置.进监狱次数）"""
+    """我要进监狱: 主动入狱10分钟，增加体力（超出软上限自动折算金币），每日限N次（银行配置.进监狱次数）"""
     a = _acct(gid, qq)
     if _check_jail(a):
         return "您已在监狱中，无需再次入狱！"
@@ -260,14 +260,29 @@ def cmd_go_jail(gid, qq):
     add_stam = cfgi("银行配置", "进监狱增加体力", 5)
     if add_stam <= 0:
         add_stam = 5
-    # 先发体力再落狱：体力失败直接返回（狱状态未动）；落狱保存失败则体力已到账、狱状态脏留待下轮落盘（禁倒挂）
-    if ST.acct_add(gid, qq, "stamina", add_stam) is None:
+    cur_st = a.int("stamina")
+    try:
+        from ..sign import settle_stat_gain, STAMINA_SOFT_CAP, STAMINA_HARD_CAP, STAMINA_OVERFLOW_COIN
+        s_soft = cfgi("签到配置", "体力软上限", STAMINA_SOFT_CAP)
+        s_hard = cfgi("签到配置", "体力硬上限", STAMINA_HARD_CAP)
+        s_rate = cfgi("签到配置", "溢出体力折算金币", STAMINA_OVERFLOW_COIN)
+        new_st, eff_st, ov_st, ov_coin, _ = settle_stat_gain(cur_st, add_stam, s_soft, s_hard, s_rate)
+    except Exception:
+        new_st, eff_st, ov_st, ov_coin = min(500, cur_st + add_stam), add_stam, 0, 0
+    now_s = _now_s()
+    rel_ts = str(int(time.time()) + 600)
+    if ST.txn_coins_acct(gid, qq, ov_coin, {
+        "stamina": str(new_st),
+        "jail": "1",
+        "jail_start": now_s,
+        "release_timestamp": rel_ts,
+        "escape_attempts": "0",
+        "escape_timestamp": "",
+    }) is None:
         return "数据库繁忙，入狱体力奖励未到账，请稍后重试。"
-    _jail_put(a, 10)
     ST.recall_set(key, str(cnt + 1))
-    ST.acct_save(gid, qq)
-    left = 10
-    return f"成功入狱{left}分钟！获得{add_stam}点体力，今日已入狱{cnt+1}/{lim}次，好好反省吧！"
+    ov_note = f"（体力已满，溢出折算+{ov_coin}{ST.coin_name()}）" if ov_coin > 0 else ""
+    return f"成功入狱10分钟！获得{eff_st}点体力{ov_note}，今日已入狱{cnt+1}/{lim}次，好好反省吧！"
 
 
 

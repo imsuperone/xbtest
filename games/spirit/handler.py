@@ -17,12 +17,12 @@ try:
     from ..config.spirit import (POWER_DIV, EXP_FLOOR, CATCH_MIN, CATCH_MAX,
                                  CATCH_LV_STEP, CATCH_MASTER_EFF, CATCH_MASTER_RATE,
                                  PVP_STAKE_CAP, PVP_STAKE_DIV, SHINY_RATE, SHINY_MULT,
-                                 SPIRIT_TRAITS)
+                                 SPIRIT_TRAITS, TRAVEL_EVENTS)
 except ImportError:
     from games.config.spirit import (POWER_DIV, EXP_FLOOR, CATCH_MIN, CATCH_MAX,  # type: ignore
                                      CATCH_LV_STEP, CATCH_MASTER_EFF, CATCH_MASTER_RATE,
                                      PVP_STAKE_CAP, PVP_STAKE_DIV, SHINY_RATE, SHINY_MULT,
-                                     SPIRIT_TRAITS)
+                                     SPIRIT_TRAITS, TRAVEL_EVENTS)
 
 MENU = (
     "✨ 精灵系统\r\n"
@@ -34,6 +34,7 @@ MENU = (
     "⚔️ 精灵冒险 地点　　🔮 使用精灵球 名称\r\n"
     "💊 使用物品 名称*数量　💖 羁绊\r\n"
     "✨ 闪光觉醒 名称　🎲 洗练 名称\r\n"
+    "🧳 旅行精灵　　🚩 精灵远征\r\n"
     "🎽 出战精灵 名称　🕊️ 回收出战精灵\r\n"
     "💠 携带精灵 名称　🗑️ 丢弃精灵 名称\r\n"
     "🧬 进化 名称　　⚔️ 精灵对战 @QQ　🏁 挑战 名称\r\n"
@@ -216,7 +217,7 @@ def _starters():
     return lst
 
 
-def _add_exp(gid, qq, sp, it, amount):
+def _add_exp(gid, qq, sp, it, amount, save_now=True):
     """加经验, 处理升级与进化"""
     it["exp"] = int(it.get("exp", 0)) + int(amount)
     evolved = ""
@@ -233,7 +234,8 @@ def _add_exp(gid, qq, sp, it, amount):
             if sp.get("ride") == old_name:
                 sp["ride"] = evo
             evolved = f"   进化成 {evo}！\r\n"
-    _save(gid, qq, sp)
+    if save_now:
+        _save(gid, qq, sp)
     return evolved
 
 
@@ -299,6 +301,12 @@ def cmd_my(gid, qq):
         lines.append(f"当前出战精灵：【{sp['active']}】")
     if sp.get("ride"):
         lines.append(f"携带欢迎精灵：【{sp['ride']}】")
+    tr = sp.get("travel")
+    if isinstance(tr, dict) and tr.get("name"):
+        lines.append(f"🧳 漫游精灵：【{tr['name']}】（发送【旅行精灵】查看/收获）")
+    expd = sp.get("expedition")
+    if isinstance(expd, dict) and expd.get("names"):
+        lines.append(f"🚩 远征小队：{'、'.join(expd['names'])}（发送【精灵远征】查看/收获）")
     return "\r\n".join(lines)
 
 
@@ -491,7 +499,7 @@ def cmd_adventure(gid, qq, place):
     exp = random.randint(max(1, exp_lo), max(exp_lo, exp_hi))
     gold = random.randint(0, max(0, gold_hi))
     if act_it.get("level") < _cfgi("最大等级", 100):
-        _add_exp(gid, qq, sp, act_it, exp)
+        _add_exp(gid, qq, sp, act_it, exp, save_now=False)
     # H: 挑战扣除（fallback全0，没配行为不变；有配则扣钱扣体力并在文案明示）
     d_lo = _cfgi("挑战扣除_金钱下限", 0)
     d_hi = _cfgi("挑战扣除_金钱上限", 0)
@@ -841,6 +849,182 @@ def cmd_bond(gid, qq, arg=""):
             f"今日已完成亲密互动，明天再来陪伴它吧！（总战力：{_power(it)}）")
 
 
+def _pick_shop_drop(charm_val=0, high_tier_bonus=0):
+    """严格从现有 _SHOP() 商城池抽取战利品；魅力越高/远征规模越大，高阶道具命中率越高"""
+    shop = _SHOP()
+    if not shop:
+        return "精灵球"
+    common_pool = []
+    rare_pool = []
+    for k, d in shop.items():
+        price = int((d or {}).get("price", 0) or 0)
+        if price > 2000:
+            rare_pool.append(k)
+        else:
+            common_pool.append(k)
+    if not common_pool:
+        common_pool = list(shop.keys())
+    if not rare_pool:
+        rare_pool = common_pool
+    rare_rate = min(45, 10 + max(0, int(charm_val or 0)) // 20 + int(high_tier_bonus or 0))
+    if random.randint(1, 100) <= rare_rate:
+        return random.choice(rare_pool)
+    return random.choice(common_pool)
+
+
+def cmd_travel(gid, qq, arg=""):
+    """旅行精灵 / 外出漫游：消耗体力+魅力派携带/出战精灵外出旅行，归来带回现有商城伴手礼、金币、经验与羁绊"""
+    sp = _spirits(gid, qq)
+    if not sp.get("list"):
+        return "亲，您还没有精灵，请先【领养精灵】吧！"
+    now = int(time.time())
+    tr = sp.get("travel")
+    if isinstance(tr, dict) and tr.get("name") and tr.get("ts"):
+        t_name = tr.get("name")
+        dur_s = max(60, int(tr.get("dur", 3600) or 3600))
+        left_s = int(tr.get("ts", 0)) + dur_s - now
+        if left_s > 0:
+            left_m = left_s // 60 + 1
+            return (f"🧳 您的精灵【{t_name}】正在外出漫游中~\r\n"
+                    f"⏳ 距离归来还需约 {left_m} 分钟，届时发送【旅行精灵】即可迎接并拆开伴手礼！")
+        # 已完成旅行，结算伴手礼
+        it = _wsp(sp, t_name) or (sp["list"][0] if sp.get("list") else None)
+        charm_val = _u(gid, qq).int("charm")
+        drop_item = _pick_shop_drop(charm_val=charm_val, high_tier_bonus=5)
+        gold_gain = random.randint(350, 850)
+        exp_gain = random.randint(200, 360)
+        bag = sp.setdefault("bag", {})
+        bag[drop_item] = int(bag.get(drop_item, 0) or 0) + 1
+        sp.pop("travel", None)
+        evo_note = ""
+        if it is not None:
+            it["bond"] = int(it.get("bond", 0) or 0) + 5
+            if int(it.get("level", 1)) < _cfgi("最大等级", 100):
+                evo_note = _add_exp(gid, qq, sp, it, exp_gain, save_now=False)
+        if ST.txn_coins_acct(gid, qq, gold_gain, {"spirits": json.dumps(sp, ensure_ascii=False)}) is None:
+            return "旅行结算系统繁忙，请稍后重试！"
+        story = random.choice(TRAVEL_EVENTS)
+        spr_disp = _fmt_name(it) if it else t_name
+        return (f"💌【旅行归来】您的精灵「{spr_disp}」漫游归来啦！\r\n"
+                f"📖 旅途见闻：{story}。\r\n"
+                f"🎁 伴手礼：「{drop_item}」×1（已放入背包）\r\n"
+                f"✨ 旅途收获：{ST.coin_name()}+{gold_gain}、经验+{exp_gain}、羁绊+5"
+                + (f"\r\n{evo_note.strip()}" if evo_note else ""))
+
+    target_name = (arg or "").strip() or sp.get("ride") or sp.get("active")
+    it = _wsp(sp, target_name) if target_name else (sp["list"][0] if sp.get("list") else None)
+    if it is None:
+        return "亲，请先设置【携带精灵 名称】或【出战精灵 名称】，或直接发送【旅行精灵 名称】！"
+    cost_stam = max(1, _cfgi("旅行消耗体力", 25))
+    cost_charm = max(0, _cfgi("旅行消耗魅力", 15))
+    dur_min = max(1, _cfgi("旅行时长分钟", 60))
+    with ST._LOCK:
+        a = _u(gid, qq)
+        cur_st = a.int("stamina")
+        cur_ch = a.int("charm")
+        if cur_st < cost_stam:
+            return f"亲，派精灵外出漫游需要消耗 {cost_stam} 点体力，当前体力（{cur_st}）不足！"
+        if cur_ch < cost_charm:
+            return f"亲，派精灵外出漫游需要消耗 {cost_charm} 点魅力，当前魅力（{cur_ch}）不足！"
+        sp["travel"] = {"name": it.get("name"), "ts": now, "dur": dur_min * 60}
+        updates = {
+            "stamina": str(max(0, cur_st - cost_stam)),
+            "charm": str(max(0, cur_ch - cost_charm)),
+            "spirits": json.dumps(sp, ensure_ascii=False),
+        }
+        if ST.txn_coins_acct(gid, qq, 0, updates) is None:
+            return "旅行系统繁忙，本次出发未成功，请稍后重试！"
+    return (f"🧳 精灵「{_fmt_name(it)}」背起小行囊外出漫游啦！\r\n"
+            f"⚡ 消耗体力 -{cost_stam}　💄 消耗魅力 -{cost_charm}\r\n"
+            f"⏳ 预计 {dur_min} 分钟后归来，届时再次发送【旅行精灵】即可领取伴手礼！")
+
+
+def cmd_expedition(gid, qq, arg=""):
+    """闲置精灵远征队：消耗大量体力派遣仓库闲置精灵远征，收获金币、全员经验与现有商城道具"""
+    sp = _spirits(gid, qq)
+    lst = sp.get("list") or []
+    if not lst:
+        return "亲，您还没有精灵，请先【领养精灵】吧！"
+    now = int(time.time())
+    expd = sp.get("expedition")
+    if isinstance(expd, dict) and expd.get("names") and expd.get("ts"):
+        names = list(expd.get("names") or [])
+        dur_s = max(60, int(expd.get("dur", 7200) or 7200))
+        left_s = int(expd.get("ts", 0)) + dur_s - now
+        if left_s > 0:
+            left_m = left_s // 60 + 1
+            return (f"🚩【远征进行中】远征小队（{'、'.join(names)}）正在探索秘境深处！\r\n"
+                    f"⏳ 距离远征完成还需约 {left_m} 分钟，完成后发送【精灵远征】即可收获战利品！")
+        # 远征完成，结算全队经验 + 金币 + 现有商城道具池掉落
+        charm_val = _u(gid, qq).int("charm")
+        rem_names = list(names)
+        team_its = []
+        for x in lst:
+            nm = x.get("name")
+            if nm in rem_names:
+                team_its.append(x)
+                rem_names.remove(nm)
+        if not team_its:
+            team_its = lst[:min(3, len(lst))]
+        cnt = max(1, len(team_its))
+        total_p = sum(_power(x) for x in team_its)
+        gold_gain = random.randint(350 * cnt, 650 * cnt) + min(1500, total_p // 10)
+        exp_gain = random.randint(260, 420)
+        bag = sp.setdefault("bag", {})
+        drops = []
+        for _ in range(min(3, cnt)):
+            d_item = _pick_shop_drop(charm_val=charm_val, high_tier_bonus=cnt * 4)
+            bag[d_item] = int(bag.get(d_item, 0) or 0) + 1
+            drops.append(d_item)
+        sp.pop("expedition", None)
+        evo_msgs = []
+        for x in team_its:
+            if int(x.get("level", 1)) < _cfgi("最大等级", 100):
+                ev = _add_exp(gid, qq, sp, x, exp_gain, save_now=False)
+                if ev:
+                    evo_msgs.append(f"{x.get('name')}:{ev.strip()}")
+        if ST.txn_coins_acct(gid, qq, gold_gain, {"spirits": json.dumps(sp, ensure_ascii=False)}) is None:
+            return "远征结算系统繁忙，请稍后重试！"
+        drop_summary = "、".join(f"「{d}」" for d in drops)
+        evo_txt = ("\r\n🧬 进化喜讯：" + "；".join(evo_msgs)) if evo_msgs else ""
+        return (f"🚩【远征凯旋】远征小队（{'、'.join(_fmt_name(x) for x in team_its)}）满载而归！\r\n"
+                f"💰 远征赏金：{ST.coin_name()}+{gold_gain}\r\n"
+                f"📈 全员历练：参战精灵经验各 +{exp_gain}\r\n"
+                f"🎁 战利品：{drop_summary}（已放入背包）"
+                f"{evo_txt}")
+
+    # 开启新远征：优先选非出战闲置精灵（仅排除首只出战个体，同名闲置个体仍可参战）
+    act_name = sp.get("active")
+    act_it = _wsp(sp, act_name) if act_name else None
+    idle_pool = [x for x in lst if x is not act_it] if len(lst) > 1 else list(lst)
+    if not idle_pool:
+        idle_pool = list(lst)
+    idle_pool.sort(key=lambda x: _power(x), reverse=True)
+    max_team = max(1, _cfgi("远征最大精灵数", 3))
+    unit_stam = max(1, _cfgi("远征单只消耗体力", 30))
+    dur_min = max(1, _cfgi("远征时长分钟", 120))
+
+    with ST._LOCK:
+        a = _u(gid, qq)
+        cur_st = a.int("stamina")
+        if cur_st < unit_stam:
+            return f"亲，派遣精灵远征每只精灵需消耗 {unit_stam} 点体力，您当前体力（{cur_st}）不足！"
+        afford_cnt = max(1, cur_st // unit_stam)
+        chosen = idle_pool[:min(max_team, len(idle_pool), afford_cnt)]
+        cost_stam = len(chosen) * unit_stam
+        chosen_names = [x.get("name") for x in chosen if x.get("name")]
+        sp["expedition"] = {"names": chosen_names, "ts": now, "dur": dur_min * 60}
+        updates = {
+            "stamina": str(max(0, cur_st - cost_stam)),
+            "spirits": json.dumps(sp, ensure_ascii=False),
+        }
+        if ST.txn_coins_acct(gid, qq, 0, updates) is None:
+            return "远征系统繁忙，本次派遣未成功，请稍后重试！"
+    return (f"🚩【远征出发】已派遣 {len(chosen)} 只精灵（{'、'.join(_fmt_name(x) for x in chosen)}）组成远征队！\r\n"
+            f"⚡ 消耗体力：{cost_stam} 点（{unit_stam}×{len(chosen)}）\r\n"
+            f"⏳ 远征时长：{dur_min} 分钟，归来后发送【精灵远征】即可收获全队经验与商城道具战利品！")
+
+
 # ---- 精灵PVP(总战力对打) ----
 def cmd_pvp(gid, qq, target):
     target = (target or "").strip()
@@ -1036,6 +1220,12 @@ def _handle_inner(gid, qq, raw):
         return cmd_awaken_shiny(gid, qq, m[4:].strip())
     if m.startswith("精灵变异"):
         return cmd_awaken_shiny(gid, qq, m[4:].strip())
+    for _tp in ("旅行精灵", "外出漫游", "精灵旅行", "召回旅行"):
+        if m.startswith(_tp):
+            return cmd_travel(gid, qq, m[len(_tp):].strip())
+    for _ep in ("精灵远征", "派遣远征", "收获远征", "远征状态"):
+        if m.startswith(_ep):
+            return cmd_expedition(gid, qq, m[len(_ep):].strip())
     if m.startswith("精灵对战"):
         return cmd_pvp(gid, qq, m[4:].strip())
     if m.startswith("挑战"):
@@ -1049,9 +1239,13 @@ def _handle_inner(gid, qq, raw):
 
 COMMANDS = (
     "领养精灵", "查看地图", "查看精灵", "购买", "精灵冒险",
-    "使用精灵球", "使用物品", "洗练", "闪光觉醒", "精灵变异", "出战精灵", "携带精灵", "丢弃精灵",
+    "使用精灵球", "使用物品", "洗练", "闪光觉醒", "精灵变异",
+    "旅行精灵", "外出漫游", "精灵旅行", "召回旅行",
+    "精灵远征", "派遣远征", "收获远征", "远征状态",
+    "出战精灵", "携带精灵", "丢弃精灵",
     "我的精灵", "精灵商城", "精灵背包", "精灵对战", "精灵排行", "羁绊",
     # V8 并入：原正则刮词域（与 handle 分支对应）
     "出战状态", "回收出战精灵", "我的背包", "挑战", "查看出战精灵",
     "精灵列表", "精灵地图", "进化", "领取精灵礼包",
 )
+

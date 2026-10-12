@@ -216,17 +216,23 @@ def cmd_create(gid, qq, name):
     if _acct(gid, qq).int("charm") < need_meili:
         return f"亲，创建帮派需要具备{need_meili}点魅力，您的魅力值不足！"
     guild_data = {"name": name, "pos": "帮主", "gong": 0, "build": 0, "intro": ""}
-    # 锁内复读体力再算更新值：防锁外读旧值与 txn 之间被并发扣减
+    # 锁内复读体力与魅力再算更新值：防锁外读旧值与 txn 之间被并发扣减
     with ST._LOCK:
         cur_st = _acct(gid, qq).int("stamina")
+        cur_ch = _acct(gid, qq).int("charm")
         if cur_st < ctili:
             return f"亲，创建帮派需要消耗{ctili}点体力，您的体力不足！"
-        updates = {"stamina": str(max(0, cur_st - ctili)),
-                   "guild": json.dumps(guild_data, ensure_ascii=False)}
+        if cur_ch < need_meili:
+            return f"亲，创建帮派需要消耗{need_meili}点魅力，您的魅力值不足！"
+        updates = {
+            "stamina": str(max(0, cur_st - ctili)),
+            "charm": str(max(0, cur_ch - need_meili)),
+            "guild": json.dumps(guild_data, ensure_ascii=False),
+        }
         if ST.txn_coins_acct(gid, qq, -cost, updates, require_funds=True) is None:
             return "帮派系统繁忙，创建未成功，请稍后重试！"
     _invalidate_guild_cache(gid)
-    return f"帮派「{name}」创建成功！您成为帮主！\r\n欢迎大家加入「{name}」！We Are 伐木累！"
+    return f"帮派「{name}」创建成功！您成为帮主（消耗{cost}{ST.coin_name()}、{ctili}体力、{need_meili}魅力）！\r\n欢迎大家加入「{name}」！We Are 伐木累！"
 
 
 def cmd_join(gid, qq, name):
@@ -249,7 +255,7 @@ def cmd_join(gid, qq, name):
     if _acct(gid, qq).int("charm") < join_meili:
         return f"亲，加入帮派需要具备{join_meili}点魅力，您的魅力值不足！"
     guild_data = {"name": name, "pos": "成员", "gong": 0, "build": 0}
-    # 锁内复读体力再算更新值：防锁外读旧值与 txn 之间被并发扣减
+    # 锁内复读体力与魅力再算更新值：防锁外读旧值与 txn 之间被并发扣减
     with ST._LOCK:
         updates = {"guild": json.dumps(guild_data, ensure_ascii=False)}
         if join_tili:
@@ -257,6 +263,11 @@ def cmd_join(gid, qq, name):
             if cur_st < join_tili:
                 return f"亲，加入帮派需要消耗{join_tili}点体力，您的体力不足！"
             updates["stamina"] = str(max(0, cur_st - join_tili))
+        if join_meili:
+            cur_ch = _acct(gid, qq).int("charm")
+            if cur_ch < join_meili:
+                return f"亲，加入帮派需要具备{join_meili}点魅力，您的魅力值不足！"
+            updates["charm"] = str(max(0, cur_ch - join_meili))
         if ST.txn_coins_acct(gid, qq, 0, updates) is None:
             return "帮派系统繁忙，加入未成功，请稍后重试！"
     _invalidate_guild_cache(gid)

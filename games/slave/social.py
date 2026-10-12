@@ -350,6 +350,11 @@ def cmd_revolt(gid, qq, st):
     need = max(500, int(uget(u, "price") or 0) // 10)
     if coins_get(gid, qq) < need:
         return _S.T.REVOLT_TOO_POOR.format(need=need)
+    charm_cost = cfgi("费用配置", "造反消耗魅力", 15)
+    try:
+        charm_cost = max(0, int(charm_cost))
+    except Exception:
+        charm_cost = 15
     cd_commit(u, "造反时间")
     # 主人奴隶数量是我方两倍 -> 镇压
     m_slaves = len(slaves_of(st, owner))
@@ -367,7 +372,7 @@ def cmd_revolt(gid, qq, st):
                 return "数据库繁忙，造反结算未成功，请稍后重试。"
             if _ok is not True:
                 return _S.T.REVOLT_TOO_POOR.format(need=need)
-        return _S.T.REVOLT_CRUSHED + f"(被罚{fine})"
+        return _S.T.REVOLT_CRUSHED + f"(被罚{fine})" + _charm_note(_charge_charm(gid, qq, charm_cost))
     sn = uget(u, "name") or (str(qq))
     loot = min(coins_get(gid, owner), _random.randint(REVOLT_LOOT_LO, REVOLT_LOOT_HI))
 
@@ -388,7 +393,8 @@ def cmd_revolt(gid, qq, st):
         uset(u, "protect_until", "")
         uset(u, "protector", "")
         return (_S.T.RV_GOURD_WIN + "\r\n" + _S.T.RV_LOOT.format(loot=loot, coin=coin_name())
-                + "\r\n" + _S.T.REVOLT_FREE.replace("，", ""))
+                + "\r\n" + _S.T.REVOLT_FREE.replace("，", "")
+                + _charm_note(_charge_charm(gid, qq, charm_cost)))
     if master_has_gourd:
         pay = min(coins_get(gid, qq), loot)
         if pay > 0:
@@ -400,7 +406,8 @@ def cmd_revolt(gid, qq, st):
                 return "数据库繁忙，造反结算未成功，请稍后重试。"
             if _ok is not True:
                 pay = 0
-        return _S.T.RV_GOURD_LOSE + f"({pay}{coin_name()})\r\n" + _S.T.REVOLT_FAIL_STAY
+        return (_S.T.RV_GOURD_LOSE + f"({pay}{coin_name()})\r\n" + _S.T.REVOLT_FAIL_STAY
+                + _charm_note(_charge_charm(gid, qq, charm_cost)))
     _revolt_p = cfgi("概率配置", "造反概率", 20)
     try:
         from ..sign import eff_prob as _LP4
@@ -423,7 +430,8 @@ def cmd_revolt(gid, qq, st):
         uset(u, "protect_until", "")
         uset(u, "protector", "")
         return (_S.T.RV_NORMAL_WIN + f"\r\n[{sn}] " + _S.T.RV_LOOT.format(loot=loot, coin=coin_name())
-                + "\r\n" + _S.T.REVOLT_FREE.replace("，", ""))
+                + "\r\n" + _S.T.REVOLT_FREE.replace("，", "")
+                + _charm_note(_charge_charm(gid, qq, charm_cost)))
     pay = min(coins_get(gid, qq), 500)
     if pay > 0:
         try:
@@ -435,7 +443,8 @@ def cmd_revolt(gid, qq, st):
         if _ok is not True:
             pay = 0
     return (_S.T.RV_NORMAL_LOSE + f"(罚{pay}{coin_name()})\r\n"
-            + f"[{sn}]" + _S.T.REVOLT_FAIL_STAY)
+            + f"[{sn}]" + _S.T.REVOLT_FAIL_STAY
+            + _charm_note(_charge_charm(gid, qq, charm_cost)))
 
 
 # ============================================================

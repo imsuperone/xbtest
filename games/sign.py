@@ -11,9 +11,17 @@ except ImportError:
     except ImportError:
         from core import storage as ST
 try:
-    from .config.sign import DEFAULTS as _SIGN_DEFAULTS, CHAIN_CAP
+    from .config.sign import (
+        DEFAULTS as _SIGN_DEFAULTS, CHAIN_CAP,
+        STAMINA_SOFT_CAP, STAMINA_HARD_CAP, STAMINA_OVERFLOW_COIN, STAMINA_BUY_DAILY_CAP,
+        CHARM_SOFT_CAP, CHARM_HARD_CAP, CHARM_OVERFLOW_COIN, CHARM_DECAY_PCT, CHARM_BUY_DAILY_CAP,
+    )
 except ImportError:
-    from games.config.sign import DEFAULTS as _SIGN_DEFAULTS, CHAIN_CAP  # type: ignore
+    from games.config.sign import (  # type: ignore
+        DEFAULTS as _SIGN_DEFAULTS, CHAIN_CAP,
+        STAMINA_SOFT_CAP, STAMINA_HARD_CAP, STAMINA_OVERFLOW_COIN, STAMINA_BUY_DAILY_CAP,
+        CHARM_SOFT_CAP, CHARM_HARD_CAP, CHARM_OVERFLOW_COIN, CHARM_DECAY_PCT, CHARM_BUY_DAILY_CAP,
+    )
 
 
 def cfgi(sec, key, default=0):
@@ -176,8 +184,46 @@ def _today_sign_order(gid):
         return 0
 
 
+def settle_stat_gain(cur_val, gain, soft_cap, hard_cap, coin_rate, daily_decay_pct=0):
+    """体力/魅力软硬上限与溢出折算单源：
+    1. 历史超硬上限(hard_cap)部分强制压回 hard_cap，超额点按 coin_rate 折算金币（单次折算上限 300 点防异常印钞）
+    2. 若启用每日高值衰减(daily_decay_pct>0)，超出 soft_cap 部分按比例自然衰减
+    3. 本次新增 gain 若使数值超过 soft_cap，超出部分不累加，自动按 coin_rate 折算为金币
+    返回: (new_val, eff_gain, overflow_pts, overflow_coins, decayed_pts)
+    """
+    cur = max(0, int(cur_val or 0))
+    g = max(0, int(gain or 0))
+    s_cap = max(1, int(soft_cap or 300))
+    h_cap = max(s_cap, int(hard_cap or 500))
+    rate = max(0, int(coin_rate or 0))
+
+    hard_ov = 0
+    if cur > h_cap:
+        hard_ov = cur - h_cap
+        cur = h_cap
+
+    decayed = 0
+    if daily_decay_pct > 0 and cur > s_cap:
+        decayed = max(1, int((cur - s_cap) * int(daily_decay_pct) // 100))
+        cur = max(s_cap, cur - decayed)
+
+    if cur < s_cap:
+        room = s_cap - cur
+        eff_gain = min(g, room)
+        soft_ov = g - eff_gain
+        new_val = cur + eff_gain
+    else:
+        eff_gain = 0
+        soft_ov = g
+        new_val = cur
+
+    conv_pts = soft_ov + min(hard_ov, 300)
+    ov_coins = conv_pts * rate
+    return new_val, eff_gain, soft_ov + hard_ov, ov_coins, decayed
+
+
 def cmd_sign(gid, qq):
-    """签到: 基础奖励 + 连签加成 + 身价/资产联动(财富=现金+存款)"""
+    """签到: 基础奖励 + 连签加成 + 软硬上限折算 + 身价/资产联动(财富=现金+存款)"""
     # 判重+读-算-写全程持 _LOCK（RLock 可重入，txn 内复入无死锁）：防并发双签双领
     with ST._LOCK:
         a = _acct(gid, qq)
@@ -229,17 +275,35 @@ def cmd_sign(gid, qq):
             cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
         except Exception:
             cur_juan = 0
+
+        # 软硬上限与溢出自动折算金币
+        stam_soft = cfgi("签到配置", "体力软上限", STAMINA_SOFT_CAP)
+        stam_hard = cfgi("签到配置", "体力硬上限", STAMINA_HARD_CAP)
+        stam_rate = cfgi("签到配置", "溢出体力折算金币", STAMINA_OVERFLOW_COIN)
+        charm_soft = cfgi("签到配置", "魅力软上限", CHARM_SOFT_CAP)
+        charm_hard = cfgi("签到配置", "魅力硬上限", CHARM_HARD_CAP)
+        charm_rate = cfgi("签到配置", "溢出魅力折算金币", CHARM_OVERFLOW_COIN)
+        charm_decay = cfgi("签到配置", "高魅力日衰减比例", CHARM_DECAY_PCT)
+
+        new_stam, eff_tili, ov_tili, coin_tili, _ = settle_stat_gain(
+            cur_stam, tili, stam_soft, stam_hard, stam_rate
+        )
+        new_charm, eff_meili, ov_meili, coin_meili, dec_meili = settle_stat_gain(
+            cur_charm, meili, charm_soft, charm_hard, charm_rate, daily_decay_pct=charm_decay
+        )
+        ov_total_coin = coin_tili + coin_meili
+
         # 单事务：钱包 delta + 账户批量字段（原5次提交→1次，持锁 1次）
         # txn 失败返 None：禁止拆成多次独立写入补偿，避免签到奖励半成功。
-        if ST.txn_coins_acct(gid, qq, base + chain_bonus, {
+        if ST.txn_coins_acct(gid, qq, base + chain_bonus + ov_total_coin, {
             "sign_count": str(total),
             "total_sign_days": str(total),
             "consecutive_days": str(chain),
             "sign_date": today,
             "last_sign_date": today,
             "account_created": a.get("account_created") or dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "stamina": str(cur_stam + tili),
-            "charm": str(cur_charm + meili),
+            "stamina": str(new_stam),
+            "charm": str(new_charm),
             "lottery_tickets": str(cur_juan + juan),
         }) is None:
             return "签到系统繁忙，本次未结算，请稍后重试！"
@@ -258,11 +322,18 @@ def cmd_sign(gid, qq):
         pass
     order = _today_sign_order(gid)
     coin = ST.coin_name()
+    stam_note = f"（溢出{ov_tili}→+{coin_tili}{coin}）" if ov_tili > 0 else ""
+    charm_notes = []
+    if dec_meili > 0:
+        charm_notes.append(f"名流衰减-{dec_meili}")
+    if ov_meili > 0:
+        charm_notes.append(f"溢出{ov_meili}→+{coin_meili}{coin}")
+    charm_note = f"（{'，'.join(charm_notes)}）" if charm_notes else ""
     return ("🏅 恭喜你签到成功！\r\n"
             "　奖励详情：\r\n"
             f"　　　💵 {coin} +{base}\r\n"
-            f"　　　⚡ 体力 +{tili}\r\n"
-            f"　　　💄 魅力 +{meili}\r\n"
+            f"　　　⚡ 体力 +{eff_tili}{stam_note}\r\n"
+            f"　　　💄 魅力 +{eff_meili}{charm_note}\r\n"
             f"　　　🎫 奖券 +{juan}\r\n"
             f"　　　🔥 第{days_cn(chain)}天连签 +{chain_bonus}\r\n"
             f"当前{coin}：{ST.coins_get(gid, qq)}\r\n"
@@ -326,11 +397,27 @@ def cmd_draw(gid, qq, amount=1):
         total_tili = sum(_o[2] for _o in _outcomes if _o is not None and _o[0] == "stamina") if _outcomes else 0
         total_meili = sum(_o[2] for _o in _outcomes if _o is not None and _o[0] == "charm") if _outcomes else 0
         wins = sum(1 for _o in _outcomes if _o is not None)
+
+        stam_soft = cfgi("签到配置", "体力软上限", STAMINA_SOFT_CAP)
+        stam_hard = cfgi("签到配置", "体力硬上限", STAMINA_HARD_CAP)
+        stam_rate = cfgi("签到配置", "溢出体力折算金币", STAMINA_OVERFLOW_COIN)
+        charm_soft = cfgi("签到配置", "魅力软上限", CHARM_SOFT_CAP)
+        charm_hard = cfgi("签到配置", "魅力硬上限", CHARM_HARD_CAP)
+        charm_rate = cfgi("签到配置", "溢出魅力折算金币", CHARM_OVERFLOW_COIN)
+
+        new_stam, eff_tili, ov_tili, coin_tili, _ = settle_stat_gain(
+            cur_stam, total_tili, stam_soft, stam_hard, stam_rate
+        )
+        new_charm, eff_meili, ov_meili, coin_meili, _ = settle_stat_gain(
+            cur_charm, total_meili, charm_soft, charm_hard, charm_rate
+        )
+        ov_coins = coin_tili + coin_meili
+
         # 单事务原子结算：钱包 delta + 奖券/体力/魅力/streak 一次提交
-        _res = ST.txn_coins_acct(gid, qq, total_coin, {
+        _res = ST.txn_coins_acct(gid, qq, total_coin + ov_coins, {
             "lottery_tickets": str(tickets - amount),
-            "stamina": str(cur_stam + total_tili),
-            "charm": str(cur_charm + total_meili),
+            "stamina": str(new_stam),
+            "charm": str(new_charm),
             "lottery_lose_streak": str(_streak),
         })
         if _res is None:
@@ -345,7 +432,8 @@ def cmd_draw(gid, qq, amount=1):
         if _o is None:
             return "很遗憾，本次未中奖，再接再厉！"
         _kind, _name_cn, _val = _o
-        return f"恭喜，抽奖成功！获得{_name_cn}+{_val}"
+        ov_tip = f"（满额溢出折算+{ov_coins}{_coin_name}）" if ov_coins > 0 else ""
+        return f"恭喜，抽奖成功！获得{_name_cn}+{_val}{ov_tip}"
     # 多连抽汇总（明细仅 amount<=10 时展开，避免刷屏）
     out_lines = []
     if amount <= 10:
@@ -356,24 +444,28 @@ def cmd_draw(gid, qq, amount=1):
                 out_lines.append(f"第{_i+1}抽：恭喜 获得{_o[1]}+{_o[2]}")
     summary = f"抽奖{amount}连抽完成：中奖{wins}/{amount}"
     if total_coin:
-        summary += f" {ST.coin_name()}+{total_coin}"
+        summary += f" {_coin_name}+{total_coin}"
     if total_tili:
-        summary += f" 体力+{total_tili}"
+        summary += f" 体力+{eff_tili}" + (f"(溢出折算+{coin_tili}{_coin_name})" if coin_tili else "")
     if total_meili:
-        summary += f" 魅力+{total_meili}"
+        summary += f" 魅力+{eff_meili}" + (f"(溢出折算+{coin_meili}{_coin_name})" if coin_meili else "")
     if wins == 0:
         summary += "，很遗憾全未中，下次保底必中！"
     return summary + ("\r\n" + "\r\n".join(out_lines) if amount <= 10 else "")
 
 
 def cmd_gift(gid, qq, kind, amount):
-    """购买体力/魅力(单次上限999, 对齐原版; 价格从 签到配置 读取) 支持存款抵扣（需求39）"""
+    """购买体力/魅力(受软上限与每日限购约束; 价格从 签到配置 读取) 支持存款抵扣（需求39）"""
     kind_cn = "体力" if kind == "stamina" else "魅力"
     if amount <= 0:
         amount = 1
     if amount > 999:
         return f"亲，{kind_cn}单次购买数量上限为999！"
     key = "stamina" if kind == "stamina" else "charm"
+    soft_cap = cfgi("签到配置", "体力软上限" if kind == "stamina" else "魅力软上限",
+                    STAMINA_SOFT_CAP if kind == "stamina" else CHARM_SOFT_CAP)
+    daily_cap = cfgi("签到配置", "每日购买体力上限" if kind == "stamina" else "每日购买魅力上限",
+                     STAMINA_BUY_DAILY_CAP if kind == "stamina" else CHARM_BUY_DAILY_CAP)
     price = cfgi("签到配置", "体力价格" if kind == "stamina" else "魅力价格", 60 if kind == "stamina" else 30)
     total = price * amount
     # 读-校验-写全程持 _LOCK（RLock 可重入）：防锁外读余额/存款/属性绝对值回写造成丢更新
@@ -382,6 +474,15 @@ def cmd_gift(gid, qq, kind, amount):
         have = ST.coins_get(gid, qq)
         dep = a.int("deposit")
         current_value = a.int(key)
+        if current_value >= soft_cap:
+            return f"亲，您的{kind_cn}已达软上限（{soft_cap}点），无法继续直接购买，请先消耗后再来！"
+        if current_value + amount > soft_cap:
+            return f"亲，购买后将超出{kind_cn}软上限（{soft_cap}点），您当前最多还可购买 {soft_cap - current_value} 点！"
+        buy_key = f"buy_{key}_{gid}_{qq}_{_today().isoformat()}"
+        bought_today = int(ST.recall_get(buy_key, "0") or 0)
+        if daily_cap > 0 and bought_today + amount > daily_cap:
+            left_buy = max(0, daily_cap - bought_today)
+            return f"亲，每日最多限购 {daily_cap} 点{kind_cn}（今日已购 {bought_today} 点，剩余可购 {left_buy} 点）！"
         if have < total:
             need = total - have
             if dep >= need:
@@ -398,6 +499,10 @@ def cmd_gift(gid, qq, kind, amount):
                 return "购买系统繁忙，本次购买未成功，请稍后重试！"
             total_paid = f"{total}{ST.coin_name()}"
         cur = current_value + amount
+        try:
+            ST.recall_set(buy_key, str(bought_today + amount))
+        except Exception:
+            pass
     return f"恭喜您花费{total_paid}，购买了{amount}点{kind_cn}，您的{kind_cn}提升到{cur}点！"
 
 
@@ -411,15 +516,19 @@ def cmd_newbie(gid, qq):
         tili = cfgi("新手配置", "体力", cfgi("新手配置", "新手体力", cfgi("新手配置", "stamina", 300)))
         meili = cfgi("新手配置", "魅力", cfgi("新手配置", "新手魅力", cfgi("新手配置", "charm", 100)))
         jq = cfgi("新手配置", "奖券", cfgi("新手配置", "新手奖券", cfgi("新手配置", "lottery_tickets", 15)))
+        stam_hard = cfgi("签到配置", "体力硬上限", STAMINA_HARD_CAP)
+        charm_hard = cfgi("签到配置", "魅力硬上限", CHARM_HARD_CAP)
         # 单事务原子领取：钱包+账户同锁一次提交，避免签到并发时 database is locked
         # txn 失败返 None：不再用多次独立写入补发，避免礼包半成功。
         cur_stam = int(float(a.get("stamina", "0") or 0))
         cur_charm = int(float(a.get("charm", "0") or 0))
         cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
+        new_stam = min(stam_hard, cur_stam + tili)
+        new_charm = min(charm_hard, cur_charm + meili)
         if ST.txn_coins_acct(gid, qq, money, {
             "novice_gift": "1",
-            "stamina": str(cur_stam + tili),
-            "charm": str(cur_charm + meili),
+            "stamina": str(new_stam),
+            "charm": str(new_charm),
             "lottery_tickets": str(cur_juan + jq),
         }) is None:
             return "新手礼包系统繁忙，本次未领取成功，请稍后重试！"
@@ -427,8 +536,8 @@ def cmd_newbie(gid, qq):
             # txn 内已覆盖 novice 标记，刷新内存避免旧对象覆盖
             try:
                 a.set("novice_gift", "1")
-                a.set("stamina", str(cur_stam + tili))
-                a.set("charm", str(cur_charm + meili))
+                a.set("stamina", str(new_stam))
+                a.set("charm", str(new_charm))
                 a.set("lottery_tickets", str(cur_juan + jq))
                 a.dirty = False
             except Exception:
