@@ -1,15 +1,15 @@
-# 小白测试版 v26w1012e
+# 小白测试版 v26w1012f
 
 > 深度复刻经典群互动玩法的 AstrBot 插件，附全功能 WebUI 管理大屏。
 
 ## 简介
 
-小白测试版包含奴隶、签到、银行、娱乐、精灵、坐骑、帮派、冒险、超管等 28 大系统，覆盖群内互动与数值养成，数据以 SQLite 落地。本插件为测试版本，数据目录与正式版完全隔离。
+小白测试版包含奴隶、签到、银行、娱乐、精灵、坐骑、帮派、冒险、超管等 28 大系统的群互动玩法插件，覆盖群内互动与数值养成，数据以 SQLite 落地。本插件为测试版本，数据目录与正式版完全隔离。
 
 本插件基于 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 开发。AstrBot 是一个松耦合、异步、支持多消息平台部署，具有易用的插件系统和完善的大语言模型（LLM）接入功能的聊天机器人及开发框架，使用文档见 [docs.astrbot.app](https://docs.astrbot.app)。
 
 - 插件 ID：`astrbot_plugin_xbbot_beta`
-- 当前版本：`v26w1012e`
+- 当前版本：`v26w1012f`
 - 运行要求：AstrBot `>=3.4.0`，平台 `aiocqhttp`
 - 仓库：https://github.com/imsuperone/xbtest
 

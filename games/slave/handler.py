@@ -366,9 +366,6 @@ _ROUTE_EXACT = {
     "我要打工": lambda gid, qq, target, st, text: cmd_work_dispatch(gid, qq, st),
     "奴隶收工": lambda gid, qq, target, st, text: cmd_work_collect(gid, qq, st),
     "搬砖": lambda gid, qq, target, st, text: cmd_self_work(gid, qq, st),
-    "兼职": lambda gid, qq, target, st, text: cmd_self_work(gid, qq, st),
-    "干活": lambda gid, qq, target, st, text: cmd_self_work(gid, qq, st),
-    "自己打工": lambda gid, qq, target, st, text: cmd_self_work(gid, qq, st),
 }
 
 
@@ -383,7 +380,7 @@ COMMANDS = (
     "宝物升阶", "升阶", "我要造反", "造反", "讨好主人", "讨好",
     "我要学习", "学习", "我要祈福", "祈福",
     # V8 并入：原正则刮词域（与 handle/_ROUTE_EXACT 分支对应），路由前缀词回归显式表
-    "排行榜", "奴隶打工", "我要打工", "奴隶收工", "搬砖", "兼职", "干活", "自己打工",
+    "排行榜", "奴隶打工", "我要打工", "奴隶收工", "搬砖",
     "武器菜单", "宝物菜单",
     "我要自由", "身价排行", "身价排行榜", "签到排行", "签到排行榜",
 )
