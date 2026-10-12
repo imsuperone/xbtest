@@ -395,7 +395,7 @@ def cmd_self_work(gid, qq, st):
     job_act, job_tail = _random.choice(_SELF_WORK_JOBS)
     cn = coin_name()
     lines = [
-        f"🧱【打工人日记】[{uname(st, qq)}] {job_act}，{job_tail}！",
+        f"🧱 {job_act}，{job_tail}！",
         f"💰 本次工钱：+{pay}{cn}（基础 {base_pay} + 身价/魅力加成 {stat_bonus}）｜🔋 体力 -{cs}",
     ]
     if is_crit:
