@@ -915,8 +915,8 @@ def cmd_travel(gid, qq, arg=""):
     it = _wsp(sp, target_name) if target_name else (sp["list"][0] if sp.get("list") else None)
     if it is None:
         return "亲，请先设置【携带精灵 名称】或【出战精灵 名称】，或直接发送【旅行精灵 名称】！"
-    cost_stam = max(1, _cfgi("旅行消耗体力", 25))
-    cost_charm = max(0, _cfgi("旅行消耗魅力", 15))
+    cost_stam = max(1, _cfgi("旅行消耗体力", 10))
+    cost_charm = max(0, _cfgi("旅行消耗魅力", 5))
     dur_min = max(1, _cfgi("旅行时长分钟", 60))
     with ST._LOCK:
         a = _u(gid, qq)
@@ -940,7 +940,7 @@ def cmd_travel(gid, qq, arg=""):
 
 
 def cmd_expedition(gid, qq, arg=""):
-    """闲置精灵远征队：消耗大量体力派遣仓库闲置精灵远征，收获金币、全员经验与现有商城道具"""
+    """闲置精灵远征队：消耗少量体力派遣仓库闲置精灵远征，收获金币、全员经验与现有商城道具"""
     sp = _spirits(gid, qq)
     lst = sp.get("list") or []
     if not lst:
@@ -1001,7 +1001,7 @@ def cmd_expedition(gid, qq, arg=""):
         idle_pool = list(lst)
     idle_pool.sort(key=lambda x: _power(x), reverse=True)
     max_team = max(1, _cfgi("远征最大精灵数", 3))
-    unit_stam = max(1, _cfgi("远征单只消耗体力", 30))
+    unit_stam = max(1, _cfgi("远征单只消耗体力", 8))
     dur_min = max(1, _cfgi("远征时长分钟", 120))
 
     with ST._LOCK:

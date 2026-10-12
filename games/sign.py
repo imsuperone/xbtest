@@ -185,10 +185,10 @@ def _today_sign_order(gid):
 
 
 def settle_stat_gain(cur_val, gain, soft_cap, hard_cap, coin_rate, daily_decay_pct=0):
-    """体力/魅力软硬上限与溢出折算单源：
-    1. 历史超硬上限(hard_cap)部分强制压回 hard_cap，超额点按 coin_rate 折算金币（单次折算上限 300 点防异常印钞）
+    """体力/魅力软硬上限与溢出折算单源（折算收益已下调为原值的 25%）：
+    1. 历史超硬上限(hard_cap)部分强制压回 hard_cap，超额点按 coin_rate 折算金币（单次折算上限 75 点）
     2. 若启用每日高值衰减(daily_decay_pct>0)，超出 soft_cap 部分按比例自然衰减
-    3. 本次新增 gain 若使数值超过 soft_cap，超出部分不累加，自动按 coin_rate 折算为金币
+    3. 本次新增 gain 若使数值超过 soft_cap，超出部分不累加，自动按 coin_rate(原值25%) 折算为金币
     返回: (new_val, eff_gain, overflow_pts, overflow_coins, decayed_pts)
     """
     cur = max(0, int(cur_val or 0))
@@ -217,7 +217,7 @@ def settle_stat_gain(cur_val, gain, soft_cap, hard_cap, coin_rate, daily_decay_p
         soft_ov = g
         new_val = cur
 
-    conv_pts = soft_ov + min(hard_ov, 300)
+    conv_pts = soft_ov + min(hard_ov, 75)
     ov_coins = conv_pts * rate
     return new_val, eff_gain, soft_ov + hard_ov, ov_coins, decayed
 
@@ -455,15 +455,16 @@ def cmd_draw(gid, qq, amount=1):
 
 
 def cmd_gift(gid, qq, kind, amount):
-    """购买体力/魅力(受软上限与每日限购约束; 价格从 签到配置 读取) 支持存款抵扣（需求39）"""
+    """购买体力/魅力(购体力上限1000, 购魅力上限300; 价格从 签到配置 读取) 支持存款抵扣（需求39）"""
     kind_cn = "体力" if kind == "stamina" else "魅力"
     if amount <= 0:
         amount = 1
-    if amount > 999:
-        return f"亲，{kind_cn}单次购买数量上限为999！"
+    max_single = 1000 if kind == "stamina" else 999
+    if amount > max_single:
+        return f"亲，{kind_cn}单次购买数量上限为{max_single}！"
     key = "stamina" if kind == "stamina" else "charm"
-    soft_cap = cfgi("签到配置", "体力软上限" if kind == "stamina" else "魅力软上限",
-                    STAMINA_SOFT_CAP if kind == "stamina" else CHARM_SOFT_CAP)
+    buy_cap = cfgi("签到配置", "购买体力上限" if kind == "stamina" else "魅力软上限",
+                   STAMINA_HARD_CAP if kind == "stamina" else CHARM_SOFT_CAP)
     daily_cap = cfgi("签到配置", "每日购买体力上限" if kind == "stamina" else "每日购买魅力上限",
                      STAMINA_BUY_DAILY_CAP if kind == "stamina" else CHARM_BUY_DAILY_CAP)
     price = cfgi("签到配置", "体力价格" if kind == "stamina" else "魅力价格", 60 if kind == "stamina" else 30)
@@ -474,10 +475,10 @@ def cmd_gift(gid, qq, kind, amount):
         have = ST.coins_get(gid, qq)
         dep = a.int("deposit")
         current_value = a.int(key)
-        if current_value >= soft_cap:
-            return f"亲，您的{kind_cn}已达软上限（{soft_cap}点），无法继续直接购买，请先消耗后再来！"
-        if current_value + amount > soft_cap:
-            return f"亲，购买后将超出{kind_cn}软上限（{soft_cap}点），您当前最多还可购买 {soft_cap - current_value} 点！"
+        if current_value >= buy_cap:
+            return f"亲，您的{kind_cn}已达购买上限（{buy_cap}点），无法继续直接购买，请先消耗后再来！"
+        if current_value + amount > buy_cap:
+            return f"亲，购买后将超出{kind_cn}上限（{buy_cap}点），您当前最多还可购买 {buy_cap - current_value} 点！"
         buy_key = f"buy_{key}_{gid}_{qq}_{_today().isoformat()}"
         bought_today = int(ST.recall_get(buy_key, "0") or 0)
         if daily_cap > 0 and bought_today + amount > daily_cap:
