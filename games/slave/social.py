@@ -220,9 +220,16 @@ def cmd_pray(gid, qq, st):
             return "数据库繁忙，祈福奖励未到账，请稍后重试。"
         return _S.T.PRAY_BIG.format(amt=f"{amt}{cn}") + f"\r\n[{name}] 获得 {amt} {cn}!!"
     if _random.randint(1, 100) <= PRAY_LOSE_CHANCE:
-        lose = min(coins_get(gid, qq), _random.randint(PRAY_LOSE_LO, PRAY_LOSE_HI))
-        if lose > 0 and coins_add(gid, qq, -lose) is None:
-            return "数据库繁忙，祈福结算未成功，请稍后重试。"
+        want_lose = _random.randint(PRAY_LOSE_LO, PRAY_LOSE_HI)
+        cur_cash = coins_get(gid, qq)
+        cur_dep = ST.acct(gid, qq).int("deposit")
+        cash_lose = min(cur_cash, want_lose)
+        dep_lose = min(cur_dep, max(0, want_lose - cash_lose))
+        lose = cash_lose + dep_lose
+        if lose > 0:
+            updates = {"deposit": str(max(0, cur_dep - dep_lose))} if dep_lose > 0 else None
+            if ST.txn_coins_acct(gid, qq, -cash_lose, updates) is None:
+                return "数据库繁忙，祈福结算未成功，请稍后重试。"
         return (_S.T.PRAY_PITY_HEAD.format(who=f"[{name}]")
                 + f"\r\n被顺走了 {lose} {cn}...")
     lo = cfgi("祈福配置", "祈福奖励下限", 1000)

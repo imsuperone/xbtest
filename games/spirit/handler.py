@@ -1094,10 +1094,15 @@ def cmd_pvp(gid, qq, target):
         return "亲，您还没有出战的精灵，无法对战！"
     if theirs is None:
         return "对方没有出战的精灵，无法对战！"
+    cd_key = f"sp_pvp_{gid}_{qq}"
+    last_ts = float(_recall_get(cd_key, "0") or 0)
+    cd_s = max(1, _cfgi("对战间隔", 1)) * 60
+    if last_ts and time.time() - last_ts < cd_s:
+        left_m = max(1, (int(cd_s - (time.time() - last_ts)) + 59) // 60)
+        return f"亲，您的精灵刚经历过激战，请休息 {left_m} 分钟后再发起对战吧！"
     myp, tap = _power(mine), _power(theirs)
-    stake = min(PVP_STAKE_CAP, ST.coins_get(gid, qq) // PVP_STAKE_DIV, ST.coins_get(gid, target) // PVP_STAKE_DIV)
-    if stake <= 0:
-        stake = 200
+    my_cash, ta_cash = ST.coins_get(gid, qq), ST.coins_get(gid, target)
+    stake = min(PVP_STAKE_CAP, max(200, my_cash // PVP_STAKE_DIV), max(200, ta_cash // PVP_STAKE_DIV))
     pwin = myp / (myp + tap) if (myp + tap) else 0.5
     try:
         from ..sign import eff_p01 as _LP01
@@ -1105,26 +1110,37 @@ def cmd_pvp(gid, qq, target):
     except Exception:
         pass
     win = random.random() < pwin
-    # 零和原子转账：一次提交，失败双方余额不变（禁先扣后发半成功）
+    _recall_set(cd_key, str(time.time()))
+    # 零和原子转账：若败方现金不足则按其实有现金划转（避免固定报0金币）
     if win:
+        real_stake = min(stake, ta_cash)
+        if real_stake > 0:
+            try:
+                _ok = ST.txn_two_wallets(gid, target, qq, real_stake)
+            except Exception:
+                _ok = None
+            if _ok is None:
+                return "精灵对战结算繁忙，本次结果未生效，请稍后重试！"
+            real = real_stake if _ok is True else 0
+        else:
+            real = 0
+        reward_txt = f"获得 {real}{ST.coin_name()}！" if real > 0 else "（对方现金为0，本次为荣誉切磋）"
+        return (f"⚔️ 精灵对战\r\n你(战力{myp}) vs {lstr(target, gid)}(战力{tap})\r\n"
+                f"【你赢！】{reward_txt}")
+    real_stake = min(stake, my_cash)
+    if real_stake > 0:
         try:
-            _ok = ST.txn_two_wallets(gid, target, qq, stake)
+            _ok = ST.txn_two_wallets(gid, qq, target, real_stake)
         except Exception:
             _ok = None
         if _ok is None:
             return "精灵对战结算繁忙，本次结果未生效，请稍后重试！"
-        real = stake if _ok is True else 0
-        return (f"⚔️ 精灵对战\r\n你(战力{myp}) vs {target}(战力{tap})\r\n"
-                f"【你赢！】获得 {real}{ST.coin_name()}！")
-    try:
-        _ok = ST.txn_two_wallets(gid, qq, target, stake)
-    except Exception:
-        _ok = None
-    if _ok is None:
-        return "精灵对战结算繁忙，本次结果未生效，请稍后重试！"
-    real = stake if _ok is True else 0
-    return (f"⚔️ 精灵对战\r\n你(战力{myp}) vs {target}(战力{tap})\r\n"
-            f"【你输…】损失 {real}{ST.coin_name()}！")
+        real = real_stake if _ok is True else 0
+    else:
+        real = 0
+    lose_txt = f"损失 {real}{ST.coin_name()}！" if real > 0 else "（现金为0，未损失金币）"
+    return (f"⚔️ 精灵对战\r\n你(战力{myp}) vs {lstr(target, gid)}(战力{tap})\r\n"
+            f"【你输…】{lose_txt}")
 
 
 def cmd_rank(gid, kind):

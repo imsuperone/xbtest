@@ -117,7 +117,7 @@ def cmd_bail(gid, qq, target, self_bail=False, kind="保释"):
         fee = random.randint(fee_lo, fee_hi) if fee_hi > fee_lo else fee_lo
         tili = cfgi("银行配置", "保释消耗体力", 15)
         meli = cfgi("银行配置", "保释魅力减少", 20)
-    if fee and ST.coins_get(gid, qq) < fee:
+    if fee and (ST.coins_get(gid, qq) + a.int("deposit")) < fee:
         return f"亲，您的{ST.coin_name()}不足，无法{kind}！{kind}金需要{fee}{ST.coin_name()}！"
     if tili and a.int("stamina") < tili:
         return f"亲，您的体力不足，无法{kind}！{kind}需要{tili}体力！"
@@ -142,14 +142,19 @@ def cmd_bail(gid, qq, target, self_bail=False, kind="保释"):
                 "SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))
             ).fetchone()
             money = int(row[0]) if row else 0
-            if money < fee or a2.int("stamina") < tili:
+            cur_dep = a2.int("deposit")
+            if (money + cur_dep) < fee or a2.int("stamina") < tili:
                 return "保释条件已变化，请稍后重试！"
-            if fee:
+            cash_pay = min(money, fee) if fee else 0
+            dep_pay = max(0, fee - cash_pay) if fee else 0
+            if cash_pay:
                 ST._DB.execute(
                     "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
                     "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
-                    (int(gid), int(qq), money - fee),
+                    (int(gid), int(qq), money - cash_pay),
                 )
+            if dep_pay:
+                a2.set("deposit", str(max(0, cur_dep - dep_pay)))
             a2.set("stamina", str(max(0, a2.int("stamina") - tili)))
             if meli:
                 a2.set("charm", str(max(0, a2.int("charm") - meli)))

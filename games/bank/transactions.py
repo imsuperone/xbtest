@@ -426,7 +426,12 @@ def cmd_rob_zone(gid, qq):
     if random.random() * 100 > prob:
         cur_st = a.int("stamina")
         cur_charm = a.int("charm")
-        fine = min(cfgi("银行配置", "打劫失败罚金", 500), ST.coins_get(gid, qq))
+        want_fine = max(0, cfgi("银行配置", "打劫失败罚金", 500))
+        cur_cash = ST.coins_get(gid, qq)
+        cur_dep = a.int("deposit")
+        cash_fine = min(cur_cash, want_fine)
+        dep_fine = min(cur_dep, max(0, want_fine - cash_fine))
+        fine = cash_fine + dep_fine
         updates = {
             "stamina": str(max(0, cur_st - cs)),
             "charm": str(max(0, cur_charm - meli)),
@@ -435,15 +440,18 @@ def cmd_rob_zone(gid, qq):
             "release_timestamp": str(int(time.time()) + int(jail_mins) * 60),
             "rob_bank_time": now_s,
         }
+        if dep_fine > 0:
+            updates["deposit"] = str(max(0, cur_dep - dep_fine))
         with ST._LOCK:
             staged = _vault_stage_delta(gid, max(0, int(fine or 0)))
             if staged is None:
                 return "银行系统繁忙，本次打劫未结算，请稍后重试！"
-            if ST.txn_coins_acct(gid, qq, -fine, updates) is None:
+            if ST.txn_coins_acct(gid, qq, -cash_fine, updates) is None:
                 return "银行系统繁忙，本次打劫未结算，请稍后重试！"
             _vault_stage_commit_cache(gid, staged)
+        dep_note = f"（含划扣存款{dep_fine}）" if dep_fine > 0 else ""
         return (f"打劫银行失败，打劫银行时被抓！被关监狱{jail_mins}分钟，\r\n"
-                f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
+                f"罚款{fine}{ST.coin_name()}{dep_note}，魅力-{meli}！")
     lo = cfgi("银行配置", "打劫银行金钱下限", 6000)
     hi = cfgi("银行配置", "打劫银行金钱上限", 12000)
     want = max(1, random.randint(lo, hi) if hi >= lo else lo)
@@ -522,7 +530,7 @@ def cmd_sell_slave(gid, qq, target):
     cs = cfgi("银行配置", "打劫消耗体力", 20)
     if a.int("stamina") < cs:
         return "亲，您的体力不足，无法实施打劫！"
-    if ST.coins_get(gid, qq) < 500:
+    if ST.coins_get(gid, qq) + a.int("deposit") < 500:
         return f"亲，您的{ST.coin_name()}不足，无法实施打劫！"
     if ST.coins_get(gid, target) < 100:
         return "亲，对方是个穷光蛋，无法对他实施打劫！"
@@ -556,8 +564,12 @@ def cmd_sell_slave(gid, qq, target):
         tn = _disp_name(target, gid)
         return f"打劫成功！你从 {tn} 处劫走{loot}{ST.coin_name()}！"
 
-    cur_money = ST.coins_get(gid, qq)
-    fine = min(1000, cur_money)
+    cur_cash = ST.coins_get(gid, qq)
+    cur_dep = a.int("deposit")
+    want_fine = max(0, cfgi("银行配置", "打劫失败罚金", 1000))
+    cash_fine = min(cur_cash, want_fine)
+    dep_fine = min(cur_dep, max(0, want_fine - cash_fine))
+    fine = cash_fine + dep_fine
     updates = {
         "stamina": str(max(0, cur_st - cs)),
         "charm": str(max(0, a.int("charm") - meli)),
@@ -566,10 +578,13 @@ def cmd_sell_slave(gid, qq, target):
         "release_timestamp": str(int(time.time()) + int(jail_mins) * 60),
         "rob_time": now_s,
     }
-    if ST.txn_coins_acct(gid, qq, -fine, updates) is None:
+    if dep_fine > 0:
+        updates["deposit"] = str(max(0, cur_dep - dep_fine))
+    if ST.txn_coins_acct(gid, qq, -cash_fine, updates) is None:
         return "银行系统繁忙，本次打劫未结算，未扣除体力和资金，请稍后重试！"
+    dep_note = f"（含划扣存款{dep_fine}）" if dep_fine > 0 else ""
     return (f"打劫失败！实施打劫时被抓！被关监狱{jail_mins}分钟，\r\n"
-            f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
+            f"罚款{fine}{ST.coin_name()}{dep_note}，魅力-{meli}！")
 
 
 # ---- 统一入口 ----

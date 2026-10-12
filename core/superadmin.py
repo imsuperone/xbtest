@@ -218,16 +218,24 @@ def _parse_target_amount(arg):
 
 
 def cmd_deduct(gid, qq, arg):
-    """扣钱: 超管扣除指定用户指定金额，显示群昵称"""
+    """扣钱: 超管扣除指定用户指定金额（优先扣现金，现金不足自动扣银行存款），显示群昵称"""
     t, amt = _parse_target_amount(arg)
     if not t or amt is None or amt <= 0:
         return "格式：扣钱 @QQ 金额（正整数）"
-    cur = _sum_money(gid, t)
-    nv = ST.coins_add(gid, t, -amt)
-    if nv is None:
-        return "数据库繁忙，扣钱未成功，请稍后重试。"
+    with ST._LOCK:
+        cur_cash = _sum_money(gid, t)
+        a = _acct(gid, t)
+        cur_dep = a.int("deposit")
+        cash_ded = min(cur_cash, amt)
+        dep_ded = min(cur_dep, max(0, amt - cash_ded))
+        updates = {"deposit": str(max(0, cur_dep - dep_ded))} if dep_ded > 0 else None
+        nv = ST.txn_coins_acct(gid, t, -cash_ded, updates)
+        if nv is None:
+            return "数据库繁忙，扣钱未成功，请稍后重试。"
     t_name = _target_name(gid, t)
-    return f"已扣除【{t_name}】{amt}{ST.coin_name()}（{cur}→{nv}）"
+    total_ded = cash_ded + dep_ded
+    dep_info = f"，存款 {cur_dep}→{max(0, cur_dep - dep_ded)}" if dep_ded > 0 else ""
+    return f"已扣除【{t_name}】{total_ded}{ST.coin_name()}（{cur_cash}→{nv}{dep_info}）"
 
 
 def cmd_recharge(gid, qq, arg):
@@ -243,9 +251,10 @@ def cmd_recharge(gid, qq, arg):
 
 
 def _clear_money(gid, t):
-    cur = _sum_money(gid, t)
-    if cur and ST.coins_add(gid, t, -cur) is None:
-        return "数据库繁忙，清空财富未成功，请稍后重试。"
+    with ST._LOCK:
+        cur = _sum_money(gid, t)
+        if ST.txn_coins_acct(gid, t, -cur if cur else 0, {"deposit": "0", "cunkuan": "0"}) is None:
+            return "数据库繁忙，清空财富未成功，请稍后重试。"
     return f"已清空 <{_name(t, gid)}> 财富。"
 
 

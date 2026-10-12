@@ -247,14 +247,21 @@ def cmd_choose(gid, qq, n):
         else:
             trap_lo = max(100, min(lo, hi) // 2)
             trap_hi = max(trap_lo, max(lo, hi) * 2 // 3)
-            fine = min(random.randint(trap_lo, trap_hi), _coin(gid, qq))
-            if fine:
-                if ST.coins_add(gid, qq, -fine) is None:
+            want_fine = random.randint(trap_lo, trap_hi)
+            cur_cash = _coin(gid, qq)
+            cur_dep = _acct(gid, qq).int("deposit")
+            cash_fine = min(cur_cash, want_fine)
+            dep_fine = min(cur_dep, max(0, want_fine - cash_fine))
+            fine = cash_fine + dep_fine
+            if fine > 0:
+                updates = {"deposit": str(max(0, cur_dep - dep_fine))} if dep_fine > 0 else None
+                if ST.txn_coins_acct(gid, qq, -cash_fine, updates) is None:
                     outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，但损失结算繁忙未扣除，请稍后重试。"
                 else:
-                    outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，损失{fine}{ST.coin_name()}，狼狈脱险……（选择{choice}的代价）"
+                    dep_note = f"（含划扣存款{dep_fine}）" if dep_fine > 0 else ""
+                    outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，损失{fine}{ST.coin_name()}{dep_note}，狼狈脱险……（选择{choice}的代价）"
             else:
-                outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，损失{fine}{ST.coin_name()}，狼狈脱险……（选择{choice}的代价）"
+                outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，身无分文的你狼狈脱险……（选择{choice}的代价）"
 
     _save(gid, qq, adv)
     if adv["round"] >= max_round:
