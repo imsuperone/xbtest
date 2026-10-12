@@ -384,22 +384,21 @@ def _custom_idx(store):
 
 
 _CUSTOM_ZW = "\u200b"
-_CUSTOM_CD = {}
-_CUSTOM_CD_SEC = 5.0
+_CUSTOM_ZW2 = "\u200c"
+_CUSTOM_LAST = {}  # (gid, hit) -> (ts, qq) 仅用于拦截 <0.35s 跨QQ机器自动秒回，同人连发0冷却
 
 
-def _custom_cmd(raw, store, gid=""):
+def _custom_cmd(raw, store, gid="", qq=""):
     """自定义指令匹配（L2 单源）：命中前只走 _custom_idx 索引（cmds 序 + ent 载荷），
     不再每条消息先回读自定义指令配置节；索引缺席/无词时才现场读配置兜底（逐行等价）。
-    防互刷保护：1) 携带零宽防回环标记 \\u200b 的同行 AI 回复直接静默忽略；
-    2) 同群同一纯自定义触发词 5s 冷却熔断，阻断多机器人互相复读刷屏。"""
+    防互刷保护（对群友 0 冷却，5 秒内连发无限秒回）：
+    1) 含零宽穿插标记(\\u200b/\\u200c)的同行 AI 消息直接静默忽略；
+    2) 仅当不同 QQ 在 0.35 秒内毫秒级跟发同一触发词（典型未更新机器人自动接话）时拦截，同人或正常群友连发零延迟。"""
     try:
         raw_str = str(raw or "")
-        if raw_str.startswith(_CUSTOM_ZW):
+        if _CUSTOM_ZW in raw_str or _CUSTOM_ZW2 in raw_str:
             return _PROTO_SILENT, raw_str.strip()
         raw = raw_str.strip()
-        if raw.startswith(_CUSTOM_ZW):
-            return _PROTO_SILENT, raw
         hit = None
         sec = None
         try:
@@ -438,14 +437,16 @@ def _custom_cmd(raw, store, gid=""):
         if cmd:
             return None, (cmd + (" " if rest else "") + rest)
         if reply:
-            if gid:
+            if gid and qq:
                 _now_c = _t_guard.time()
                 _ck = (str(gid), str(hit))
-                if _now_c - _CUSTOM_CD.get(_ck, 0.0) < _CUSTOM_CD_SEC:
+                _prev = _CUSTOM_LAST.get(_ck)
+                # 仅拦截：另一个不同 QQ 在 0.35s 内毫秒级复读（其他机器人自动触发）；同一玩家连发或正常间隔 0 冷却
+                if _prev is not None and str(_prev[1]) != str(qq) and (_now_c - _prev[0]) < 0.35:
                     return _PROTO_SILENT, raw
-                if len(_CUSTOM_CD) > 2048:
-                    _CUSTOM_CD.clear()
-                _CUSTOM_CD[_ck] = _now_c
+                if len(_CUSTOM_LAST) > 2048:
+                    _CUSTOM_LAST.clear()
+                _CUSTOM_LAST[_ck] = (_now_c, str(qq))
             # 变量渲染 + 多回复随机（纯自定义支持 {name}/{qq}/{gid}/{time}/{coin}/{at} 等）
             try:
                 # _custom_cmd 在路由层无 gid/qq 上下文时由 handle 传入 rest，此处先多选再渲染
@@ -661,7 +662,7 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
         return _MAIN_MENU
     if store:
         try:
-            creply, raw = _custom_cmd(raw, store, gid=gid)
+            creply, raw = _custom_cmd(raw, store, gid=gid, qq=qq)
             if creply is _PROTO_SILENT:
                 return None
             if creply:

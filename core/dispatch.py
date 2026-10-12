@@ -314,14 +314,15 @@ async def send_reply(event, reply, qq, raw, gid, ST, logger, do_platform,
             note = f"平台动作执行失败：{e}"
         reply = note
     # 纯自定义指令不自动带名字（用户要求），带变量渲染后直接返回；
-    # 同时注入不可见零宽防回环标记 \u200b，彻底阻断同群多同款插件 AI 互相触发 mj 死循环
+    # 在首字符后穿插零宽字符 \u200b\u200c（如 m\u200b\u200cj），任何平台 strip() 均无法剥离，
+    # 且新旧版同行 AI 的 startswith("mj") 恒为 False，无需冷却即可彻底阻断互刷
     if not _is_pure_custom(raw, ST):
         try:
             reply = name_prefix(qq, reply, None, gid)
         except TypeError:
             reply = name_prefix(qq, reply)
-    elif isinstance(reply, str) and reply and not reply.startswith(("\u200b", "[CQ:")):
-        reply = "\u200b" + reply
+    elif isinstance(reply, str) and reply and not reply.startswith("[CQ:") and "\u200b" not in reply:
+        reply = (reply[:1] + "\u200b\u200c" + reply[1:]) if len(reply) > 1 else ("\u200b\u200c" + reply)
     try:
         comp = build_chain(reply)
         event.stop_event()
