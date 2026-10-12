@@ -444,7 +444,11 @@ def cmd_welfare(gid, qq):
     if ST.recall_get(key, ""):
         return "亲，您今天已经领取过帮派福利了，明天再来吧！"
     base = _cfgi("福利基数", 4000)
-    got = base + int(g.get("gong", 0)) * WELFARE_PER_GONG
+    bonus_cap = _cfgi("福利加成上限", 20000)
+    gong_bonus = int(g.get("gong", 0)) * WELFARE_PER_GONG
+    if bonus_cap > 0:
+        gong_bonus = min(bonus_cap, gong_bonus)
+    got = base + gong_bonus
     # 先占领取标记再发钱（失败关闭）：崩溃/并发重入时至多少发、绝不多发；
     # 发钱失败则回滚标记，允许重领（禁标记与发钱不一致）
     if not ST.recall_set(key, "1"):

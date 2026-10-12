@@ -195,36 +195,36 @@ _PLUGIN_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def _merge_persistent_config(data_dir):
-    """持久配置兜底（原 XbBot.__init__ 内联逻辑，提为函数以便自测复用，零语义差）：
-    WebUI 保存落盘 data_dir/config.json；若 AstrBot 重启时过滤掉未知节
-    （如备份配置/WebDAV），用本地持久值补齐缺失键，防“保存后丢失”"""
+    """持久配置优先合并（原 XbBot.__init__ 内联逻辑）：
+    WebUI 保存落盘 data_dir/config.json 与 SQLite sys_config_json；
+    本地持久值绝对优先于宿主传入的旧 config 残留，防止更新/重启后数值回滚。"""
     try:
         import json as _pjs
         _pcfg = os.path.join(data_dir, "config.json")
+        _loaded_file = False
         if os.path.isfile(_pcfg):
             with open(_pcfg, encoding="utf-8") as _pf:
                 _praw = _pjs.load(_pf)
             _pnom = _normalize_cfg(_praw) if isinstance(_praw, dict) else {}
+            if _pnom:
+                _loaded_file = True
             for _sec, _kv in _pnom.items():
                 if isinstance(_kv, dict) and set(_kv.keys()) == {""}:
-                    # 顶层标量键（如 _active_balance_mode）落盘扁平后归一成 {"": v}，
-                    # 此处还原回标量，否则前端会读到字典误判档位
-                    if _sec not in ST._CONFIG:
+                    if str(_kv[""]) != "":
+                        ST._CONFIG[_sec] = _kv[""]
+                    elif _sec not in ST._CONFIG:
                         ST._CONFIG[_sec] = _kv[""]
                     continue
                 if isinstance(_kv, dict) and _kv:
                     _dst = ST._CONFIG.setdefault(_sec, {})
                     if _sec == "备份配置":
-                        # 备份管理专属卡片配置，本地持久值绝对优先于未定制的默认 schema
                         _dst.update(_kv)
                     else:
                         for _k, _v in _kv.items():
-                            if _k not in _dst:
+                            if str(_v) != "" or _k not in _dst:
                                 _dst[_k] = _v
-                            elif str(_dst.get(_k, "")) == "" and str(_v) != "":
-                                # AstrBot 原生页按 schema 物化空键会覆盖掉用户值，
-                                # 本地有非空持久值时必须回填，否则 WebDAV 等配置重启即丢
-                                _dst[_k] = _v
+        if not _loaded_file and hasattr(ST, "reload_config_from_db"):
+            ST.reload_config_from_db()
     except Exception:
         pass
 
@@ -280,7 +280,7 @@ def _apply_fresh_casual(data_dir):
                 ST._bump_config_ver()
         except Exception:
             pass
-        # 落盘合并到 XbBot.__init__ 尾部一次完成（本函数只改内存＋bump，调用方统一 save+sync）
+        # 落盘合并到 XbBot.__init__ 尾部统一一次完成（本函数只改内存＋bump，调用方统一 save+sync）
         return True
     except Exception:
         return False
@@ -329,10 +329,22 @@ class XbBot(Star):
         ST.set_astrbot_config(config)
         _merge_persistent_config(data_dir)
         _need_save = bool(_apply_fresh_casual(data_dir))
+        if isinstance(config, dict) and any(k != "_comment" for k in config.keys()):
+            _need_save = True
         # DB 镜像最后一道兜底：文件也被污染时仍可从库恢复
         try:
             if hasattr(ST, "wd_cfg_restore"):
                 ST.wd_cfg_restore()
+        except Exception:
+            pass
+        # 一次性迁移修复：清除旧版宿主残留导致的存款利率 3%/2% 回滚，统一对齐为 1%
+        try:
+            if str(ST.recall_get("mig_bank_rate_1pct", "") or "") != "1":
+                _bcfg = ST._CONFIG.setdefault("银行配置", {})
+                if str(_bcfg.get("存款利率", "1")) in ("2", "3"):
+                    _bcfg["存款利率"] = "1"
+                    _need_save = True
+                ST.recall_set("mig_bank_rate_1pct", "1")
         except Exception:
             pass
         # 接龙奖励全局锁定 20 金币 + 0 魅力：历史旧档（400+2 等）残留会被一次性纠正

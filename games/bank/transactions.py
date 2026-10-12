@@ -28,21 +28,33 @@ def cmd_deposit(gid, qq, amount):
             return f"亲，您的{ST.coin_name()}不足，请重新选择存款数！"
         rate = cfgi("银行配置", "存款利率", 1)
         cap = cfgi("银行配置", "利息上限", 50000)
+        max_daily = cfgi("银行配置", "每日结息次数", 3)
+        today_s = str(dt.date.today())
+        cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
         interest = _settle_interest(a, rate, cap)
         old = a.int("deposit")
-        if ST.txn_coins_acct(gid, qq, -amount, {"stamina": str(a.int("stamina") - cs), "deposit": str(old + amount + interest), "withdraw_timestamp": str(int(time.time()))}, require_funds=True) is None:
+        updates = {
+            "stamina": str(a.int("stamina") - cs),
+            "deposit": str(old + amount + interest),
+            "withdraw_timestamp": str(int(time.time())),
+        }
+        if interest > 0:
+            updates["interest_date"] = today_s
+            updates["interest_count"] = str(cur_cnt + 1)
+        if ST.txn_coins_acct(gid, qq, -amount, updates, require_funds=True) is None:
             return "亲，银行系统繁忙，存款未成功，请稍后重试！"
         total = old + amount + interest
+    cnt_note = f"\r\n💡 今日结息次数：{cur_cnt + 1}/{max_daily}" if (interest > 0 and max_daily > 0) else (
+        f"\r\n💡 今日结息已满 {max_daily}/{max_daily} 次，明日可继续结息" if (old > 0 and max_daily > 0 and cur_cnt >= max_daily) else ""
+    )
     return (f"存款成功！消耗{cs}点体力，共存入：{amount}，\r\n"
             f"上期结息：{interest}，当前总存款：{total}，"
             f"当前利率：{rate}%，1小时后可取款！\r\n"
-            f"剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
-
-
+            f"剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}{cnt_note}")
 
 
 def _settle_interest(a, rate, cap):
-    """按 上次取款时间戳 到现在的小时数计息(满 1小时 才结息, 封顶利息上限) - 已改为1h结算(需求26)"""
+    """按 上次取款时间戳 到现在的小时数计息(满 1小时 才结息, 封顶利息上限, 每日最多结息 N 次)"""
     ts = a.get("withdraw_timestamp", "")
     try:
         last = float(ts)
@@ -51,6 +63,12 @@ def _settle_interest(a, rate, cap):
     dep = a.int("deposit")
     if dep <= 0:
         return 0
+    max_daily = cfgi("银行配置", "每日结息次数", 3)
+    if max_daily > 0:
+        today_s = str(dt.date.today())
+        cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
+        if cur_cnt >= max_daily:
+            return 0
     # 改为小时结算：1小时=3600s
     elapsed_h = (time.time() - last) / 3600.0
     term_h = 1  # 固定1小时一结
@@ -58,8 +76,6 @@ def _settle_interest(a, rate, cap):
         return 0
     interest = int(dep * rate / 100.0 * min(1.0, elapsed_h / term_h))
     return min(interest, cap)
-
-
 
 
 def cmd_withdraw(gid, qq, amount):
@@ -75,35 +91,43 @@ def cmd_withdraw(gid, qq, amount):
             return f"存款不足！当前存款：{dep}"
         rate = cfgi("银行配置", "存款利率", 1)
         cap = cfgi("银行配置", "利息上限", 50000)
+        max_daily = cfgi("银行配置", "每日结息次数", 3)
+        today_s = str(dt.date.today())
+        cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
         interest = _settle_interest(a, rate, cap)
-        # 利息未到时提示剩余时间与可用强制取款，但仍允许取款（取款成功但无利息，满足测试与需求38的提示）
+        # 利息未到或今日结息次数已满时提示剩余时间与可用强制取款，但仍允许取款
         if interest == 0 and dep > 0:
-            try:
-                last = float(a.get("withdraw_timestamp", "0") or "0")
-                left = int(3600 - (time.time() - last))
-                if left > 0:
-                    # 仍允许取款，但在成功消息中附加提示，兼顾测试的“取款成功”校验
-                    pot = int(dep * rate / 100.0)
-                    pot = min(pot, cap)
-                    # 不直接return，继续向下走取款成功逻辑，附加提示在最终返回中体现
-                    interest_note = f"（提示：利息结算需1小时，还需{left//60}分{left%60}秒，到期可获{pot}{ST.coin_name()}，可强取）"
-                else:
+            if max_daily > 0 and cur_cnt >= max_daily:
+                interest_note = f"（提示：今日结息已满 {max_daily}/{max_daily} 次，本次仅取回本金，明日可继续结息）"
+            else:
+                try:
+                    last = float(a.get("withdraw_timestamp", "0") or "0")
+                    left = int(3600 - (time.time() - last))
+                    if left > 0:
+                        pot = int(dep * rate / 100.0)
+                        pot = min(pot, cap)
+                        interest_note = f"（提示：利息结算需1小时，还需{left//60}分{left%60}秒，到期可获{pot}{ST.coin_name()}，可强取）"
+                    else:
+                        interest_note = ""
+                except Exception:
                     interest_note = ""
-            except Exception:
-                interest_note = ""
+        elif interest > 0 and max_daily > 0:
+            interest_note = f"💡 今日结息次数：{cur_cnt + 1}/{max_daily}"
         else:
             interest_note = ""
         # 取款仅扣除本次取出的存款本金，利息为银行派发的收益额外计入钱包
         new_dep = dep - amount
-        if ST.txn_coins_acct(gid, qq, amount + interest, {"deposit": str(new_dep), "withdraw_timestamp": str(int(time.time()))}) is None:
+        updates = {"deposit": str(new_dep), "withdraw_timestamp": str(int(time.time()))}
+        if interest > 0:
+            updates["interest_date"] = today_s
+            updates["interest_count"] = str(cur_cnt + 1)
+        if ST.txn_coins_acct(gid, qq, amount + interest, updates) is None:
             return "亲，银行系统繁忙，取款未成功，请稍后重试！"
         base = (f"取款成功！获得利息：{interest}，本次取款：{amount}，\r\n"
                 f"还剩存款：{new_dep}，剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
     if 'interest_note' in locals() and interest_note:
         base += f"\r\n{interest_note}"
     return base
-
-
 
 
 def cmd_force_withdraw(gid, qq, amount):
@@ -119,15 +143,12 @@ def cmd_force_withdraw(gid, qq, amount):
         if dep < amount:
             return f"存款不足！当前存款：{dep}"
         # 原子：钱包 + 存款同事务，避免半成功（中文文案不变）
-        # txn 失败返 None（内部已回滚）：走原子单项降级，而非当成功
         if ST.txn_coins_acct(gid, qq, amount, {"deposit": str(dep - amount)}) is None:
             return "亲，银行系统繁忙，强制取款未成功，请稍后重试！"
         # 不重置取款时间戳，利息仍按原剩余金额与原计时继续结算
         return (f"强制取款成功！因未到取款时间，本次没有利息（不影响后续利息按剩余{ dep - amount}计）。\r\n"
                 f"本次取款：{amount}，还剩存款：{dep - amount}，"
                 f"剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
-
-
 
 
 def cmd_transfer(gid, qq, target, amount):
@@ -189,8 +210,6 @@ def cmd_transfer(gid, qq, target, amount):
     except Exception:
         tn = str(target)
     return f"转账成功！您已向 {tn} 转入{credit}{ST.coin_name()}！"
-
-
 
 
 def _gid_known(dest_gid):
@@ -299,7 +318,6 @@ def cmd_gamble(gid, qq, amount):
                 new_money = cur - amount + gain
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_money))
                 ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
-                # 先验 commit 再清脏＋计数：提交失败抛给降级；计数失败只丢一次（优于降级双重收费）
                 try:
                     ST._DB.commit()
                 except Exception:
@@ -315,7 +333,6 @@ def cmd_gamble(gid, qq, amount):
                 # 失败：-amount 魅力 -meli
                 new_money = cur - amount
                 cur_mei = a2.int("charm")
-                # 魅力扣减钳位：配置负数不倒扣、不越过 0（防负魅力）
                 meli_eff = max(0, min(int(meli), cur_mei))
                 a2.set("charm", str(cur_mei - meli_eff))
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_money))
@@ -341,12 +358,10 @@ def cmd_gamble(gid, qq, amount):
                             f"赌博时被抓了！被关监狱{jail_mins}分钟！")
                 return f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli_eff}……愿赌服输~"
     except Exception:
-        # 主路径半截写入必须先回滚；失败不得重新随机或拆单收费。
         try:
             ST._safe_rollback()
         except Exception:
             pass
-        # 半截缓存污染：主路径 a2.set 已改缓存，逐出后降级从回滚后 DB 重载，防体力/魅力双扣
         try:
             if ST._DB is not None:
                 ST._ACC_CACHE.pop((str(gid), str(qq)), None)
@@ -357,8 +372,6 @@ def cmd_gamble(gid, qq, amount):
         except Exception:
             pass
     return "赌博系统繁忙，本次未结算，未扣除资金和体力，请稍后重试！"
-
-
 
 
 def _vault_state(gid):
@@ -381,7 +394,6 @@ def _vault_state(gid):
     except Exception:
         _raw = None
     if _raw is None or str(_raw).strip() == "":
-        # 从未初始化：按初始值开库（与“被掏空=0”严格区分，禁回种）
         return min(seed, cap), cap
     try:
         v = max(0, int(_raw))
@@ -400,8 +412,7 @@ def _vault_state(gid):
 
 
 def cmd_rob_zone(gid, qq):
-    """打劫银行：只动独立金库，不碰任何用户存款。成功从金库提款，失败罚金充公进金库。
-    金库 kv 与钱包/账户同 _LOCK 同事务：kv 先 stage 不单独 commit，txn_coins_acct 一并提交或一并回滚。"""
+    """打劫银行：只动独立金库，不碰任何用户存款。成功从金库提款，失败罚金充公进金库。"""
     a = _acct(gid, qq)
     if _check_jail(a):
         return _show_jail(a)
@@ -459,17 +470,24 @@ def cmd_rob_zone(gid, qq):
             except Exception:
                 pass
             return "银行系统繁忙，本次打劫未结算，请稍后重试！"
-        if ST.txn_coins_acct(gid, qq, loot,
-                             {"stamina": str(max(0, a.int("stamina") - cs)), "rob_bank_time": now_s}) is None:
-            # txn 失败已回滚：金库扣减同事务一并回滚，无需手工退款
+        bounty = min(15000, max(1000, loot // 3))
+        if ST.txn_coins_acct(gid, qq, loot, {
+            "stamina": str(max(0, a.int("stamina") - cs)),
+            "rob_bank_time": now_s,
+            "wanted_until": str(int(time.time()) + 1800),
+            "wanted_bounty": str(bounty),
+        }) is None:
             return "银行系统繁忙，本次打劫未结算，请稍后重试！"
         _vault_stage_commit_cache(gid, staged)
-    return f"打劫银行成功！从金库劫走{loot}{ST.coin_name()}！"
+        try:
+            ST.recall_set("wanted_last_%s" % gid, str(qq))
+        except Exception:
+            pass
+    return f"打劫银行成功！从金库劫走{loot}{ST.coin_name()}！（已进入30分钟治安通缉，悬赏{bounty}{ST.coin_name()}）"
 
 
 def _vault_stage_delta(gid, delta):
-    """金库增减 stage 进当前事务（不单独 commit；调用方随后 txn_coins_acct 统一提交）。
-    返回 (new_vault, cap) 成功；失败返回 None（内部已回滚）。须持 ST._LOCK 调用。"""
+    """金库增减 stage 进当前事务（不单独 commit；调用方随后 txn_coins_acct 统一提交）。"""
     try:
         v, cap = _vault_state(gid)
         new_v = max(0, min(cap, int(v) + int(delta)))
@@ -504,8 +522,6 @@ def _vault_stage_commit_cache(gid, staged):
             _kvc["bank_vault_ts_%s" % gid] = str(time.time())
     except Exception:
         pass
-
-
 
 
 def cmd_sell_slave(gid, qq, target):
@@ -547,15 +563,25 @@ def cmd_sell_slave(gid, qq, target):
         loot = min(victim_money, random.randint(lo, hi))
         if loot <= 0:
             return "亲，对方是个穷光蛋，无法对他实施打劫！"
+        bounty = min(15000, max(1000, loot // 3))
         result = ST.txn_two_wallets_acct(
             gid, target, qq, loot,
-            {"stamina": str(max(0, cur_st - cs)), "rob_time": now_s},
+            {
+                "stamina": str(max(0, cur_st - cs)),
+                "rob_time": now_s,
+                "wanted_until": str(int(time.time()) + 1800),
+                "wanted_bounty": str(bounty),
+            },
             acct_qq=qq,
         )
         if result is not True:
             return "银行系统繁忙，本次打劫未结算，未扣除体力和资金，请稍后重试！" if result is None else "亲，对方是个穷光蛋，无法对他实施打劫！"
+        try:
+            ST.recall_set("wanted_last_%s" % gid, str(qq))
+        except Exception:
+            pass
         tn = _disp_name(target, gid)
-        return f"打劫成功！你从 {tn} 处劫走{loot}{ST.coin_name()}！"
+        return f"打劫成功！你从 {tn} 处劫走{loot}{ST.coin_name()}！（已进入30分钟通缉，悬赏{bounty}{ST.coin_name()}）"
 
     cur_money = ST.coins_get(gid, qq)
     fine = min(1000, cur_money)
@@ -573,6 +599,189 @@ def cmd_sell_slave(gid, qq, target):
             f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
 
 
+def cmd_patrol(gid, qq):
+    """治安巡逻：白道稳定赚钱玩法，协助银行巡视金库与群聊治安，领取津贴与魅力奖励"""
+    a = _acct(gid, qq)
+    if _check_jail(a):
+        return _show_jail(a)
+    cs = cfgi("银行配置", "巡逻消耗体力", 8)
+    if a.int("stamina") < cs:
+        return f"亲，治安巡逻需要 {cs} 点体力，您的体力不足！"
+    cd_mins = cfgi("银行配置", "巡逻间隔", 5)
+    ok, mins = _cd(a, "patrol_time", cd_mins)
+    if not ok:
+        return f"巡逻小队正在休整，请 {mins} 分钟后再来巡逻！"
+    lo = cfgi("银行配置", "巡逻金钱下限", 1800)
+    hi = cfgi("银行配置", "巡逻金钱上限", 4800)
+    base_pay = random.randint(lo, max(lo, hi))
+    charm = max(0, a.int("charm"))
+    charm_bonus = min(2000, charm * 4)
+    extra = 0
+    charm_gain = 1
+    event_desc = random.choice([
+        "沿街护送运钞车平安抵达银行",
+        "排查金库周边可疑人员，维护群内治安",
+        "协助走失群友找回遗失钱包",
+        "在商业街值守巡查，吓退潜伏扒手",
+    ])
+    if random.randint(1, 100) <= 25:
+        extra = random.randint(1500, 3500)
+        charm_gain = 2
+        event_desc = "巡逻途中当场截获一名流窜惯偷，追回赃款获银行通报表扬"
+    total_pay = base_pay + charm_bonus + extra
+    now_s = _now_s()
+    with ST._LOCK:
+        cur_st = a.int("stamina")
+        if cur_st < cs:
+            return f"亲，治安巡逻需要 {cs} 点体力，您的体力不足！"
+        cur_ch = a.int("charm")
+        try:
+            from ..sign import settle_stat_gain as _settle_stat
+            new_ch, real_c, _, ov_c, _ = _settle_stat(cur_ch, charm_gain, 300, 500, 2)
+        except Exception:
+            new_ch, real_c, ov_c = min(500, cur_ch + charm_gain), charm_gain, 0
+        if ST.txn_coins_acct(gid, qq, total_pay + ov_c, {
+            "stamina": str(max(0, cur_st - cs)),
+            "charm": str(new_ch),
+            "patrol_time": now_s,
+        }) is None:
+            return "银行系统繁忙，巡逻补贴结算未成功，请稍后重试！"
+    wanted_tip = ""
+    try:
+        w_qq = str(ST.recall_get("wanted_last_%s" % gid, "") or "").strip()
+        if w_qq and w_qq != str(qq):
+            wa = _acct(gid, w_qq)
+            w_until = int(wa.get("wanted_until", "0") or 0)
+            if w_until > int(time.time()) and not _check_jail(wa):
+                w_bounty = int(wa.get("wanted_bounty", "1000") or 1000)
+                w_name = _disp_name(w_qq, gid)
+                wanted_tip = f"\r\n🚨 通缉线索：{w_name}({w_qq}) 正在通缉中（悬赏{w_bounty}{ST.coin_name()}），发送【抓捕 @{w_qq}】可缉拿领赏！"
+    except Exception:
+        pass
+    extra_line = f"\r\n🏅 立功嘉奖：+{extra}{ST.coin_name()}" if extra > 0 else ""
+    ov_note = f"（魅力软上限折算+{ov_c}{ST.coin_name()}）" if ov_c > 0 else ""
+    return (
+        f"🚓 治安巡逻完成！{event_desc}！\r\n"
+        f"💰 巡逻津贴：{base_pay}{ST.coin_name()}"
+        + (f"（含魅力加成+{charm_bonus}）" if charm_bonus > 0 else "")
+        + extra_line
+        + f"\r\n✨ 共获收益：{total_pay + ov_c}{ST.coin_name()}，魅力+{real_c}{ov_note}，体力-{cs}"
+        + wanted_tip
+    )
+
+
+def cmd_arrest(gid, qq, target=None):
+    """抓捕通缉犯：对打劫成功后30分钟内处于通缉状态的劫匪实施抓捕，缴获悬赏金并送入监狱"""
+    target = _ensure_target_qq(target, gid)
+    if not target:
+        try:
+            cand = str(ST.recall_get("wanted_last_%s" % gid, "") or "").strip()
+            if cand and cand != str(qq):
+                target = cand
+        except Exception:
+            pass
+    if not target:
+        return "请指定抓捕目标，格式：【抓捕 @QQ】（当前群暂无最新通缉犯）"
+    if str(target) == str(qq):
+        return "亲，不能自己抓捕自己！想体验铁窗泪请发送【我要进监狱】~"
+    a = _acct(gid, qq)
+    if _check_jail(a):
+        return _show_jail(a)
+    ta = _acct(gid, target)
+    if _check_jail(ta):
+        return "对方已经在监狱里服刑了，无需重复抓捕！"
+    now_ts = int(time.time())
+    wanted_until = int(ta.get("wanted_until", "0") or 0)
+    if wanted_until <= now_ts:
+        return "对方当前安分守己，不在通缉期内（打劫银行或打劫群友成功后30分钟内可被抓捕）！"
+    cs = cfgi("银行配置", "巡逻消耗体力", 8)
+    if a.int("stamina") < cs:
+        return f"亲，执行抓捕需要 {cs} 点体力，您的体力不足！"
+    ok, mins = _cd(a, "arrest_time", 3)
+    if not ok:
+        return f"抓捕行动刚结束，请 {mins} 分钟后再出警！"
+    prob = cfgi("银行配置", "抓捕成功概率", 65)
+    try:
+        from ..sign import eff_prob as _luck_eff_ar
+        prob = _luck_eff_ar(prob, gid, qq)
+    except Exception:
+        pass
+    now_s = _now_s()
+    tn = _disp_name(target, gid)
+    if random.randint(1, 100) <= prob:
+        bounty = max(1000, int(ta.get("wanted_bounty", "2000") or 2000))
+        bank_bonus = max(800, bounty // 2)
+        jail_mins = cfgi("银行配置", "打劫关押时间", 5)
+        with ST._LOCK:
+            cur_st = a.int("stamina")
+            if cur_st < cs:
+                return f"亲，执行抓捕需要 {cs} 点体力，您的体力不足！"
+            cur_ch = a.int("charm")
+            try:
+                from ..sign import settle_stat_gain as _settle_stat2
+                new_ch, real_c, _, ov_c, _ = _settle_stat2(cur_ch, 3, 300, 500, 2)
+            except Exception:
+                new_ch, real_c, ov_c = min(500, cur_ch + 3), 3, 0
+            robber_coins = ST.coins_get(gid, target)
+            seized = min(robber_coins, bounty)
+            acct_upd = {
+                "stamina": str(max(0, cur_st - cs)),
+                "charm": str(new_ch),
+                "arrest_time": now_s,
+            }
+            if seized > 0:
+                res = ST.txn_two_wallets_acct(
+                    gid, target, qq, seized,
+                    acct_upd,
+                    acct_qq=qq,
+                )
+                if res is None:
+                    return "银行系统繁忙，抓捕结算未成功，请稍后重试！"
+            else:
+                if ST.txn_coins_acct(gid, qq, 0, acct_upd) is None:
+                    return "银行系统繁忙，抓捕结算未成功，请稍后重试！"
+            ST.coins_add(gid, qq, bank_bonus + ov_c)
+            ta2 = _acct(gid, target)
+            ta2.set("jail", "1")
+            ta2.set("jail_start", now_s)
+            ta2.set("release_timestamp", str(now_ts + int(jail_mins) * 60))
+            ta2.set("wanted_until", "0")
+            ta2.set("wanted_bounty", "0")
+            ST.acct_save(gid, target)
+            try:
+                if str(ST.recall_get("wanted_last_%s" % gid, "")) == str(target):
+                    ST.recall_set("wanted_last_%s" % gid, "")
+            except Exception:
+                pass
+        total_gain = seized + bank_bonus + ov_c
+        return (
+            f"🚨 抓捕成功！你将通缉犯 {tn} 缉拿归案，关押入狱 {jail_mins} 分钟！\r\n"
+            f"💰 追缴赃款：{seized}{ST.coin_name()} + 银行悬赏：{bank_bonus}{ST.coin_name()}（共获 {total_gain}{ST.coin_name()}）\r\n"
+            f"✨ 魅力+{real_c}，体力-{cs}"
+        )
+    consolation = 300
+    with ST._LOCK:
+        cur_st = a.int("stamina")
+        if ST.txn_coins_acct(gid, qq, consolation, {
+            "stamina": str(max(0, cur_st - cs)),
+            "arrest_time": now_s,
+        }) is None:
+            return "银行系统繁忙，抓捕结算未成功，请稍后重试！"
+    return f"💨 抓捕未果！通缉犯 {tn} 负隅顽抗侥幸逃脱，银行发放 {consolation}{ST.coin_name()} 出警补贴（体力-{cs}）！"
+
+
 # ---- 统一入口 ----
 
-__all__ = ["_settle_interest", "cmd_cross_transfer", "cmd_deposit", "cmd_force_withdraw", "cmd_gamble", "cmd_rob_zone", "cmd_sell_slave", "cmd_transfer", "cmd_withdraw"]
+__all__ = [
+    "_settle_interest",
+    "cmd_arrest",
+    "cmd_cross_transfer",
+    "cmd_deposit",
+    "cmd_force_withdraw",
+    "cmd_gamble",
+    "cmd_patrol",
+    "cmd_rob_zone",
+    "cmd_sell_slave",
+    "cmd_transfer",
+    "cmd_withdraw",
+]

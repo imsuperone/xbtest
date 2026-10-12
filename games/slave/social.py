@@ -11,16 +11,18 @@ from . import slave_state as _S
 try:
     from ..config.slave import (STUDY_FEE_LO, STUDY_FEE_HI, STUDY_EXP_LO, STUDY_EXP_HI,
                                 PRAY_LOSE_CHANCE, PRAY_LOSE_LO, PRAY_LOSE_HI, PRAY_NINJA_CHANCE,
-                                WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WAGE_FLOOR,
-                                WORK_PCT_CAP,
+                                WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WORTH_CAP, WORK_WAGE_FLOOR,
+                                WORK_PCT_CAP, WORK_CRIT_CHANCE, WORK_CRIT_LO, WORK_CRIT_HI,
+                                SELF_WORK_LO, SELF_WORK_HI, SELF_WORK_BONUS_CAP, SELF_WORK_CRIT_CHANCE,
                                 REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
                                 TREASURE_GOURD_NAME,
                                 CHARM_PROB_STEP, CHARM_PROB_BONUS, CHARM_PROB_CAP)
 except ImportError:
     from games.config.slave import (STUDY_FEE_LO, STUDY_FEE_HI, STUDY_EXP_LO, STUDY_EXP_HI,  # type: ignore
                                     PRAY_LOSE_CHANCE, PRAY_LOSE_LO, PRAY_LOSE_HI, PRAY_NINJA_CHANCE,
-                                    WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WAGE_FLOOR,
-                                    WORK_PCT_CAP,
+                                    WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WORTH_CAP, WORK_WAGE_FLOOR,
+                                    WORK_PCT_CAP, WORK_CRIT_CHANCE, WORK_CRIT_LO, WORK_CRIT_HI,
+                                    SELF_WORK_LO, SELF_WORK_HI, SELF_WORK_BONUS_CAP, SELF_WORK_CRIT_CHANCE,
                                     REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
                                     TREASURE_GOURD_NAME,
                                     CHARM_PROB_STEP, CHARM_PROB_BONUS, CHARM_PROB_CAP)
@@ -243,7 +245,7 @@ def cmd_work_dispatch(gid, qq, st):
     u = U(st, qq)
     my = slaves_of(st, qq)
     if not my:
-        return _S.T.WORK_NO_SLAVE
+        return _S.T.WORK_NO_SLAVE + "\r\n💡 发送【搬砖】或【兼职】可亲自打工赚取金币！"
     if uget(u, "work_status") == "真":
         started = cn_parse(uget(u, "work_time")) or 0
         duration = cfgi("间隔配置", "打工间隔", 1) * 60
@@ -262,7 +264,8 @@ def cmd_work_dispatch(gid, qq, st):
     target = 0
     for s in my:
         su = U(st, s)
-        w = _random.randint(WORK_BASE_LO, WORK_BASE_HI) + int(uget(su, "price") or 0) // WORK_WORTH_DIV
+        worth_bonus = min(WORK_WORTH_CAP, max(0, int(uget(su, "price") or 0)) // max(1, WORK_WORTH_DIV))
+        w = _random.randint(WORK_BASE_LO, WORK_BASE_HI) + worth_bonus
         uset(su, "_work_wage", str(w))
         target += w
     uset(u, "work_status", "真")
@@ -271,13 +274,11 @@ def cmd_work_dispatch(gid, qq, st):
     return _S.T.WORK_DISPATCH.format(target=target, min=duration)
 
 
-
-
 def cmd_work_collect(gid, qq, st):
     u = U(st, qq)
     my = slaves_of(st, qq)
     if not my:
-        return _S.T.WORK_NO_SLAVE
+        return _S.T.WORK_NO_SLAVE + "\r\n💡 发送【搬砖】或【兼职】可亲自打工赚取金币！"
     if uget(u, "work_status") != "真":
         return _S.T.WORK_NOT_STARTED
     started = cn_parse(uget(u, "work_time")) or 0
@@ -306,8 +307,6 @@ def cmd_work_collect(gid, qq, st):
             lines.append(f"[{uname(st,s)}]{_S.T.WORK_NO_WAGE}")
             continue
         got = wage * ratio // 100
-        if _work_bonus > 0:
-            got += got * _work_bonus // 100
         if got <= 0:
             uset(su, "_work_wage", "")
             continue
@@ -321,7 +320,13 @@ def cmd_work_collect(gid, qq, st):
     if _failed_names:
         lines.append("以下奴隶工资到账失败（系统繁忙，快照已保留，下轮收工可重结）："
                      + "、".join(f"[{n}]" for n in _failed_names))
-    master_net = total - wage_paid
+    master_net = max(0, total - wage_paid)
+    if _work_bonus > 0 and master_net > 0:
+        master_net += master_net * _work_bonus // 100
+    crit_bonus = 0
+    if master_net > 0 and not _failed_names and _random.randint(1, 100) <= WORK_CRIT_CHANCE:
+        crit_bonus = _random.randint(WORK_CRIT_LO, WORK_CRIT_HI)
+        master_net += crit_bonus
     if master_net > 0:
         if coins_add(gid, qq, master_net) is None:
             lines.append("主人收益到账失败（系统繁忙），本轮收工状态已保留，可稍后重发送工。")
@@ -334,6 +339,67 @@ def cmd_work_collect(gid, qq, st):
     uset(u, "work_time", "")
     lines.append(_S.T.WORK_WAGE_TOTAL.format(wage=wage_paid))
     lines.append(_S.T.WORK_MASTER_GET.format(got=max(0, master_net)))
+    if crit_bonus > 0:
+        lines.append(f"🎉【打工大单】奴隶们超额完成商业订单，主人额外进账 +{crit_bonus}{coin_name()}！")
+    return "\r\n".join(lines)
+
+
+_SELF_WORK_JOBS = (
+    ("去工地扛水泥砌墙", "工头直夸你手脚麻利"),
+    ("跑腿闪送连送十单", "客户五星好评连连"),
+    ("在夜市支摊猛火炒粉", "食客排起长龙一抢而空"),
+    ("去漫展兼职特邀NPC", "互动人气爆棚收获打赏"),
+    ("深夜代驾护送富豪回家", "老板随手甩下一笔小费"),
+    ("帮豪门富婆溜三只哈士奇", "富婆对你十分满意"),
+    ("通宵接单帮人紧急修Bug", "甲方当场爽快结清尾款"),
+    ("去商业街发传单带货", "业绩全场第一拿下提成"),
+)
+
+
+def cmd_self_work(gid, qq, st):
+    """自己打工（搬砖 / 兼职 / 干活）：无需拥有奴隶，消耗少量体力，收益与自身身价和魅力挂钩。"""
+    u = U(st, qq)
+    ok, mins = cd_check(u, "搬砖时间", "搬砖间隔")
+    if not ok:
+        return _fmt(mins, "搬砖")
+    cs = max(1, cfgi("费用配置", "搬砖消耗体力", 8))
+    acct = ST.acct(gid, qq)
+    if acct.int("stamina") < cs:
+        return f"亲，您的体力不足（需要 {cs} 点体力），无法出门搬砖！"
+    price = max(500, _safe_int(uget(u, "price"), cfgi("费用配置", "初始身价", 1000)))
+    charm = max(0, acct.int("charm"))
+    base_pay = _random.randint(SELF_WORK_LO, SELF_WORK_HI)
+    stat_bonus = min(SELF_WORK_BONUS_CAP, price // 20 + charm * 5)
+    pay = base_pay + stat_bonus
+    try:
+        _wb = _treasure_pct_total(treasures_of(u), "work", WORK_PCT_CAP)
+    except Exception:
+        _wb = 0
+    if _wb > 0:
+        pay += pay * _wb // 100
+    is_crit = _random.randint(1, 100) <= SELF_WORK_CRIT_CHANCE
+    worth_up = 0
+    if is_crit:
+        pay = int(pay * 1.6)
+        worth_up = _random.randint(50, 150)
+    with ST._LOCK:
+        cur_st = ST.acct(gid, qq).int("stamina")
+        if cur_st < cs:
+            return f"亲，您的体力不足（需要 {cs} 点体力），无法出门搬砖！"
+        if ST.txn_coins_acct(gid, qq, pay, {"stamina": str(max(0, cur_st - cs))}) is None:
+            return "数据库繁忙，搬砖结算未成功，请稍后重试。"
+    cd_commit(u, "搬砖时间")
+    if worth_up > 0:
+        new_p = min(_S.MAX_PRICE, price + worth_up)
+        uset(u, "price", str(new_p))
+    job_act, job_tail = _random.choice(_SELF_WORK_JOBS)
+    cn = coin_name()
+    lines = [
+        f"🧱【打工人日记】[{uname(st, qq)}] {job_act}，{job_tail}！",
+        f"💰 本次工钱：+{pay}{cn}（基础 {base_pay} + 身价/魅力加成 {stat_bonus}）｜🔋 体力 -{cs}",
+    ]
+    if is_crit:
+        lines.append(f"✨【工头重赏】触发大单暴击（收益 ×1.6），身价额外上涨 +{worth_up}！")
     return "\r\n".join(lines)
 
 
@@ -452,4 +518,4 @@ def cmd_revolt(gid, qq, st):
 # ============================================================
 
 
-__all__ = ["cmd_flatter", "cmd_pray", "cmd_revolt", "cmd_study", "cmd_work_collect", "cmd_work_dispatch"]
+__all__ = ["cmd_flatter", "cmd_pray", "cmd_revolt", "cmd_self_work", "cmd_study", "cmd_work_collect", "cmd_work_dispatch"]

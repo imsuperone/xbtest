@@ -15,7 +15,7 @@ from .combat import _treasure_effect, _treasure_names, _weapon_atk_bonus, _weapo
 from .gacha import _gacha_pool, _img_path, _weapon_img_path, cmd_gacha, cmd_starup, cmd_treasure_menu, cmd_treasure_up, cmd_weapon_menu
 from .nick import clear_note_name, mark_known
 from .profile import cmd_menu, cmd_myinfo, cmd_query, cmd_rank, cmd_rank_price, cmd_rank_sign
-from .social import cmd_flatter, cmd_pray, cmd_revolt, cmd_study, cmd_work_collect, cmd_work_dispatch
+from .social import cmd_flatter, cmd_pray, cmd_revolt, cmd_self_work, cmd_study, cmd_work_collect, cmd_work_dispatch
 from .trade import cmd_buy_slave, cmd_buyslot, cmd_freedom, cmd_protect, cmd_ransom, cmd_release, cmd_torture
 from .slave_state import _resolve_persistent_data_dir
 
@@ -365,6 +365,10 @@ _ROUTE_EXACT = {
     "奴隶打工": lambda gid, qq, target, st, text: cmd_work_dispatch(gid, qq, st),
     "我要打工": lambda gid, qq, target, st, text: cmd_work_dispatch(gid, qq, st),
     "奴隶收工": lambda gid, qq, target, st, text: cmd_work_collect(gid, qq, st),
+    "搬砖": lambda gid, qq, target, st, text: cmd_self_work(gid, qq, st),
+    "兼职": lambda gid, qq, target, st, text: cmd_self_work(gid, qq, st),
+    "干活": lambda gid, qq, target, st, text: cmd_self_work(gid, qq, st),
+    "自己打工": lambda gid, qq, target, st, text: cmd_self_work(gid, qq, st),
 }
 
 
@@ -379,6 +383,7 @@ COMMANDS = (
     "宝物升阶", "升阶", "我要造反", "造反", "讨好主人", "讨好",
     "我要学习", "学习", "我要祈福", "祈福",
     # V8 并入：原正则刮词域（与 handle/_ROUTE_EXACT 分支对应），路由前缀词回归显式表
-    "排行榜", "奴隶打工", "我要打工", "奴隶收工", "武器菜单", "宝物菜单",
+    "排行榜", "奴隶打工", "我要打工", "奴隶收工", "搬砖", "兼职", "干活", "自己打工",
+    "武器菜单", "宝物菜单",
     "我要自由", "身价排行", "身价排行榜", "签到排行", "签到排行榜",
 )

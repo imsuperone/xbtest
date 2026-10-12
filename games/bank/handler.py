@@ -23,7 +23,7 @@ def handle(gid, qq, raw):
         text = r1
     else:
         # 纯QQ字符串兜底 (仅对需要目标的指令)
-        if any(text.startswith(p) for p in ("转账", "打劫", "劫狱", "保释")):
+        if any(text.startswith(p) for p in ("转账", "打劫", "劫狱", "保释", "抓捕", "缉拿")):
             m = re.search(r"\b(\d{5,12})\b", text)
             if m:
                 target = m.group(1)
@@ -54,6 +54,10 @@ def handle(gid, qq, raw):
 
     if text.startswith("赌博"):
         return cmd_gamble(gid, qq, n)
+    if text in ("治安巡逻", "巡逻"):
+        return cmd_patrol(gid, qq)
+    if text.startswith("抓捕") or text.startswith("缉拿"):
+        return cmd_arrest(gid, qq, target or text[2:].strip())
     if text.startswith("打劫银行"):
         return cmd_rob_zone(gid, qq)
     if text.startswith("打劫"):
@@ -105,6 +109,7 @@ __all__ = ["handle", "COMMANDS"]
 
 COMMANDS = (
     "存款", "强制取款", "取款", "转账", "跨群转账", "赌博", "打劫银行", "打劫",
+    "治安巡逻", "巡逻", "抓捕", "缉拿",
     "发红包", "抢红包", "劫狱", "保释", "自我保释",
     "进监狱", "出狱", "越狱",
     # V8 并入：原正则刮词域（与 handle 分支对应）

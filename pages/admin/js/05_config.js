@@ -243,21 +243,21 @@ async function openAutoBalanceModal() {
         <input type="radio" name="balanceMode" value="standard" ${activeMode === "standard" ? "checked" : ""} style="margin-top:3px">
         <div>
           <div style="font-weight:600;color:var(--text);font-size:13px">🟢 标准平衡（推荐 · 经济稳健）</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 300-800 + 连签 50，利率 1%，造反率 35%，祈福爆发 5%。数值平稳，适合多数群聊。</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 300-800 + 连签 50，利率 1%（每日3次），造反率 35%，祈福爆发 5%。数值平稳，适合多数群聊。</div>
         </div>
       </label>
       <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "casual" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="casual" ${activeMode === "casual" ? "checked" : ""} style="margin-top:3px">
         <div>
           <div style="font-weight:600;color:var(--text);font-size:13px">🟡 休闲高福利（高爆率 · 活跃社群）</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 800-2000 + 连签 100，利率 1%，造反率 20%，祈福爆发 15%，赌博成功率 60%。低惩罚、节奏快，适合活跃社群。</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 800-2000 + 连签 100，利率 1%（每日3次），造反率 20%，祈福爆发 15%，赌博成功率 52%。低惩罚、节奏快，适合活跃社群。</div>
         </div>
       </label>
       <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "hardcore" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="hardcore" ${activeMode === "hardcore" ? "checked" : ""} style="margin-top:3px">
         <div>
           <div style="font-weight:600;color:var(--text);font-size:13px">🔴 硬核博弈（高对抗 · 惩罚重）</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 150-400 + 连签 20，利率 1%，造反率 45%，祈福爆发 2%。高风险高回报，适合对抗型社群。</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 150-400 + 连签 20，利率 1%（每日3次），造反率 45%，祈福爆发 2%。高风险高回报，适合对抗型社群。</div>
         </div>
       </label>
     </div>
