@@ -317,9 +317,9 @@ def rank_batch(gid, field="money", topn=500):
             elif field == "sign":
                 v = int(float(kv.get("sign_count", 0) or 0))
             elif field == "stamina":
-                v = int(float(kv.get("stamina", 0) or 0))
+                v = max(0, min(1000, int(float(kv.get("stamina", kv.get("tili", 0)) or 0))))
             elif field == "charm":
-                v = int(float(kv.get("charm", 0) or 0))
+                v = max(0, min(500, int(float(kv.get("charm", kv.get("meili", 0)) or 0))))
             elif field == "deposit":
                 v = int(float(kv.get("deposit", kv.get("cunkuan", 0)) or 0))
             else:

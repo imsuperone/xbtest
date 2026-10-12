@@ -122,9 +122,11 @@ def cmd_recv_red(gid, qq, pwd):
             got = random.randint(lo, hi)
             if got > total:
                 got = total
-            # 扣体力、加金币魅力
-            a.set("stamina", str(a.int("stamina") - cost_tili))
-            a.set("charm", str(a.int("charm") + gain_meili + base_meili))
+            # 扣体力、加金币魅力（魅力受300软上限压制）
+            a.set("stamina", str(max(0, a.int("stamina") - cost_tili)))
+            _cur_ch = a.int("charm")
+            _new_ch = _cur_ch if _cur_ch >= 300 else min(300, _cur_ch + gain_meili + base_meili)
+            a.set("charm", str(_new_ch))
             try:
                 _grabbed = [c for c in str(a.get("redpack_codes", "") or "").split("|") if c]
             except Exception:

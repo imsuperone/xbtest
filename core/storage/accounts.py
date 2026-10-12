@@ -83,7 +83,17 @@ def acct_add(gid, qq, name, delta, floor=0):
     with _S._LOCK:
         a = acct(gid, qq)
         cur = a.int(name)
-        newv = cur + int(delta)
+        d = int(delta)
+        en_name = _S.cn_to_en(str(name))
+        if d > 0 and en_name in ("stamina", "charm"):
+            soft_cap = 300
+            hard_cap = 1000 if en_name == "stamina" else 500
+            if cur >= soft_cap:
+                newv = min(hard_cap, cur)
+            else:
+                newv = min(soft_cap, cur + d)
+        else:
+            newv = cur + d
         if newv < floor:
             newv = floor
         old_kv = copy.deepcopy(a.kv)

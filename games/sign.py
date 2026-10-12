@@ -228,8 +228,22 @@ def cmd_sign(gid, qq):
     with ST._LOCK:
         a = _acct(gid, qq)
         today = _today().isoformat()
+        stam_soft = cfgi("签到配置", "体力软上限", STAMINA_SOFT_CAP)
+        stam_hard = cfgi("签到配置", "体力硬上限", STAMINA_HARD_CAP)
+        charm_soft = cfgi("签到配置", "魅力软上限", CHARM_SOFT_CAP)
+        charm_hard = cfgi("签到配置", "魅力硬上限", CHARM_HARD_CAP)
         # 重复签到看两个日期键（旧数据可能只写其一，任一是今天都算已签，禁错位双签）
         if a.get("sign_date") == today or a.get("last_sign_date") == today:
+            # 重复签到时顺带自愈压制超标体力/魅力
+            try:
+                _cs = int(float(a.get("stamina", "0") or 0))
+                _cc = int(float(a.get("charm", "0") or 0))
+                if _cs > stam_hard or _cc > charm_hard:
+                    a.set("stamina", str(min(stam_hard, _cs)))
+                    a.set("charm", str(min(charm_hard, _cc)))
+                    ST.acct_save(gid, qq)
+            except Exception:
+                pass
             return cfg("签到配置", "重复签到文案",
                           "亲，您今天已经签到过了，请明天继续吧！")
         # 脏值自愈：计数坏串按 0 起（禁整单抛错锁死签到）
@@ -277,16 +291,12 @@ def cmd_sign(gid, qq):
             cur_juan = 0
 
         # 软硬上限与溢出自动折算金币
-        stam_soft = cfgi("签到配置", "体力软上限", STAMINA_SOFT_CAP)
-        stam_hard = cfgi("签到配置", "体力硬上限", STAMINA_HARD_CAP)
         stam_rate = cfgi("签到配置", "溢出体力折算金币", STAMINA_OVERFLOW_COIN)
-        charm_soft = cfgi("签到配置", "魅力软上限", CHARM_SOFT_CAP)
-        charm_hard = cfgi("签到配置", "魅力硬上限", CHARM_HARD_CAP)
         charm_rate = cfgi("签到配置", "溢出魅力折算金币", CHARM_OVERFLOW_COIN)
         charm_decay = cfgi("签到配置", "高魅力日衰减比例", CHARM_DECAY_PCT)
 
-        new_stam, eff_tili, ov_tili, coin_tili, _ = settle_stat_gain(
-            cur_stam, tili, stam_soft, stam_hard, stam_rate
+        new_stam, eff_tili, ov_tili, coin_tili, dec_tili = settle_stat_gain(
+            cur_stam, tili, stam_soft, stam_hard, stam_rate, daily_decay_pct=charm_decay
         )
         new_charm, eff_meili, ov_meili, coin_meili, dec_meili = settle_stat_gain(
             cur_charm, meili, charm_soft, charm_hard, charm_rate, daily_decay_pct=charm_decay
@@ -674,9 +684,9 @@ def _rank_by(gid, fn, name, topn=10):
                     elif name == "签到":
                         v = int(float(kv.get("sign_count", 0) or 0))
                     elif name == "体力":
-                        v = int(float(kv.get("stamina", 0) or 0))
+                        v = max(0, min(1000, int(float(kv.get("stamina", kv.get("tili", 0)) or 0))))
                     elif name == "魅力":
-                        v = int(float(kv.get("charm", 0) or 0))
+                        v = max(0, min(500, int(float(kv.get("charm", kv.get("meili", 0)) or 0))))
                     elif name == "发言":
                         v = int(float(kv.get("message_count", kv.get("发言数", 0)) or 0))
                     else:
@@ -748,8 +758,8 @@ def cmd_mine_rank(gid, qq):
             kv = acct_data.get(q, {})
             vals_cash[q] = wallet_map.get(q, 0) + int(float(kv.get("deposit", kv.get("cunkuan", 0)) or 0))
             vals_sign[q] = int(float(kv.get("sign_count", 0) or 0))
-            vals_stam[q] = int(float(kv.get("stamina", 0) or 0))
-            vals_charm[q] = int(float(kv.get("charm", 0) or 0))
+            vals_stam[q] = max(0, min(1000, int(float(kv.get("stamina", kv.get("tili", 0)) or 0))))
+            vals_charm[q] = max(0, min(500, int(float(kv.get("charm", kv.get("meili", 0)) or 0))))
         def _pos(d):
             sorted_q = sorted(d.items(), key=lambda x: -x[1])
             for i, (q_, v) in enumerate(sorted_q, 1):

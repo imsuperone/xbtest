@@ -347,6 +347,120 @@ class XbBot(Star):
                 ST.recall_set("mig_bank_rate_1pct", "1")
         except Exception:
             pass
+        # 一次性迁移：搬砖间隔拉长至 30 分钟、消耗体力 15 点，并锁定签到软硬上限配置
+        try:
+            if str(ST.recall_get("mig_banzhuan_cd_30m", "") or "") != "1":
+                _icfg = ST._CONFIG.setdefault("间隔配置", {})
+                try:
+                    if int(float(_icfg.get("搬砖间隔", "0") or 0)) < 30:
+                        _icfg["搬砖间隔"] = "30"
+                        _need_save = True
+                except Exception:
+                    _icfg["搬砖间隔"] = "30"
+                    _need_save = True
+                _fcfg = ST._CONFIG.setdefault("费用配置", {})
+                try:
+                    if int(float(_fcfg.get("搬砖消耗体力", "0") or 0)) < 15:
+                        _fcfg["搬砖消耗体力"] = "15"
+                        _need_save = True
+                except Exception:
+                    _fcfg["搬砖消耗体力"] = "15"
+                    _need_save = True
+                _scfg = ST._CONFIG.setdefault("签到配置", {})
+                _scfg["体力软上限"] = "300"
+                _scfg["体力硬上限"] = "1000"
+                _scfg["购买体力上限"] = "1000"
+                _scfg["溢出体力折算金币"] = "4"
+                _scfg["魅力软上限"] = "300"
+                _scfg["魅力硬上限"] = "500"
+                _scfg["溢出魅力折算金币"] = "2"
+                _need_save = True
+                ST.recall_set("mig_banzhuan_cd_30m", "1")
+        except Exception:
+            pass
+        # 全库体力/魅力强压执行：首次迁移将全库历史存量 >300 的体力与魅力强制压回 300 软上限（按 25% 折算补贴金币），
+        # 并清理旧键 tili/meili 残留；后续启动持续校验硬上限（体力<=1000，魅力<=500）
+        try:
+            if ST._DB is not None:
+                import json as _mjs
+                _first_clamp = str(ST.recall_get("mig_force_stat_clamp_v2", "") or "") != "1"
+                _stam_lim = 300 if _first_clamp else 1000
+                _charm_lim = 300 if _first_clamp else 500
+                with ST._LOCK:
+                    _arows = ST._DB.execute("SELECT gid, qq, data FROM accounts").fetchall()
+                    _upd_accts = []
+                    _upd_coins = []
+                    for _agid, _aqq, _adata in (_arows or []):
+                        try:
+                            _akv = _mjs.loads(_adata) if _adata else {}
+                        except Exception:
+                            continue
+                        if not isinstance(_akv, dict):
+                            continue
+                        _changed = False
+                        # 合并并清理旧键名，防止 SQL json_extract 或旧字段残留绕过压制
+                        _raw_st = _akv.get("stamina", _akv.get("tili", _akv.get("体力", _akv.get("体力总数", "0"))))
+                        _raw_ch = _akv.get("charm", _akv.get("meili", _akv.get("魅力", _akv.get("魅力总数", "0"))))
+                        for _old_k in ("tili", "体力", "体力总数", "meili", "魅力", "魅力总数"):
+                            if _old_k in _akv:
+                                _akv.pop(_old_k, None)
+                                _changed = True
+                        try:
+                            _st_v = max(0, int(float(_raw_st or 0)))
+                        except Exception:
+                            _st_v = 0
+                        try:
+                            _ch_v = max(0, int(float(_raw_ch or 0)))
+                        except Exception:
+                            _ch_v = 0
+                        _comp_coin = 0
+                        if _st_v > _stam_lim:
+                            _ov_s = _st_v - _stam_lim
+                            if _first_clamp:
+                                _comp_coin += min(_ov_s, 75) * 4
+                            _st_v = _stam_lim
+                            _akv["stamina"] = str(_st_v)
+                            _changed = True
+                        elif _changed and "stamina" not in _akv and _st_v > 0:
+                            _akv["stamina"] = str(_st_v)
+                        if _ch_v > _charm_lim:
+                            _ov_c = _ch_v - _charm_lim
+                            if _first_clamp:
+                                _comp_coin += min(_ov_c, 75) * 2
+                            _ch_v = _charm_lim
+                            _akv["charm"] = str(_ch_v)
+                            _changed = True
+                        elif _changed and "charm" not in _akv and _ch_v > 0:
+                            _akv["charm"] = str(_ch_v)
+                        if _changed:
+                            _upd_accts.append((_mjs.dumps(_akv, ensure_ascii=False), int(_agid), int(_aqq)))
+                            if _comp_coin > 0:
+                                _upd_coins.append((int(_agid), int(_aqq), int(_comp_coin)))
+                    if _upd_accts:
+                        ST._DB.executemany("UPDATE accounts SET data=? WHERE gid=? AND qq=?", _upd_accts)
+                        for _cg, _cq, _cc in _upd_coins:
+                            _wrow = ST._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (_cg, _cq)).fetchone()
+                            _wcur = int(_wrow[0]) if _wrow else 0
+                            _wnew = min(getattr(ST, "COIN_CAP", 100000000000), _wcur + _cc)
+                            ST._DB.execute(
+                                "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
+                                "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
+                                (_cg, _cq, _wnew),
+                            )
+                        ST._safe_commit()
+                        try:
+                            ST._ACC_CACHE.clear()
+                        except Exception:
+                            pass
+                        if _logger_layer:
+                            try:
+                                _logger_layer.info(f"[强压迁移] 已压制 {len(_upd_accts)} 个超标账户的体力/魅力存量 (上限={_stam_lim}/{_charm_lim})")
+                            except Exception:
+                                pass
+                if _first_clamp:
+                    ST.recall_set("mig_force_stat_clamp_v2", "1")
+        except Exception:
+            pass
         # 接龙奖励全局锁定 20 金币 + 0 魅力：历史旧档（400+2 等）残留会被一次性纠正
         # （只标脏，落盘并入尾部统一 save+sync）
         try:

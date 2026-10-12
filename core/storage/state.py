@@ -93,7 +93,7 @@ class Acct:
         self.qq = str(qq)
         if kv:
             has_cn = any('\u4e00' <= c <= '\u9fff' for c in "".join(kv.keys()))
-            if has_cn:
+            if has_cn or "tili" in kv or "meili" in kv or "cunkuan" in kv or "jiangquan" in kv:
                 kv = translate_dict(kv)
         self.kv = kv if kv is not None else {}
         self.dirty = False
@@ -103,14 +103,28 @@ class Acct:
         return str(v) if v is not None else str(d)
     def set(self, k, v):
         k = cn_to_en(str(k))
+        if k in ("stamina", "charm"):
+            try:
+                iv = max(0, int(float(v or 0)))
+                cap = 1000 if k == "stamina" else 500
+                if iv > cap:
+                    iv = cap
+                v = str(iv)
+            except Exception:
+                pass
         self.kv[k] = str(v)
         self.dirty = True
     def int(self, k, d=0):
         k = cn_to_en(str(k))
         try:
-            return int(float(self.get(k, str(d))))
+            iv = int(float(self.get(k, str(d))))
         except Exception:
-            return int(d)
+            iv = int(d)
+        if k == "stamina":
+            return max(0, min(1000, iv))
+        if k == "charm":
+            return max(0, min(500, iv))
+        return iv
 class _DirtyDict(dict):
     """单群千人增量落盘：dict 写即标脏，避免 save_group 全量 1000→1"""
     def __init__(self, *args, _gid=None, _qq=None, _group=None, **kwargs):

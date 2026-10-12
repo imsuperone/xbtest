@@ -245,7 +245,7 @@ def cmd_work_dispatch(gid, qq, st):
     u = U(st, qq)
     my = slaves_of(st, qq)
     if not my:
-        return _S.T.WORK_NO_SLAVE + "\r\n💡 发送【搬砖】或【兼职】可亲自打工赚取金币！"
+        return _S.T.WORK_NO_SLAVE + "\r\n💡 发送【搬砖】可亲自打工赚取金币！"
     if uget(u, "work_status") == "真":
         started = cn_parse(uget(u, "work_time")) or 0
         duration = cfgi("间隔配置", "打工间隔", 1) * 60
@@ -278,7 +278,7 @@ def cmd_work_collect(gid, qq, st):
     u = U(st, qq)
     my = slaves_of(st, qq)
     if not my:
-        return _S.T.WORK_NO_SLAVE + "\r\n💡 发送【搬砖】或【兼职】可亲自打工赚取金币！"
+        return _S.T.WORK_NO_SLAVE + "\r\n💡 发送【搬砖】可亲自打工赚取金币！"
     if uget(u, "work_status") != "真":
         return _S.T.WORK_NOT_STARTED
     started = cn_parse(uget(u, "work_time")) or 0
@@ -357,19 +357,19 @@ _SELF_WORK_JOBS = (
 
 
 def cmd_self_work(gid, qq, st):
-    """自己打工（搬砖 / 兼职 / 干活）：无需拥有奴隶，消耗少量体力，收益与自身身价和魅力挂钩。"""
+    """自己打工（搬砖）：无需拥有奴隶，默认30分钟冷却、消耗15体力，收益与自身身价和魅力适度挂钩。"""
     u = U(st, qq)
     ok, mins = cd_check(u, "搬砖时间", "搬砖间隔")
     if not ok:
         return _fmt(mins, "搬砖")
-    cs = max(1, cfgi("费用配置", "搬砖消耗体力", 8))
+    cs = max(1, cfgi("费用配置", "搬砖消耗体力", 15))
     acct = ST.acct(gid, qq)
     if acct.int("stamina") < cs:
         return f"亲，您的体力不足（需要 {cs} 点体力），无法出门搬砖！"
     price = max(500, _safe_int(uget(u, "price"), cfgi("费用配置", "初始身价", 1000)))
     charm = max(0, acct.int("charm"))
     base_pay = _random.randint(SELF_WORK_LO, SELF_WORK_HI)
-    stat_bonus = min(SELF_WORK_BONUS_CAP, price // 20 + charm * 5)
+    stat_bonus = min(SELF_WORK_BONUS_CAP, price // 30 + charm * 3)
     pay = base_pay + stat_bonus
     try:
         _wb = _treasure_pct_total(treasures_of(u), "work", WORK_PCT_CAP)
@@ -380,8 +380,8 @@ def cmd_self_work(gid, qq, st):
     is_crit = _random.randint(1, 100) <= SELF_WORK_CRIT_CHANCE
     worth_up = 0
     if is_crit:
-        pay = int(pay * 1.6)
-        worth_up = _random.randint(50, 150)
+        pay = int(pay * 1.5)
+        worth_up = _random.randint(30, 100)
     with ST._LOCK:
         cur_st = ST.acct(gid, qq).int("stamina")
         if cur_st < cs:
@@ -399,7 +399,7 @@ def cmd_self_work(gid, qq, st):
         f"💰 本次工钱：+{pay}{cn}（基础 {base_pay} + 身价/魅力加成 {stat_bonus}）｜🔋 体力 -{cs}",
     ]
     if is_crit:
-        lines.append(f"✨【工头重赏】触发大单暴击（收益 ×1.6），身价额外上涨 +{worth_up}！")
+        lines.append(f"✨【工头重赏】触发大单暴击（收益 ×1.5），身价额外上涨 +{worth_up}！")
     return "\r\n".join(lines)
 
 
