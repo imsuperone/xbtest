@@ -433,9 +433,17 @@ def _custom_cmd(raw, store, gid="", qq=""):
         e = e if isinstance(e, dict) else {"reply": str(e)}
         cmd = str(e.get("command", "") or "").strip()
         reply = str(e.get("reply", "") or "").strip()
-        rest = raw[len(hit):].strip()
+        raw_tail = raw[len(hit):]
+        rest = raw_tail.strip()
         if cmd:
+            # 别名映射指令：仅当完全等于触发词，或后续紧跟空白/@/CQ码/数字参数时才重写，
+            # 避免群聊日常说话如“查询xxxxxx”因前缀命中别名被强行改写为“我的信息 xxxxxx”
+            if rest and not (raw_tail[:1].isspace() or rest.startswith(("@", "[CQ:", "[DR:")) or rest[:1].isdigit()):
+                return None, raw
             return None, (cmd + (" " if rest else "") + rest)
+        if rest:
+            # 纯自定义触发词严格精确匹配，防止“mj是什么”误触发“mj”
+            return None, raw
         if reply:
             if gid and qq:
                 _now_c = _t_guard.time()

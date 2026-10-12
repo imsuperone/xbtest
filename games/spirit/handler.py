@@ -1074,18 +1074,33 @@ def cmd_expedition(gid, qq, arg=""):
 
 # ---- 精灵PVP(总战力对打) ----
 def cmd_pvp(gid, qq, target):
-    target = (target or "").strip()
-    if target:
-        t_at, _ = ST.parse_at(target)
-        if t_at:
-            target = t_at
-        else:
-            import re as _re_pvp
-            m_qq = _re_pvp.search(r"(\d{5,12})", target)
-            if m_qq:
-                target = m_qq.group(1)
-    if not target or target == str(qq):
+    raw_arg = (target or "").strip()
+    if not raw_arg:
         return "亲，请输入对方QQ：精灵对战 对方QQ"
+    t = None
+    rest = raw_arg
+    t_at, r_at = ST.parse_at(raw_arg)
+    if t_at:
+        try:
+            _ok = ST.is_qq_mention(t_at, raw_arg) if hasattr(ST, "is_qq_mention") else True
+        except Exception:
+            _ok = True
+        if _ok:
+            t = str(t_at).strip()
+            rest = (r_at or "").strip()
+    if not t:
+        import re as _re_pvp
+        m_qq = _re_pvp.fullmatch(r"@?\s*(\d{5,12})", raw_arg)
+        if m_qq:
+            t = m_qq.group(1)
+            rest = ""
+    if not t or not t.isdigit() or rest:
+        if raw_arg.startswith(("@", "[CQ:at")) or raw_arg[:1].isdigit():
+            return "亲，请输入对方QQ：精灵对战 对方QQ"
+        return None
+    target = t
+    if target == str(qq):
+        return "亲，不能与自己进行精灵对战！"
     sp = _spirits(gid, qq)
     mine = _wsp(sp, sp.get("active")) if sp.get("active") else None
     tsp = _spirits(gid, target)
@@ -1260,9 +1275,13 @@ def _handle_inner(gid, qq, raw):
         return cmd_view(gid, qq, m[4:].strip())
     if m.startswith("购买"):
         # 坐骑系统的 购买坐骑 由坐骑引擎接管, 此处放行
-        if m.startswith("购买坐骑"):
+        if m.startswith(("购买坐骑", "购买体力", "购买魅力", "购买奴隶位")):
             return None
-        return cmd_buy(gid, qq, m[2:].strip())
+        _raw_b = m[2:]
+        _barg = _raw_b.strip()
+        if not _barg or _barg in _SHOP() or _raw_b[:1].isspace():
+            return cmd_buy(gid, qq, _barg)
+        return None
     if m.startswith("精灵冒险"):
         return cmd_adventure(gid, qq, m[4:].strip())
     if m.startswith("使用精灵球"):
@@ -1276,9 +1295,17 @@ def _handle_inner(gid, qq, raw):
     if m.startswith("丢弃精灵"):
         return cmd_discard(gid, qq, m[4:].strip())
     if m.startswith("进化"):
-        return cmd_evolve(gid, qq, m[2:].strip())
+        _raw_e = m[2:]
+        _earg = _raw_e.strip()
+        if not _earg or _earg in _SPIRITS() or _raw_e[:1].isspace():
+            return cmd_evolve(gid, qq, _earg)
+        return None
     if m.startswith("洗练"):
-        return cmd_recast(gid, qq, m[2:].strip())
+        _raw_r = m[2:]
+        _rarg = _raw_r.strip()
+        if not _rarg or _rarg in _SPIRITS() or _raw_r[:1].isspace():
+            return cmd_recast(gid, qq, _rarg)
+        return None
     if m.startswith("闪光觉醒"):
         return cmd_awaken_shiny(gid, qq, m[4:].strip())
     if m.startswith("精灵变异"):
@@ -1292,9 +1319,17 @@ def _handle_inner(gid, qq, raw):
     if m.startswith("精灵对战"):
         return cmd_pvp(gid, qq, m[4:].strip())
     if m.startswith("挑战"):
-        return cmd_pvp(gid, qq, m[2:].strip())
+        _raw_c = m[2:]
+        _carg = _raw_c.strip()
+        if not _carg or _carg.startswith(("@", "[CQ:at")) or _carg[:1].isdigit():
+            return cmd_pvp(gid, qq, _carg)
+        return None
     if m.startswith("羁绊"):
-        return cmd_bond(gid, qq, m[2:].strip())
+        _raw_bd = m[2:]
+        _bdarg = _raw_bd.strip()
+        if not _bdarg or _bdarg in _SPIRITS() or _raw_bd[:1].isspace():
+            return cmd_bond(gid, qq, _bdarg)
+        return None
     if m.startswith("精灵排行"):
         return cmd_rank(gid, m[4:].strip())
     return None

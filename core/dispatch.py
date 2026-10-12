@@ -280,7 +280,7 @@ def _is_pure_custom(raw, ST):
                     e = _ent[t]
                     ev = e if isinstance(e, dict) else {"reply": str(e)}
                     if not str(ev.get("command", "") or "").strip() and str(ev.get("reply", "") or "").strip():
-                        return True
+                        return rt == t
                     return False
             return False
         # 索引缺席/无词：退回现场全量排序（仅此路径读配置节，与旧实现逐行等价）
@@ -291,7 +291,7 @@ def _is_pure_custom(raw, ST):
                 if rt.startswith(t):
                     ev = e if isinstance(e, dict) else {"reply": str(e)}
                     if not str(ev.get("command", "") or "").strip() and str(ev.get("reply", "") or "").strip():
-                        return True
+                        return rt == t
                     return False
     except Exception:
         pass

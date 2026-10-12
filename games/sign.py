@@ -824,44 +824,43 @@ def handle(gid, qq, raw):
     if text == "每日打卡":
         return cmd_daily_checkin(gid, qq)
     # 排行优先于签到，避免 “签到榜” 误判为签到
-    if text.startswith("个人财富榜") or text.startswith("财富榜"):
+    if text in ("个人财富榜", "财富榜"):
         return cmd_rank(gid, "cash", None)
-    if text.startswith("签到榜"):
+    if text == "签到榜":
         return cmd_rank(gid, "sign", None)
-    if text.startswith("体力排行榜") or text.startswith("体力榜"):
+    if text in ("体力排行榜", "体力榜"):
         return cmd_rank(gid, "stamina", None)
-    if text.startswith("魅力排行榜") or text.startswith("魅力榜"):
+    if text in ("魅力排行榜", "魅力榜"):
         return cmd_rank(gid, "charm", None)
-    if text == "签到" or text.startswith("签到 ") or text == "打卡" or text.startswith("打卡 "):
+    if text in ("签到", "打卡"):
         return cmd_sign(gid, qq)
     if text in ("个人排行", "我的排行"):
         return cmd_mine_rank(gid, qq)
     if text.startswith("抽奖"):
-        m = _r.search(r"(\d+)", text)
+        if text == "抽奖":
+            return cmd_draw(gid, qq, 1)
+        m = _r.fullmatch(r"抽奖\s*\+?\s*(\d+)", text)
         if m:
             return cmd_draw(gid, qq, int(m.group(1)))
-        # 无数字后缀且非裸词（如抽奖系统）禁扣券：此前一律扣 1 奖券
-        if text.strip() == "抽奖":
-            return cmd_draw(gid, qq, 1)
-        return "抽奖格式：【抽奖】或【抽奖 数量】（如抽奖 10），奖券不足可先签到领取~"
-    if text.startswith("领取新手礼包") or text.startswith("领取新人礼包"):
+        return None
+    if text in ("领取新手礼包", "领取新人礼包"):
         return cmd_newbie(gid, qq)
-    if text == "赞我" or text.startswith("赞我 "):
+    if text == "赞我":
         return cmd_like(gid, qq)
     if text.startswith("购买体力"):
-        m = _r.search(r"(\d+)", text)
+        if text == "购买体力":
+            return cmd_gift(gid, qq, "stamina", 1)
+        m = _r.fullmatch(r"购买体力\s*\+?\s*(\d+)", text)
         if m:
             return cmd_gift(gid, qq, "stamina", int(m.group(1)))
-        if text.strip() == "购买体力":
-            return cmd_gift(gid, qq, "stamina", 1)
-        return "购买体力格式：【购买体力】或【购买体力 数量】"
+        return None
     if text.startswith("购买魅力"):
-        m = _r.search(r"(\d+)", text)
+        if text == "购买魅力":
+            return cmd_gift(gid, qq, "charm", 1)
+        m = _r.fullmatch(r"购买魅力\s*\+?\s*(\d+)", text)
         if m:
             return cmd_gift(gid, qq, "charm", int(m.group(1)))
-        if text.strip() == "购买魅力":
-            return cmd_gift(gid, qq, "charm", 1)
-        return "购买魅力格式：【购买魅力】或【购买魅力 数量】"
+        return None
     return None
 
 

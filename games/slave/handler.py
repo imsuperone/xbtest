@@ -87,29 +87,22 @@ def _route_locked(gid, qq, raw):
         _qq_ok = True
     if target and not _qq_ok:
         target = None
+        text = str(raw or "").strip()
     mark_known(gid, qq)
 
     # 兼容纯 QQ 号（无 @）的写法：文案仅 @QQ，但解析支持 QQ 号
     if not target:
-            # 仅对需要目标的指令尝试提取，避免金额被误判
-            _need = ("查询","买下","折磨","保护","释放","赎身","打架","购买奴隶位")
-            for _pref in _need:
-                if text.startswith(_pref):
-                    m = _re.search(r"\b(\d{5,12})\b", text)
-                    if m:
-                        target = m.group(1)
-                        text = text.replace(m.group(0), "", 1).strip()
-                    break
-            # 通用兜底：若仍无 target 且文本含 @QQ 之外的独立 QQ 号（如 买下 123），也尝试首个数字
-            if not target:
-                # 对于买下/查询等，即使前缀不完全匹配也尝试
-                if any(kw in text for kw in ("买下","查询","保护","释放","赎身","打架")):
-                    m = _re.search(r"\b(\d{5,12})\b", text)
-                    if m:
-                        target = m.group(1)
-                        text = text.replace(m.group(0), "", 1).strip()
+        # 仅对需要目标的指令尝试提取，避免金额被误判
+        _need = ("我的信息", "查询", "买下", "折磨", "保护", "释放", "赎身", "打架")
+        for _pref in _need:
+            if text.startswith(_pref):
+                m = _re.search(r"\b(\d{5,12})\b", text)
+                if m:
+                    target = m.group(1)
+                    text = text.replace(m.group(0), "", 1).strip()
+                break
 
-    # 去掉开头的表情码干扰
+    # 去掉开头的表情码干扰（保留未解析的 @ 文本以便识别无效 @昵称）
     text = _re.sub(r"\[(?:CQ|DR):[^\]]+\]", "", text).strip()
 
     # Fast path: exact commands
@@ -119,91 +112,66 @@ def _route_locked(gid, qq, raw):
     if text in store.wake("奴隶系统", "奴隶系统"):
         return cmd_menu()
     if text.startswith("我的信息"):
-        # 支持 我的信息 @QQ / QQ 查询他人（兼容已提取的 target）
-        t = target
-        if not t and text.startswith("我的信息 "):
-            # 兜底：从剩余文本再解析（纯数字或@）
-            t2, _ = store.parse_at(text[len("我的信息 "):])
-            if t2:
-                t = t2
-            else:
-                import re as _re2
-                m = _re2.search(r"(\d{5,12})", text)
-                if m:
-                    t = m.group(1)
-        if t:
-            return cmd_query(gid, qq, t, st)
-        return cmd_myinfo(gid, qq, st)
+        rest = text[len("我的信息"):].strip()
+        if target:
+            if not rest:
+                return cmd_query(gid, qq, target, st)
+            return None
+        if not rest:
+            return cmd_myinfo(gid, qq, st)
+        if rest.startswith("@"):
+            return "未能找到该成员～格式：【查询 @QQ】"
+        return None
     if text.startswith("查询"):
         # v0.7.29：9 个查询转发/放行全部退役，一律静默（空白无关，含全角/制表符）。
-        # 此前查询更新/版本以 is_admin=True 越权转发超管（与全静默红线冲突），查询维护同理；
-        # 查询菜单（无空格）/查询 地图（有空格）此前漏放行会误查用户，现一并静默，行为一致。
         if _re.sub(r"\s+", "", text).startswith(_QUERY_SILENT):
             return None
-        # 查询 (不带参数) / 查询我 / 查询自己 -> 直接查看自己的档案。
-        # rest 取自原消息（顶部 parse 会吞掉 @昵称，用解析后文本会导致 rest 为空而误查自己）。
-        _raw0 = _re.sub(r"\[(?:CQ|DR):[^\]]+\]", "", str(raw or "")).strip()
-        rest = _raw0[len("查询"):].strip() if _raw0.startswith("查询") else text[len("查询"):].strip()
-        if not target and (not rest or rest in ("我", "自己", "个人", "我的信息", "自己信息", "个人信息")):
+        rest_after_target = text[len("查询"):].strip()
+        if target:
+            if not rest_after_target:
+                return cmd_query(gid, qq, target, st)
+            return None
+        _raw0 = _re.sub(r"\[(?:CQ|DR):(?!(?:at\b))[^\]]+\]", "", str(raw or "")).strip()
+        rest = _raw0[len("查询"):].strip() if _raw0.startswith("查询") else rest_after_target
+        if rest in ("", "我", "自己", "个人", "我的信息", "自己信息", "个人信息"):
             return cmd_myinfo(gid, qq, st)
-
-        # 查询@QQ / 查询 QQ -> 查他人档案，兼容已提取的 target（QQ-only，不认昵称）
-        t = target
-        if not t:
-            t2, _ = store.parse_at(text)
-            try:
-                _t2_ok = store.is_qq_mention(t2, text) if hasattr(store, "is_qq_mention") else True
-            except Exception:
-                _t2_ok = True
-            if t2 and _t2_ok:
-                t = t2
-            else:
-                if rest.startswith("@"):
-                    rest = rest[1:].strip()
-                if rest:
-                    m_num = _re.search(r"^(\d{5,12})$", rest)
-                    if m_num:
-                        t = m_num.group(1)
-        if t:
-            return cmd_query(gid, qq, t, st)
-        return "未能找到该成员～格式：【查询 @QQ】"
-    if text.startswith("买下"):
-        return cmd_buy_slave(gid, qq, target, st)
-    if text.startswith("折磨"):
-        return cmd_torture(gid, qq, target, st)
-    if text.startswith("保护"):
-        return cmd_protect(gid, qq, target, st)
-    if text.startswith("释放"):
-        return cmd_release(gid, qq, target, st)
-    if text.startswith("赎身"):
-        return cmd_ransom(gid, qq, target, st)
-    if text.startswith("买奴隶位") or text.startswith("购买奴隶位"):
+        if rest.startswith("@"):
+            return "未能找到该成员～格式：【查询 @QQ】"
+        return None
+    for _p, _fn in (
+        ("买下", cmd_buy_slave),
+        ("折磨", cmd_torture),
+        ("保护", cmd_protect),
+        ("释放", cmd_release),
+        ("赎身", cmd_ransom),
+        ("打架", cmd_fight),
+    ):
+        if text.startswith(_p):
+            _rest = text[len(_p):].strip()
+            if _rest and not _rest.startswith("@"):
+                return None
+            return _fn(gid, qq, target, st)
+    if text in ("买奴隶位", "购买奴隶位"):
         return cmd_buyslot(gid, qq, st)
-    if text.startswith("打架"):
-        return cmd_fight(gid, qq, target, st)
-    if text.startswith("五十连抽") or text.startswith("50连抽"):
+    if text in ("五十连抽", "50连抽"):
         return cmd_gacha(gid, qq, st, count=50)
-    if text.startswith("三十连抽") or text.startswith("30连抽"):
+    if text in ("三十连抽", "30连抽"):
         return cmd_gacha(gid, qq, st, count=30)
-    if text.startswith("十连抽"):
+    if text == "十连抽":
         return cmd_gacha(gid, qq, st, count=10)
-    if text.startswith("抽武器"):
+    if text == "抽武器":
         return cmd_gacha(gid, qq, st, count=1)
     if text.startswith("武器升星"):
         return cmd_starup(gid, qq, text[4:], st)
-    if text.startswith("升星"):
-        return cmd_starup(gid, qq, text[2:], st)
     if text.startswith("宝物升阶"):
         return cmd_treasure_up(gid, qq, text[4:], st)
-    if text.startswith("升阶"):
-        return cmd_treasure_up(gid, qq, text[2:], st)
-    if text == "我要造反" or text.startswith("造反"):
+    if text in ("我要造反", "造反"):
         return cmd_revolt(gid, qq, st)
-    if text.startswith("讨好主人") or text == "讨好":
+    if text in ("讨好主人", "讨好"):
         return cmd_flatter(gid, qq, st)
-    if text == "我要学习" or text.startswith("学习"):
+    if text in ("我要学习", "学习"):
         return cmd_study(gid, qq, st)
-    if text == "我要祈福" or text.startswith("祈福"):
+    if text in ("我要祈福", "祈福"):
         return cmd_pray(gid, qq, st)
 
     # 查询武器/宝物信息: 支持带【】或不带
@@ -218,6 +186,18 @@ def _route_locked(gid, qq, raw):
         ssr_img_map = {_os.path.splitext(_os.path.basename(p))[0]: p for p in ssr_pool}
     except Exception:
         all_w = []
+    if text.startswith("升星"):
+        _raw_w = text[2:]
+        _warg = _raw_w.strip("+＋ ").strip()
+        if not _warg or _raw_w[:1] in (" ", "\t", "+", "＋") or _warg in all_w or _warg in weapons_of(U(st, qq)):
+            return cmd_starup(gid, qq, _raw_w, st)
+        return None
+    if text.startswith("升阶"):
+        _raw_t = text[2:]
+        _targ = _raw_t.strip("+＋ ").strip()
+        if not _targ or _raw_t[:1] in (" ", "\t", "+", "＋") or _targ in treas:
+            return cmd_treasure_up(gid, qq, _raw_t, st)
+        return None
     if q in treas:
         stage = int(uget(U(st, qq), q + "升阶", "0"))
         have = int(uget(U(st, qq), q, "0"))
@@ -353,7 +333,6 @@ def clear_user_slave(gid, qq):
 # 使指令采集器不收录（WebUI 指令页不再出现），行为保持全静默。
 _QUERY_SILENT = ("查询更新", "查询版本", "查询维护", "查询坐骑", "查询精灵", "查询帮派", "查询冒险", "查询地图", "查询菜单")
 _ROUTE_EXACT = {
-    "我的信息": lambda gid, qq, target, st, text: cmd_query(gid, qq, target, st) if target else cmd_myinfo(gid, qq, st),
     "我要自由": lambda gid, qq, target, st, text: cmd_freedom(gid, qq, st),
     "武器菜单": lambda gid, qq, target, st, text: cmd_weapon_menu(gid, qq, st),
     "宝物菜单": lambda gid, qq, target, st, text: cmd_treasure_menu(gid, qq, st),

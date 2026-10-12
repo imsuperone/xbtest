@@ -22,7 +22,7 @@ def handle(gid, qq, raw, is_admin=False):
     _clean_expired_game(gid)
     if text in ST.wake("娱乐系统", "娱乐系统"):
         return _MENU
-    if text.startswith("抽签"):
+    if text == "抽签":
         # 先查每日再扣费（原顺序先扣费后查，已抽过仍扣钱）
         a = ST.acct(gid, qq)
         today = ST.recall_get(f"chouqian_{gid}_{qq}", "")
@@ -60,7 +60,7 @@ def handle(gid, qq, raw, is_admin=False):
     if text.startswith("扔炸弹"):
         return cmd_bomb(gid, qq, text[3:].strip())
     # ---- 会话类游戏 ----
-    if text.startswith("开始接龙"):
+    if text == "开始接龙":
         chk = _check_single_game(gid, "接龙", sender_qq=qq)
         if chk:
             return chk
@@ -148,7 +148,7 @@ def handle(gid, qq, raw, is_admin=False):
                 players.remove(str(qq))
                 ST.recall_set(f"chain_players_{gid}", ",".join(players))
             return "你已退出接龙！"
-    if text.startswith("开始急转弯"):
+    if text == "开始急转弯":
         chk = _check_single_game(gid, "急转弯", sender_qq=qq)
         if chk:
             return chk
@@ -163,7 +163,7 @@ def handle(gid, qq, raw, is_admin=False):
         ST.recall_set(f"trick_players_{gid}", "")
         _set_active_game(gid, "急转弯")
         return "🤔 急转弯：" + q + "\r\n回复你的答案！（其他玩家30秒内发送【加入急转弯】加入）"
-    if text.startswith("开始猜字谜"):
+    if text == "开始猜字谜":
         chk = _check_single_game(gid, "猜字谜", sender_qq=qq)
         if chk:
             return chk
@@ -178,7 +178,7 @@ def handle(gid, qq, raw, is_admin=False):
         ST.recall_set(f"miri_players_{gid}", "")
         _set_active_game(gid, "猜字谜")
         return "🔤 字谜：" + q + "\r\n回复你的答案！（其他玩家30秒内发送【加入字谜】加入）"
-    if text.startswith("开始猜数"):
+    if text == "开始猜数":
         chk = _check_single_game(gid, "猜数", sender_qq=qq)
         if chk:
             return chk
@@ -195,7 +195,7 @@ def handle(gid, qq, raw, is_admin=False):
         return ("🎲 猜数开始！我心中想了一个 1-100 之间的数字，\r\n"
                 "请你回复一个数字来猜，我会提示大了/小了！\r\n"
                 "（其他玩家30秒内发送【加入猜数】加入，发送【退出猜数】结束）")
-    if text.startswith("开始答题"):
+    if text == "开始答题":
         chk = _check_single_game(gid, "答题", sender_qq=qq)
         if chk:
             return chk
@@ -220,7 +220,7 @@ def handle(gid, qq, raw, is_admin=False):
         return _join_game(gid, qq, "trick", "急转弯")
     if text == "加入二四点":
         return _join_game(gid, qq, "game24", "二四点")
-    if text.startswith("退出猜数"):
+    if text == "退出猜数":
         res = _quit_game(gid, qq, "guessnum", "猜数")
         # _quit_game 已清 owner 相关，若是开局者退出则清锁
         owner = ST.recall_get(f"guessnum_owner_{gid}")
@@ -262,20 +262,17 @@ def handle(gid, qq, raw, is_admin=False):
             if not ST.recall_get(f"game24_owner_{gid}"):
                 _clear_active_game(gid)
         return "已退出二四点！"
-    if text.startswith("开始二四点"):
-        chk = _check_single_game(gid, "二四点", sender_qq=qq)
-        if chk:
-            return chk
-        return _start_24(gid, qq)
-    if text.startswith("二四点"):
+    if text in ("开始二四点", "二四点"):
         chk = _check_single_game(gid, "二四点", sender_qq=qq)
         if chk:
             return chk
         return _start_24(gid, qq)
     if text.startswith("猜拳"):
-        m = re.search(r"猜拳\s*(石头|剪刀|布)", text)
-        if not m:
+        if text == "猜拳":
             return "请输入：猜拳 石头/剪刀/布"
+        m = re.fullmatch(r"猜拳\s*(石头|剪刀|布)", text)
+        if not m:
+            return None
         err = _ent_cost(gid, qq, "猜拳")
         if err:
             return err

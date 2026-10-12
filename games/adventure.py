@@ -375,9 +375,17 @@ def handle(gid, qq, raw):
     if text == "复活币排行":
         return cmd_rank(gid, qq)
     if text.startswith("冒险") or text.startswith("adventure"):
-        return cmd_start(gid, qq, text[2:].strip() if text.startswith("冒险") else text[9:].strip())
+        _raw_sub = text[2:] if text.startswith("冒险") else text[9:]
+        _sub = _raw_sub.strip()
+        if not _sub or _sub in MAPS or _raw_sub[:1].isspace():
+            return cmd_start(gid, qq, _sub)
+        return None
     if text.startswith("选择"):
-        return cmd_choose(gid, qq, text[2:].strip())
+        _raw_sub = text[2:]
+        _sub = _raw_sub.strip()
+        if not _sub or _sub in ("1", "2", "3", "一", "二", "三") or (_raw_sub[:1].isspace() and _sub.isdigit()):
+            return cmd_choose(gid, qq, _sub)
+        return None
     # 纯数字直接作答：若玩家当前正在冒险中，直接发送 1、2、3 等即可作答推进
     if text in ("1", "2", "3", "[1]", "[2]", "[3]", "1.", "2.", "3.", "一", "二", "三"):
         adv = _cur(gid, qq)

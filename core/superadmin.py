@@ -185,43 +185,42 @@ def _parse_target_amount(arg):
             t = m.group(1)
             rest = arg[len(t):].strip().lstrip("* ").strip()
     if not t:
-        nums = re.findall(r"\d+", arg)
-        if len(nums) >= 2:
-            return nums[-2], int(nums[-1])
+        m = re.fullmatch(r"@?\s*(\d{5,12})\s*\*?\s*(\d+)", arg)
+        if m:
+            return m.group(1), int(m.group(2))
         return None, None
-    # 金额：优先取 rest 末尾的数字，其次取 arg 中最后一个非 t 的数字
-    # rest 可能为 "100000" 或 "*100000" 等
-    m = re.search(r"(\d+)\s*$", rest)
+    # 金额：rest 须为纯数字（可选前置 *），防止引用回复聊天时将“扣钱了 100 @QQ”误判为指令
+    rest_clean = rest.strip()
+    m = re.fullmatch(r"\*?\s*(\d+)", rest_clean)
     if m:
         try:
             return t, int(m.group(1))
         except Exception:
             pass
-    # 兼容金额紧贴 QQ 如 "QQ*100000" 或 "QQ 100000"
-    # 从 rest 中找首个数字
-    m = re.search(r"(\d+)", rest)
-    if m:
-        try:
-            return t, int(m.group(1))
-        except Exception:
-            pass
-    # 兜底：从原 arg 中找最后一个非 t 的数字
-    nums = re.findall(r"\d+", arg)
-    for n in reversed(nums):
-        if n != t:
-            try:
-                return t, int(n)
-            except Exception:
-                continue
     # 仅剩 t 本身，无金额
     return None, None
 
 
+def _looks_like_target_arg(arg):
+    """判断参数是否显式带有 @、CQ 码或纯数字（用于区分输错参数的指令与日常闲聊）"""
+    s = (arg or "").strip()
+    if not s:
+        return True
+    if s.startswith(("@", "[CQ:at")):
+        return True
+    if re.match(r"^\d+$", s):
+        return True
+    return False
+
+
 def cmd_deduct(gid, qq, arg):
     """扣钱: 超管扣除指定用户指定金额（优先扣现金，现金不足自动扣银行存款），显示群昵称"""
+    arg = (arg or "").strip()
     t, amt = _parse_target_amount(arg)
     if not t or amt is None or amt <= 0:
-        return "格式：扣钱 @QQ 金额（正整数）"
+        if _looks_like_target_arg(arg):
+            return "格式：扣钱 @QQ 金额（正整数）"
+        return None
     with ST._LOCK:
         cur_cash = _sum_money(gid, t)
         a = _acct(gid, t)
@@ -240,9 +239,12 @@ def cmd_deduct(gid, qq, arg):
 
 def cmd_recharge(gid, qq, arg):
     """充钱: 超管给指定用户充值指定金额，显示群昵称"""
+    arg = (arg or "").strip()
     t, amt = _parse_target_amount(arg)
     if not t or amt is None or amt <= 0:
-        return "格式：充钱 @QQ 金额（正整数）"
+        if _looks_like_target_arg(arg):
+            return "格式：充钱 @QQ 金额（正整数）"
+        return None
     nv = ST.coins_add(gid, t, amt)
     if nv is None:
         return "数据库繁忙，充值未成功，请稍后重试。"
@@ -267,14 +269,17 @@ def _clear_field(gid, t, field, label):
 
 def cmd_clear(gid, qq, arg):
     arg = (arg or "").strip()
+    if arg in ("清空", "重置"):
+        return "格式：清空{财富/体力/魅力/账户/精灵/用户} @QQ"
     m = re.match(r"^(?:清空|重置)(财富|体力|魅力|账户|精灵|用户)\s*(.*)$", arg)
     if not m:
-        return "格式：清空{财富/体力/魅力/账户/精灵/用户} @QQ"
+        return None
     kind = m.group(1)
     rest = m.group(2).strip()
     t = None
+    rem = rest
     try:
-        t_parsed, _ = ST.parse_at(rest)
+        t_parsed, rem_parsed = ST.parse_at(rest)
         if t_parsed:
             try:
                 _ok = ST.is_qq_mention(t_parsed, rest) if hasattr(ST, "is_qq_mention") else True
@@ -282,18 +287,23 @@ def cmd_clear(gid, qq, arg):
                 _ok = True
             if _ok:
                 t = str(t_parsed).strip()
+                rem = (rem_parsed or "").strip()
     except Exception:
         pass
     if not t:
-        m_cq = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", rest)
+        m_cq = re.fullmatch(r"\[CQ:at,qq=(\d+)[^\]]*\]", rest)
         if m_cq:
             t = m_cq.group(1)
+            rem = ""
     if not t:
-        m_qq = re.search(r"@?\s*(\d{5,12})", rest)
+        m_qq = re.fullmatch(r"@?\s*(\d{5,12})", rest)
         if m_qq:
             t = m_qq.group(1)
-    if not t:
-        return "格式：清空{财富/体力/魅力/账户/精灵/用户} @QQ"
+            rem = ""
+    if not t or rem:
+        if not rest or rest.startswith(("@", "[CQ:at")):
+            return "格式：清空{财富/体力/魅力/账户/精灵/用户} @QQ"
+        return None
     if kind == "财富":
         return _clear_money(gid, t)
     if kind in ("体力", "stamina"):
@@ -363,8 +373,10 @@ def cmd_clear(gid, qq, arg):
 
 # ---- 禁言/踢人(平台动作, 由 main._do_platform 执行) ----
 def cmd_mute(gid, qq, arg):
-    """禁言 @QQ 分钟（QQ-only，不认昵称）"""
+    """禁言 @QQ 分钟（QQ-only，不认昵称；日常聊天如“禁言原神原神”静默不回格式）"""
     arg = (arg or "").strip()
+    if not arg:
+        return "格式：禁言 @QQ 分钟"
     # 先尝试统一 parse_at 解析（命中须过 QQ-only 校验）
     target = None
     rest = arg
@@ -377,33 +389,44 @@ def cmd_mute(gid, qq, arg):
                 _ok = True
             if _ok:
                 target = t
-                rest = r
+                rest = (r or "").strip()
     except Exception:
         pass
     if target:
-        # rest 含分钟
-        m2 = re.search(r"(\d+)", rest)
-        mins = int(m2.group(1)) if m2 else 0
-        if not mins:
+        if not rest:
+            return "格式：禁言 @QQ 分钟"
+        m2 = re.fullmatch(r"(\d+)\s*(?:分钟|分|m|min)?", rest)
+        if not m2:
+            # 引用回复他人但正文是“禁言原神原神”等普通聊天文本，直接静默
+            return None
+        mins = int(m2.group(1))
+        if mins <= 0:
             return "格式：禁言 @QQ 分钟"
         if str(target) == str(qq):
             return "不能对自己执行禁言！"
         return "__XB_PLATFORM__|mute|%s|%d" % (target, mins * 60)
-    m = re.match(r"@?\s*(\d{5,12})\s*(\d+)", arg)
+    m = re.fullmatch(r"@?\s*(\d{5,12})\s+(\d+)\s*(?:分钟|分|m|min)?", arg)
     if not m:
-        return "格式：禁言 @QQ 分钟"
+        if _looks_like_target_arg(arg):
+            return "格式：禁言 @QQ 分钟"
+        return None
     t, mins = m.group(1), int(m.group(2))
+    if mins <= 0:
+        return "格式：禁言 @QQ 分钟"
     if str(t) == str(qq):
         return "不能对自己执行禁言！"
     return "__XB_PLATFORM__|mute|%s|%d" % (t, mins * 60)
 
 
 def cmd_kick(gid, qq, arg):
-    """踢人 @QQ（QQ-only，与禁言同口径）"""
+    """踢人 @QQ（QQ-only，与禁言同口径；日常聊天如“踢人了”静默不回格式）"""
     arg = (arg or "").strip()
+    if not arg:
+        return "格式：踢人 @QQ"
     target = None
+    rest = ""
     try:
-        t, _ = ST.parse_at(arg)
+        t, r = ST.parse_at(arg)
         if t:
             try:
                 _ok = ST.is_qq_mention(t, arg) if hasattr(ST, "is_qq_mention") else True
@@ -411,12 +434,18 @@ def cmd_kick(gid, qq, arg):
                 _ok = True
             if _ok:
                 target = str(t).strip()
+                rest = (r or "").strip()
     except Exception:
         pass
-    if not target:
-        m = re.match(r"@?\s*(\d{5,12})", arg)
+    if target:
+        if rest:
+            return None
+    else:
+        m = re.fullmatch(r"@?\s*(\d{5,12})", arg)
         if not m:
-            return "格式：踢人 @QQ"
+            if _looks_like_target_arg(arg):
+                return "格式：踢人 @QQ"
+            return None
         target = m.group(1)
     if not target.isdigit():
         return "格式：踢人 @QQ"
@@ -711,7 +740,7 @@ def handle(gid, qq, raw, is_admin=False):
         return _maint_on(gid)
     if text == "关闭维护":
         return _maint_off(gid)
-    if text.startswith("维护信息"):
+    if text == "维护信息" or text.startswith("维护信息 ") or text.startswith("维护信息\t"):
         return _maint_msg(text[4:].strip())
     if text == "查看维护":
         sw = ST.cfg("维护配置", "维护开关", "假")

@@ -181,26 +181,33 @@ def cmd_bomb(gid, qq, arg):
     mute_lo = cfgi("娱乐配置", "扔炸弹_禁言下限", 5)
     mute_hi = cfgi("娱乐配置", "扔炸弹_禁言上限", 10)
     # 解析目标（QQ-only：CQ码 / @QQ / 纯数字，不认昵称）
-    target = None
-    if arg:
-        m = _re2.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", arg)
-        if m:
-            target = m.group(1)
-        else:
-            t, _ = ST.parse_at(arg)
-            try:
-                _ok = ST.is_qq_mention(t, arg) if hasattr(ST, "is_qq_mention") else True
-            except Exception:
-                _ok = True
-            if t and _ok:
-                target = t
-            if not target:
-                # 纯数字 QQ
-                mm = _re2.search(r"(\d{5,12})", arg)
-                if mm:
-                    target = mm.group(1)
-    if not target:
+    arg = (arg or "").strip()
+    if not arg:
         return "请指定扔炸弹目标，格式：扔炸弹 @QQ"
+    target = None
+    rest = arg
+    m = _re2.fullmatch(r"\[CQ:at,qq=(\d+)[^\]]*\]", arg)
+    if m:
+        target = m.group(1)
+        rest = ""
+    else:
+        t, r = ST.parse_at(arg)
+        try:
+            _ok = ST.is_qq_mention(t, arg) if hasattr(ST, "is_qq_mention") else True
+        except Exception:
+            _ok = True
+        if t and _ok:
+            target = t
+            rest = (r or "").strip()
+        if not target:
+            mm = _re2.fullmatch(r"@?\s*(\d{5,12})", arg)
+            if mm:
+                target = mm.group(1)
+                rest = ""
+    if not target or rest:
+        if arg.startswith(("@", "[CQ:at")):
+            return "请指定扔炸弹目标，格式：扔炸弹 @QQ"
+        return None
     if ST.coins_get(gid, qq) < cost:
         return "笑~你没有那么多%s（扔炸弹需%d）" % (ST.coin_name(), cost)
     if a.int("stamina") < tili:

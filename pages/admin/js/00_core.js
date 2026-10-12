@@ -1,6 +1,6 @@
 const PLUGIN_ID = "astrbot_plugin_xbbot_beta";
 // 构建时由 build_frontend.py 注入当前 metadata 版本（与后端对账用；源里永远是占位）
-const FRONTEND_VER = "26w1012o";
+const FRONTEND_VER = "26w1012p";
 
 let _WORKING_API_PREFIX = null;
 const _GET_DEDUP_CACHE = {};

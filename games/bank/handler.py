@@ -37,41 +37,64 @@ def handle(gid, qq, raw):
         n = int(mms[-1])
 
     if text.startswith("存款"):
-        return cmd_deposit(gid, qq, n)
+        if text == "存款" or re.fullmatch(r"存款\s*(\d+)", text):
+            return cmd_deposit(gid, qq, n)
+        return None
     if text.startswith("强制取款"):
-        return cmd_force_withdraw(gid, qq, n)
+        if text == "强制取款" or re.fullmatch(r"强制取款\s*(\d+)", text):
+            return cmd_force_withdraw(gid, qq, n)
+        return None
     if text.startswith("取款"):
-        return cmd_withdraw(gid, qq, n)
+        if text == "取款" or re.fullmatch(r"取款\s*(\d+)", text):
+            return cmd_withdraw(gid, qq, n)
+        return None
     if text.startswith("跨群转账"):
-        nums = re.findall(r"(\d+)", text)
-        if len(nums) < 2:
-            return "亲，跨群转账格式为：【跨群转账 群号 金额】！"
-        return cmd_cross_transfer(gid, qq, nums[0], int(nums[-1]))
+        _raw_ct = text[4:]
+        if not _raw_ct or _raw_ct[:1].isspace() or _raw_ct[:1].isdigit():
+            nums = re.findall(r"(\d+)", text)
+            if len(nums) < 2:
+                return "亲，跨群转账格式为：【跨群转账 群号 金额】！"
+            return cmd_cross_transfer(gid, qq, nums[0], int(nums[-1]))
+        return None
     if text.startswith("转账"):
+        _rest = text[2:].strip()
         if not target:
-            return "请指定转账目标，格式：【转账 @QQ 金额】"
-        return cmd_transfer(gid, qq, target, n)
+            if not _rest or _rest.startswith("@"):
+                return "请指定转账目标，格式：【转账 @QQ 金额】"
+            return None
+        if not _rest or re.fullmatch(r"\*?\s*\d+", _rest):
+            return cmd_transfer(gid, qq, target, n)
+        return None
 
     if text.startswith("赌博"):
-        return cmd_gamble(gid, qq, n)
-    if text.startswith("打劫银行"):
+        if text == "赌博" or re.fullmatch(r"赌博\s*(\d+)", text):
+            return cmd_gamble(gid, qq, n)
+        return None
+    if text == "打劫银行":
         return cmd_rob_zone(gid, qq)
     if text.startswith("打劫"):
-        return cmd_sell_slave(gid, qq, target)
+        _rest = text[2:].strip()
+        if not _rest or _rest.startswith("@"):
+            return cmd_sell_slave(gid, qq, target)
+        return None
     if text.startswith("发红包"):
         rest = text[3:].strip()
+        if not rest:
+            return "亲，发红包格式为：【发红包 金额】或【发红包 金额 口令】！"
         parts = re.split(r"\s+", rest)
         amt_s = parts[0] if parts else ""
-        m_amt = re.search(r"(\d+)", amt_s)
+        m_amt = re.fullmatch(r"(\d+)", amt_s)
         pwd = " ".join(parts[1:]) if len(parts) > 1 else None
         if not m_amt:
-            return "亲，发红包格式为：【发红包 金额】或【发红包 金额 口令】！"
+            return None
         return cmd_redpack(gid, qq, int(m_amt.group(1)), pwd)
     if text.startswith("抢红包"):
-        pwd = text[3:].strip()
+        raw_tail = text[3:]
+        pwd = raw_tail.strip()
         if not pwd:
-            # 兼容 “抢红包 口令” 中间多空格
             pwd = re.sub(r"^抢红包\s*", "", raw or "").strip()
+        elif not raw_tail[:1].isspace():
+            return None
         return cmd_recv_red(gid, qq, pwd)
     if text in ("我要进监狱", "进监狱"):
         return cmd_go_jail(gid, qq)
@@ -80,10 +103,16 @@ def handle(gid, qq, raw):
     if text in ("我要越狱", "越狱"):
         return cmd_jailbreak(gid, qq)
     if text.startswith("劫狱"):
-        return cmd_bail(gid, qq, target or text[2:].strip(), kind="劫狱")
+        _rest = text[2:].strip()
+        if not _rest or _rest.startswith("@"):
+            return cmd_bail(gid, qq, target or _rest, kind="劫狱")
+        return None
     if text.startswith("保释"):
-        return cmd_bail(gid, qq, target or text[2:].strip())
-    if text.startswith("自我保释"):
+        _rest = text[2:].strip()
+        if not _rest or _rest.startswith("@"):
+            return cmd_bail(gid, qq, target or _rest)
+        return None
+    if text == "自我保释":
         return cmd_bail(gid, qq, qq, self_bail=True)
     # 隐式红包口令再兜底(处理 raw 中无前缀但包含口令的情况)
     try:
