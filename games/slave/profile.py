@@ -9,7 +9,7 @@ except ImportError:
     from core import storage as ST
     store = ST
 from . import slave_state as _S
-from .base import U, _safe_int, cfg, cfgi, coins_get, protected_until, slaves_of, star_of, treasures_of, uget, uset, weapons_of
+from .base import U, _safe_int, cd_check, cfg, cfgi, cn_parse, coins_get, protected_until, slaves_of, star_of, treasures_of, uget, uset, weapons_of
 from .nick import uname
 
 
@@ -17,10 +17,44 @@ def cmd_menu():
     return _S.T.MENU
 
 
+def _build_status_line(gid, qq, u, acct, slaves):
+    """构建个人档案底部的实时冷却与挂机状态栏"""
+    import json as _j
+    parts = []
+    try:
+        ok_bz, mins_bz = cd_check(u, "搬砖时间", "搬砖间隔")
+        parts.append("搬砖就绪" if ok_bz else f"搬砖({mins_bz}分)")
+    except Exception:
+        pass
+    try:
+        if uget(u, "work_status") == "真":
+            started = cn_parse(uget(u, "work_time")) or 0
+            dur = cfgi("间隔配置", "打工间隔", 1) * 60
+            left = started + dur - _time.time()
+            parts.append(f"奴隶打工({int(left / 60) + 1}分)" if left > 0 else "奴隶可收工!")
+        elif slaves:
+            parts.append("奴隶空闲")
+    except Exception:
+        pass
+    try:
+        sp = _j.loads(acct.get("spirits", "{}") or "{}")
+        now_i = int(_time.time())
+        tr = sp.get("travel")
+        if isinstance(tr, dict) and tr.get("name") and tr.get("ts"):
+            left_s = int(tr.get("ts", 0)) + max(60, int(tr.get("dur", 3600) or 3600)) - now_i
+            parts.append(f"旅行({left_s // 60 + 1}分)" if left_s > 0 else "旅行可收获!")
+        expd = sp.get("expedition")
+        if isinstance(expd, dict) and expd.get("names") and expd.get("ts"):
+            left_s2 = int(expd.get("ts", 0)) + max(60, int(expd.get("dur", 7200) or 7200)) - now_i
+            parts.append(f"远征({left_s2 // 60 + 1}分)" if left_s2 > 0 else "远征可收获!")
+    except Exception:
+        pass
+    return f"⏳状态：{'｜'.join(parts)}" if parts else ""
 
 
 def cmd_myinfo(gid, qq, st):
     try:
+        import json as _j
         if _S.BOT_UIN and str(qq) == str(_S.BOT_UIN):
             return _S.T.BOT_NO_JOIN
         u = U(st, qq)
@@ -55,6 +89,25 @@ def cmd_myinfo(gid, qq, st):
             f"🎁宝物：{', '.join(t_list) if t_list else _S.T.NO_TREASURE}",
             f"👥奴隶({len(slaves)}/{cap})：{sl_txt}",
         ]
+        try:
+            try:
+                from ..ride import active_ride_info
+            except ImportError:
+                from games.ride import active_ride_info  # type: ignore
+            r_name, r_pct = active_ride_info(gid, qq)
+            ride_txt = f"{r_name}(+{r_pct}%)" if r_name else "木有坐骑"
+        except Exception:
+            ride_txt = "木有坐骑"
+        try:
+            g_d = _j.loads(acct.get("guild", "{}") or "{}")
+            g_name = str(g_d.get("name") or "").strip()
+            guild_txt = f"{g_name}({g_d.get('pos', '成员')})" if g_name else "木有帮派"
+        except Exception:
+            guild_txt = "木有帮派"
+        lines.append(f"🏎️坐骑：{ride_txt}｜🏰帮派：{guild_txt}")
+        st_line = _build_status_line(gid, qq, u, acct, slaves)
+        if st_line:
+            lines.append(st_line)
         return "\r\n".join(lines)
     except Exception:
         # 兜底防御：发生未预料异常时依然返回完整版档案格式，杜绝退化为简版

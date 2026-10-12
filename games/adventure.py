@@ -230,14 +230,20 @@ def cmd_choose(gid, qq, n):
     elif kind == "neutral":
         outcome = f"{event_text}\r\n—— 你以少量代价换得通行，未得也未失（选择{choice}）"
     else:
-        fine = min(random.randint(_cfgi("结局金钱下限", 1500), _cfgi("结局金钱上限", 2000)), _coin(gid, qq))
-        if fine:
-            if ST.coins_add(gid, qq, -fine) is None:
-                outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，但损失结算繁忙未扣除，请稍后重试。"
+        if _revive(gid, qq) > 0 and ST.acct_add(gid, qq, "revive_coins", -1) is not None:
+            outcome = (f"{event_text}\r\n🛡️ 遭遇陷阱/诅咒！危急关头自动消耗【复活币×1】护体，"
+                       f"免除全部损失化险为夷！（剩余复活币：{_revive(gid, qq)}）")
+        else:
+            trap_lo = max(100, min(lo, hi) // 2)
+            trap_hi = max(trap_lo, max(lo, hi) * 2 // 3)
+            fine = min(random.randint(trap_lo, trap_hi), _coin(gid, qq))
+            if fine:
+                if ST.coins_add(gid, qq, -fine) is None:
+                    outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，但损失结算繁忙未扣除，请稍后重试。"
+                else:
+                    outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，损失{fine}{ST.coin_name()}，狼狈脱险……（选择{choice}的代价）"
             else:
                 outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，损失{fine}{ST.coin_name()}，狼狈脱险……（选择{choice}的代价）"
-        else:
-            outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，损失{fine}{ST.coin_name()}，狼狈脱险……（选择{choice}的代价）"
 
     _save(gid, qq, adv)
     if adv["round"] >= max_round:

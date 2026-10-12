@@ -375,6 +375,15 @@ def cmd_self_work(gid, qq, st):
         _wb = _treasure_pct_total(treasures_of(u), "work", WORK_PCT_CAP)
     except Exception:
         _wb = 0
+    try:
+        try:
+            from ..ride import active_ride_info
+        except ImportError:
+            from games.ride import active_ride_info  # type: ignore
+        _, _r_pct = active_ride_info(gid, qq)
+        _wb += int(_r_pct or 0)
+    except Exception:
+        pass
     if _wb > 0:
         pay += pay * _wb // 100
     is_crit = _random.randint(1, 100) <= SELF_WORK_CRIT_CHANCE

@@ -102,16 +102,18 @@ def _guild_info(gid, gname):
     owner = next((q for q, g in mem if g.get("pos") == "帮主"), None)
     gong = sum(int(g.get("gong", 0) or 0) for _, g in mem)
     build = sum(int(g.get("build", 0) or 0) for _, g in mem)
-    # 战力=帮主/护法出战精灵总战力之和(简化: 帮主+护法的 精灵战力)
-    fight = sum(_spirit_power(gid, q) for (q, g) in mem if g.get("pos") in ("帮主", "护法"))
     # 等级: 帮主已升等级优先, 否则按帮贡推算
     owner_g = _my(gid, owner) if owner else {}
     lv = int(owner_g.get("lv", 0) or 0)
     if lv < 1:
         lv = 1 + (gong // max(1, _cfgi("升级需要帮贡", 20000)))
+    # 战力=(帮主/护法出战精灵战力 + 城墙修筑防御加成) × 等级战力加成
+    base_fight = sum(_spirit_power(gid, q) for (q, g) in mem if g.get("pos") in ("帮主", "护法"))
+    wall_fight = build * 50
+    fight = int((base_fight + wall_fight) * (1.0 + 0.05 * max(0, lv - 1)))
     return {"name": gname, "owner": owner, "count": len(mem), "gong": gong,
             "build": build, "fight": fight, "level": lv,
-            "intro": _my(gid, owner).get("intro", "") if owner else ""}
+            "intro": owner_g.get("intro", "") if owner else ""}
 
 
 def _spirit_power(gid, qq):
@@ -190,9 +192,11 @@ def cmd_my(gid, qq):
     if not g.get("name"):
         return "亲，您还没有加入任何帮派，发送【创建帮派 名称】或【加入帮派 名称】！"
     info = _guild_info(gid, g["name"])
+    lv = info["level"] if info else 1
+    limit = _cfgi("人数上限", 30) + max(0, lv - 1) * 5
     return (f"【{g['name']}】　职务:{g.get('pos','成员')}\r\n"
             f"宣言:{info['intro'] if info else '（空）'}\r\n"
-            f"人数:{info['count'] if info else 0}　等级:{info['level'] if info else 1}\r\n"
+            f"人数:{info['count'] if info else 0}/{limit}　等级:Lv.{lv}\r\n"
             f"帮贡:{info['gong'] if info else 0}　修筑:{info['build'] if info else 0}　战力:{info['fight'] if info else 0}\r\n"
             f"我的贡献:{g.get('gong',0)}　我的修筑:{g.get('build',0)}")
 
@@ -245,7 +249,7 @@ def cmd_join(gid, qq, name):
     info = _guild_info(gid, name)
     if not info:
         return "亲，该帮派不存在，发送【帮派列表】查看本群帮派！"
-    limit = _cfgi("人数上限", 30)
+    limit = _cfgi("人数上限", 30) + max(0, int(info.get("level", 1)) - 1) * 5
     if info["count"] >= limit:
         return "亲，该帮派人数已满，无法加入！"
     join_tili = _cfgi("加入消耗体力", 0)
@@ -300,7 +304,7 @@ def cmd_invite(gid, qq, target):
     if tg.get("name"):
         return "对方已经加入帮派，无需邀请！"
     info = _guild_info(gid, g["name"])
-    limit = _cfgi("人数上限", 30)
+    limit = _cfgi("人数上限", 30) + max(0, int(info.get("level", 1) if info else 1) - 1) * 5
     if info and info["count"] >= limit:
         return "亲，该帮派人数已满，无法再邀请！"
     _acct(gid, target).set("guild_invite", g["name"])
@@ -320,7 +324,7 @@ def cmd_accept_invite(gid, qq):
         _acct(gid, qq).set("guild_invite", "")
         ST.acct_save(gid, qq)
         return "亲，该帮派已不存在，邀请失效！"
-    limit = _cfgi("人数上限", 30)
+    limit = _cfgi("人数上限", 30) + max(0, int(info.get("level", 1)) - 1) * 5
     if info["count"] >= limit:
         return "亲，该帮派人数已满，无法加入！"
     _save_member(gid, qq, {"name": inv, "pos": "成员", "gong": 0, "build": 0})
@@ -412,15 +416,17 @@ def cmd_mine(gid, qq):
 
 
 def cmd_build(gid, qq, amt):
-    """修筑城墙: 帮派强化-修筑价格/修筑上限"""
+    """修筑城墙: 帮派强化-修筑价格/修筑上限（每点修筑增加帮战战力+50、每日福利+150）"""
     g = _my(gid, qq)
     if not g.get("name"):
         return "亲，您还没有加入任何帮派！"
     amt = int(amt or 1)
     if amt <= 0:
         return "修筑数量至少为 1，格式：【修筑 数量】！"
+    info = _guild_info(gid, g["name"])
+    lv = int(info.get("level", 1) if info else 1)
     price = _cfgi("修筑价格", 10000)
-    cap = _cfgi("修筑上限", 50)
+    cap = _cfgi("修筑上限", 50) + max(0, lv - 1) * 20
     cur = int(g.get("build", 0) or 0)
     if cur + amt > cap:
         return f"帮派城墙修筑已达上限（{cap}），无法继续修筑！"
@@ -433,7 +439,7 @@ def cmd_build(gid, qq, amt):
     ) is None:
         return "帮派系统繁忙，修筑未成功，请稍后重试！"
     _invalidate_guild_cache(gid)
-    return f"修筑城墙成功！当前城墙长度{g['build']}/{cap}，花费{cost}{ST.coin_name()}"
+    return f"修筑城墙成功！当前城墙长度{g['build']}/{cap}，花费{cost}{ST.coin_name()}（本帮战力+{amt*50}、每日福利提升）"
 
 
 def cmd_welfare(gid, qq):
@@ -443,9 +449,14 @@ def cmd_welfare(gid, qq):
     key = f"guild_welfare_{gid}_{qq}_{time.strftime('%Y%m%d')}"
     if ST.recall_get(key, ""):
         return "亲，您今天已经领取过帮派福利了，明天再来吧！"
+    info = _guild_info(gid, g["name"])
+    lv = int(info.get("level", 1) if info else 1)
+    total_build = int(info.get("build", 0) if info else 0)
+    my_build = int(g.get("build", 0) or 0)
     base = _cfgi("福利基数", 4000)
     bonus_cap = _cfgi("福利加成上限", 20000)
-    gong_bonus = int(g.get("gong", 0)) * WELFARE_PER_GONG
+    lv_wall_bonus = max(0, lv - 1) * 800 + my_build * 150 + total_build * 30
+    gong_bonus = int(g.get("gong", 0) or 0) * WELFARE_PER_GONG + lv_wall_bonus
     if bonus_cap > 0:
         gong_bonus = min(bonus_cap, gong_bonus)
     got = base + gong_bonus
@@ -459,7 +470,7 @@ def cmd_welfare(gid, qq):
         except Exception:
             pass
         return "帮派系统繁忙，福利未发放，请稍后重试。"
-    return f"领取帮派福利成功！获得 {got}{ST.coin_name()}（基础{base}+帮贡奖励）"
+    return f"领取帮派福利成功！获得 {got}{ST.coin_name()}（基础{base}+等级/城墙/帮贡奖励{gong_bonus}）"
 
 
 def cmd_battle(gid, qq, gname):
@@ -498,7 +509,7 @@ def cmd_battle(gid, qq, gname):
             _lo = max(0, _lo)
             _hi = max(0, _hi)
             if _hi > 0:
-                gain = _rr.randint(_lo, _hi)
+                gain = _rr.randint(_lo, _hi) + max(0, int(mine.get("level", 1)) - 1) * 5
         if gain > 0:
             my["gong"] = int(my.get("gong", 0) or 0) + gain
             _save_member(gid, qq, my)
@@ -567,17 +578,28 @@ def cmd_manage(gid, qq, arg):
             return f"已将帮主出让给 <{_gname(gid, m.group(1))}>！"
         return "仅帮主可出让给同帮成员！"
     if arg.startswith("帮派升级"):
-        cost = _cfgi("升级需要帮贡", 20000)
+        cost = max(1, _cfgi("升级需要帮贡", 20000))
         info = _guild_info(gid, name)
-        if not info:
+        if not info or not info.get("owner"):
             return "帮派数据异常！"
         if info["gong"] < cost:
-            return f"帮贡不足，升级需要{cost}帮贡！"
-        owner_g = _my(gid, info["owner"])
-        owner_g["lv"] = int(owner_g.get("lv", 0) or 0) + 1
-        owner_g["gong"] = max(0, int(owner_g.get("gong", 0) or 0) - cost)
-        _save_member(gid, info["owner"], owner_g)
-        return f"帮派升至 Lv.{owner_g['lv']}！（消耗{cost}帮贡）"
+            return f"帮贡不足，升级需要{cost}帮贡（当前本帮总帮贡：{info['gong']}）！"
+        mem = _members(gid, name)
+        order = {"帮主": 0, "护法": 1, "成员": 2}
+        mem.sort(key=lambda x: (order.get(x[1].get("pos", "成员"), 2), -int(x[1].get("gong", 0) or 0)))
+        rem = cost
+        new_lv = max(int(info.get("level", 1)), int(_my(gid, info["owner"]).get("lv", 1) or 1)) + 1
+        for mq, mg in mem:
+            cur_g = max(0, int(mg.get("gong", 0) or 0))
+            if cur_g > 0 and rem > 0:
+                take = min(cur_g, rem)
+                mg["gong"] = cur_g - take
+                rem -= take
+            if str(mq) == str(info["owner"]):
+                mg["lv"] = new_lv
+            _save_member(gid, mq, mg)
+        _invalidate_guild_cache(gid)
+        return f"🏰 帮派升至 Lv.{new_lv}！（消耗全帮 {cost} 帮贡，人数上限+5、战力+5%、每日福利+800）"
     if arg.startswith("解散帮派"):
         if my.get("pos") != "帮主":
             return "亲，仅帮主可解散帮派！"

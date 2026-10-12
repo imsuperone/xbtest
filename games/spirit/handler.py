@@ -892,6 +892,16 @@ def cmd_travel(gid, qq, arg=""):
         charm_val = _u(gid, qq).int("charm")
         drop_item = _pick_shop_drop(charm_val=charm_val, high_tier_bonus=5)
         gold_gain = random.randint(350, 850)
+        try:
+            try:
+                from ..ride import active_ride_info
+            except ImportError:
+                from games.ride import active_ride_info  # type: ignore
+            _, _r_pct = active_ride_info(gid, qq)
+            if _r_pct > 0:
+                gold_gain += gold_gain * int(_r_pct) // 100
+        except Exception:
+            pass
         exp_gain = random.randint(200, 360)
         bag = sp.setdefault("bag", {})
         bag[drop_item] = int(bag.get(drop_item, 0) or 0) + 1
@@ -969,6 +979,16 @@ def cmd_expedition(gid, qq, arg=""):
         cnt = max(1, len(team_its))
         total_p = sum(_power(x) for x in team_its)
         gold_gain = random.randint(350 * cnt, 650 * cnt) + min(1500, total_p // 10)
+        try:
+            try:
+                from ..ride import active_ride_info
+            except ImportError:
+                from games.ride import active_ride_info  # type: ignore
+            _, _r_pct2 = active_ride_info(gid, qq)
+            if _r_pct2 > 0:
+                gold_gain += gold_gain * int(_r_pct2) // 100
+        except Exception:
+            pass
         exp_gain = random.randint(260, 420)
         bag = sp.setdefault("bag", {})
         drops = []

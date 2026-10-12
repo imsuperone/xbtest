@@ -374,10 +374,44 @@ def _mount_price(name):
         return int(RIDES.get(name, 0))
 
 
+def _ride_bonus_by_price(price):
+    """根据坐骑价值计算被动加成百分比（搬砖工钱/远征金币/打架战力加成）"""
+    p = int(price or 0)
+    if p >= 2000000:
+        return 15
+    if p >= 500000:
+        return 10
+    if p >= 100000:
+        return 6
+    if p > 0:
+        return 3
+    return 0
+
+
+def active_ride_info(gid, qq):
+    """返回 (当前坐骑名, 加成百分比)；未乘坐返回 ('', 0)"""
+    try:
+        r = _rides(gid, qq)
+        lst = r.get("list") or []
+        if not lst:
+            return "", 0
+        act = str(r.get("active") or r.get("welcome") or "").strip()
+        if not act or act not in lst:
+            act = str(lst[0]).strip()
+        if not act:
+            return "", 0
+        shop = _ride_shop()
+        price = int(shop.get(act, 0) or _mount_price(act) or 0)
+        return act, _ride_bonus_by_price(price)
+    except Exception:
+        return "", 0
+
+
 def cmd_shop():
     lines = ["欢迎来到坐骑商城！", "━━━━━━━━━━━━━━"]
     for name, price in _ride_shop().items():
-        lines.append(f"{name}　{price}{ST.coin_name()}")
+        pct = _ride_bonus_by_price(price)
+        lines.append(f"{name}　{price}{ST.coin_name()}（加成+{pct}%）")
     lines.append("发送【购买坐骑 名称】购买炫酷坐骑！\r\n发送【查看坐骑 名称】查看坐骑信息！")
     return "\r\n".join(lines)
 
@@ -397,13 +431,14 @@ def cmd_buy(gid, qq, name):
     r.setdefault("list", []).append(name)
     if not r.get("welcome"):
         r["welcome"] = name
-        r["active"] = name
+    r["active"] = name
     if price > 0:
         if ST.txn_coins_acct(gid, qq, -price, {"rides": json.dumps(r, ensure_ascii=False)}, require_funds=True) is None:
             return "坐骑商城繁忙，购买未成功，请稍后重试！"
     else:
         _save(gid, qq, r)
-    return (f"购买到炫酷的坐骑「{name}」！\r\n发送【我的坐骑】查看你拥有的坐骑！", _ride_img_path(name))
+    pct = _ride_bonus_by_price(price)
+    return (f"购买到炫酷的坐骑「{name}」（已自动乘坐，收益/战力+{pct}%）！\r\n发送【我的坐骑】查看你拥有的坐骑！", _ride_img_path(name))
 
 
 def cmd_view(gid, qq, name):
@@ -413,22 +448,36 @@ def cmd_view(gid, qq, name):
     if name not in shop:
         return "亲，商城中不存在该坐骑！\r\n请发送【坐骑商城】查看商城正在售卖的坐骑吧！"
     owned = name in _rides(gid, qq).get("list", [])
-    return (f"〈{name}〉\r\n属性：{RIDE_TYPE}\r\n价格：{shop[name]}{ST.coin_name()}\r\n"
+    price = int(shop[name] or 0)
+    pct = _ride_bonus_by_price(price)
+    refund = price * 5 // 100
+    return (f"〈{name}〉\r\n属性：{RIDE_TYPE}（乘坐加成：搬砖/远征/战力+{pct}%）\r\n"
+            f"价格：{price}{ST.coin_name()}（丢弃回收返5%：{refund}{ST.coin_name()}）\r\n"
             f"状态：{'已拥有' if owned else '未拥有（发送【购买坐骑 %s】购买）' % name}", _ride_img_path(name))
 
 
 def cmd_discard(gid, qq, name):
     if not name:
         return "亲，您的格式有误，丢弃坐骑格式为：【丢弃坐骑 名称】！"
-    r = _rides(gid, qq)
-    if name not in r.get("list", []):
-        return "亲，您并没有该坐骑，无需丢弃！"
-    if r.get("welcome") == name:
-        return "亲，该坐骑为欢迎坐骑，请先回收该坐骑再进行丢弃，回收格式为：【回收欢迎坐骑 名称】！"
-    r["list"] = [x for x in r.get("list", []) if x != name]
-    if r.get("active") == name:
-        r["active"] = r.get("list", [""])[0] if r.get("list") else ""
-    _save(gid, qq, r)
+    with ST._LOCK:
+        r = _rides(gid, qq)
+        if name not in r.get("list", []):
+            return "亲，您并没有该坐骑，无需丢弃！"
+        if r.get("welcome") == name:
+            return "亲，该坐骑为欢迎坐骑，请先回收该坐骑再进行丢弃，回收格式为：【回收欢迎坐骑 名称】！"
+        shop = _ride_shop()
+        price = int(shop.get(name, 0) or _mount_price(name) or 0)
+        refund = max(0, price * 5 // 100)
+        r["list"] = [x for x in r.get("list", []) if x != name]
+        if r.get("active") == name:
+            r["active"] = r.get("list", [""])[0] if r.get("list") else ""
+        if refund > 0:
+            if ST.txn_coins_acct(gid, qq, refund, {"rides": json.dumps(r, ensure_ascii=False)}) is None:
+                return "坐骑系统繁忙，丢弃回收未成功，请稍后重试！"
+        else:
+            _save(gid, qq, r)
+    if refund > 0:
+        return f"已丢弃坐骑「{name}」，二手回收折算 5% 返还 {refund}{ST.coin_name()}！"
     return f"已丢弃坐骑「{name}」！"
 
 

@@ -303,7 +303,7 @@ def atk_of(st, qq):
 
 
 def battle_power(st, qq):
-    """战斗力 = 主人身价*(1+身价加成) + 武器攻击力 + 宝物攻击加成"""
+    """战斗力 = 主人身价*(1+身价加成) + 武器攻击力 + 宝物攻击加成 + 坐骑加成"""
     u = U(st, qq)
     p = int(uget(u, "price") or 0)
     for s in slaves_of(st, qq):
@@ -312,7 +312,20 @@ def battle_power(st, qq):
         _wb = _treasure_pct_total(treasures_of(u), "worth", WORTH_PCT_CAP)
     except Exception:
         _wb = 0
-    return p + p * _wb // 100 + atk_of(st, qq) + _treasure_atk_total(treasures_of(u))
+    base_bp = p + p * _wb // 100 + atk_of(st, qq) + _treasure_atk_total(treasures_of(u))
+    try:
+        gid = getattr(st, "_gid", "")
+        if gid:
+            try:
+                from ..ride import active_ride_info
+            except ImportError:
+                from games.ride import active_ride_info  # type: ignore
+            _, r_pct = active_ride_info(gid, qq)
+            if r_pct > 0:
+                base_bp += base_bp * r_pct // 100
+    except Exception:
+        pass
+    return base_bp
 
 
 
