@@ -108,6 +108,7 @@ function applyAccentColor(hex, save) {
       cur.style.background = ok ? v : (getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9");
     } catch (e) {}
   }
+  try { localStorage.setItem("xbbot_ui_accent", ok ? v : ""); } catch (e) {}
 }
 
 const _MOON_SVG_PATH = "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z";
@@ -130,18 +131,11 @@ function applyTheme(t) {
 // initTheme() 里的 applyTheme() 已经会按新主题重算一遍 primary，无需单独初始化。
 
 // ---------- UI 偏好（主题色 + 深浅色）服务端持久化 ----------
-// AstrBot 用沙箱 iframe 载本页，localStorage 不可用：本地缓存这条路走不通
-// （稳定版 app.js:150 早已注明），所以服务端配置是唯一真相源，不留任何本地副本。
-// 落 config 的「UI偏好」节：config/save 逐节 setdefault+update、缺键不动，不碰玩法配置；
-// 该节不在 config/schema 里，配置页按 schema.groups 渲染，不会被误渲染出来。
 function revealUiPrefs() {
   try { document.documentElement.removeAttribute("data-boot"); } catch (e) {}
 }
 
 let _uiPrefTimer = null;
-// 首屏竞态护栏：loadUiPrefs 的 config/get 还在半路时用户已动过换肤，
-// 服务端旧值回压会覆盖这次点击（debounce 随后 POST 的又是被覆盖后的值=点击丢失）。
-// 用户一碰偏好就置位，loadUiPrefs 据此跳过回压。
 let _uiPrefTouched = false;
 function persistUiPrefs() {
   _uiPrefTouched = true;
@@ -162,14 +156,13 @@ function persistUiPrefs() {
   }, 600);
 }
 
-// 返回 true = 服务端还没记过深浅色，调用方需回写一次，否则沙箱里下次刷新仍是默认
 function applyUiPrefs(sec) {
   const s = (sec && typeof sec === "object") ? sec : {};
   let needSeed = false;
   if (s["主题模式"] === "dark" || s["主题模式"] === "light") {
-    applyTheme(s["主题模式"]);   // 内部会用 _CURRENT_ACCENT_COLOR 先套一遍，取色随后覆盖
+    applyTheme(s["主题模式"]);
   } else {
-    needSeed = true;             // 节还不存在（首次升级）也要回种，不能直接返回
+    needSeed = true;
   }
   if (Object.prototype.hasOwnProperty.call(s, "主题色")) {
     applyAccentColor(String(s["主题色"] || "").trim(), false);
@@ -180,7 +173,7 @@ function applyUiPrefs(sec) {
 async function loadUiPrefs() {
   try {
     const cfg = await getBridge().apiGet("config/get");
-    if (_uiPrefTouched) return;   // 拉取期间用户已动过：本地是新值，不再回压旧值
+    if (_uiPrefTouched) return;
     if (applyUiPrefs((cfg || {})["UI偏好"])) persistUiPrefs();
   } catch (e) {
     console.warn("[xbbot] 读取 UI 偏好失败:", e);
@@ -190,12 +183,22 @@ async function loadUiPrefs() {
 }
 
 function initTheme() {
-  // 没有本地缓存可读（服务端是唯一真相源，由 loadUiPrefs() 回填）；
-  // 首帧先按系统深浅色给个合理初值，随后被服务端值覆盖。
-  let savedTheme = "light";
+  let savedTheme = "";
+  let savedAccent = "";
   try {
-    savedTheme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+    savedTheme = localStorage.getItem("xbbot_ui_theme") || "";
+    savedAccent = localStorage.getItem("xbbot_ui_accent") || "";
   } catch (e) {}
+  if (savedTheme !== "dark" && savedTheme !== "light") {
+    try {
+      savedTheme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+    } catch (e) {
+      savedTheme = "light";
+    }
+  }
+  if (savedAccent && /^#[0-9a-fA-F]{6}$/.test(savedAccent)) {
+    _CURRENT_ACCENT_COLOR = savedAccent;
+  }
   applyTheme(savedTheme);
 
   const toggleBtn = document.getElementById("themeToggleBtn");

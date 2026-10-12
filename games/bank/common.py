@@ -146,35 +146,15 @@ def _cd(a, key, mins):
 
 # ---- 监狱(入狱/出狱) ----
 def _extract_transfer_target(raw, gid=None):
-    """QQ-only 解析 @目标: 顺序 ST.parse_at(仅认 CQ/@数字/独立数字) -> CQ码 -> @QQ数字。
-    @昵称一律不认（防撞名串人）。返回 (target_qq_or_None, remaining_text)。"""
+    """QQ-only 解析 @目标: 仅认 CQ码 -> @QQ数字，@昵称一律不认（防撞名串人）。返回 (target_qq_or_None, remaining_text)。"""
     raw = str(raw or "")
-    # 1) ST.parse_at（命中后必须过 QQ-only 校验，否则视为未命中继续直解）
-    try:
-        t, rem = ST.parse_at(raw)
-        if t:
-            try:
-                _ok = ST.is_qq_mention(t, raw) if hasattr(ST, "is_qq_mention") else True
-            except Exception:
-                _ok = True
-            if _ok:
-                return str(t), rem.strip()
-    except Exception:
-        pass
-    # 2) CQ code
     m = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", raw)
     if m:
-        rem = re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", raw).strip()
-        return m.group(1), rem
-    # 3) @QQ number
+        return m.group(1), re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", raw).strip()
     m = re.search(r"@\s*(\d{5,12})", raw)
     if m:
-        rem = re.sub(r"@\s*\d{5,12}", "", raw, count=1).strip()
-        return m.group(1), rem
-    # 4) 纯QQ字符串兜底由调用方按指令启用（防金额误判），此处不解
+        return m.group(1), re.sub(r"@\s*\d{5,12}", "", raw, count=1).strip()
     return None, raw.strip()
-
-
 
 
 def _ensure_target_qq(target, gid=None):
@@ -184,32 +164,12 @@ def _ensure_target_qq(target, gid=None):
     s = str(target).strip()
     if re.fullmatch(r"\d{5,12}", s):
         return s
-    # 尝试 ST.parse_at（命中须过 QQ-only 校验）
-    try:
-        t, _ = ST.parse_at(s)
-        if t and re.fullmatch(r"\d{5,12}", str(t)):
-            try:
-                _ok = ST.is_qq_mention(t, s) if hasattr(ST, "is_qq_mention") else True
-            except Exception:
-                _ok = True
-            if _ok:
-                return str(t)
-    except Exception:
-        pass
-    # CQ
-    m = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", s)
-    if m:
-        return m.group(1)
-    # @QQ
-    m = re.search(r"@\s*(\d{5,12})", s)
-    if m:
-        return m.group(1)
-    # 纯QQ字符串
-    m2 = re.search(r"\b(\d{5,12})\b", s)
-    if m2:
-        return m2.group(1)
-    # 解不出返 None（调用方均判空）：禁返原文，否则按 QQ 建幻影账户吞钱
-    return None
+    m = (
+        re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", s)
+        or re.search(r"@\s*(\d{5,12})", s)
+        or re.search(r"\b(\d{5,12})\b", s)
+    )
+    return m.group(1) if m else None
 
 
 

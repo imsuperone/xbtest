@@ -96,9 +96,11 @@ async def handle_groups_list(request=None, context=None):
                     _maint = False
                 gname = str((bot_groups or {}).get(str(gid)) or "").strip()
                 try:
-                    cached_name = str(ST.recall_get("group_name_%s" % gid, "") or "").strip()
+                    k_gn = "group_name_%s" % gid
+                    cached_name = str(ST.recall_get(k_gn, "") or "").strip()
                     if gname and gname != cached_name:
-                        ST.recall_set("group_name_%s" % gid, gname)
+                        with ST._KV_CACHE_LOCK:
+                            ST._KV_CACHE[k_gn] = gname
                     elif not gname and cached_name:
                         gname = cached_name
                 except Exception:

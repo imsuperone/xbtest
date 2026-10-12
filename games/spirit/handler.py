@@ -30,6 +30,7 @@ MENU = (
     "🛍️ 精灵商城　　🎒 我的背包\r\n"
     "🗺️ 精灵地图　　📍 查看地图 地点\r\n"
     "⚔️ 精灵冒险 地点　　🔮 使用精灵球 名称\r\n"
+    "💊 使用物品 名称*数量　💖 羁绊\r\n"
     "🎽 出战精灵 名称　🕊️ 回收出战精灵\r\n"
     "💠 携带精灵 名称　🗑️ 丢弃精灵 名称\r\n"
     "🧬 进化 名称　　⚔️ 精灵对战 @QQ　🏁 挑战 名称\r\n"
@@ -612,6 +613,92 @@ def cmd_evolve(gid, qq, name):
     return f"恭喜！「{name}」进化成「{evo}」！"
 
 
+def cmd_use_item(gid, qq, raw_arg):
+    """使用背包道具（奇异甜食/吐司/攻击之源/防御之源/特防之源/特攻之源/进化液），默认作用于当前出战精灵"""
+    raw_arg = (raw_arg or "").strip()
+    if not raw_arg:
+        return "亲，使用物品格式为：【使用物品 物品名称*数量】（如：使用物品 奇异甜食*1）！"
+    import re as _re_item
+    m = _re_item.match(r"^([^*\s×xX]+)(?:[\s*×xX]+(\d+))?$", raw_arg)
+    if not m:
+        return "亲，使用物品格式为：【使用物品 物品名称*数量】！"
+    item_name = m.group(1).strip()
+    cnt = max(1, min(999, int(m.group(2) or 1)))
+    sp = _spirits(gid, qq)
+    bag = sp.setdefault("bag", {})
+    have = int(bag.get(item_name, 0) or 0)
+    if have <= 0:
+        return f"亲，您的背包中没有「{item_name}」，请先前往【精灵商城】购买！"
+    if have < cnt:
+        return f"亲，您的背包中「{item_name}」仅有 {have} 个，不足 {cnt} 个！"
+    act_name = sp.get("active")
+    it = _wsp(sp, act_name) if act_name else None
+    if it is None:
+        return "亲，请先发送【出战精灵 名称】指定要培养的出战精灵！"
+    shop = _SHOP()
+    info = shop.get(item_name, {}) or {}
+    attr = str(info.get("attr", "")).strip()
+    eff = int(info.get("effect", 1) or 1)
+    if attr == "精灵球":
+        return f"亲，「{item_name}」是精灵球，请发送【使用精灵球 {item_name}】收服野生精灵！"
+    if attr == "进化" or item_name == "进化液":
+        return cmd_evolve(gid, qq, act_name)
+    field_map = {
+        "等级": "level",
+        "HP": "hp",
+        "生命": "hp",
+        "攻击": "atk",
+        "防御": "def",
+        "特攻": "spa",
+        "特防": "spd",
+        "速度": "spe",
+    }
+    field = field_map.get(attr)
+    if not field:
+        return f"亲，「{item_name}」暂无法直接使用！"
+    if field == "level":
+        max_lv = _cfgi("最大等级", 100)
+        cur_lv = int(it.get("level", 1))
+        if cur_lv >= max_lv:
+            return f"亲，您的精灵【{act_name}】已达最高等级 Lv.{max_lv}！"
+        cnt = min(cnt, max_lv - cur_lv)
+    delta = eff * cnt
+    it[field] = int(it.get(field, 0)) + delta
+    bag[item_name] = have - cnt
+    if bag[item_name] <= 0:
+        bag.pop(item_name, None)
+    _save(gid, qq, sp)
+    return (f"✨ 使用成功！消耗「{item_name}」×{cnt}\r\n"
+            f"出战精灵【{act_name}】{attr}+{delta}（当前 {it[field]}，总战力 {_power(it)}）")
+
+
+def cmd_bond(gid, qq, arg=""):
+    """羁绊互动：每日与出战精灵互动可提升羁绊亲密度并获得全维属性与经验加成"""
+    sp = _spirits(gid, qq)
+    act_name = (arg or "").strip() or sp.get("active")
+    it = _wsp(sp, act_name) if act_name else None
+    if it is None:
+        return "亲，请先【出战精灵 名称】或发送【羁绊 精灵名称】与精灵互动！"
+    bond_val = int(it.get("bond", 0) or 0)
+    today = time.strftime("%Y%m%d")
+    last_day = str(it.get("bond_day", "") or "")
+    if last_day != today:
+        gain = random.randint(5, 12)
+        bond_val += gain
+        it["bond"] = bond_val
+        it["bond_day"] = today
+        stat_key, stat_label = random.choice([
+            ("hp", "生命"), ("atk", "攻击"), ("def", "防御"), ("spa", "特攻"), ("spd", "特防")
+        ])
+        it[stat_key] = int(it.get(stat_key, 0)) + 1
+        _add_exp(gid, qq, sp, it, 120)
+        return (f"💖 羁绊互动｜与【{it.get('name', act_name)}】亲密互动成功！\r\n"
+                f"亲密度 +{gain}（当前羁绊值：{bond_val}）\r\n"
+                f"羁绊回馈：{stat_label}+1、经验+120（当前总战力：{_power(it)}）")
+    return (f"💖 【{it.get('name', act_name)}】当前羁绊值：{bond_val}\r\n"
+            f"今日已完成亲密互动，明天再来陪伴它吧！（总战力：{_power(it)}）")
+
+
 # ---- 精灵PVP(总战力对打) ----
 def cmd_pvp(gid, qq, target):
     target = (target or "").strip()
@@ -769,7 +856,7 @@ def _handle_inner(gid, qq, raw):
         return cmd_my(gid, qq)
     if m == "精灵商城":
         return cmd_shop()
-    if m == "我的背包":
+    if m in ("我的背包", "精灵背包"):
         return cmd_backpack(gid, qq)
     if m == "精灵地图":
         return cmd_map()
@@ -791,6 +878,8 @@ def _handle_inner(gid, qq, raw):
         return cmd_adventure(gid, qq, m[4:].strip())
     if m.startswith("使用精灵球"):
         return cmd_catch(gid, qq, m[5:].strip())
+    if m.startswith("使用物品"):
+        return cmd_use_item(gid, qq, m[4:].strip())
     if m.startswith("出战精灵"):
         return cmd_set_active(gid, qq, m[4:].strip())
     if m.startswith("携带精灵"):
@@ -804,7 +893,7 @@ def _handle_inner(gid, qq, raw):
     if m.startswith("挑战"):
         return cmd_pvp(gid, qq, m[2:].strip())
     if m.startswith("羁绊"):
-        return "羁绊系统：与你的精灵共同冒险提升亲密度（待实装）。"
+        return cmd_bond(gid, qq, m[2:].strip())
     if m.startswith("精灵排行"):
         return cmd_rank(gid, m[4:].strip())
     return None
@@ -812,7 +901,7 @@ def _handle_inner(gid, qq, raw):
 
 COMMANDS = (
     "领养精灵", "查看地图", "查看精灵", "购买", "精灵冒险",
-    "使用精灵球", "出战精灵", "携带精灵", "丢弃精灵",
+    "使用精灵球", "使用物品", "出战精灵", "携带精灵", "丢弃精灵",
     "我的精灵", "精灵商城", "精灵背包", "精灵对战", "精灵排行", "羁绊",
     # V8 并入：原正则刮词域（与 handle 分支对应）
     "出战状态", "回收出战精灵", "我的背包", "挑战", "查看出战精灵",

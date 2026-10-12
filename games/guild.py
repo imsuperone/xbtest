@@ -342,21 +342,9 @@ def cmd_exit(gid, qq):
         if ST.acct_save(gid, qq) is None:
             return "数据库繁忙，退出帮派未成功，请稍后重试。"
     # 清 guild 字段（在锁外读写有竞态，但 _my/_save_member 内部有各自保护；此处与原逻辑一致）
-    a = _acct(gid, qq)
-    a.set("guild", "")
-    ST.acct_save(gid, qq)
-    mem = _members(gid, name)
-    for q, _ in mem:
-        if str(q) == str(qq):
-            continue
-        u = _my(gid, q)
-        if u.get("name") == name:
-            # 成员数变化由 _guild_info 重新计算，无需逐个改
-            pass
+    _save_member(gid, qq, {})
     _invalidate_guild_cache(gid)
     return f"已退出帮派「{name}」！"
-    _save_member(gid, qq, {})
-    return f"您已退出帮派「{name}」！"
 
 
 def _gname(gid, qq):
@@ -476,7 +464,7 @@ def cmd_battle(gid, qq, gname):
     if not mine:
         return "对不起，您所在的帮派数据异常！"
     limit = _cfgi("帮战次数上限", 5)
-    key = f"guildwar_{gid}_{qq}_{time.strftime('%Y%m%d')}"
+    key = f"guildwar_{gid}_{my['name']}_{time.strftime('%Y%m%d')}"
     if int(ST.recall_get(key, "0") or 0) >= limit:
         return "对不起，您所在的帮派今日帮战次数已达上限！"
     ST.recall_set(key, str(int(ST.recall_get(key, "0") or 0) + 1))
@@ -526,12 +514,18 @@ def cmd_manage(gid, qq, arg):
         return "帮派宣言已更新！"
     m = None
     if arg.startswith("添加护法"):
+        if my.get("pos") != "帮主":
+            return "亲，仅帮主可添加护法！"
         m = re.search(r"(\d{5,12})", arg)
         if m and _is_member(gid, name, m.group(1)):
+            if _my(gid, m.group(1)).get("pos") == "帮主":
+                return "不能对帮主使用该操作！"
             tg = _my(gid, m.group(1)); tg["pos"] = "护法"; _save_member(gid, m.group(1), tg)
             return f"已将 <{_gname(gid, m.group(1))}> 设为护法！"
         return "无法添加该护法（需是同帮成员）！"
     if arg.startswith("取消护法"):
+        if my.get("pos") != "帮主":
+            return "亲，仅帮主可取消护法！"
         m = re.search(r"(\d{5,12})", arg)
         if m and _is_member(gid, name, m.group(1)):
             if _my(gid, m.group(1)).get("pos") == "帮主":
@@ -542,8 +536,11 @@ def cmd_manage(gid, qq, arg):
     if arg.startswith("移出帮派"):
         m = re.search(r"(\d{5,12})", arg)
         if m and _is_member(gid, name, m.group(1)):
-            if _my(gid, m.group(1)).get("pos") == "帮主":
+            target_pos = _my(gid, m.group(1)).get("pos")
+            if target_pos == "帮主":
                 return "不能对帮主使用该操作！"
+            if target_pos == "护法" and my.get("pos") != "帮主":
+                return "亲，仅帮主可移出护法！"
             _save_member(gid, m.group(1), {})
             return f"已将 <{_gname(gid, m.group(1))}> 移出帮派！"
         return "无法移出（需是同帮成员）！"
@@ -567,6 +564,8 @@ def cmd_manage(gid, qq, arg):
         _save_member(gid, info["owner"], owner_g)
         return f"帮派升至 Lv.{owner_g['lv']}！（消耗{cost}帮贡）"
     if arg.startswith("解散帮派"):
+        if my.get("pos") != "帮主":
+            return "亲，仅帮主可解散帮派！"
         dis_tili = _cfgi("解散消耗体力", 0)
         dis_meili = _cfgi("解散扣除魅力", 0)
         with ST._LOCK:

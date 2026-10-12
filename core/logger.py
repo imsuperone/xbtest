@@ -101,6 +101,14 @@ def info(msg):
     log(msg, "INFO")
 
 
+def warn(msg):
+    log(msg, "WARN")
+
+
+def warning(msg):
+    log(msg, "WARN")
+
+
 def error(msg):
     log(msg, "ERROR")
 

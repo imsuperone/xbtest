@@ -575,4 +575,4 @@ def cmd_sell_slave(gid, qq, target):
 
 # ---- 统一入口 ----
 
-__all__ = ["_settle_interest", "cmd_deposit", "cmd_force_withdraw", "cmd_gamble", "cmd_rob_zone", "cmd_sell_slave", "cmd_transfer", "cmd_withdraw"]
+__all__ = ["_settle_interest", "cmd_cross_transfer", "cmd_deposit", "cmd_force_withdraw", "cmd_gamble", "cmd_rob_zone", "cmd_sell_slave", "cmd_transfer", "cmd_withdraw"]

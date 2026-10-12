@@ -374,163 +374,127 @@ def _import_file_data(filename, data):
         fd_tmp, tmp = tempfile.mkstemp(prefix="xbbot_legacy_", suffix="_" + os.path.basename(filename).replace("/", "_").replace("\\", "_"))
         os.close(fd_tmp)
         try:
-            with open(tmp, "wb") as w:
-                w.write(data)
-        except Exception as e:
-            return json_response({"error": f"write tmp failed: {e}", "imported": 0})
-        lower = filename.lower()
-        if lower.endswith(".zip"):
-            def _safe_extract(zf, dest):
-                # ZipSlip 防护：跳过绝对路径与 .. 逃逸条目
-                for info in zf.infolist():
-                    try:
-                        if info.flag_bits & 0x800 == 0:
-                            info.filename = info.filename.encode("cp437").decode("gbk", errors="replace")
-                    except Exception:
-                        pass
-                    _name = str(info.filename or "").replace("\\", "/")
-                    if not _name or _name.startswith("/") or ".." in _name.split("/"):
-                        continue
-                    try:
-                        zf.extract(info, dest)
-                    except Exception:
-                        pass
             try:
-                ztmp = tempfile.mkdtemp(prefix="xbbot_legacy_")
+                with open(tmp, "wb") as w:
+                    w.write(data)
+            except Exception as e:
+                return json_response({"error": f"write tmp failed: {e}", "imported": 0})
+            lower = filename.lower()
+            if lower.endswith(".zip"):
+                def _safe_extract(zf, dest):
+                    # ZipSlip 防护：跳过绝对路径与 .. 逃逸条目
+                    for info in zf.infolist():
+                        try:
+                            if info.flag_bits & 0x800 == 0:
+                                info.filename = info.filename.encode("cp437").decode("gbk", errors="replace")
+                        except Exception:
+                            pass
+                        _name = str(info.filename or "").replace("\\", "/")
+                        if not _name or _name.startswith("/") or ".." in _name.split("/"):
+                            continue
+                        try:
+                            zf.extract(info, dest)
+                        except Exception:
+                            pass
+                ztmp = ""
                 try:
+                    ztmp = tempfile.mkdtemp(prefix="xbbot_legacy_")
                     with zipfile.ZipFile(tmp, "r") as zf:
                         _safe_extract(zf, ztmp)
-                except Exception as ze:
-                    raise ze
-                total = 0
-                for root2, _, files2 in os.walk(ztmp):
-                    for fn in files2:
-                        fp = os.path.join(root2, fn)
-                        fl = fn.lower()
-                        rel = os.path.relpath(fp, ztmp).replace(os.sep, "/")
-                        if fl.endswith(".db"):
-                            try:
-                                # zip 内备份导出 JSON 同样先拆包（仅魔数命中改写）
+                    total = 0
+                    for root2, _, files2 in os.walk(ztmp):
+                        for fn in files2:
+                            fp = os.path.join(root2, fn)
+                            fl = fn.lower()
+                            rel = os.path.relpath(fp, ztmp).replace(os.sep, "/")
+                            if fl.endswith(".db"):
                                 try:
-                                    with open(fp, "rb") as _rf:
-                                        _zraw = _rf.read()
-                                    _zuw = _unwrap_backup_export(_zraw)
-                                    if _zuw is not None:
-                                        with open(fp, "wb") as _wf:
-                                            _wf.write(_zuw)
+                                    try:
+                                        with open(fp, "rb") as _rf:
+                                            _zraw = _rf.read()
+                                        _zuw = _unwrap_backup_export(_zraw)
+                                        if _zuw is not None:
+                                            with open(fp, "wb") as _wf:
+                                                _wf.write(_zuw)
+                                    except Exception:
+                                        pass
+                                    total += ST.merge_from(fp)
                                 except Exception:
                                     pass
-                                total += ST.merge_from(fp)
-                            except Exception:
-                                pass
-                        elif fl.endswith(".ini"):
-                            try:
-                                content = None
-                                for enc in ("gbk", "utf-8", "utf-8-sig"):
-                                    try:
-                                        with open(fp, encoding=enc) as rf:
-                                            content = rf.read()
-                                        break
-                                    except Exception:
-                                        continue
-                                if content is not None:
-                                    total += _handle_ini_content(content, rel)
-                            except Exception:
-                                pass
-                        elif fl.endswith(".json"):
-                            try:
-                                with open(fp, encoding="utf-8") as _jf:
-                                    j = json.load(_jf)
-                                # 与单文件 json 同口径（三表），禁再手写双表分裂
-                                if isinstance(j, dict) and isinstance(j.get("users"), list):
-                                    total += _import_users_list(j["users"], "json")
-                            except Exception:
-                                pass
-                try:
-                    shutil.rmtree(ztmp)
-                except Exception:
-                    pass
-                try:
-                    os.remove(tmp)
-                except Exception:
-                    pass
-                ST.flush_all()
-                # 存量精灵 adopted 自愈：已有 list 但无 adopted 的老数据补齐
-                _migrated = _heal_spirits_adopted()
-                return json_response({"imported": total, "type": "zip", "migrated": locals().get("_migrated", 0)})
-            except Exception as e:
-                return json_response({"error": f"zip failed: {e}", "imported": 0})
-        if lower.endswith(".db"):
-            try:
-                cnt = ST.merge_from(tmp)
-                ST.flush_all()
-                # 同步精灵 adopted 自愈
-                _heal_spirits_adopted()
-                try:
-                    os.remove(tmp)
-                except Exception:
-                    pass
-                return json_response({"imported": cnt, "type": "db"})
-            except Exception as e:
-                return _err(f"db import failed: {e}", 500)
-        if lower.endswith(".ini"):
-            try:
-                content = None
-                for enc in ("gbk", "utf-8", "utf-8-sig"):
-                    try:
-                        with open(tmp, encoding=enc) as rf:
-                            content = rf.read()
-                        break
-                    except Exception:
-                        continue
-                if content is None:
-                    return _err("ini decode failed", 400)
-                cnt = _handle_ini_content(content, filename)
-                ST.flush_all()
-                try:
-                    os.remove(tmp)
-                except Exception:
-                    pass
-                return json_response({"imported": cnt, "type": "ini"})
-            except Exception as e:
-                return _err(f"ini import failed: {e}", 500)
-        if lower.endswith(".json"):
-            try:
-                j = json.loads(data.decode("utf-8", errors="ignore"))
-                if isinstance(j, dict) and isinstance(j.get("users"), list):
-                    ok = 0
-                    for item in j["users"]:
-                        if not isinstance(item, dict):
-                            continue
-                        gid = str(item.get("gid") or "").strip()
-                        qq = str(item.get("qq") or "").strip()
-                        if not gid or not qq:
-                            continue
-                        if "wallet" in item:
-                            try:
-                                tgt = int(item["wallet"])
-                                cur = ST.coins_get(gid, qq)
-                                ST.coins_add(gid, qq, tgt - cur)
-                            except Exception:
-                                pass
-                        if "account" in item and isinstance(item["account"], dict):
-                            a = ST.acct(gid, qq)
-                            a.kv.clear()
-                            a.dirty = True
-                            for k, v in item["account"].items():
-                                a.set(str(k), str(v))
-                            ST.acct_save(gid, qq)
-                        ok += 1
+                            elif fl.endswith(".ini"):
+                                try:
+                                    content = None
+                                    for enc in ("gbk", "utf-8", "utf-8-sig"):
+                                        try:
+                                            with open(fp, encoding=enc) as rf:
+                                                content = rf.read()
+                                            break
+                                        except Exception:
+                                            continue
+                                    if content is not None:
+                                        total += _handle_ini_content(content, rel)
+                                except Exception:
+                                    pass
+                            elif fl.endswith(".json"):
+                                try:
+                                    with open(fp, encoding="utf-8") as _jf:
+                                        j = json.load(_jf)
+                                    if isinstance(j, dict) and isinstance(j.get("users"), list):
+                                        total += _import_users_list(j["users"], "json")
+                                except Exception:
+                                    pass
                     ST.flush_all()
-                    try:
-                        os.remove(tmp)
-                    except Exception:
-                        pass
-                    return json_response({"imported": ok, "type": "json"})
-                return _err("json must contain users list", 400)
-            except Exception as e:
-                return _err(f"json import failed: {e}", 500)
-        return _err(f"unsupported file type: {filename}", 400)
+                    _migrated = _heal_spirits_adopted()
+                    return json_response({"imported": total, "type": "zip", "migrated": _migrated})
+                except Exception as e:
+                    return json_response({"error": f"zip failed: {e}", "imported": 0})
+                finally:
+                    if ztmp:
+                        try:
+                            shutil.rmtree(ztmp)
+                        except Exception:
+                            pass
+            if lower.endswith(".db"):
+                try:
+                    cnt = ST.merge_from(tmp)
+                    ST.flush_all()
+                    _heal_spirits_adopted()
+                    return json_response({"imported": cnt, "type": "db"})
+                except Exception as e:
+                    return _err(f"db import failed: {e}", 500)
+            if lower.endswith(".ini"):
+                try:
+                    content = None
+                    for enc in ("gbk", "utf-8", "utf-8-sig"):
+                        try:
+                            with open(tmp, encoding=enc) as rf:
+                                content = rf.read()
+                            break
+                        except Exception:
+                            continue
+                    if content is None:
+                        return _err("ini decode failed", 400)
+                    cnt = _handle_ini_content(content, filename)
+                    ST.flush_all()
+                    return json_response({"imported": cnt, "type": "ini"})
+                except Exception as e:
+                    return _err(f"ini import failed: {e}", 500)
+            if lower.endswith(".json"):
+                try:
+                    j = json.loads(data.decode("utf-8", errors="ignore"))
+                    if isinstance(j, dict) and isinstance(j.get("users"), list):
+                        ok = _import_users_list(j["users"], "json")
+                        return json_response({"imported": ok, "type": "json"})
+                    return _err("json must contain users list", 400)
+                except Exception as e:
+                    return _err(f"json import failed: {e}", 500)
+            return _err(f"unsupported file type: {filename}", 400)
+        finally:
+            try:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+            except Exception:
+                pass
     except Exception as e:
         import traceback
         try:

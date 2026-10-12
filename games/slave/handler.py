@@ -353,7 +353,7 @@ def clear_user_slave(gid, qq):
 # 使指令采集器不收录（WebUI 指令页不再出现），行为保持全静默。
 _QUERY_SILENT = ("查询更新", "查询版本", "查询维护", "查询坐骑", "查询精灵", "查询帮派", "查询冒险", "查询地图", "查询菜单")
 _ROUTE_EXACT = {
-    "我的信息": lambda gid, qq, target, st, text: cmd_myinfo(gid, qq, st),
+    "我的信息": lambda gid, qq, target, st, text: cmd_query(gid, qq, target, st) if target else cmd_myinfo(gid, qq, st),
     "我要自由": lambda gid, qq, target, st, text: cmd_freedom(gid, qq, st),
     "武器菜单": lambda gid, qq, target, st, text: cmd_weapon_menu(gid, qq, st),
     "宝物菜单": lambda gid, qq, target, st, text: cmd_treasure_menu(gid, qq, st),

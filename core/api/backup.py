@@ -28,11 +28,14 @@ def _backup_base(plugin_base=""):
 
 
 def _safe_backup(rel, base=""):
-    b = base or _backup_base()
-    p = os.path.abspath(os.path.join(b, str(rel or "").strip()))
-    if p != b and not p.startswith(b + os.sep):
+    try:
+        b = os.path.realpath(base or _backup_base())
+        p = os.path.realpath(os.path.join(b, str(rel or "").strip()))
+        if os.path.commonpath([b, p]) != b:
+            return None
+        return p
+    except Exception:
         return None
-    return p
 
 
 async def handle_backups_list(request, plugin_base=""):

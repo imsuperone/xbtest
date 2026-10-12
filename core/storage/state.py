@@ -292,38 +292,4 @@ _KV_CACHE_LOCK = threading.RLock()
 _WD_SECRET_KEYS = ("WebDAV服务器地址", "WebDAV用户名", "WebDAV应用密码")
 _WD_SECRET = {}
 _WD_SECRET_LOADED = False
-
-
-class Store:
-    """存储实例门面（新增，旧 `import storage as ST` 模块级调用保持兼容）。
-
-    目标：终结全局单例直调。新代码经 Store 实例拿 cfg/recall/acct，
-    router.handle(store=...) 未来可注入不同 Store（测试/多租户）。
-    当前实现全部委托模块级函数，零语义差。
-    """
-
-    def __getattr__(self, name):
-        import sys as _sys
-        # 1) state 自身
-        _mod = _sys.modules.get(__name__)
-        try:
-            return getattr(_mod, name)
-        except AttributeError:
-            pass
-        # 2) 同包兄弟模块（app_config/wallet/kv/...）：经 import 懒委托，
-        #    与 storage/__init__ 门面同序，避免 cfg/recall 等落空
-        for _sub in ("app_config", "wallet", "accounts", "groups", "kv",
-                     "collections", "secrets", "backup", "db", "mentions"):
-            try:
-                import importlib as _il
-                _pkg = __name__.rsplit(".", 1)[0] if "." in __name__ else __name__
-                _m = _il.import_module(f"{_pkg}.{_sub}")
-                if hasattr(_m, name):
-                    return getattr(_m, name)
-            except Exception:
-                continue
-        raise AttributeError(f"Store has no attribute {name!r}")
-
-
-default_store = Store()
-__all__ = ["Store", "default_store"]
+__all__ = ["Acct", "Group", "_DirtyDict", "set_last_backup"]

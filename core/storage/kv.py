@@ -248,4 +248,4 @@ def clean_expired_kv(ttl_sec=7 * 24 * 3600):
         return 0
 
 
-__all__ = ["recall_get", "recall_set", "wd_cfg_backup", "wd_cfg_restore", "clean_expired_kv"]
+__all__ = ["recall_get", "recall_set", "recall_prefix", "wd_cfg_backup", "wd_cfg_restore", "clean_expired_kv"]

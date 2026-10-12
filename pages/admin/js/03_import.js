@@ -566,10 +566,10 @@ async function main() {
   
   Promise.all([loadOverviewReq(), loadAnalytics()]).catch(() => {});
   TAB_DONE.overview = true;
-  // 空闲预取：总览首屏后，后台静默预热高频 Tab（用户/奴隶/群聊），切 Tab 即零等待
+  // 空闲预取：总览首屏后，仅后台静默预热轻量群聊开关表，用户/奴隶大表按需点开加载避免阻塞DB
   const _idlePrefetch = () => {
     try {
-      const cand = ["users", "slave", "groups"];
+      const cand = ["groups"];
       cand.forEach((t, i) => {
         if (TAB_DONE[t]) return;
         setTimeout(() => {
