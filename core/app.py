@@ -376,6 +376,16 @@ class XbBot(Star):
                 _scfg["溢出魅力折算金币"] = "2"
                 _need_save = True
                 ST.recall_set("mig_banzhuan_cd_30m", "1")
+            if str(ST.recall_get("mig_slave_work_cd_15m", "") or "") != "1":
+                _icfg2 = ST._CONFIG.setdefault("间隔配置", {})
+                try:
+                    if int(float(_icfg2.get("打工间隔", "0") or 0)) < 15:
+                        _icfg2["打工间隔"] = "15"
+                        _need_save = True
+                except Exception:
+                    _icfg2["打工间隔"] = "15"
+                    _need_save = True
+                ST.recall_set("mig_slave_work_cd_15m", "1")
         except Exception:
             pass
         # 全库体力/魅力强压执行：首次迁移将全库历史存量 >300 的体力与魅力强制压回 300 软上限（按 25% 折算补贴金币），

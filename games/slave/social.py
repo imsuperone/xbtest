@@ -248,7 +248,7 @@ def cmd_work_dispatch(gid, qq, st):
         return _S.T.WORK_NO_SLAVE + "\r\n💡 发送【搬砖】可亲自打工赚取金币！"
     if uget(u, "work_status") == "真":
         started = cn_parse(uget(u, "work_time")) or 0
-        duration = cfgi("间隔配置", "打工间隔", 1) * 60
+        duration = cfgi("间隔配置", "打工间隔", 15) * 60
         left = started + duration - _time.time()
         if left > 0:
             return _S.T.WORK_WORKING.format(min=int(left / 60) + 1)
@@ -260,7 +260,7 @@ def cmd_work_dispatch(gid, qq, st):
             except Exception:
                 pass
         uset(u, "work_status", "")   # 超时自动收工
-    duration = cfgi("间隔配置", "打工间隔", 1)
+    duration = cfgi("间隔配置", "打工间隔", 15)
     target = 0
     for s in my:
         su = U(st, s)
@@ -282,7 +282,7 @@ def cmd_work_collect(gid, qq, st):
     if uget(u, "work_status") != "真":
         return _S.T.WORK_NOT_STARTED
     started = cn_parse(uget(u, "work_time")) or 0
-    duration = cfgi("间隔配置", "打工间隔", 1) * 60
+    duration = cfgi("间隔配置", "打工间隔", 15) * 60
     left = started + duration - _time.time()
     if left > 0:
         return _S.T.WORK_WAIT.format(min=int(left / 60) + 1)

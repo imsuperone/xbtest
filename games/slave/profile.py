@@ -29,7 +29,7 @@ def _build_status_line(gid, qq, u, acct, slaves):
     try:
         if uget(u, "work_status") == "真":
             started = cn_parse(uget(u, "work_time")) or 0
-            dur = cfgi("间隔配置", "打工间隔", 1) * 60
+            dur = cfgi("间隔配置", "打工间隔", 15) * 60
             left = started + dur - _time.time()
             parts.append(f"奴隶打工({int(left / 60) + 1}分)" if left > 0 else "奴隶可收工!")
         elif slaves:

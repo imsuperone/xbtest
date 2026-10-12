@@ -46,7 +46,7 @@ def cmd_deposit(gid, qq, amount):
         total = old + amount + interest
     return (f"存款成功！消耗{cs}点体力，共存入：{amount}，\r\n"
             f"上期结息：{interest}，当前总存款：{total}，"
-            f"当前利率：{rate}%，1小时后可取款！\r\n"
+            f"1小时后可取款！\r\n"
             f"剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
 
 
