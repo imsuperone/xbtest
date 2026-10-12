@@ -26,7 +26,7 @@ except ImportError:
                                     REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
                                     TREASURE_GOURD_NAME,
                                     CHARM_PROB_STEP, CHARM_PROB_BONUS, CHARM_PROB_CAP)
-from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgi, cn_fmt, cn_parse, coins_add, coins_get, slaves_of, treasures_of, uget, uset
+from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgi, cn_fmt, cn_parse, coins_add, coins_get, deduct_cash_or_deposit, slaves_of, total_assets, transfer_cash_or_deposit, treasures_of, uget, uset
 from .combat import _has_treasure_type, _treasure_names, _treasure_pct_total, battle_power
 from .nick import uname
 from .profile import coin_name
@@ -74,8 +74,8 @@ def cmd_flatter(gid, qq, st):
         return _fmt(mins, "讨好主人")
     if int(uget(u, "price") or 0) > int(U(st, owner).get("price") or 0):
         return _S.T.FLATTER_RICHER
-    mc = coins_get(gid, owner)
-    if mc <= 0:
+    mc = total_assets(gid, owner)
+    if mc < 100:
         return _S.T.FLATTER_POOR_M
     charm_cost = cfgi("费用配置", "讨好消耗魅力", 5)
     try:
@@ -94,19 +94,17 @@ def cmd_flatter(gid, qq, st):
         got = _random.randint(50, max(50, min(mc, 500)))
         got = min(got, mc)
         if got <= 0:
+            cd_commit(u, "flatter_time")
             return ("你各种撒娇打泼，主人仍不为所动，你什么都没有讨到~"
                     + _charm_note(_charge_charm(gid, qq, charm_cost)))
-        # 原子双钱包：失败不推进 CD、不发奖励（禁半成功）
-        try:
-            _ok = ST.txn_two_wallets(gid, owner, qq, got)
-        except Exception:
-            _ok = None
-        if _ok is None:
+        paid_got = transfer_cash_or_deposit(gid, owner, qq, got)
+        if paid_got is None:
             return "数据库繁忙，讨好结算未成功，请稍后重试。"
-        if _ok is not True:
+        if paid_got <= 0:
             return _S.T.FLATTER_POOR_M
         cd_commit(u, "flatter_time")
-        return _S.T.FLATTER_OK.format(got=got) + _charm_note(_charge_charm(gid, qq, charm_cost))
+        return _S.T.FLATTER_OK.format(got=paid_got) + _charm_note(_charge_charm(gid, qq, charm_cost))
+    cd_commit(u, "flatter_time")
     return ("你各种撒娇打泼，主人仍不为所动，你什么都没有讨到~"
             + _charm_note(_charge_charm(gid, qq, charm_cost)))
 
@@ -128,23 +126,19 @@ def _grant_treasure(gid, qq, st):
     return t
 
 
-
-
 def cmd_study(gid, qq, st):
     u = U(st, qq)
-    owner = uget(u, "owner")
     ok, mins = cd_check(u, "study_time", "学习间隔")
     if not ok:
         return _fmt(mins, "学习")
     fee = _random.randint(STUDY_FEE_LO, STUDY_FEE_HI)
-    if owner:
-        oc = coins_get(gid, owner)
-        if oc < fee:
-            return _S.T.STUDY_POOR_MASTER.format(fee=fee)
-    # 学费由主人支付(原版机制); 无主者自付。扣费失败即停，不加经验（禁免费增发）
-    payer = owner if owner else qq
-    if coins_add(gid, payer, -fee) is None:
+    if total_assets(gid, qq) < fee:
+        return f"学费不足（需要 {fee} {coin_name()}），无法开始学习！"
+    paid_fee = deduct_cash_or_deposit(gid, qq, fee, require_full=True)
+    if paid_fee is None:
         return "数据库繁忙，学费扣款未成功，学习未开始，请稍后重试。"
+    if paid_fee < fee:
+        return f"学费不足（需要 {fee} {coin_name()}），无法开始学习！"
     exp_gain = _random.randint(STUDY_EXP_LO, STUDY_EXP_HI)
     uset(u, "weapon_exp", str(int(uget(u, "weapon_exp", "0") or 0) + exp_gain))
     cd_commit(u, "study_time")
@@ -434,7 +428,7 @@ def cmd_revolt(gid, qq, st):
     if not ok:
         return _fmt(mins, "造反")
     need = max(500, int(uget(u, "price") or 0) // 10)
-    if coins_get(gid, qq) < need:
+    if total_assets(gid, qq) < need:
         return _S.T.REVOLT_TOO_POOR.format(need=need)
     charm_cost = cfgi("费用配置", "造反消耗魅力", 15)
     try:
@@ -447,51 +441,34 @@ def cmd_revolt(gid, qq, st):
     my_power = battle_power(st, qq)
     om_power = battle_power(st, owner)
     if m_slaves >= 2 * max(1, len(slaves_of(st, qq))) and om_power > my_power:
-        fine = min(coins_get(gid, qq), REVOLT_FINE)
-        if fine > 0:
-            # 原子双钱包：失败不改群档（禁半成功）
-            try:
-                _ok = ST.txn_two_wallets(gid, qq, owner, fine)
-            except Exception:
-                _ok = None
-            if _ok is None:
-                return "数据库繁忙，造反结算未成功，请稍后重试。"
-            if _ok is not True:
-                return _S.T.REVOLT_TOO_POOR.format(need=need)
+        fine = transfer_cash_or_deposit(gid, qq, owner, REVOLT_FINE)
+        if fine is None:
+            return "数据库繁忙，造反结算未成功，请稍后重试。"
+        fine = max(0, int(fine or 0))
         return _S.T.REVOLT_CRUSHED + f"(被罚{fine})" + _charm_note(_charge_charm(gid, qq, charm_cost))
     sn = uget(u, "name") or (str(qq))
-    loot = min(coins_get(gid, owner), _random.randint(REVOLT_LOOT_LO, REVOLT_LOOT_HI))
+    loot_want = _random.randint(REVOLT_LOOT_LO, REVOLT_LOOT_HI)
 
     i_have_gourd = _has_treasure_type(treasures_of(u), "pardon", (TREASURE_GOURD_NAME,))
     master_has_gourd = _has_treasure_type(treasures_of(U(st, owner)), "pardon", (TREASURE_GOURD_NAME,))
 
     if i_have_gourd:
-        if loot > 0:
-            try:
-                _ok = ST.txn_two_wallets(gid, owner, qq, loot)
-            except Exception:
-                _ok = None
-            if _ok is None:
-                return "数据库繁忙，造反结算未成功，请稍后重试。"
-            if _ok is not True:
-                loot = 0
+        loot = transfer_cash_or_deposit(gid, owner, qq, loot_want)
+        if loot is None:
+            return "数据库繁忙，造反结算未成功，请稍后重试。"
+        loot = max(0, int(loot or 0))
         uset(u, "owner", "")
         uset(u, "protect_until", "")
         uset(u, "protector", "")
+        uset(u, "_work_wage", "")
         return (_S.T.RV_GOURD_WIN + "\r\n" + _S.T.RV_LOOT.format(loot=loot, coin=coin_name())
                 + "\r\n" + _S.T.REVOLT_FREE.replace("，", "")
                 + _charm_note(_charge_charm(gid, qq, charm_cost)))
     if master_has_gourd:
-        pay = min(coins_get(gid, qq), loot)
-        if pay > 0:
-            try:
-                _ok = ST.txn_two_wallets(gid, qq, owner, pay)
-            except Exception:
-                _ok = None
-            if _ok is None:
-                return "数据库繁忙，造反结算未成功，请稍后重试。"
-            if _ok is not True:
-                pay = 0
+        pay = transfer_cash_or_deposit(gid, qq, owner, loot_want)
+        if pay is None:
+            return "数据库繁忙，造反结算未成功，请稍后重试。"
+        pay = max(0, int(pay or 0))
         return (_S.T.RV_GOURD_LOSE + f"({pay}{coin_name()})\r\n" + _S.T.REVOLT_FAIL_STAY
                 + _charm_note(_charge_charm(gid, qq, charm_cost)))
     _revolt_p = cfgi("概率配置", "造反概率", 20)
@@ -503,31 +480,21 @@ def cmd_revolt(gid, qq, st):
     # 魅力加成进成功率（w1004c）
     _revolt_p = max(0, min(100, _revolt_p + _charm_bonus(gid, qq)))
     if _random.randint(1, 100) <= _revolt_p:
-        if loot > 0:
-            try:
-                _ok = ST.txn_two_wallets(gid, owner, qq, loot)
-            except Exception:
-                _ok = None
-            if _ok is None:
-                return "数据库繁忙，造反结算未成功，请稍后重试。"
-            if _ok is not True:
-                loot = 0
+        loot = transfer_cash_or_deposit(gid, owner, qq, loot_want)
+        if loot is None:
+            return "数据库繁忙，造反结算未成功，请稍后重试。"
+        loot = max(0, int(loot or 0))
         uset(u, "owner", "")
         uset(u, "protect_until", "")
         uset(u, "protector", "")
+        uset(u, "_work_wage", "")
         return (_S.T.RV_NORMAL_WIN + f"\r\n[{sn}] " + _S.T.RV_LOOT.format(loot=loot, coin=coin_name())
                 + "\r\n" + _S.T.REVOLT_FREE.replace("，", "")
                 + _charm_note(_charge_charm(gid, qq, charm_cost)))
-    pay = min(coins_get(gid, qq), 500)
-    if pay > 0:
-        try:
-            _ok = ST.txn_two_wallets(gid, qq, owner, pay)
-        except Exception:
-            _ok = None
-        if _ok is None:
-            return "数据库繁忙，造反结算未成功，请稍后重试。"
-        if _ok is not True:
-            pay = 0
+    pay = transfer_cash_or_deposit(gid, qq, owner, 500)
+    if pay is None:
+        return "数据库繁忙，造反结算未成功，请稍后重试。"
+    pay = max(0, int(pay or 0))
     return (_S.T.RV_NORMAL_LOSE + f"(罚{pay}{coin_name()})\r\n"
             + f"[{sn}]" + _S.T.REVOLT_FAIL_STAY
             + _charm_note(_charge_charm(gid, qq, charm_cost)))

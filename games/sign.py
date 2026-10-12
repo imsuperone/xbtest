@@ -531,8 +531,8 @@ def cmd_newbie(gid, qq):
         stam_hard = cfgi("签到配置", "体力硬上限", STAMINA_HARD_CAP)
         charm_soft = cfgi("签到配置", "魅力软上限", CHARM_SOFT_CAP)
         charm_hard = cfgi("签到配置", "魅力硬上限", CHARM_HARD_CAP)
-        stam_rate = cfgi("签到配置", "体力溢出折算", STAMINA_OVERFLOW_COIN)
-        charm_rate = cfgi("签到配置", "魅力溢出折算", CHARM_OVERFLOW_COIN)
+        stam_rate = cfgi("签到配置", "溢出体力折算金币", STAMINA_OVERFLOW_COIN)
+        charm_rate = cfgi("签到配置", "溢出魅力折算金币", CHARM_OVERFLOW_COIN)
         # 单事务原子领取：钱包+账户同锁一次提交，避免签到并发时 database is locked
         # txn 失败返 None：不再用多次独立写入补发，避免礼包半成功。
         cur_stam = int(float(a.get("stamina", "0") or 0))

@@ -9,7 +9,7 @@ except ImportError:
     from core import storage as ST
     store = ST
 from . import slave_state as _S
-from .base import U, _safe_int, cd_check, cfg, cfgi, cn_parse, coins_get, protected_until, slaves_of, star_of, treasures_of, uget, uset, weapons_of
+from .base import U, _safe_int, cd_check, cfg, cfgi, cn_parse, coins_get, protected_until, slaves_of, star_of, treasures_of, uget, user_slave_slots, uset, weapons_of
 from .nick import uname
 
 
@@ -59,7 +59,7 @@ def cmd_myinfo(gid, qq, st):
             return _S.T.BOT_NO_JOIN
         u = U(st, qq)
         coins = coins_get(gid, qq)
-        price = _safe_int(uget(u, "price"), 500)
+        price = _safe_int(uget(u, "price"), cfgi("费用配置", "初始身价", 1000))
         owner = uget(u, "owner")
         prot = protected_until(u)
         if prot and prot > _time.time():
@@ -69,9 +69,7 @@ def cmd_myinfo(gid, qq, st):
         sign_total, sign_streak = _sign_info(gid, qq, st)
         wexp = _safe_int(uget(u, "weapon_exp"), 0)
         slaves = slaves_of(st, qq)
-        cap = _safe_int(uget(u, "slave_slots"), cfgi("设置", "奴隶个数", 5))
-        if cap <= 0:
-            cap = 2
+        cap = user_slave_slots(u)
         sl_txt = ", ".join(uname(st, s) for s in slaves) or _S.T.NO_SLAVE
         w_list = weapons_of(u)
         t_list = treasures_of(u)
@@ -115,14 +113,15 @@ def cmd_myinfo(gid, qq, st):
             name = uname(st, qq) if 'st' in locals() else str(qq)
             coins = store.coins_get(gid, qq)
             acct = store.acct(gid, qq)
+            init_p = cfgi("费用配置", "初始身价", 1000)
             return ("📋【%s】的档案\r\n"
-                    "💰资产：%d%s｜🏦存款：%d｜💎身价：500\r\n"
+                    "💰资产：%d%s｜🏦存款：%d｜💎身价：%d\r\n"
                     "🔋体力：%d｜💄魅力：%d｜🎫奖券：%d｜📖经验：0\r\n"
                     "👑主人：木有主人｜无人保护｜📅总签%d·连签%d天\r\n"
                     "⚔️武器：木有武器\r\n"
                     "🎁宝物：木有宝物\r\n"
                     "👥奴隶(0/2)：木有奴隶" % (
-                        name, coins, store.coin_name(), acct.int("deposit"),
+                        name, coins, store.coin_name(), acct.int("deposit"), init_p,
                         acct.int("stamina"), acct.int("charm"), acct.int("lottery_tickets"),
                         acct.int("sign_count"), acct.int("consecutive_days")
                     ))
@@ -212,24 +211,35 @@ def cmd_rank_price(gid, st):
         out.append(f"{i}. [{uname(st, q)}] {p}")
     return "\r\n".join(out)
 def cmd_rank_sign(gid, st):
-    """签到次数来自本地档案(总签天数), 不再依赖 drea"""
-    lst = []
-    for q in st.sections():
-        if not q.isdigit():
-            continue
-        if _S.BOT_UIN and q == str(_S.BOT_UIN):
-            continue
+    """签到排行榜：统一委托 sign.cmd_rank(gid, 'sign', st)，与【签到榜】完全同源"""
+    try:
         try:
-            dcount = int(uget(st[q], "total_sign_days", "0") or 0)
-        except Exception:
-            dcount = 0
-        lst.append((dcount, q))
-    lst.sort(reverse=True)
-    out = ["📅 签到排行榜"]
-    for i, (dcount, q) in enumerate(lst[:10], 1):
-        nm = uget(st[q], "name") if st.has_section(q) else ""
-        out.append(f"{i}. [{nm or q}] {dcount}天")
-    return "\r\n".join(out)
+            from ..sign import cmd_rank as _sign_rank
+        except ImportError:
+            from games.sign import cmd_rank as _sign_rank  # type: ignore
+        return _sign_rank(gid, "sign", st)
+    except Exception:
+        lst = []
+        for q in st.sections():
+            if not q.isdigit():
+                continue
+            if _S.BOT_UIN and q == str(_S.BOT_UIN):
+                continue
+            try:
+                acct = ST.acct(gid, q)
+                dcount = max(
+                    int(uget(st[q], "total_sign_days", "0") or 0),
+                    acct.int("sign_count"),
+                    acct.int("total_sign_days"),
+                )
+            except Exception:
+                dcount = 0
+            lst.append((dcount, q))
+        lst.sort(reverse=True)
+        out = ["📅 签到排行榜"]
+        for i, (dcount, q) in enumerate(lst[:10], 1):
+            out.append(f"{i}. [{uname(st, q)}] {dcount}天")
+        return "\r\n".join(out)
 def cmd_rank(gid, st):
     return cmd_rank_price(gid, st) + "\r\n\r\n" + cmd_rank_sign(gid, st)
 

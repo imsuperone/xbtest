@@ -125,7 +125,7 @@ def U(st, qq):
         u["weapon"] = ""
         u["treasure"] = ""
         u["weapon_exp"] = "0"
-        u["slave_slots"] = str(cfgi("设置", "奴隶个数", 5))
+        u["slave_slots"] = str(cfgi("设置", "奴隶个数", 2))
         u["protect_until"] = ""
         u["sign_date"] = ""
         u["consecutive_days"] = "0"
@@ -156,6 +156,97 @@ def uget(u, k, d=""):
 
 def uset(u, k, v):
     u[_cn2en(str(k))] = str(v)
+
+
+def max_slave_slots():
+    base_cap = max(1, cfgi("设置", "奴隶个数", 2))
+    return max(base_cap, cfgi("设置", "奴隶个数上限", 5))
+
+
+def user_slave_slots(u):
+    """用户当前可用奴隶位：未购买过奴隶位时始终跟随全局配置（自动修复历史残留 5/3/15）；已购买时在 [base_cap, max_cap] 间生效。"""
+    base_cap = max(1, cfgi("设置", "奴隶个数", 2))
+    max_cap = max(base_cap, cfgi("设置", "奴隶个数上限", 5))
+    try:
+        bought = str(uget(u, "slot_bought", "") or "").strip() == "1"
+        raw = _safe_int(uget(u, "slave_slots", ""), base_cap)
+        if not bought:
+            if raw != base_cap:
+                uset(u, "slave_slots", str(base_cap))
+            return base_cap
+        clamped = max(base_cap, min(raw, max_cap))
+        if clamped != raw:
+            uset(u, "slave_slots", str(clamped))
+        return clamped
+    except Exception:
+        return base_cap
+
+
+def total_assets(gid, qq):
+    """玩家总流动资产（现金 + 银行存款）"""
+    try:
+        return max(0, int(coins_get(gid, qq) or 0)) + max(0, int(store.acct(gid, qq).int("deposit") or 0))
+    except Exception:
+        return max(0, int(coins_get(gid, qq) or 0))
+
+
+def deduct_cash_or_deposit(gid, qq, want_amount, require_full=False):
+    """优先扣现金，不足部分自动从银行存款补扣。
+    成功返回实际扣除总额 (int)，数据库繁忙返回 None，require_full=True 且余额不足返回 -1。"""
+    want = max(0, int(want_amount or 0))
+    if want <= 0:
+        return 0
+    with store._LOCK:
+        cur_cash = max(0, int(coins_get(gid, qq) or 0))
+        cur_dep = max(0, int(store.acct(gid, qq).int("deposit") or 0))
+        avail = cur_cash + cur_dep
+        if require_full and avail < want:
+            return -1
+        take = min(avail, want)
+        if take <= 0:
+            return 0
+        cash_ded = min(cur_cash, take)
+        dep_ded = take - cash_ded
+        updates = {"deposit": str(max(0, cur_dep - dep_ded))} if dep_ded > 0 else None
+        if store.txn_coins_acct(gid, qq, -cash_ded, updates, require_funds=(cash_ded > 0)) is None:
+            return None
+        return take
+
+
+def transfer_cash_or_deposit(gid, from_qq, to_qq, want_amount, require_full=False):
+    """从 from_qq（优先扣现金，不足扣银行存款）划转至 to_qq 现金钱包。
+    成功返回实际划转金额 (int)，数据库繁忙返回 None，require_full=True 且余额不足返回 -1。"""
+    want = max(0, int(want_amount or 0))
+    if want <= 0:
+        return 0
+    with store._LOCK:
+        cur_cash = max(0, int(coins_get(gid, from_qq) or 0))
+        cur_dep = max(0, int(store.acct(gid, from_qq).int("deposit") or 0))
+        avail = cur_cash + cur_dep
+        if require_full and avail < want:
+            return -1
+        take = min(avail, want)
+        if take <= 0:
+            return 0
+        cash_ded = min(cur_cash, take)
+        dep_ded = take - cash_ded
+        if dep_ded <= 0:
+            ok = store.txn_two_wallets(gid, from_qq, to_qq, cash_ded)
+            if ok is None:
+                return None
+            if ok is not True:
+                return -1 if require_full else 0
+            return take
+        updates = {"deposit": str(max(0, cur_dep - dep_ded))}
+        if store.txn_coins_acct(gid, from_qq, -cash_ded, updates, require_funds=(cash_ded > 0)) is None:
+            return None
+        if coins_add(gid, to_qq, take) is None:
+            try:
+                store.txn_coins_acct(gid, from_qq, cash_ded, {"deposit": str(cur_dep)})
+            except Exception:
+                pass
+            return None
+        return take
 
 
 
@@ -369,4 +460,4 @@ def load_events():
 
 
 
-__all__ = ["U", "cd_check", "cd_commit", "cfg", "cfgf", "cfgi", "cn_fmt", "cn_parse", "coins_add", "coins_get", "load_events", "log", "protected_until", "save", "slaves_of", "star_of", "state", "treasures_of", "uget", "uset", "weapons_of"]
+__all__ = ["U", "cd_check", "cd_commit", "cfg", "cfgf", "cfgi", "cn_fmt", "cn_parse", "coins_add", "coins_get", "deduct_cash_or_deposit", "load_events", "log", "max_slave_slots", "protected_until", "save", "slaves_of", "star_of", "state", "total_assets", "transfer_cash_or_deposit", "treasures_of", "uget", "user_slave_slots", "uset", "weapons_of"]

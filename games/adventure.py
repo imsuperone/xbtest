@@ -126,6 +126,12 @@ def cmd_start(gid, qq, mapname):
         return "请输入冒险地图：冒险 迷失海岛\r\n发送【冒险系统】查看地图列表！"
     if mapname not in MAPS:
         return "亲，不存在该冒险地图，发送【冒险系统】查看地图吧！"
+    cur_adv = _cur(gid, qq)
+    if cur_adv.get("map"):
+        return (
+            f"🗺️ 您当前正在【{cur_adv['map']}】进行第 {cur_adv.get('round', 1)} 轮冒险！\r\n"
+            "💡 请直接发送数字【1】/【2】/【3】继续抉择推进剧情！"
+        )
     a = _acct(gid, qq)
     cs = _cfgi("冒险消耗体力", 5)
     if a.int("stamina") < cs:
@@ -181,9 +187,11 @@ def cmd_choose(gid, qq, n):
     if not adv.get("map"):
         return "对不起，您尚未开始冒险，请发送【冒险 地图】开始！"
     m = adv["map"]
-    # P1: 非法输入不再随机推进误导，直接提示格式
+    # P1: 非法输入不再随机推进误导，支持 1/2/3、一/二/三、[1]/1. 等常见回复格式
+    raw_n = str(n or "").strip().strip("[]【】()（）.。、 ")
+    raw_n = {"一": "1", "二": "2", "三": "3"}.get(raw_n, raw_n)
     try:
-        choice = int(str(n or "").strip())
+        choice = int(raw_n)
     except Exception:
         return "请输入数字 1 / 2 / 3 继续冒险！"
     if choice not in (1, 2, 3):

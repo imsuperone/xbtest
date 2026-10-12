@@ -576,9 +576,13 @@ def _cmd_current_values():
         else:
             _head = "📊 当前数值【自定义】（最接近%s，差%s项）" % (_names.get(_best, _best), results[_best])
         _lines = [_head]
+        _best_pre = _PRE.get(_best, {})
         for _sec, _key in _SIG:
             try:
-                _lines.append("%s：%s" % (_key, ST.cfg(_sec, _key, "")))
+                _val = ST.cfg(_sec, _key, "")
+                if _val == "":
+                    _val = _best_pre.get(_sec, {}).get(_key, "")
+                _lines.append("%s：%s" % (_key, _val))
             except Exception:
                 pass
         return "\r\n".join(_lines)

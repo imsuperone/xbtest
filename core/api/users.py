@@ -277,6 +277,9 @@ async def handle_users_clean_left(request, context=None):
                             st[sec]["owner"] = ""
                             st[sec]["purchase_price"] = "0"
                             st[sec]["purchase_time"] = ""
+                            st[sec]["protect_until"] = ""
+                            st[sec]["protector"] = ""
+                            st[sec]["_work_wage"] = ""
                 except Exception:
                     continue
             cleaned += 1
@@ -286,6 +289,16 @@ async def handle_users_clean_left(request, context=None):
                 slave.save(g)
             except Exception:
                 failed_gids.append(g)
+        if cleaned:
+            try:
+                from ...games import guild as _guild_mod
+                _guild_mod._invalidate_guild_cache(g)
+            except Exception:
+                try:
+                    from games import guild as _guild_mod  # type: ignore
+                    _guild_mod._invalidate_guild_cache(g)
+                except Exception:
+                    pass
 
         cleaned_total += cleaned
         if cleaned:
@@ -346,9 +359,21 @@ async def handle_user_clear(request):
                         u["owner"] = ""
                         u["purchase_price"] = "0"
                         u["purchase_time"] = ""
+                        u["protect_until"] = ""
+                        u["protector"] = ""
+                        u["_work_wage"] = ""
                 slave.save(gid)
         except Exception:
             pass
+        try:
+            from ...games import guild as _guild_mod2
+            _guild_mod2._invalidate_guild_cache(gid)
+        except Exception:
+            try:
+                from games import guild as _guild_mod2  # type: ignore
+                _guild_mod2._invalidate_guild_cache(gid)
+            except Exception:
+                pass
 
         # 2b. 清除分群昵称内存（防清除后列表仍显示幽灵名）
         try:

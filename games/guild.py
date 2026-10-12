@@ -100,6 +100,22 @@ def _guild_info(gid, gname):
     if not mem:
         return None
     owner = next((q for q, g in mem if g.get("pos") == "帮主"), None)
+    if owner is None and mem:
+        # 若帮主被退群清理或删档导致无帮主，自动由护法/最高帮贡成员继任帮主
+        try:
+            cand_q, cand_g = sorted(
+                mem,
+                key=lambda item: (
+                    1 if item[1].get("pos") == "护法" else 0,
+                    int(item[1].get("gong", 0) or 0),
+                ),
+                reverse=True,
+            )[0]
+            cand_g["pos"] = "帮主"
+            _save_member(gid, cand_q, cand_g)
+            owner = cand_q
+        except Exception:
+            owner = mem[0][0]
     gong = sum(int(g.get("gong", 0) or 0) for _, g in mem)
     build = sum(int(g.get("build", 0) or 0) for _, g in mem)
     # 等级: 默认 Lv.1，通过【帮派升级】消耗帮贡提升
@@ -501,8 +517,8 @@ def cmd_battle(gid, qq, gname):
         win = random_bool(mp / (mp + fp)) if (mp + fp) else False
     if win:
         import random as _rr
-        lo = _cfgi("帮战获贡下限", 0)
-        hi = _cfgi("帮战获贡上限", 0)
+        lo = _cfgi("帮战获贡下限", 10)
+        hi = _cfgi("帮战获贡上限", 30)
         gain = 0
         if hi > 0 or lo > 0:
             _lo, _hi = (lo, hi) if lo <= hi else (hi, lo)
@@ -513,11 +529,34 @@ def cmd_battle(gid, qq, gname):
         if gain > 0:
             my["gong"] = int(my.get("gong", 0) or 0) + gain
             _save_member(gid, qq, my)
+            # 同时从敌方帮主或高贡成员扣减最多 gain//2 帮贡（不低于 0）
+            try:
+                foe_mem = _members(gid, gname)
+                rem_take = max(1, gain // 2)
+                for fq, fg in sorted(foe_mem, key=lambda x: int(x[1].get("gong", 0) or 0), reverse=True):
+                    if rem_take <= 0:
+                        break
+                    cur_fg = max(0, int(fg.get("gong", 0) or 0))
+                    if cur_fg <= 0:
+                        continue
+                    ded = min(cur_fg, rem_take)
+                    fg["gong"] = cur_fg - ded
+                    _save_member(gid, fq, fg)
+                    rem_take -= ded
+            except Exception:
+                pass
             return (f"恭喜，您的帮派在此次帮战中大获全胜，收缴敌方帮贡！+{gain}帮贡\r\n"
                     f"{my['name']}(战力{mp}) 击败 {gname}(战力{fp})")
         return (f"恭喜，您的帮派在此次帮战中大获全胜，收缴敌方帮贡！\r\n"
                 f"{my['name']}(战力{mp}) 击败 {gname}(战力{fp})")
-    return (f"很抱歉，您的帮派在此次帮战中惨败，损失帮贡！\r\n"
+    import random as _rr2
+    cur_my_gong = max(0, int(my.get("gong", 0) or 0))
+    lose_gong = min(cur_my_gong, _rr2.randint(5, 15))
+    if lose_gong > 0:
+        my["gong"] = cur_my_gong - lose_gong
+        _save_member(gid, qq, my)
+    loss_txt = f"（-{lose_gong}帮贡）" if lose_gong > 0 else ""
+    return (f"很抱歉，您的帮派在此次帮战中惨败，损失帮贡{loss_txt}！\r\n"
             f"{my['name']}(战力{mp}) 不敌 {gname}(战力{fp})")
 
 

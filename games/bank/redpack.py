@@ -18,10 +18,10 @@ def cmd_redpack(gid, qq, amount, pwd=None):
     a = _acct(gid, qq)
     if _check_jail(a):
         return _show_jail(a)
-    min_amt = cfgi("银行配置", "红包_最小金额", 2000)
+    min_amt = cfgi("银行配置", "红包_最小金额", 200)
     max_amt = cfgi("银行配置", "红包_最大金额", getattr(ST, "COIN_CAP", 100000000000))
     cost_tili = cfgi("银行配置", "红包_发体力", 2)
-    interval = cfgi("银行配置", "红包_间隔时间", 60)
+    interval = cfgi("银行配置", "红包_间隔时间", 15)
     if amount < min_amt:
         return f"亲，发红包最小金额为：{min_amt}！请输入正确格式：发红包 金额"
     if amount > max_amt:
@@ -39,25 +39,30 @@ def cmd_redpack(gid, qq, amount, pwd=None):
         return "亲，您的账户余额不足，无法发红包！"
     if a.int("stamina") < cost_tili:
         return f"体力不足，发红包需要{cost_tili}体力！"
-    # 原子化：钱包+体力+红包表同锁，避免并发互删
+    # 原子化：钱包+体力+红包表同锁，避免并发互删与覆盖未领完同口令红包
     try:
         with ST._LOCK:
-            # 复用 txn_coins_acct 思路：直接操作 DB
-            # 扣钱扣体力
+            now_ts = int(time.time())
+            ST._DB.execute("DELETE FROM redpacks WHERE ts < ? OR amount <= 0", (now_ts - 86400,))
+            existing = ST._DB.execute("SELECT amount FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd))).fetchone()
+            if existing and int(existing[0] or 0) > 0:
+                return f"当前群内已有口令为【{pwd}】的未领完红包，请换个口令或先抢完它！"
             row = ST._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
             cur = int(row[0]) if row else 0
-            newv = cur - int(amount)
-            if newv < 0:
-                newv = 0
-            ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), newv))
+            if cur < int(amount):
+                return "亲，您的账户余额不足，无法发红包！"
             a2 = ST.acct(gid, qq)
-            a2.set("stamina", str(a2.int("stamina") - cost_tili))
-            a2.set("redpack_send_time", str(int(time.time())))
+            cur_st = a2.int("stamina")
+            if cur_st < cost_tili:
+                return f"体力不足，发红包需要{cost_tili}体力！"
+            newv = cur - int(amount)
+            ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), newv))
+            a2.set("stamina", str(max(0, cur_st - cost_tili)))
+            a2.set("redpack_send_time", str(now_ts))
             ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
             ST._DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
-            ST._DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
             ST._DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
-                           (int(gid), int(qq), pwd, amount, int(time.time())))
+                           (int(gid), int(qq), pwd, int(amount), now_ts))
             try:
                 ST._DB.commit()
             except Exception:

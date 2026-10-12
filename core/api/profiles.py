@@ -81,8 +81,8 @@ async def handle_slave_users(request):    # 请求参数在事件循环上提取
 
     def _work():
         try:
-            default_init_price = ST.cfgi("费用配置", "初始身价", 500) if hasattr(ST, "cfgi") else 500
-            if default_init_price <= 0: default_init_price = 500
+            default_init_price = ST.cfgi("费用配置", "初始身价", 1000) if hasattr(ST, "cfgi") else 1000
+            if default_init_price <= 0: default_init_price = 1000
 
             # 从 groups, wallet, accounts 聚合所有玩家
             out = []
@@ -171,9 +171,9 @@ async def handle_slave_calibrate(request):
         try:
             init_price = _to_int(data.get("price", 0) or 0)
             if init_price <= 0:
-                init_price = ST.cfgi("费用配置", "初始身价", 500) if hasattr(ST, "cfgi") else 500
+                init_price = ST.cfgi("费用配置", "初始身价", 1000) if hasattr(ST, "cfgi") else 1000
             if init_price <= 0:
-                init_price = 500
+                init_price = 1000
 
             fixed_count = 0
             for g in _slave_all_gids():

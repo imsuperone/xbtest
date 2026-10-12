@@ -14,7 +14,7 @@ try:
 except ImportError:
     from games.config.slave import (TORTURE_VICTIM_CD, TORTURE_FALLBACK_LO, TORTURE_FALLBACK_HI,  # type: ignore
                                     TORTURE_FALLBACK_OWNER_DIV, SLOT_GROWTH)
-from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgf, cfgi, cn_fmt, cn_parse, coins_add, coins_get, protected_until, slaves_of, uget, uset
+from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgf, cfgi, cn_fmt, cn_parse, coins_add, coins_get, deduct_cash_or_deposit, max_slave_slots, protected_until, slaves_of, total_assets, uget, user_slave_slots, uset
 from .nick import exists_user, uname
 from .profile import coin_name
 
@@ -43,9 +43,7 @@ def cmd_buy_slave(gid, qq, target, st):
         if prot_qq and st.has_section(prot_qq):
             return _S.T.BUY_PROTECTED.format(who=uname(st, prot_qq), min=left)
         return _S.T.PROTECTED_CANNOT_BUY.format(min=left)
-    slots = _safe_int(uget(buyer, "slave_slots", str(cfgi("设置", "奴隶个数", 5))), cfgi("设置", "奴隶个数", 5))
-    if slots <= 0:
-        slots = max(1, cfgi("设置", "奴隶个数", 5))
+    slots = user_slave_slots(buyer)
     mine = slaves_of(st, qq)
     if len(mine) >= slots:
         return _S.T.BUY_SLOT_FULL.format(cap=slots)
@@ -125,7 +123,6 @@ def cmd_torture(gid, qq, target, st):
         return _fmt(mins, "折磨")
     if not my_slaves:
         return _S.T.TORTURE_ALL_DONE
-    sc = coins_get(gid, tid)
     cd_commit(U(st, qq), "torture_time")
     _tor_p = cfgi("概率配置", "折磨成功率", 75)
     try:
@@ -137,18 +134,14 @@ def cmd_torture(gid, qq, target, st):
         return _S.T.TORTURE_MERCY
     evs = [e for e in _S.EVENTS if e.get("type", "").startswith("折磨")]
     if not evs:
-        take = min(sc, _random.randint(TORTURE_FALLBACK_LO, TORTURE_FALLBACK_HI))
+        want_take = _random.randint(TORTURE_FALLBACK_LO, TORTURE_FALLBACK_HI)
+        take = deduct_cash_or_deposit(gid, tid, want_take)
+        if take is None:
+            return "数据库繁忙，折磨结算未成功，请稍后重试。"
         if take > 0:
-            # 先扣奴隶再奖主人：任一步失败即退款回滚并中止，不改时间戳（禁半成功）
-            if coins_add(gid, tid, -take) is None:
-                return "数据库繁忙，折磨结算未成功，请稍后重试。"
             _share = take // TORTURE_FALLBACK_OWNER_DIV
             if _share > 0 and coins_add(gid, qq, _share) is None:
-                try:
-                    coins_add(gid, tid, take)
-                except Exception:
-                    pass
-                return "数据库繁忙，折磨结算未成功，已退款，请稍后重试。"
+                return "数据库繁忙，折磨结算未成功，请稍后重试。"
         uset(s, "tortured_time", cn_fmt(_time.time()))
         return f"折磨了 [{uname(st,tid)}], 掠夺 {take}"
     up_pool = [e for e in evs if e.get("effect") == "主人货币上涨"]
@@ -164,10 +157,10 @@ def cmd_torture(gid, qq, target, st):
         parts.append(_S.T.EVENT_MASTER_UP.format(text=ev.get("text", ""), amt=amt))
     elif down_pool and _random.random() < 0.3:
         ev = _random.choice(down_pool)
-        amt = min(coins_get(gid, qq), _random.randint(50, 500))
+        amt = deduct_cash_or_deposit(gid, qq, _random.randint(50, 500))
+        if amt is None:
+            return "数据库繁忙，折磨结算未成功，请稍后重试。"
         if amt > 0:
-            if coins_add(gid, qq, -amt) is None:
-                return "数据库繁忙，折磨结算未成功，请稍后重试。"
             parts.append(_S.T.EVENT_MASTER_DOWN.format(text=ev.get("text", ""), amt=amt))
     if sup_pool and _random.random() < 0.35:
         ev = _random.choice(sup_pool)
@@ -177,10 +170,10 @@ def cmd_torture(gid, qq, target, st):
         parts.append(_S.T.EVENT_SLAVE_UP.format(text=ev.get("text", ""), amt=amt))
     elif sdown_pool and _random.random() < 0.5:
         ev = _random.choice(sdown_pool)
-        amt = min(sc, _random.randint(30, 400))
+        amt = deduct_cash_or_deposit(gid, tid, _random.randint(30, 400))
+        if amt is None:
+            return "数据库繁忙，折磨结算未成功，请稍后重试。"
         if amt > 0:
-            if coins_add(gid, tid, -amt) is None:
-                return "数据库繁忙，折磨结算未成功，请稍后重试。"
             parts.append(_S.T.EVENT_SLAVE_DOWN.format(text=ev.get("text", ""), amt=amt))
     if not parts:
         return _S.T.TORTURE_MERCY
@@ -241,6 +234,7 @@ def cmd_release(gid, qq, target, st):
     uset(s, "owner", "")
     uset(s, "protect_until", "")
     uset(s, "protector", "")
+    uset(s, "_work_wage", "")
     cd_commit(U(st, qq), "release_time")
     return _S.T.RELEASE_OK.format(who=uname(st, tid))
 
@@ -276,6 +270,9 @@ def cmd_ransom(gid, qq, target, st):
     if _ok is not True:
         return _S.T.POOR.format(coin=coin_name()) + f"(需{price})"
     uset(s, "owner", "")
+    uset(s, "protect_until", "")
+    uset(s, "protector", "")
+    uset(s, "_work_wage", "")
     uset(s, "赎身时间", cn_fmt(_time.time()))
     return f"[{uname(st,qq)}] 大发善心，花费{price}为 [{uname(st,tid)}] 赎身，Ta已恢复自由！"
 
@@ -308,6 +305,9 @@ def cmd_freedom(gid, qq, st):
         return (_S.T.FREE_BY_TORTURE.format(cost=price) + "\r\n" + _S.T.FREE_FAIL_PAY
                 + f"\r\n(还差 {price - have} {coin_name()})")
     uset(u, "owner", "")
+    uset(u, "protect_until", "")
+    uset(u, "protector", "")
+    uset(u, "_work_wage", "")
     uset(u, "自由时间", cn_fmt(_time.time()))
     return _S.T.FREE_KIND.format(cost=price) + "\r\n换取自由！"
 
@@ -316,24 +316,30 @@ def cmd_freedom(gid, qq, st):
 
 def cmd_buyslot(gid, qq, st):
     u = U(st, qq)
-    cur = _safe_int(uget(u, "slave_slots", str(cfgi("设置", "奴隶个数", 5))), cfgi("设置", "奴隶个数", 5))
-    cap = cfgi("设置", "奴隶个数上限", 15)
+    cur = user_slave_slots(u)
+    cap = max_slave_slots()
     if cur >= cap:
         return _S.T.SLOT_SYS_MAX
     base_price = cfgi("设置", "奴隶位价格", 5000)
-    base_cap = cfgi("设置", "奴隶个数", 5)
+    base_cap = max(1, cfgi("设置", "奴隶个数", 2))
     price = int(base_price * (SLOT_GROWTH ** max(0, cur - base_cap)))
     if coins_get(gid, qq) < price:
         return (_S.T.SLOT_NEED.format(price=price) + "\r\n" +
                 _S.T.SLOT_POOR.format(coin=coin_name()))
     if coins_add(gid, qq, -price) is None:
         return "数据库繁忙，购买奴隶位未成功，未扣款，请稍后重试。"
+    uset(u, "slot_bought", "1")
     uset(u, "slave_slots", str(cur + 1))
+    next_line = (
+        _S.T.SLOT_NEXT_PRICE.format(price=int(price * SLOT_GROWTH))
+        if (cur + 1) < cap
+        else "🎉 已达系统最大奴隶位上限！"
+    )
     return ("\r\n".join([
         f"恭喜您花费{price}{coin_name()}",
         _S.T.SLOT_BUY_ONE,
         _S.T.SLOT_NOW_CAP.format(cap=cur + 1),
-        _S.T.SLOT_NEXT_PRICE.format(price=int(price * SLOT_GROWTH)),
+        next_line,
     ]))
 
 

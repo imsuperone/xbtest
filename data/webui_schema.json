@@ -8,11 +8,11 @@
       },
       "奴隶个数": {
         "type": "int",
-        "default": 5
+        "default": 2
       },
       "奴隶个数上限": {
         "type": "int",
-        "default": 15
+        "default": 5
       },
       "奴隶位价格": {
         "type": "int",
@@ -40,15 +40,15 @@
       },
       "十连抽花费": {
         "type": "int",
-        "default": 1500
+        "default": 3000
       },
       "三十连抽花费": {
         "type": "int",
-        "default": 4000
+        "default": 8000
       },
       "五十连抽花费": {
         "type": "int",
-        "default": 6000
+        "default": 12000
       },
       "抽武器R概率": {
         "type": "int",

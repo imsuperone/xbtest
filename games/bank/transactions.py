@@ -33,11 +33,13 @@ def cmd_deposit(gid, qq, amount):
         cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
         interest = _settle_interest(a, rate, cap)
         old = a.int("deposit")
+        prev_ts = a.int("withdraw_timestamp")
         updates = {
             "stamina": str(a.int("stamina") - cs),
             "deposit": str(old + amount + interest),
-            "withdraw_timestamp": str(int(time.time())),
         }
+        if old <= 0 or interest > 0 or prev_ts <= 0:
+            updates["withdraw_timestamp"] = str(int(time.time()))
         if interest > 0:
             updates["interest_date"] = today_s
             updates["interest_count"] = str(cur_cnt + 1)

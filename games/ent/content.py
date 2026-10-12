@@ -57,7 +57,7 @@ _MENU = (
 def _fee(gid, qq, kind):
     """娱乐功能消耗金币(娱乐配置__<kind>造价=0 免费)"""
     try:
-        c = int(float(ST.cfg("娱乐配置", kind + "造价", "0") or "0"))
+        c = cfgi("娱乐配置", kind + "造价", 0)
     except Exception:
         c = 0
     if c <= 0:

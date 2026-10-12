@@ -19,7 +19,7 @@ except ImportError:
                                     FIGHT_POOR_LIMIT, FIGHT_CRIT_PER_STAR, FIGHT_CRIT_MULT,
                                     SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS,
                                     WORTH_PCT_CAP)
-from .base import U, _fmt, _safe_int, cd_check, cd_commit, cfg, cfgf, cfgi, cn_fmt, cn_parse, coins_get, slaves_of, star_of, treasures_of, uget, uset, weapons_of
+from .base import U, _fmt, _safe_int, cd_check, cd_commit, cfg, cfgf, cfgi, cn_fmt, cn_parse, coins_get, protected_until, slaves_of, star_of, total_assets, transfer_cash_or_deposit, treasures_of, uget, user_slave_slots, uset, weapons_of
 try:
     from ..config.shop import TREASURES as _TREASURES_BUILTIN
 except ImportError:
@@ -358,7 +358,7 @@ def cmd_fight(gid, qq, target, st):
     if my_p >= ta_p * FIGHT_REFUSE_POWER:
         return _S.T.FIGHT_TOO_STRONG
 
-    ca, cdd = coins_get(gid, qq), coins_get(gid, tid)
+    ca, cdd = total_assets(gid, qq), total_assets(gid, tid)
     stake = min(int(ca * FIGHT_STAKE_PCT), int(cdd * FIGHT_STAKE_PCT), FIGHT_STAKE_CAP)
     if stake <= 0:
         if ca < FIGHT_POOR_LIMIT:
@@ -404,11 +404,11 @@ def cmd_fight(gid, qq, target, st):
     def _shield(owner_q):
         return _has_treasure_type(treasures_of(U(st, owner_q)), "shield", (SHIELD_TREASURE,))
 
+    now_ts = _time.time()
     if win:
         lines.append(_S.T.FIGHT_WIN)
-        free_slot = len(slaves_of(st, qq)) < _safe_int(uget(U(st, qq), "slave_slots",
-                                                  str(cfgi("设置", "奴隶个数", 5))), cfgi("设置", "奴隶个数", 5))
-        stealable = [s for s in d_slaves]
+        free_slot = len(slaves_of(st, qq)) < user_slave_slots(U(st, qq))
+        stealable = [s for s in d_slaves if now_ts >= protected_until(U(st, s))]
         if stealable and free_slot:
             if _shield(tid):
                 victim = _random.choice(stealable)
@@ -418,57 +418,45 @@ def cmd_fight(gid, qq, target, st):
                 victim = _random.choice(stealable)
                 uset(U(st, victim), "owner", qq)
                 uset(U(st, victim), "purchase_price", str(int(uget(U(st, victim), "price") or 0)))
-                uset(U(st, victim), "purchase_time", cn_fmt(_time.time()))
+                uset(U(st, victim), "purchase_time", cn_fmt(now_ts))
+                uset(U(st, victim), "protect_until", "")
+                uset(U(st, victim), "protector", "")
                 uset(U(st, victim), "_work_wage", "")
                 newp = min(_S.MAX_PRICE, int(int(uget(U(st, victim), "price") or 0) * cfgf("费用配置", "买入身价上涨", _S.PRICE_UP)))
                 uset(U(st, victim), "price", str(newp))
                 lines.append(_S.T.FIGHT_GET_SLAVE.format(slave="[" + uname(st, victim) + "]"))
-        elif stealable:
-            ransom = min(cdd, stake)
-            if ransom > 0:
-                # 原子双钱包：失败如实告知，不改奴隶归属（禁半成功）
-                try:
-                    _ok = ST.txn_two_wallets(gid, tid, qq, ransom)
-                except Exception:
-                    _ok = None
-                if _ok is None:
-                    return "\r\n".join(lines) + "\r\n赎金结算繁忙，请稍后重试。"
-                if _ok is not True:
-                    ransom = 0
+        else:
+            ransom = transfer_cash_or_deposit(gid, tid, qq, stake)
+            if ransom is None:
+                return "\r\n".join(lines) + "\r\n赎金结算繁忙，请稍后重试。"
+            ransom = max(0, int(ransom or 0))
             lines.append(_S.T.FIGHT_SLOT_FULL.format(money=ransom))
     else:
         lines.append(_S.T.FIGHT_LOSE)
         shield = _shield(qq)
-        stealable = [s for s in a_slaves]
-        if stealable and not shield:
-            free_t = len(slaves_of(st, tid)) < _safe_int(uget(U(st, tid), "slave_slots",
-                                                   str(cfgi("设置", "奴隶个数", 5))), cfgi("设置", "奴隶个数", 5))
-            if free_t:
-                victim = _random.choice(stealable)
-                uset(U(st, victim), "owner", tid)
-                uset(U(st, victim), "purchase_price", str(int(uget(U(st, victim), "price") or 0)))
-                uset(U(st, victim), "purchase_time", cn_fmt(_time.time()))
-                uset(U(st, victim), "_work_wage", "")
-                newp = min(_S.MAX_PRICE, int(int(uget(U(st, victim), "price") or 0) * cfgf("费用配置", "买入身价上涨", _S.PRICE_UP)))
-                uset(U(st, victim), "price", str(newp))
-                lines.append(_S.T.FIGHT_LOSE_SLAVE.format(slave="[" + uname(st, victim) + "]"))
-            else:
-                ransom = min(ca, stake)
-                if ransom > 0:
-                    # 原子双钱包：失败如实告知，不改奴隶归属（禁半成功）
-                    try:
-                        _ok = ST.txn_two_wallets(gid, qq, tid, ransom)
-                    except Exception:
-                        _ok = None
-                    if _ok is None:
-                        return "\r\n".join(lines) + "\r\n赎金结算繁忙，请稍后重试。"
-                    if _ok is not True:
-                        ransom = 0
-                lines.append(_S.T.FIGHT_PAY_MONEY.format(money=ransom))
-        elif shield:
+        stealable = [s for s in a_slaves if now_ts >= protected_until(U(st, s))]
+        free_t = len(slaves_of(st, tid)) < user_slave_slots(U(st, tid))
+        if stealable and not shield and free_t:
+            victim = _random.choice(stealable)
+            uset(U(st, victim), "owner", tid)
+            uset(U(st, victim), "purchase_price", str(int(uget(U(st, victim), "price") or 0)))
+            uset(U(st, victim), "purchase_time", cn_fmt(now_ts))
+            uset(U(st, victim), "protect_until", "")
+            uset(U(st, victim), "protector", "")
+            uset(U(st, victim), "_work_wage", "")
+            newp = min(_S.MAX_PRICE, int(int(uget(U(st, victim), "price") or 0) * cfgf("费用配置", "买入身价上涨", _S.PRICE_UP)))
+            uset(U(st, victim), "price", str(newp))
+            lines.append(_S.T.FIGHT_LOSE_SLAVE.format(slave="[" + uname(st, victim) + "]"))
+        elif shield and stealable:
             victim = _random.choice(stealable)
             lines.append(_S.T.FIGHT_MY_TREASURE)
             lines.append("[" + uname(st, victim) + "]" + _S.T.FIGHT_MY_SHIELD)
+        else:
+            ransom = transfer_cash_or_deposit(gid, qq, tid, stake)
+            if ransom is None:
+                return "\r\n".join(lines) + "\r\n赎金结算繁忙，请稍后重试。"
+            ransom = max(0, int(ransom or 0))
+            lines.append(_S.T.FIGHT_PAY_MONEY.format(money=ransom))
     return "\r\n".join(lines)
 
 

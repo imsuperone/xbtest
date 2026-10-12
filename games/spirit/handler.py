@@ -37,7 +37,7 @@ MENU = (
     "🧳 旅行精灵　　🚩 精灵远征\r\n"
     "🎽 出战精灵 名称　🕊️ 回收出战精灵\r\n"
     "💠 携带精灵 名称　🗑️ 丢弃精灵 名称\r\n"
-    "🧬 进化 名称　　⚔️ 精灵对战 @QQ　🏁 挑战 名称\r\n"
+    "🧬 进化 名称　　⚔️ 精灵对战 @QQ　🏁 挑战 @QQ\r\n"
     "🏆 精灵排行\r\n"
     "━━━━━━━━━━━━━━\r\n"
     "💡 发送对应指令即可游玩"
@@ -218,7 +218,7 @@ def _starters():
 
 
 def _add_exp(gid, qq, sp, it, amount, save_now=True):
-    """加经验, 处理升级与进化"""
+    """加经验与升级（进化统一需使用【进化液】/【进化 名称】，达到进化等级时给出提示）"""
     it["exp"] = int(it.get("exp", 0)) + int(amount)
     evolved = ""
     while it["exp"] >= _exp_need(it) and it["level"] < _cfgi("最大等级", 100):
@@ -227,13 +227,8 @@ def _add_exp(gid, qq, sp, it, amount, save_now=True):
         old_name = it.get("name")
         base = _SPIRITS().get(old_name, {})
         evo = base.get("evolve", "否")
-        if evo and evo != "否" and it["level"] >= base.get("lv", 0):
-            _apply_new_species(it, evo)
-            if sp.get("active") == old_name:
-                sp["active"] = evo
-            if sp.get("ride") == old_name:
-                sp["ride"] = evo
-            evolved = f"   进化成 {evo}！\r\n"
+        if evo and evo != "否" and it["level"] >= int(base.get("lv", 0) or 0):
+            evolved = f"💡 【{old_name}】已达进化等级 Lv.{base.get('lv', 0)}，可使用【进化液】发送【进化 {old_name}】进化为「{evo}」！\r\n"
     if save_now:
         _save(gid, qq, sp)
     return evolved
@@ -501,8 +496,9 @@ def cmd_adventure(gid, qq, place):
     gold_hi = _cfgi("挑战奖励_金钱上限", 250)
     exp = random.randint(max(1, exp_lo), max(exp_lo, exp_hi))
     gold = random.randint(0, max(0, gold_hi))
+    evo_hint = ""
     if act_it.get("level") < _cfgi("最大等级", 100):
-        _add_exp(gid, qq, sp, act_it, exp, save_now=False)
+        evo_hint = _add_exp(gid, qq, sp, act_it, exp, save_now=False) or ""
     # H: 挑战扣除（fallback全0，没配行为不变；有配则扣钱扣体力并在文案明示）
     d_lo = _cfgi("挑战扣除_金钱下限", 0)
     d_hi = _cfgi("挑战扣除_金钱上限", 0)
@@ -545,6 +541,7 @@ def cmd_adventure(gid, qq, place):
     return (f"【精灵冒险】来到{place}，遭遇了野生的 Lv.{wl}「{wild_label}」！\r\n"
             f"{shiny_banner}"
             f"历练奖励：经验+{exp} {ST.coin_name()}+{gold}\r\n"
+            f"{evo_hint}"
             f"{_deduct_msg}"
             "如需收服请发【使用精灵球 精灵球名称】")
 
@@ -641,10 +638,15 @@ def cmd_discard(gid, qq, name):
         return "亲，您没有该精灵，无需丢弃！"
     if len(sp.get("list", [])) <= 1:
         return "亲，您至少需要保留一只精灵，无法丢弃最后一只！"
-    if sp.get("active") == name:
-        sp["active"] = ""
-    if sp.get("ride") == name:
-        sp["ride"] = ""
+    same_cnt = sum(1 for _x in sp.get("list", []) if _x.get("name") == name)
+    tr = sp.get("travel")
+    if same_cnt <= 1 and isinstance(tr, dict) and tr.get("name") == name and tr.get("ts"):
+        return f"亲，精灵【{name}】正在外出旅行中，请先收获旅行后再丢弃！"
+    expd = sp.get("expedition")
+    if isinstance(expd, dict) and expd.get("names") and expd.get("ts"):
+        in_exp_cnt = sum(1 for _n in (expd.get("names") or []) if _n == name)
+        if same_cnt <= in_exp_cnt:
+            return f"亲，精灵【{name}】正在组队远征中，请先收获远征后再丢弃！"
     # P0: 同名多只时仅删首只，误删全部是资损
     _lst = list(sp.get("list", []))
     for _i, _x in enumerate(_lst):
@@ -652,6 +654,11 @@ def cmd_discard(gid, qq, name):
             del _lst[_i]
             break
     sp["list"] = _lst
+    if same_cnt <= 1:
+        if sp.get("active") == name:
+            sp["active"] = ""
+        if sp.get("ride") == name:
+            sp["ride"] = ""
     red = _cfgi("魅力减少", 10)
     # 单事务原子结算：扣魅力+移除精灵一次提交；失败则精灵保留、魅力不扣（禁半成功）
     try:
@@ -684,10 +691,19 @@ def cmd_evolve(gid, qq, name):
     if int(bag.get("进化液", 0)) <= 0:
         del bag["进化液"]
     _apply_new_species(it, evo)
-    if sp.get("active") == name:
+    if sp.get("active") == name and not _wsp(sp, name):
         sp["active"] = evo
-    if sp.get("ride") == name:
+    if sp.get("ride") == name and not _wsp(sp, name):
         sp["ride"] = evo
+    tr = sp.get("travel")
+    if isinstance(tr, dict) and tr.get("name") == name and not _wsp(sp, name):
+        tr["name"] = evo
+    expd = sp.get("expedition")
+    if isinstance(expd, dict) and isinstance(expd.get("names"), list):
+        for _idx_n, _en in enumerate(expd["names"]):
+            if _en == name:
+                expd["names"][_idx_n] = evo
+                break
     _save(gid, qq, sp)
     return f"恭喜！「{name}」进化成「{_fmt_name(it)}」（总战力：{_power(it)}）！"
 

@@ -167,19 +167,19 @@ def cmd_bomb(gid, qq, arg):
     """扔炸弹: 花费+体力掷炸弹, 按概率命中目标(命中则禁言目标，需平台支持)"""
     import re as _re2
     a = ST.acct(gid, qq)
-    cost = cfgi("娱乐配置", "扔炸弹_需要金钱", 30000)
-    tili = cfgi("娱乐配置", "扔炸弹_消耗体力", 20)
-    meli = cfgi("娱乐配置", "扔炸弹_魅力减少", 5)
+    cost = cfgi("娱乐配置", "扔炸弹_需要金钱", 2000)
+    tili = cfgi("娱乐配置", "扔炸弹_消耗体力", 5)
+    meli = cfgi("娱乐配置", "扔炸弹_魅力减少", 2)
     nmin = cfgi("娱乐配置", "扔炸弹_个数下限", 1)
     nmax = cfgi("娱乐配置", "扔炸弹_个数上限", 2)
-    prob = cfgi("娱乐配置", "扔炸弹_成功概率", 70)
+    prob = cfgi("娱乐配置", "扔炸弹_成功概率", 75)
     try:
         from ..sign import eff_prob as _luck_eff
         prob = _luck_eff(prob, gid, qq)
     except Exception:
         pass
-    mute_lo = cfgi("娱乐配置", "扔炸弹_禁言下限", 5)
-    mute_hi = cfgi("娱乐配置", "扔炸弹_禁言上限", 10)
+    mute_lo = cfgi("娱乐配置", "扔炸弹_禁言下限", 1)
+    mute_hi = cfgi("娱乐配置", "扔炸弹_禁言上限", 5)
     # 解析目标（QQ-only：CQ码 / @QQ / 纯数字，不认昵称）
     arg = (arg or "").strip()
     if not arg:
