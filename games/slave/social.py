@@ -246,19 +246,20 @@ def cmd_work_dispatch(gid, qq, st):
     my = slaves_of(st, qq)
     if not my:
         return _S.T.WORK_NO_SLAVE + "\r\n💡 发送【搬砖】可亲自打工赚取金币！"
+    _prev_msg = ""
     if uget(u, "work_status") == "真":
         started = cn_parse(uget(u, "work_time")) or 0
         duration = cfgi("间隔配置", "打工间隔", 15) * 60
         left = started + duration - _time.time()
         if left > 0:
-            return _S.T.WORK_WORKING.format(min=int(left / 60) + 1)
+            return _S.T.WORK_WORKING.format(min=max(1, (int(left) + 59) // 60))
         # 超时先结算旧轮工资，防重派覆盖快照致上轮收益丢失
         _old_wage = _safe_int(uget(u, "work_wage"), 0)
         if _old_wage > 0:
             try:
-                cmd_work_collect(gid, qq, st)
+                _prev_msg = cmd_work_collect(gid, qq, st) or ""
             except Exception:
-                pass
+                _prev_msg = ""
         uset(u, "work_status", "")   # 超时自动收工
     duration = cfgi("间隔配置", "打工间隔", 15)
     target = 0
@@ -271,7 +272,8 @@ def cmd_work_dispatch(gid, qq, st):
     uset(u, "work_status", "真")
     uset(u, "work_time", cn_fmt(_time.time()))
     uset(u, "work_wage", str(target))
-    return _S.T.WORK_DISPATCH.format(target=target, min=duration)
+    disp_msg = _S.T.WORK_DISPATCH.format(target=target, min=duration)
+    return f"{_prev_msg}\r\n━━━━━━━━━━━━━━\r\n{disp_msg}" if _prev_msg else disp_msg
 
 
 def cmd_work_collect(gid, qq, st):
@@ -285,7 +287,7 @@ def cmd_work_collect(gid, qq, st):
     duration = cfgi("间隔配置", "打工间隔", 15) * 60
     left = started + duration - _time.time()
     if left > 0:
-        return _S.T.WORK_WAIT.format(min=int(left / 60) + 1)
+        return _S.T.WORK_WAIT.format(min=max(1, (int(left) + 59) // 60))
 
     ratio = cfgi("费用配置", "工资比例", 50)
     try:
@@ -403,9 +405,11 @@ def cmd_self_work(gid, qq, st):
         uset(u, "price", str(new_p))
     job_act, job_tail = _random.choice(_SELF_WORK_JOBS)
     cn = coin_name()
+    extra_bonus = max(0, pay - base_pay - stat_bonus)
+    extra_str = f" + 额外加成 {extra_bonus}" if extra_bonus > 0 else ""
     lines = [
         f"🧱 {job_act}，{job_tail}！",
-        f"💰 本次工钱：+{pay}{cn}（基础 {base_pay} + 身价/魅力加成 {stat_bonus}）｜🔋 体力 -{cs}",
+        f"💰 本次工钱：+{pay}{cn}（基础 {base_pay} + 身价/魅力加成 {stat_bonus}{extra_str}）｜🔋 体力 -{cs}",
     ]
     if is_crit:
         lines.append(f"✨【工头重赏】触发大单暴击（收益 ×1.5），身价额外上涨 +{worth_up}！")

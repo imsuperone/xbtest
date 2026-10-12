@@ -274,13 +274,16 @@ def cmd_gift(gid, qq):
     sp["gift"] = 1
     bag = sp.setdefault("bag", {})
     # 礼包来自 精灵配置: 精灵球/大师球/奇异甜食
-    for k in ("精灵球", "大师球", "奇异甜食"):
-        n = int(_cfg(k, 0) or 0)
+    defaults = {"精灵球": 5, "大师球": 1, "奇异甜食": 3}
+    got_counts = {}
+    for k, d in defaults.items():
+        n = max(0, _cfgi(k, d))
+        got_counts[k] = n
         if n:
             bag[k] = int(bag.get(k, 0)) + n
     _save(gid, qq, sp)
     return ("恭喜您获得精灵礼包一份！\r\n精灵球+%s 大师球+%s 奇异甜食+%s"
-            % (_cfg("精灵球", 0), _cfg("大师球", 0), _cfg("奇异甜食", 0)))
+            % (got_counts["精灵球"], got_counts["大师球"], got_counts["奇异甜食"]))
 
 
 def cmd_my(gid, qq):
@@ -884,7 +887,7 @@ def cmd_travel(gid, qq, arg=""):
         dur_s = max(60, int(tr.get("dur", 3600) or 3600))
         left_s = int(tr.get("ts", 0)) + dur_s - now
         if left_s > 0:
-            left_m = left_s // 60 + 1
+            left_m = max(1, (int(left_s) + 59) // 60)
             return (f"🧳 您的精灵【{t_name}】正在外出漫游中~\r\n"
                     f"⏳ 距离归来还需约 {left_m} 分钟，届时发送【旅行精灵】即可迎接并拆开伴手礼！")
         # 已完成旅行，结算伴手礼
@@ -921,10 +924,29 @@ def cmd_travel(gid, qq, arg=""):
                 f"✨ 旅途收获：{ST.coin_name()}+{gold_gain}、经验+{exp_gain}、羁绊+5"
                 + (f"\r\n{evo_note.strip()}" if evo_note else ""))
 
-    target_name = (arg or "").strip() or sp.get("ride") or sp.get("active")
-    it = _wsp(sp, target_name) if target_name else (sp["list"][0] if sp.get("list") else None)
-    if it is None:
-        return "亲，请先设置【携带精灵 名称】或【出战精灵 名称】，或直接发送【旅行精灵 名称】！"
+    expd = sp.get("expedition")
+    expd_rem = list(expd.get("names") or []) if (isinstance(expd, dict) and expd.get("names") and expd.get("ts")) else []
+    free_for_travel = []
+    for x in sp.get("list", []):
+        nm = x.get("name")
+        if nm in expd_rem:
+            expd_rem.remove(nm)
+        else:
+            free_for_travel.append(x)
+    if not free_for_travel:
+        return "亲，您的精灵目前都在远征途中，请等【精灵远征】归来后再派精灵外出漫游吧！"
+    arg_name = (arg or "").strip()
+    if arg_name:
+        it = next((x for x in free_for_travel if x.get("name") == arg_name), None)
+        if it is None:
+            if _wsp(sp, arg_name) is not None:
+                return f"亲，精灵「{arg_name}」正在远征途中，暂时无法外出漫游！"
+            return "亲，您未拥有该精灵，请检查名称或发送【我的精灵】查看！"
+    else:
+        pref_name = sp.get("ride") or sp.get("active")
+        it = next((x for x in free_for_travel if x.get("name") == pref_name), None) if pref_name else None
+        if it is None:
+            it = free_for_travel[0]
     cost_stam = max(1, _cfgi("旅行消耗体力", 10))
     cost_charm = max(0, _cfgi("旅行消耗魅力", 5))
     dur_min = max(1, _cfgi("旅行时长分钟", 60))
@@ -962,7 +984,7 @@ def cmd_expedition(gid, qq, arg=""):
         dur_s = max(60, int(expd.get("dur", 7200) or 7200))
         left_s = int(expd.get("ts", 0)) + dur_s - now
         if left_s > 0:
-            left_m = left_s // 60 + 1
+            left_m = max(1, (int(left_s) + 59) // 60)
             return (f"🚩【远征进行中】远征小队（{'、'.join(names)}）正在探索秘境深处！\r\n"
                     f"⏳ 距离远征完成还需约 {left_m} 分钟，完成后发送【精灵远征】即可收获战利品！")
         # 远征完成，结算全队经验 + 金币 + 现有商城道具池掉落
@@ -1013,12 +1035,17 @@ def cmd_expedition(gid, qq, arg=""):
                 f"🎁 战利品：{drop_summary}（已放入背包）"
                 f"{evo_txt}")
 
-    # 开启新远征：优先选非出战闲置精灵（仅排除首只出战个体，同名闲置个体仍可参战）
+    # 开启新远征：排除正在外出旅行的精灵，并优先选非出战闲置精灵
+    tr = sp.get("travel")
+    tr_it = _wsp(sp, tr.get("name")) if (isinstance(tr, dict) and tr.get("name") and tr.get("ts")) else None
+    avail_lst = [x for x in lst if x is not tr_it]
+    if not avail_lst:
+        return "亲，您的精灵正在外出漫游中，暂时没有空闲精灵可派遣远征！"
     act_name = sp.get("active")
     act_it = _wsp(sp, act_name) if act_name else None
-    idle_pool = [x for x in lst if x is not act_it] if len(lst) > 1 else list(lst)
+    idle_pool = [x for x in avail_lst if x is not act_it] if len(avail_lst) > 1 else list(avail_lst)
     if not idle_pool:
-        idle_pool = list(lst)
+        idle_pool = list(avail_lst)
     idle_pool.sort(key=lambda x: _power(x), reverse=True)
     max_team = max(1, _cfgi("远征最大精灵数", 3))
     unit_stam = max(1, _cfgi("远征单只消耗体力", 8))

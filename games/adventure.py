@@ -151,16 +151,24 @@ def cmd_start(gid, qq, mapname):
     return _build_start_narrative(mapname)
 
 
-def _pick_event(mapname):
+def _pick_event(mapname, target_kind=None):
     # 60% 全局池，40% 地图专属，增加代入感
     pool = []
     if random.random() < EXCLUSIVE_CHANCE and mapname in MAP_SPECIFIC_EVENTS:
         pool = MAP_SPECIFIC_EVENTS[mapname]
+        if target_kind:
+            filtered = [x for x in pool if x[1] == target_kind]
+            if filtered:
+                return random.choice(filtered)
         # 展开为 (text, kind)
-    else:
+    elif not target_kind:
         # 从 RANDOM_EVENTS 随机
         txt, kind, _ = random.choice(RANDOM_EVENTS)
         return txt, kind
+    if target_kind:
+        filtered_rand = [(t, k) for (t, k, _) in RANDOM_EVENTS if k == target_kind]
+        if filtered_rand:
+            return random.choice(filtered_rand)
     if pool:
         txt, kind = random.choice(pool)
         return txt, kind
@@ -186,6 +194,7 @@ def cmd_choose(gid, qq, n):
     lo = _cfgi("事件金钱下限", 500); hi = _cfgi("事件金钱上限", 1500)
     money = random.randint(lo, hi)
     event_text, kind = _pick_event(m)
+    orig_kind = kind
 
     # 根据 kind 与随机分支决定奖励/惩罚
     # 选择影响概率：选 1 偏向 bonus，选 2 平衡，选 3 偏向 trap 但 high reward
@@ -205,6 +214,8 @@ def cmd_choose(gid, qq, n):
         kind = "bonus"
     elif r > bias + BONUS_GAP and kind == "bonus":
         kind = "trap"
+    if kind != orig_kind:
+        event_text, _ = _pick_event(m, target_kind=kind)
 
     if kind == "bonus":
         # 35% 额外复活币：任一到账失败如实告知（禁冒领成功）

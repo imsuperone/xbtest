@@ -31,7 +31,7 @@ def _build_status_line(gid, qq, u, acct, slaves):
             started = cn_parse(uget(u, "work_time")) or 0
             dur = cfgi("间隔配置", "打工间隔", 15) * 60
             left = started + dur - _time.time()
-            parts.append(f"奴隶打工({int(left / 60) + 1}分)" if left > 0 else "奴隶可收工!")
+            parts.append(f"奴隶打工({max(1, (int(left) + 59) // 60)}分)" if left > 0 else "奴隶可收工!")
         elif slaves:
             parts.append("奴隶空闲")
     except Exception:
@@ -42,11 +42,11 @@ def _build_status_line(gid, qq, u, acct, slaves):
         tr = sp.get("travel")
         if isinstance(tr, dict) and tr.get("name") and tr.get("ts"):
             left_s = int(tr.get("ts", 0)) + max(60, int(tr.get("dur", 3600) or 3600)) - now_i
-            parts.append(f"旅行({left_s // 60 + 1}分)" if left_s > 0 else "旅行可收获!")
+            parts.append(f"旅行({max(1, (int(left_s) + 59) // 60)}分)" if left_s > 0 else "旅行可收获!")
         expd = sp.get("expedition")
         if isinstance(expd, dict) and expd.get("names") and expd.get("ts"):
             left_s2 = int(expd.get("ts", 0)) + max(60, int(expd.get("dur", 7200) or 7200)) - now_i
-            parts.append(f"远征({left_s2 // 60 + 1}分)" if left_s2 > 0 else "远征可收获!")
+            parts.append(f"远征({max(1, (int(left_s2) + 59) // 60)}分)" if left_s2 > 0 else "远征可收获!")
     except Exception:
         pass
     return f"⏳状态：{'｜'.join(parts)}" if parts else ""

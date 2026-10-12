@@ -435,6 +435,8 @@ def cmd_buy(gid, qq, name):
     if price > 0:
         if ST.txn_coins_acct(gid, qq, -price, {"rides": json.dumps(r, ensure_ascii=False)}, require_funds=True) is None:
             return "坐骑商城繁忙，购买未成功，请稍后重试！"
+        if r.get("welcome"):
+            _welcome_add(gid)
     else:
         _save(gid, qq, r)
     pct = _ride_bonus_by_price(price)

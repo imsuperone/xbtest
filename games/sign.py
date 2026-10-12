@@ -527,16 +527,22 @@ def cmd_newbie(gid, qq):
         tili = cfgi("新手配置", "体力", cfgi("新手配置", "新手体力", cfgi("新手配置", "stamina", 300)))
         meili = cfgi("新手配置", "魅力", cfgi("新手配置", "新手魅力", cfgi("新手配置", "charm", 100)))
         jq = cfgi("新手配置", "奖券", cfgi("新手配置", "新手奖券", cfgi("新手配置", "lottery_tickets", 15)))
+        stam_soft = cfgi("签到配置", "体力软上限", STAMINA_SOFT_CAP)
         stam_hard = cfgi("签到配置", "体力硬上限", STAMINA_HARD_CAP)
+        charm_soft = cfgi("签到配置", "魅力软上限", CHARM_SOFT_CAP)
         charm_hard = cfgi("签到配置", "魅力硬上限", CHARM_HARD_CAP)
+        stam_rate = cfgi("签到配置", "体力溢出折算", STAMINA_OVERFLOW_COIN)
+        charm_rate = cfgi("签到配置", "魅力溢出折算", CHARM_OVERFLOW_COIN)
         # 单事务原子领取：钱包+账户同锁一次提交，避免签到并发时 database is locked
         # txn 失败返 None：不再用多次独立写入补发，避免礼包半成功。
         cur_stam = int(float(a.get("stamina", "0") or 0))
         cur_charm = int(float(a.get("charm", "0") or 0))
         cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
-        new_stam = min(stam_hard, cur_stam + tili)
-        new_charm = min(charm_hard, cur_charm + meili)
-        if ST.txn_coins_acct(gid, qq, money, {
+        new_stam, eff_stam, _, ov_stam_c, _ = settle_stat_gain(cur_stam, tili, stam_soft, stam_hard, stam_rate)
+        new_charm, eff_charm, _, ov_charm_c, _ = settle_stat_gain(cur_charm, meili, charm_soft, charm_hard, charm_rate)
+        ov_coins = ov_stam_c + ov_charm_c
+        total_money = money + ov_coins
+        if ST.txn_coins_acct(gid, qq, total_money, {
             "novice_gift": "1",
             "stamina": str(new_stam),
             "charm": str(new_charm),
@@ -553,8 +559,9 @@ def cmd_newbie(gid, qq):
                 a.dirty = False
             except Exception:
                 pass
+    ov_tip = f"（含溢出属性折算+{ov_coins}{ST.coin_name()}）" if ov_coins > 0 else ""
     return (f"恭喜您获得新手礼包一份！\r\n"
-            f"{ST.coin_name()}+{money}\r\n体力+{tili}\r\n魅力+{meili}\r\n奖券+{jq}")
+            f"{ST.coin_name()}+{total_money}{ov_tip}\r\n体力+{eff_stam}\r\n魅力+{eff_charm}\r\n奖券+{jq}")
 
 
 def cmd_like(gid, qq):

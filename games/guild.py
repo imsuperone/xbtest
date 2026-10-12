@@ -102,11 +102,9 @@ def _guild_info(gid, gname):
     owner = next((q for q, g in mem if g.get("pos") == "帮主"), None)
     gong = sum(int(g.get("gong", 0) or 0) for _, g in mem)
     build = sum(int(g.get("build", 0) or 0) for _, g in mem)
-    # 等级: 帮主已升等级优先, 否则按帮贡推算
+    # 等级: 默认 Lv.1，通过【帮派升级】消耗帮贡提升
     owner_g = _my(gid, owner) if owner else {}
-    lv = int(owner_g.get("lv", 0) or 0)
-    if lv < 1:
-        lv = 1 + (gong // max(1, _cfgi("升级需要帮贡", 20000)))
+    lv = max([1] + [int(g.get("lv", 1) or 1) for _, g in mem])
     # 战力=(帮主/护法出战精灵战力 + 城墙修筑防御加成) × 等级战力加成
     base_fight = sum(_spirit_power(gid, q) for (q, g) in mem if g.get("pos") in ("帮主", "护法"))
     wall_fight = build * 50
@@ -422,14 +420,15 @@ def cmd_build(gid, qq, amt):
         return "亲，您还没有加入任何帮派！"
     amt = int(amt or 1)
     if amt <= 0:
-        return "修筑数量至少为 1，格式：【修筑 数量】！"
+        return "修筑数量至少为 1，格式：【修筑城墙 数量】！"
     info = _guild_info(gid, g["name"])
     lv = int(info.get("level", 1) if info else 1)
     price = _cfgi("修筑价格", 10000)
     cap = _cfgi("修筑上限", 50) + max(0, lv - 1) * 20
     cur = int(g.get("build", 0) or 0)
-    if cur + amt > cap:
-        return f"帮派城墙修筑已达上限（{cap}），无法继续修筑！"
+    total_build = int(info.get("build", cur) if info else cur)
+    if total_build + amt > cap:
+        return f"帮派城墙修筑已达上限（{total_build}/{cap}），无法继续修筑（升级帮派可提升上限）！"
     cost = price * amt
     if ST.coins_get(gid, qq) < cost:
         return f"笑~你没有那么多{ST.coin_name()}（修筑城墙需要{cost}）"
@@ -439,7 +438,8 @@ def cmd_build(gid, qq, amt):
     ) is None:
         return "帮派系统繁忙，修筑未成功，请稍后重试！"
     _invalidate_guild_cache(gid)
-    return f"修筑城墙成功！当前城墙长度{g['build']}/{cap}，花费{cost}{ST.coin_name()}（本帮战力+{amt*50}、每日福利提升）"
+    new_total = total_build + amt
+    return f"修筑城墙成功！当前城墙长度{new_total}/{cap}（个人累计{g['build']}），花费{cost}{ST.coin_name()}（本帮战力+{amt*50}、每日福利提升）"
 
 
 def cmd_welfare(gid, qq):
@@ -573,8 +573,15 @@ def cmd_manage(gid, qq, arg):
     if arg.startswith("出让帮派"):
         m = re.search(r"(\d{5,12})", arg)
         if m and my.get("pos") == "帮主" and _is_member(gid, name, m.group(1)):
-            tg = _my(gid, m.group(1)); tg["pos"] = "帮主"; _save_member(gid, m.group(1), tg)
-            my["pos"] = "护法"; _save_member(gid, qq, my)
+            tg = _my(gid, m.group(1))
+            tg["pos"] = "帮主"
+            if my.get("lv"):
+                tg["lv"] = int(my.get("lv", 1) or 1)
+            if "intro" in my:
+                tg["intro"] = my.get("intro", "")
+            _save_member(gid, m.group(1), tg)
+            my["pos"] = "护法"
+            _save_member(gid, qq, my)
             return f"已将帮主出让给 <{_gname(gid, m.group(1))}>！"
         return "仅帮主可出让给同帮成员！"
     if arg.startswith("帮派升级"):
@@ -693,15 +700,15 @@ def handle(gid, qq, raw):
         return cmd_list(gid, qq)
     if text == "我的帮派":
         return cmd_my(gid, qq)
-    if text == "成员列表":
+    if text in ("成员列表", "帮派成员"):
         return cmd_members(gid, qq)
-    if text == "帮派排行":
-        return cmd_rank(gid, "总战力")
+    if text.startswith("帮派排行"):
+        return cmd_rank(gid, text[4:].strip() or "总战力")
     if text == "退出帮派":
         return cmd_exit(gid, qq)
     if text in ("我的贡献", "我的修筑"):
         return cmd_mine(gid, qq)
-    if text == "领取帮派福利":
+    if text in ("领取帮派福利", "帮派福利"):
         return cmd_welfare(gid, qq)
     if text.startswith("创建帮派"):
         return cmd_create(gid, qq, text[4:].strip())
