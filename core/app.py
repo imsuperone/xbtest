@@ -364,21 +364,23 @@ class XbBot(Star):
         slave.init_slave(
             bot_uin="",  # 完全自动获取，已移除 bot_uin 手动配置
             import_wallet_dir=str((cfg.get("网络") or {}).get("import_wallet_dir", "") or "") if isinstance(cfg.get("网络"), dict) else "")
-        # 兜底自定义示例：mj + 像素方块…（纯自定义 command="" reply）若旧配置缺失则补齐并落盘
+        # 兜底自定义示例：mj + 像素方块…（纯自定义 command="" reply）仅首次建库/迁移补齐一次，后台删除后不再复活
         try:
-            sec = ST._CONFIG.get("自定义指令配置")
-            if not isinstance(sec, dict):
-                sec = {}
-                ST._CONFIG["自定义指令配置"] = sec
-            need = False
-            if "mj" not in sec:
-                sec["mj"] = {"command": "", "reply": "mj"}
-                need = True
-            if "像素方块的硬核才是王道" not in sec:
-                sec["像素方块的硬核才是王道"] = {"command": "", "reply": "你的卡通画风根本没技巧"}
-                need = True
-            if need:
-                _need_save = True
+            if not ST.recall_get("mig_custom_seed_v1", ""):
+                sec = ST._CONFIG.get("自定义指令配置")
+                if not isinstance(sec, dict):
+                    sec = {}
+                    ST._CONFIG["自定义指令配置"] = sec
+                need = False
+                if "mj" not in sec:
+                    sec["mj"] = {"command": "", "reply": "mj"}
+                    need = True
+                if "像素方块的硬核才是王道" not in sec:
+                    sec["像素方块的硬核才是王道"] = {"command": "", "reply": "你的卡通画风根本没技巧"}
+                    need = True
+                ST.recall_set("mig_custom_seed_v1", "1")
+                if need:
+                    _need_save = True
         except Exception:
             pass
         # __init__ 种子三处（新装预设/接龙纠正/mj 示例）落盘合并为一次：全量 JSON＋文件＋DB 三写只付一次

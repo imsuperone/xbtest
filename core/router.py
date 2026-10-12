@@ -383,11 +383,23 @@ def _custom_idx(store):
 
 
 
-def _custom_cmd(raw, store):
+_CUSTOM_ZW = "\u200b"
+_CUSTOM_CD = {}
+_CUSTOM_CD_SEC = 5.0
+
+
+def _custom_cmd(raw, store, gid=""):
     """自定义指令匹配（L2 单源）：命中前只走 _custom_idx 索引（cmds 序 + ent 载荷），
-    不再每条消息先回读自定义指令配置节；索引缺席/无词时才现场读配置兜底（逐行等价）。"""
+    不再每条消息先回读自定义指令配置节；索引缺席/无词时才现场读配置兜底（逐行等价）。
+    防互刷保护：1) 携带零宽防回环标记 \\u200b 的同行 AI 回复直接静默忽略；
+    2) 同群同一纯自定义触发词 5s 冷却熔断，阻断多机器人互相复读刷屏。"""
     try:
-        raw = str(raw or "").strip()
+        raw_str = str(raw or "")
+        if raw_str.startswith(_CUSTOM_ZW):
+            return _PROTO_SILENT, raw_str.strip()
+        raw = raw_str.strip()
+        if raw.startswith(_CUSTOM_ZW):
+            return _PROTO_SILENT, raw
         hit = None
         sec = None
         try:
@@ -426,6 +438,14 @@ def _custom_cmd(raw, store):
         if cmd:
             return None, (cmd + (" " if rest else "") + rest)
         if reply:
+            if gid:
+                _now_c = _t_guard.time()
+                _ck = (str(gid), str(hit))
+                if _now_c - _CUSTOM_CD.get(_ck, 0.0) < _CUSTOM_CD_SEC:
+                    return _PROTO_SILENT, raw
+                if len(_CUSTOM_CD) > 2048:
+                    _CUSTOM_CD.clear()
+                _CUSTOM_CD[_ck] = _now_c
             # 变量渲染 + 多回复随机（纯自定义支持 {name}/{qq}/{gid}/{time}/{coin}/{at} 等）
             try:
                 # _custom_cmd 在路由层无 gid/qq 上下文时由 handle 传入 rest，此处先多选再渲染
@@ -641,7 +661,9 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
         return _MAIN_MENU
     if store:
         try:
-            creply, raw = _custom_cmd(raw, store)
+            creply, raw = _custom_cmd(raw, store, gid=gid)
+            if creply is _PROTO_SILENT:
+                return None
             if creply:
                 # 纯自定义变量渲染（{name}/{qq}/{gid}/{time}/{coin}/{at}）且不再走名字前缀在 main 已跳过
                 try:

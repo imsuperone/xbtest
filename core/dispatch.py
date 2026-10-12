@@ -313,12 +313,15 @@ async def send_reply(event, reply, qq, raw, gid, ST, logger, do_platform,
         except Exception as e:
             note = f"平台动作执行失败：{e}"
         reply = note
-    # 纯自定义指令不自动带名字（用户要求），带变量渲染后直接返回
+    # 纯自定义指令不自动带名字（用户要求），带变量渲染后直接返回；
+    # 同时注入不可见零宽防回环标记 \u200b，彻底阻断同群多同款插件 AI 互相触发 mj 死循环
     if not _is_pure_custom(raw, ST):
         try:
             reply = name_prefix(qq, reply, None, gid)
         except TypeError:
             reply = name_prefix(qq, reply)
+    elif isinstance(reply, str) and reply and not reply.startswith(("\u200b", "[CQ:")):
+        reply = "\u200b" + reply
     try:
         comp = build_chain(reply)
         event.stop_event()
