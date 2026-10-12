@@ -44,13 +44,10 @@ def cmd_deposit(gid, qq, amount):
         if ST.txn_coins_acct(gid, qq, -amount, updates, require_funds=True) is None:
             return "亲，银行系统繁忙，存款未成功，请稍后重试！"
         total = old + amount + interest
-    cnt_note = f"\r\n💡 今日结息次数：{cur_cnt + 1}/{max_daily}" if (interest > 0 and max_daily > 0) else (
-        f"\r\n💡 今日结息已满 {max_daily}/{max_daily} 次，明日可继续结息" if (old > 0 and max_daily > 0 and cur_cnt >= max_daily) else ""
-    )
     return (f"存款成功！消耗{cs}点体力，共存入：{amount}，\r\n"
             f"上期结息：{interest}，当前总存款：{total}，"
             f"当前利率：{rate}%，1小时后可取款！\r\n"
-            f"剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}{cnt_note}")
+            f"剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
 
 
 def _settle_interest(a, rate, cap):
@@ -95,24 +92,19 @@ def cmd_withdraw(gid, qq, amount):
         today_s = str(dt.date.today())
         cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
         interest = _settle_interest(a, rate, cap)
-        # 利息未到或今日结息次数已满时提示剩余时间与可用强制取款，但仍允许取款
-        if interest == 0 and dep > 0:
-            if max_daily > 0 and cur_cnt >= max_daily:
-                interest_note = f"（提示：今日结息已满 {max_daily}/{max_daily} 次，本次仅取回本金，明日可继续结息）"
-            else:
-                try:
-                    last = float(a.get("withdraw_timestamp", "0") or "0")
-                    left = int(3600 - (time.time() - last))
-                    if left > 0:
-                        pot = int(dep * rate / 100.0)
-                        pot = min(pot, cap)
-                        interest_note = f"（提示：利息结算需1小时，还需{left//60}分{left%60}秒，到期可获{pot}{ST.coin_name()}，可强取）"
-                    else:
-                        interest_note = ""
-                except Exception:
+        # 利息未到时提示剩余时间与可用强制取款，但仍允许取款（结息次数不外显）
+        if interest == 0 and dep > 0 and not (max_daily > 0 and cur_cnt >= max_daily):
+            try:
+                last = float(a.get("withdraw_timestamp", "0") or "0")
+                left = int(3600 - (time.time() - last))
+                if left > 0:
+                    pot = int(dep * rate / 100.0)
+                    pot = min(pot, cap)
+                    interest_note = f"（提示：利息结算需1小时，还需{left//60}分{left%60}秒，到期可获{pot}{ST.coin_name()}，可强取）"
+                else:
                     interest_note = ""
-        elif interest > 0 and max_daily > 0:
-            interest_note = f"💡 今日结息次数：{cur_cnt + 1}/{max_daily}"
+            except Exception:
+                interest_note = ""
         else:
             interest_note = ""
         # 取款仅扣除本次取出的存款本金，利息为银行派发的收益额外计入钱包
