@@ -642,6 +642,16 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
             _custom_idx(store)
     except Exception:
         pass
+    # 实时数值调控轻量巡检钩子（非 realtime 模式 O(1) 零开销返回，realtime 模式每10分钟巡检一次）
+    try:
+        from .api.balance import maybe_realtime_tick as _rt_tick
+        _rt_tick(False)
+    except Exception:
+        try:
+            from core.api.balance import maybe_realtime_tick as _rt_tick  # type: ignore
+            _rt_tick(False)
+        except Exception:
+            pass
     # 总开关：完全静默，包括超管，最高优先级
     try:
         if store and store.cfg("总开关配置", "总开关", "真") != "真":

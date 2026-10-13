@@ -539,44 +539,40 @@ def _version():
 # ---- 统一入口（测试指令仅超管，WebUI可配但不显示于MENU，已删 个人信息） ----
 # 注意：凡 handle() 响应的别名必须同步进本表；非超管命中一律静默 None（BY DESIGN，见 AIINFO）
 # 超管指令一律精确单触发词，禁冗余别名/模糊词
-_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份", "维护信息", "查看维护", "检查更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表", "测试图片", "webdav测试", "开启维护", "关闭维护", "当前数值")
+_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份", "维护信息", "查看维护", "检查更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表", "测试图片", "webdav测试", "开启维护", "关闭维护", "当前数值", "数值调控")
 
 
 def _cmd_current_values():
-    """超管精确指令「当前数值」：输出当前生效的 12 项核心数值＋档位判定。
-    命中预设报模式名，否则报自定义（判定口径与 config/balance_state 同源）。"""
+    """超管精确指令「当前数值」：输出当前生效的调控模式（固定/实时）＋12 项核心数值。"""
     try:
         try:
-            from .api.balance import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG
+            from .api.balance import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG, get_balance_state_snapshot as _snap
         except ImportError:
-            try:
-                from core.api.balance import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG  # type: ignore
-            except ImportError:
-                from .api.settings import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG
+            from core.api.balance import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG, get_balance_state_snapshot as _snap  # type: ignore
     except Exception:
         return "数值引擎未就绪，请稍后重试"
     try:
-        results = {}
-        for _mode, _preset in _PRE.items():
-            _mm = 0
-            for _sec, _key in _SIG:
-                try:
-                    _cur = ST.cfg(_sec, _key, "")
-                    if _cur == "":
-                        continue
-                    if str(_cur) != str(_preset.get(_sec, {}).get(_key, "")):
-                        _mm += 1
-                except Exception:
-                    continue
-            results[_mode] = _mm
-        _best = sorted(_PRE.keys(), key=lambda m: (results[m], 0 if m == "standard" else 1))[0]
+        st = _snap()
+        ctrl = st.get("control_type", "fixed")
+        best = st.get("mode", "standard")
+        mm = int(st.get("mismatch_count", 0))
+        rt = st.get("realtime_metrics") or {}
         _names = {"standard": "标准平衡模式", "casual": "休闲高福利模式", "hardcore": "硬核博弈模式"}
-        if results[_best] == 0:
-            _head = "📊 当前数值【%s】" % _names.get(_best, _best)
+        if ctrl == "realtime":
+            _head = (
+                f"📊 当前数值【⚡ 实时调整模式】（基准：{_names.get(best, best)}）\r\n"
+                f"🌐 经济阶段：{rt.get('phase', '均衡稳态期')}（通胀指数 {rt.get('inflation_index', 0)}）\r\n"
+                f"👥 活跃玩家：{rt.get('player_count', 0)}人 | 中位资产：{rt.get('median_wealth', 0)} | 人均：{rt.get('avg_wealth', 0)}\r\n"
+                f"⚖️ 实时倍率：产出 {rt.get('faucet_mult', 1.0)}x / 回收 {rt.get('sink_mult', 1.0)}x\r\n"
+                f"----------------"
+            )
         else:
-            _head = "📊 当前数值【自定义】（最接近%s，差%s项）" % (_names.get(_best, _best), results[_best])
+            if mm == 0:
+                _head = f"📊 当前数值【📌 固定模式 · {_names.get(best, best)}】"
+            else:
+                _head = f"📊 当前数值【📌 固定模式 · 自定义】（基准：{_names.get(best, best)}，偏移{mm}项）"
         _lines = [_head]
-        _best_pre = _PRE.get(_best, {})
+        _best_pre = _PRE.get(best, {})
         for _sec, _key in _SIG:
             try:
                 _val = ST.cfg(_sec, _key, "")
@@ -588,6 +584,67 @@ def _cmd_current_values():
         return "\r\n".join(_lines)
     except Exception as e:
         return f"读取当前数值异常: {e}"
+
+
+def _cmd_balance_control(arg):
+    """超管指令「数值调控」：支持切换【固定模式（标准/休闲/硬核）】与【实时调整模式】。"""
+    try:
+        try:
+            from .api.balance import apply_balance_config as _apply_bal
+        except ImportError:
+            from core.api.balance import apply_balance_config as _apply_bal  # type: ignore
+    except Exception:
+        return "数值引擎未就绪，请稍后重试"
+    a = (arg or "").strip()
+    if not a or a in ("状态", "查看", "详情"):
+        return (
+            _cmd_current_values()
+            + "\r\n----------------\r\n"
+            + "💡 切换指令：\r\n"
+            + "• 数值调控 固定 标准|休闲|硬核\r\n"
+            + "• 数值调控 实时 [标准|休闲|硬核]"
+        )
+    parts = a.split()
+    mode_map = {
+        "标准": "standard", "标准平衡": "standard", "standard": "standard",
+        "休闲": "casual", "休闲高福利": "casual", "高福利": "casual", "casual": "casual",
+        "硬核": "hardcore", "硬核博弈": "hardcore", "hardcore": "hardcore",
+    }
+    mode_names = {"standard": "🟢 标准平衡模式", "casual": "🟡 休闲高福利模式", "hardcore": "🔴 硬核博弈模式"}
+    p0 = parts[0].lower()
+    if p0 in ("实时", "实时调整", "实时模式", "动态", "realtime", "dynamic"):
+        base_m = ST.cfg("设置", "平衡模式", "standard") or "standard"
+        if len(parts) >= 2 and parts[1].lower() in mode_map:
+            base_m = mode_map[parts[1].lower()]
+        if base_m not in mode_names:
+            base_m = "standard"
+        res = _apply_bal("realtime", base_m)
+        rt = res.get("realtime_metrics") or {}
+        return (
+            f"⚡ 已开启【实时调整模式】\r\n"
+            f"📌 基准档位：{mode_names.get(base_m, base_m)}\r\n"
+            f"🌐 当前阶段：{rt.get('phase', '均衡稳态期')}（通胀指数 {rt.get('inflation_index', 0)}）\r\n"
+            f"⚖️ 动态倍率：产出 {rt.get('faucet_mult', 1.0)}x / 回收 {rt.get('sink_mult', 1.0)}x\r\n"
+            f"✅ 已同步调控 {res.get('updated_sections', 0)} 个模块（{res.get('updated_keys', 0)} 项参数）"
+        )
+    if p0 in ("固定", "固定模式", "预设", "fixed"):
+        sub = parts[1].lower() if len(parts) >= 2 else "标准"
+        m = mode_map.get(sub)
+        if not m:
+            return "格式：数值调控 固定 标准|休闲|硬核\r\n或：数值调控 实时 [标准|休闲|硬核]"
+        res = _apply_bal("fixed", m)
+        return (
+            f"📌 已切换至【固定模式 · {mode_names.get(m, m)}】\r\n"
+            f"✅ 已写入 {res.get('updated_sections', 0)} 个系统模块（{res.get('updated_keys', 0)} 项数值参数）"
+        )
+    if p0 in mode_map:
+        m = mode_map[p0]
+        res = _apply_bal("fixed", m)
+        return (
+            f"📌 已切换至【固定模式 · {mode_names.get(m, m)}】\r\n"
+            f"✅ 已写入 {res.get('updated_sections', 0)} 个系统模块（{res.get('updated_keys', 0)} 项数值参数）"
+        )
+    return "格式：\r\n• 数值调控 固定 标准|休闲|硬核\r\n• 数值调控 实时 [标准|休闲|硬核]"
 
 
 def _cmd_imgtest():
@@ -754,9 +811,11 @@ def handle(gid, qq, raw, is_admin=False):
         except Exception:
             _gm = False
         return f"全局维护：{sw}\r\n本群维护：{'开' if _gm else '关'}\r\n维护信息：{msg}"
-    # 当前数值：超管精确指令，无模糊唤醒（BY DESIGN 同超管静默规则）
+    # 当前数值 / 数值调控：超管精确指令，无模糊唤醒（BY DESIGN 同超管静默规则）
     if text == "当前数值":
         return _cmd_current_values()
+    if text == "数值调控" or text.startswith("数值调控 ") or text.startswith("数值调控\t"):
+        return _cmd_balance_control(text[4:].strip())
     # 测试testxb / 超管列表由 app._dispatch 入口直收（聊天不显示，BY DESIGN），此处无需分支
     return None
 

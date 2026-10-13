@@ -89,37 +89,62 @@ const BALANCE_MODE_META = {
   hardcore: { icon: "🔴", label: "硬核博弈模式", fg: "var(--bad)", bg: "rgba(255,59,48,0.1)", bd: "var(--bad)" },
 };
 async function refreshBalanceBadges() {
-  // 徽标按真实档位+漂移检测刷新（此前写死休闲，属显示问题）
-  const paint = (mode, drift) => {
+  const paint = (ctrl, mode, drift, rt, mismatches) => {
     const meta = BALANCE_MODE_META[mode] || BALANCE_MODE_META.standard;
     ["activeBalanceBadge1", "activeBalanceBadge2"].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
-      if (drift > 0) {
-        el.textContent = `⚪ ${meta.label}（已偏离${drift}项）`;
-        el.style.color = "var(--muted)"; el.style.background = "var(--panel)"; el.style.border = "1px solid var(--line)";
-        el.title = "数值与该档预设不一致，可点开重选覆盖";
+      el.style.display = "inline-flex";
+      el.style.alignItems = "center";
+      el.style.cursor = "pointer";
+      if (ctrl === "realtime") {
+        const phase = (rt && rt.phase) || "⚖️ 均衡稳态期";
+        const fm = rt && rt.faucet_mult !== undefined ? rt.faucet_mult : 1.0;
+        const sm = rt && rt.sink_mult !== undefined ? rt.sink_mult : 1.0;
+        el.textContent = `⚡ 实时模式 · ${phase} (产出${fm}x/回收${sm}x)`;
+        el.style.color = "#6366f1";
+        el.style.background = "rgba(99,102,241,0.13)";
+        el.style.border = "1px solid rgba(99,102,241,0.38)";
+        el.title = `${(rt && rt.summary) || "实时动态调控运行中"}\n基准：${meta.label} | 活跃玩家：${(rt && rt.player_count) || 0}人 | 中位资产：${((rt && rt.median_wealth) || 0).toLocaleString()} | 人均：${((rt && rt.avg_wealth) || 0).toLocaleString()}`;
+      } else if (drift > 0) {
+        el.textContent = `📌 固定 · ${meta.label}（已偏离${drift}项）`;
+        el.style.color = "var(--acc)";
+        el.style.background = "rgba(99,102,241,0.1)";
+        el.style.border = "1px solid var(--accBorder)";
+        const tips = (mismatches || []).map(x => `${x.sec}.${x.key}: 当前=${x.actual} (预设=${x.expected})`).join("\n");
+        el.title = `当前在 [${meta.label}] 基础上自定义修改了 ${drift} 项核心指标:\n${tips}`;
       } else {
-        el.textContent = `${meta.icon} 当前生效：${meta.label}`;
-        el.style.color = meta.fg; el.style.background = meta.bg; el.style.border = `1px solid ${meta.bd}`;
-        el.title = "点击切换数值平衡模式";
+        el.textContent = `📌 固定 · ${meta.icon} ${meta.label}`;
+        el.style.color = meta.fg;
+        el.style.background = meta.bg;
+        el.style.border = `1px solid ${meta.bd}`;
+        el.title = "点击切换固定模式（标准/休闲/硬核）或实时调整模式";
       }
     });
   };
   try {
     const st = await getBridge().apiGet("config/balance_state").catch(() => null);
-    if (st && st.ok && st.mode) { paint(st.mode, st.mismatch || 0); return; }
+    if (st && st.ok && st.mode) {
+      paint(st.control_type || "fixed", st.mode, st.mismatch_count ?? st.mismatch ?? 0, st.realtime_metrics || {}, st.mismatches || []);
+      return st;
+    }
   } catch (e) {}
   try {
     const cfg = await getBridge().apiGet("config/get").catch(() => null);
+    const ctrl = (cfg && (cfg._balance_control_type || (cfg["设置"] && cfg["设置"]["调控模式"]))) || "fixed";
     const m = (cfg && (cfg._active_balance_mode || (cfg["设置"] && cfg["设置"]["平衡模式"]))) || "standard";
-    paint(["standard", "casual", "hardcore"].includes(m) ? m : "standard", 0);
+    paint(ctrl === "realtime" ? "realtime" : "fixed", ["standard", "casual", "hardcore"].includes(m) ? m : "standard", 0, (cfg && cfg._realtime_balance_meta) || {}, []);
   } catch (e) {}
+  return null;
 }
-["activeBalanceBadge1", "activeBalanceBadge2"].forEach((id) => {
-  document.getElementById(id)?.addEventListener("click", () => {
-    try { if (typeof openAutoBalanceModal === "function") openAutoBalanceModal(); } catch (e) {}
-  });
+["activeBalanceBadge1", "activeBalanceBadge2", "btnAutoBalance", "btnAutoBalance2"].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el && !el.dataset.balBound) {
+    el.dataset.balBound = "1";
+    el.addEventListener("click", () => {
+      try { if (typeof openAutoBalanceModal === "function") openAutoBalanceModal(); } catch (e) {}
+    });
+  }
 });
 async function loadConfig() {
   try {
@@ -210,58 +235,147 @@ async function openAutoBalanceModal() {
   const cancelBtn = document.getElementById("appModalCancel");
   const okBtn = document.getElementById("appModalOk");
 
-  if (icon) icon.textContent = "🎯";
-  if (title) title.textContent = "数值平衡预设";
+  if (icon) icon.textContent = "⚖️";
+  if (title) title.textContent = "智能数值调控中心（固定模式 / 实时调整模式）";
   if (inputWrap) inputWrap.style.display = "none";
 
-  // 档位以 balance_state 逐档推断为准：出厂种子实为休闲数值但标记缺省 standard，
-  // 直接读标记会 perpetual 误报偏离；推断命中哪档就预选哪档，只报真偏离
+  let curCtrl = "fixed";
   let activeMode = "standard";
+  let rt = {};
   let _driftInfo = "";
   try {
-    const st = await getBridge().apiGet("config/balance_state").catch(() => null);
-    if (st && st.ok && st.mode && ["standard", "casual", "hardcore"].includes(st.mode)) {
-      activeMode = st.mode;
-      if (st.mismatch > 0) {
-        const _names = (st.mismatches || []).map((x) => x.key).join("、");
-        const _mlabel = ((typeof BALANCE_MODE_META !== "undefined" && BALANCE_MODE_META[activeMode]) || {}).label || activeMode;
-        _driftInfo = `<div style="font-size:12px;color:var(--warn);background:var(--warnSoft);border:1px solid var(--warn);border-radius:8px;padding:8px 10px;margin-bottom:12px">⚠️ 当前数值与「${_mlabel}」不一致（${st.mismatch} 项不符${_names ? "：" + esc(_names) : ""}）。可重选预设覆盖，或在指令页逐项调整。</div>`;
+    const st = await refreshBalanceBadges();
+    if (st && st.ok) {
+      curCtrl = st.control_type === "realtime" ? "realtime" : "fixed";
+      if (st.mode && ["standard", "casual", "hardcore"].includes(st.mode)) {
+        activeMode = st.mode;
       }
-    } else {
-      const cfg = await getBridge().apiGet("config/get");
-      const m = (cfg && (cfg._active_balance_mode || (cfg["设置"] && cfg["设置"]["平衡模式"]))) || "standard";
-      activeMode = ["standard", "casual", "hardcore"].includes(m) ? m : "standard";
+      rt = st.realtime_metrics || {};
+      const mm = st.mismatch_count ?? st.mismatch ?? 0;
+      const _mlabel = (BALANCE_MODE_META[activeMode] || {}).label || activeMode;
+      if (curCtrl === "realtime") {
+        _driftInfo = `<div style="font-size:12px;color:#6366f1;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.35);border-radius:10px;padding:9px 12px;margin-bottom:12px">
+          ⚡ 当前运行：<strong>实时调整模式</strong>（基准：${_mlabel} · <strong>${esc(rt.phase || "⚖️ 均衡稳态期")}</strong>）
+          <div style="margin-top:3px;font-size:11.5px;color:var(--muted)">${esc(rt.summary || "系统正根据全服实时资产动态调节产出与回收倍率")}</div>
+        </div>`;
+      } else if (mm > 0) {
+        const _names = (st.mismatches || []).map((x) => `${x.key}=${x.actual}`).join("、");
+        _driftInfo = `<div style="font-size:12px;color:var(--warn);background:var(--warnSoft);border:1px solid var(--warn);border-radius:10px;padding:8px 12px;margin-bottom:12px">⚠️ 当前处于<strong>固定模式</strong>，但与「${_mlabel}」有 ${mm} 项自定义偏移${_names ? "（" + esc(_names) + "）" : ""}。可重新应用预设对齐，或开启实时调整模式。</div>`;
+      } else {
+        _driftInfo = `<div style="font-size:12px;color:var(--ok);background:var(--okSoft);border:1px solid var(--ok);border-radius:10px;padding:8px 12px;margin-bottom:12px">📌 当前运行：<strong>固定模式 · ${_mlabel}</strong>（全系统 28 个模块参数 100% 同步生效中）</div>`;
+      }
     }
   } catch (e) { activeMode = "standard"; }
 
+  const fmt = (n) => Number(n || 0).toLocaleString();
+
   content.innerHTML = `
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
-      选择预设方案，统一调整货币奖励、惩罚倍率、抽奖爆率与奴隶身价等数值：
-    </div>${_driftInfo}
+    ${_driftInfo}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <button type="button" id="balTabFixed" style="padding:10px 12px;border-radius:10px;border:2px solid ${curCtrl === "fixed" ? "var(--acc)" : "var(--line)"};background:${curCtrl === "fixed" ? "var(--accSoft)" : "var(--panel)"};color:var(--text);font-weight:700;font-size:13px;cursor:pointer;text-align:left">
+        <div>📌 固定预设模式</div>
+        <div style="font-size:11px;font-weight:400;color:var(--muted);margin-top:2px">标准 / 休闲 / 硬核三档静态锁定</div>
+      </button>
+      <button type="button" id="balTabRealtime" style="padding:10px 12px;border-radius:10px;border:2px solid ${curCtrl === "realtime" ? "#6366f1" : "var(--line)"};background:${curCtrl === "realtime" ? "rgba(99,102,241,0.12)" : "var(--panel)"};color:var(--text);font-weight:700;font-size:13px;cursor:pointer;text-align:left">
+        <div>⚡ 实时调整模式</div>
+        <div style="font-size:11px;font-weight:400;color:var(--muted);margin-top:2px">感知全服资产与通胀率自动调节</div>
+      </button>
+    </div>
+
+    <div id="balRealtimePanel" style="display:${curCtrl === "realtime" ? "block" : "none"};padding:12px;border-radius:12px;border:1px solid rgba(99,102,241,0.35);background:rgba(99,102,241,0.06);margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <span style="font-weight:700;font-size:12.5px;color:#6366f1">📡 全服实时经济遥测指标</span>
+        <span style="font-size:11.5px;padding:2px 8px;border-radius:999px;background:rgba(99,102,241,0.15);color:#6366f1;font-weight:600">${esc(rt.phase || "⚖️ 均衡稳态期")} · 通胀指数 ${rt.inflation_index ?? 0}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;text-align:center">
+        <div style="background:var(--panel);padding:6px;border-radius:8px;border:1px solid var(--line)">
+          <div style="font-size:10.5px;color:var(--muted)">活跃玩家</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmt(rt.player_count)} 人</div>
+        </div>
+        <div style="background:var(--panel);padding:6px;border-radius:8px;border:1px solid var(--line)">
+          <div style="font-size:10.5px;color:var(--muted)">中位资产</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmt(rt.median_wealth)}</div>
+        </div>
+        <div style="background:var(--panel);padding:6px;border-radius:8px;border:1px solid var(--line)">
+          <div style="font-size:10.5px;color:var(--muted)">人均资产</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmt(rt.avg_wealth)}</div>
+        </div>
+        <div style="background:var(--panel);padding:6px;border-radius:8px;border:1px solid var(--line)">
+          <div style="font-size:10.5px;color:var(--muted)">前10%占比</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${Math.round((rt.top10_share || 0) * 100)}%</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+        <div style="background:var(--panel);padding:7px 10px;border-radius:8px;border:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11.5px;color:var(--muted)">💧 水龙头产出倍率</span>
+          <strong style="font-size:13.5px;color:var(--ok)">${rt.faucet_mult ?? 1.0}x</strong>
+        </div>
+        <div style="background:var(--panel);padding:7px 10px;border-radius:8px;border:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11.5px;color:var(--muted)">🔥 金币回收消耗倍率</span>
+          <strong style="font-size:13.5px;color:#d97706">${rt.sink_mult ?? 1.0}x</strong>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.45">
+        💡 <strong>实时调控原理：</strong>每 10 分钟自动采集全服【现金+存款】分布（65%中位数+35%均值防巨鲸失真）。开荒期自动提产出降物价；通胀期自动收紧水龙头、抬升抽卡/升星/坐骑/罚款回收池。下方可选择实时调控的<strong>基准档位</strong>：
+      </div>
+    </div>
+
+    <div id="balPresetListTitle" style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px">
+      ${curCtrl === "realtime" ? "🎯 选择实时调整的【基准锚点档位】：" : "📌 选择固定模式下的【预设档位】（统一调整全部 28 个配置分区）："}
+    </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "standard" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="standard" ${activeMode === "standard" ? "checked" : ""} style="margin-top:3px">
         <div>
-          <div style="font-weight:600;color:var(--text);font-size:13px">🟢 标准平衡（推荐 · 经济稳健）</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 300-800 + 连签 50，利率 1%（每日3次），造反率 35%，祈福爆发 5%。数值平稳，适合多数群聊。</div>
+          <div style="font-weight:600;color:var(--text);font-size:13px">🟢 标准平衡模式（推荐 · 经济稳健）</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 1000~1600 | 打工 300~700 | 单抽 500/十连 4500 | 初始身价 1000 | 奴隶位 2(上限5) | 存款利率 1%/天。适合绝大多数长期活跃群聊。</div>
         </div>
       </label>
       <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "casual" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="casual" ${activeMode === "casual" ? "checked" : ""} style="margin-top:3px">
         <div>
-          <div style="font-weight:600;color:var(--text);font-size:13px">🟡 休闲高福利（高爆率 · 活跃社群）</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 800-2000 + 连签 100，利率 1%（每日3次），造反率 20%，祈福爆发 15%，赌博成功率 52%。低惩罚、节奏快，适合活跃社群。</div>
+          <div style="font-weight:600;color:var(--text);font-size:13px">🟡 休闲高福利模式（高爆率 · 爽游节奏）</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 2500~4000 | 体力 40~80 | 单抽 300/十连 2700 | 冷却减半 | 捕捉率 65% | 坐骑与培养费半价。低惩罚、快节奏，适合休闲娱乐社群。</div>
         </div>
       </label>
       <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:${activeMode === "hardcore" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
         <input type="radio" name="balanceMode" value="hardcore" ${activeMode === "hardcore" ? "checked" : ""} style="margin-top:3px">
         <div>
-          <div style="font-weight:600;color:var(--text);font-size:13px">🔴 硬核博弈（高对抗 · 惩罚重）</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 150-400 + 连签 20，利率 1%（每日3次），造反率 45%，祈福爆发 2%。高风险高回报，适合对抗型社群。</div>
+          <div style="font-weight:600;color:var(--text);font-size:13px">🔴 硬核博弈模式（防通胀 · 高对抗）</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">签到 500~800 | 打工 150~350 | 单抽 1000/十连 9000 | 初始身价 500/涨幅 25% | 坐骑翻倍。严控金币泛滥，刺激群内抢夺与博弈。</div>
         </div>
       </label>
     </div>
   `;
+
+  const tabFixed = document.getElementById("balTabFixed");
+  const tabRealtime = document.getElementById("balTabRealtime");
+  const rtPanel = document.getElementById("balRealtimePanel");
+  const listTitle = document.getElementById("balPresetListTitle");
+
+  const updateCtrlUI = (nextCtrl) => {
+    curCtrl = nextCtrl;
+    if (tabFixed) {
+      tabFixed.style.borderColor = curCtrl === "fixed" ? "var(--acc)" : "var(--line)";
+      tabFixed.style.background = curCtrl === "fixed" ? "var(--accSoft)" : "var(--panel)";
+    }
+    if (tabRealtime) {
+      tabRealtime.style.borderColor = curCtrl === "realtime" ? "#6366f1" : "var(--line)";
+      tabRealtime.style.background = curCtrl === "realtime" ? "rgba(99,102,241,0.12)" : "var(--panel)";
+    }
+    if (rtPanel) rtPanel.style.display = curCtrl === "realtime" ? "block" : "none";
+    if (listTitle) {
+      listTitle.textContent = curCtrl === "realtime"
+        ? "🎯 选择实时调整的【基准锚点档位】："
+        : "📌 选择固定模式下的【预设档位】（统一调整全部 28 个配置分区）：";
+    }
+    if (okBtn) {
+      okBtn.textContent = curCtrl === "realtime" ? "⚡ 开启并立即执行实时调控" : "📌 应用所选固定预设";
+    }
+  };
+
+  if (tabFixed) tabFixed.onclick = () => updateCtrlUI("fixed");
+  if (tabRealtime) tabRealtime.onclick = () => updateCtrlUI("realtime");
 
   // 选项高亮切换
   const radios = content.querySelectorAll("input[name='balanceMode']");
@@ -283,22 +397,23 @@ async function openAutoBalanceModal() {
   if (_closeBtn) _closeBtn.onclick = () => { modal.className = ""; };
   modal.onclick = (e) => { if (e.target === modal) modal.className = ""; };
   if (okBtn) {
-    okBtn.textContent = "应用该预设";
+    okBtn.textContent = curCtrl === "realtime" ? "⚡ 开启并立即执行实时调控" : "📌 应用所选固定预设";
     okBtn.disabled = false;
     okBtn.onclick = async () => {
       const sel = content.querySelector("input[name='balanceMode']:checked");
       const mode = sel ? sel.value : "standard";
       okBtn.disabled = true;
-      okBtn.textContent = "正在应用...";
+      okBtn.textContent = curCtrl === "realtime" ? "正在采集全服经济并调控..." : "正在应用固定预设...";
       try {
-        const r = await getBridge().apiPost("config/auto_balance", { mode });
+        const r = await getBridge().apiPost("config/auto_balance", { control_type: curCtrl, mode });
         if (r && r.ok) {
-          const _summary = mode === "casual" ? "签到800-2000+连签100，利率1%，造反20%" : (mode === "hardcore" ? "签到150-400+连签20，利率1%，造反45%" : "签到300-800+连签50，利率1%，造反35%");
-          toast(`已应用「${mode === "standard" ? "标准平衡" : (mode === "casual" ? "休闲福利" : "硬核博弈")}」数值方案：${_summary}`, "ok");
+          toast(r.msg || "智能数值调控已生效", "ok", 4500);
           modal.className = "";
           try { await refreshBalanceBadges(); } catch (e) {}
           await loadConfig();
           if (typeof loadCommands === "function") try { await loadCommands(); } catch(e) {}
+          if (typeof loadShops === "function") try { await loadShops(); } catch(e) {}
+          if (typeof loadSlaveUsers === "function") try { await loadSlaveUsers(); } catch(e) {}
         } else {
           toast("应用失败: " + (r && (r.error || r.msg) ? (r.error || r.msg) : "未知错误"), "bad");
         }
@@ -306,7 +421,7 @@ async function openAutoBalanceModal() {
         toast("应用失败: " + err.message, "bad");
       } finally {
         okBtn.disabled = false;
-        okBtn.textContent = "应用该预设";
+        okBtn.textContent = curCtrl === "realtime" ? "⚡ 开启并立即执行实时调控" : "📌 应用所选固定预设";
       }
     };
   }
