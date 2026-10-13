@@ -612,8 +612,19 @@ class XbBot(Star):
                 self._extract_bot_uin_sync(event)
             except Exception:
                 pass
-            gid = str(event.get_group_id() or "")
-            if not gid:
+            gid = str(event.get_group_id() or "").strip()
+            if not gid or not gid.isdigit():
+                return
+            plat = ""
+            try:
+                gpn = getattr(event, "get_platform_name", None)
+                if callable(gpn):
+                    plat = str(gpn() or "").strip().lower()
+                if not plat:
+                    plat = str(getattr(event, "platform_id", "") or getattr(event, "platform", "") or "").strip().lower()
+            except Exception:
+                pass
+            if plat and plat not in ("onebot", "aiocqhttp", "aihttpcq", "cqhttp", "onebot11", "onebot_v11"):
                 return
             try:
                 _grp = getattr(getattr(event, "message_obj", None), "group", None)
@@ -628,8 +639,8 @@ class XbBot(Star):
                         ST.recall_set(f"group_name_{gid}", _gname)
             except Exception:
                 pass
-            qq = str(event.get_sender_id() or "")
-            if not qq:
+            qq = str(event.get_sender_id() or "").strip()
+            if not qq or not qq.isdigit():
                 return
             try:
                 card = (getattr(event.message_obj.sender, "card", None)
