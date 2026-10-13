@@ -331,11 +331,15 @@ def _ride_shop_raw():
     return DEFAULT_RIDE_SHOP_EXT
 
 def _ride_shop():
-    """坐骑商城数据: 优先 商城图鉴.ride_shop(JSON name->price 或 {price,img})；空=未自定义，回退 RIDES 内置"""
+    """坐骑商城数据: 优先 坐骑配置.价格_<name>，未设则取 商城图鉴.ride_shop，最后回退 RIDES 内置"""
     v = ST.cfg("商城图鉴", "ride_shop", "")
     d = _parse_ride_shop(v) if v else {}
     if d:
-        return {k: val["price"] for k, val in d.items()}
+        out = {}
+        for k, val in d.items():
+            raw_p = str(_cfg("价格_" + k, "")).strip()
+            out[k] = _mount_price(k) if raw_p else val["price"]
+        return out
     out = {}
     for name in RIDES:
         out[name] = _mount_price(name)

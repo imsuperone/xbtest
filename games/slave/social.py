@@ -91,7 +91,9 @@ def cmd_flatter(gid, qq, st):
     # 魅力加成进成功率（w1004c：魅力=奴隶玩法硬通货）
     _flatter_p = max(0, min(100, _flatter_p + _charm_bonus(gid, qq)))
     if _random.randint(1, 100) <= _flatter_p:
-        got = _random.randint(50, max(50, min(mc, 500)))
+        f_lo = max(1, cfgi("费用配置", "讨好收益下限", 50))
+        f_hi = max(f_lo, cfgi("费用配置", "讨好收益上限", 500))
+        got = _random.randint(min(f_lo, mc), max(min(f_lo, mc), min(mc, f_hi)))
         got = min(got, mc)
         if got <= 0:
             cd_commit(u, "flatter_time")
@@ -131,7 +133,9 @@ def cmd_study(gid, qq, st):
     ok, mins = cd_check(u, "study_time", "学习间隔")
     if not ok:
         return _fmt(mins, "学习")
-    fee = _random.randint(STUDY_FEE_LO, STUDY_FEE_HI)
+    fee_lo = max(0, cfgi("费用配置", "学习学费下限", STUDY_FEE_LO))
+    fee_hi = max(fee_lo, cfgi("费用配置", "学习学费上限", STUDY_FEE_HI))
+    fee = _random.randint(fee_lo, fee_hi)
     if total_assets(gid, qq) < fee:
         return f"学费不足（需要 {fee} {coin_name()}），无法开始学习！"
     paid_fee = deduct_cash_or_deposit(gid, qq, fee, require_full=True)
@@ -139,7 +143,9 @@ def cmd_study(gid, qq, st):
         return "数据库繁忙，学费扣款未成功，学习未开始，请稍后重试。"
     if paid_fee < fee:
         return f"学费不足（需要 {fee} {coin_name()}），无法开始学习！"
-    exp_gain = _random.randint(STUDY_EXP_LO, STUDY_EXP_HI)
+    exp_lo = max(1, cfgi("费用配置", "学习经验下限", STUDY_EXP_LO))
+    exp_hi = max(exp_lo, cfgi("费用配置", "学习经验上限", STUDY_EXP_HI))
+    exp_gain = _random.randint(exp_lo, exp_hi)
     uset(u, "weapon_exp", str(int(uget(u, "weapon_exp", "0") or 0) + exp_gain))
     cd_commit(u, "study_time")
     head = f"缴纳学费 {fee} 后开始学习! 武器经验 +{exp_gain}"
@@ -264,10 +270,12 @@ def cmd_work_dispatch(gid, qq, st):
         uset(u, "work_status", "")   # 超时自动收工
     duration = cfgi("间隔配置", "打工间隔", 15)
     target = 0
+    w_lo = max(0, cfgi("费用配置", "打工收益下限", WORK_BASE_LO))
+    w_hi = max(w_lo, cfgi("费用配置", "打工收益上限", WORK_BASE_HI))
     for s in my:
         su = U(st, s)
         worth_bonus = min(WORK_WORTH_CAP, max(0, int(uget(su, "price") or 0)) // max(1, WORK_WORTH_DIV))
-        w = _random.randint(WORK_BASE_LO, WORK_BASE_HI) + worth_bonus
+        w = _random.randint(w_lo, w_hi) + worth_bonus
         uset(su, "_work_wage", str(w))
         target += w
     uset(u, "work_status", "真")
@@ -371,7 +379,9 @@ def cmd_self_work(gid, qq, st):
         return f"亲，您的体力不足（需要 {cs} 点体力），无法出门搬砖！"
     price = max(500, _safe_int(uget(u, "price"), cfgi("费用配置", "初始身价", 1000)))
     charm = max(0, acct.int("charm"))
-    base_pay = _random.randint(SELF_WORK_LO, SELF_WORK_HI)
+    sw_lo = max(0, cfgi("费用配置", "搬砖收益下限", SELF_WORK_LO))
+    sw_hi = max(sw_lo, cfgi("费用配置", "搬砖收益上限", SELF_WORK_HI))
+    base_pay = _random.randint(sw_lo, sw_hi)
     stat_bonus = min(SELF_WORK_BONUS_CAP, price // 30 + charm * 3)
     pay = base_pay + stat_bonus
     try:
@@ -436,18 +446,21 @@ def cmd_revolt(gid, qq, st):
     except Exception:
         charm_cost = 15
     cd_commit(u, "造反时间")
+    revolt_fine = max(0, cfgi("费用配置", "造反失败罚金", 500))
+    loot_lo = max(0, cfgi("费用配置", "造反掠夺下限", REVOLT_LOOT_LO))
+    loot_hi = max(loot_lo, cfgi("费用配置", "造反掠夺上限", REVOLT_LOOT_HI))
     # 主人奴隶数量是我方两倍 -> 镇压
     m_slaves = len(slaves_of(st, owner))
     my_power = battle_power(st, qq)
     om_power = battle_power(st, owner)
     if m_slaves >= 2 * max(1, len(slaves_of(st, qq))) and om_power > my_power:
-        fine = transfer_cash_or_deposit(gid, qq, owner, REVOLT_FINE)
+        fine = transfer_cash_or_deposit(gid, qq, owner, max(100, revolt_fine))
         if fine is None:
             return "数据库繁忙，造反结算未成功，请稍后重试。"
         fine = max(0, int(fine or 0))
         return _S.T.REVOLT_CRUSHED + f"(被罚{fine})" + _charm_note(_charge_charm(gid, qq, charm_cost))
     sn = uget(u, "name") or (str(qq))
-    loot_want = _random.randint(REVOLT_LOOT_LO, REVOLT_LOOT_HI)
+    loot_want = _random.randint(loot_lo, loot_hi)
 
     i_have_gourd = _has_treasure_type(treasures_of(u), "pardon", (TREASURE_GOURD_NAME,))
     master_has_gourd = _has_treasure_type(treasures_of(U(st, owner)), "pardon", (TREASURE_GOURD_NAME,))
@@ -491,7 +504,7 @@ def cmd_revolt(gid, qq, st):
         return (_S.T.RV_NORMAL_WIN + f"\r\n[{sn}] " + _S.T.RV_LOOT.format(loot=loot, coin=coin_name())
                 + "\r\n" + _S.T.REVOLT_FREE.replace("，", "")
                 + _charm_note(_charge_charm(gid, qq, charm_cost)))
-    pay = transfer_cash_or_deposit(gid, qq, owner, 500)
+    pay = transfer_cash_or_deposit(gid, qq, owner, revolt_fine)
     if pay is None:
         return "数据库繁忙，造反结算未成功，请稍后重试。"
     pay = max(0, int(pay or 0))

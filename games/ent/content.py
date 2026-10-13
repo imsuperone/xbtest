@@ -55,17 +55,32 @@ _MENU = (
 
 
 def _fee(gid, qq, kind):
-    """娱乐功能消耗金币(娱乐配置__<kind>造价=0 免费)"""
+    """娱乐功能消耗金币与体力(娱乐配置__<kind>造价/消耗体力=0 免费)"""
     try:
-        c = cfgi("娱乐配置", kind + "造价", 0)
+        c = max(0, cfgi("娱乐配置", kind + "造价", cfgi("娱乐配置", kind + "需要金钱", 0)))
     except Exception:
         c = 0
-    if c <= 0:
+    try:
+        tili = max(0, cfgi("娱乐配置", kind + "消耗体力", 0))
+    except Exception:
+        tili = 0
+    if c <= 0 and tili <= 0:
         return None
-    if ST.coins_get(gid, qq) < c:
+    if c > 0 and ST.coins_get(gid, qq) < c:
         return "笑~你没有那么多%s（%s需%d）" % (ST.coin_name(), kind, c)
-    if ST.coins_add(gid, qq, -c) is None:
-        return "数据库繁忙，扣费未成功，请稍后重试。"
+    if tili > 0 and ST.acct(gid, qq).int("stamina") < tili:
+        return "体力不足，%s需要%d体力！" % (kind, tili)
+    with ST._LOCK:
+        if c > 0 and ST.coins_get(gid, qq) < c:
+            return "笑~你没有那么多%s（%s需%d）" % (ST.coin_name(), kind, c)
+        if tili > 0 and ST.acct(gid, qq).int("stamina") < tili:
+            return "体力不足，%s需要%d体力！" % (kind, tili)
+        updates = {}
+        if tili > 0:
+            a = ST.acct(gid, qq)
+            updates["stamina"] = str(max(0, a.int("stamina") - tili))
+        if ST.txn_coins_acct(gid, qq, -c if c > 0 else 0, updates, require_funds=(c > 0)) is None:
+            return "数据库繁忙，扣费未成功，请稍后重试。"
     return None
 
 

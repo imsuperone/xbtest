@@ -359,7 +359,8 @@ def cmd_fight(gid, qq, target, st):
         return _S.T.FIGHT_TOO_STRONG
 
     ca, cdd = total_assets(gid, qq), total_assets(gid, tid)
-    stake = min(int(ca * FIGHT_STAKE_PCT), int(cdd * FIGHT_STAKE_PCT), FIGHT_STAKE_CAP)
+    stake_cap = max(100, cfgi("费用配置", "打架掠夺上限", FIGHT_STAKE_CAP))
+    stake = min(int(ca * FIGHT_STAKE_PCT), int(cdd * FIGHT_STAKE_PCT), stake_cap)
     if stake <= 0:
         if ca < FIGHT_POOR_LIMIT:
             return _S.T.FIGHT_I_AM_POOR.replace("@", "")

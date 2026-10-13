@@ -46,14 +46,15 @@ def cmd_deposit(gid, qq, amount):
         if ST.txn_coins_acct(gid, qq, -amount, updates, require_funds=True) is None:
             return "亲，银行系统繁忙，存款未成功，请稍后重试！"
         total = old + amount + interest
+        term_h = max(1, cfgi("银行配置", "存款期限", 1))
     return (f"存款成功！消耗{cs}点体力，共存入：{amount}，\r\n"
             f"上期结息：{interest}，当前总存款：{total}，"
-            f"1小时后可取款！\r\n"
+            f"{term_h}小时后可取款！\r\n"
             f"剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
 
 
 def _settle_interest(a, rate, cap):
-    """按 上次取款时间戳 到现在的小时数计息(满 1小时 才结息, 封顶利息上限, 每日最多结息 N 次)"""
+    """按 上次取款时间戳 到现在的小时数计息(满 存款期限 小时才结息, 封顶利息上限, 每日最多结息 N 次)"""
     ts = a.get("withdraw_timestamp", "")
     try:
         last = float(ts)
@@ -70,7 +71,7 @@ def _settle_interest(a, rate, cap):
             return 0
     # 改为小时结算：1小时=3600s
     elapsed_h = (time.time() - last) / 3600.0
-    term_h = 1  # 固定1小时一结
+    term_h = max(1, cfgi("银行配置", "存款期限", 1))
     if elapsed_h < term_h:
         return 0
     interest = int(dep * rate / 100.0 * min(1.0, elapsed_h / term_h))
@@ -91,6 +92,7 @@ def cmd_withdraw(gid, qq, amount):
         rate = cfgi("银行配置", "存款利率", 1)
         cap = cfgi("银行配置", "利息上限", 50000)
         max_daily = cfgi("银行配置", "每日结息次数", 3)
+        term_h = max(1, cfgi("银行配置", "存款期限", 1))
         today_s = str(dt.date.today())
         cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
         interest = _settle_interest(a, rate, cap)
@@ -98,11 +100,11 @@ def cmd_withdraw(gid, qq, amount):
         if interest == 0 and dep > 0 and not (max_daily > 0 and cur_cnt >= max_daily):
             try:
                 last = float(a.get("withdraw_timestamp", "0") or "0")
-                left = int(3600 - (time.time() - last))
+                left = int(term_h * 3600 - (time.time() - last))
                 if left > 0:
                     pot = int(dep * rate / 100.0)
                     pot = min(pot, cap)
-                    interest_note = f"（提示：利息结算需1小时，还需{left//60}分{left%60}秒，到期可获{pot}{ST.coin_name()}，可强取）"
+                    interest_note = f"（提示：利息结算需{term_h}小时，还需{left//60}分{left%60}秒，到期可获{pot}{ST.coin_name()}，可强取）"
                 else:
                     interest_note = ""
             except Exception:

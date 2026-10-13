@@ -56,7 +56,11 @@ def daily_luck_delta_pp(luck):
         v = int(luck)
     except Exception:
         return 0.0
-    return (v - 50) / 50.0 * DAILY_LUCK_MAX_BONUS
+    try:
+        max_b = float(cfg("打卡配置", "最大加成", DAILY_LUCK_MAX_BONUS) or DAILY_LUCK_MAX_BONUS)
+    except Exception:
+        max_b = DAILY_LUCK_MAX_BONUS
+    return (v - 50) / 50.0 * max_b
 
 
 def get_daily_luck(gid, qq):
@@ -128,7 +132,9 @@ def cmd_daily_checkin(gid, qq):
             return (f"📅 你今天已经打卡过了！\n"
                     f"🍀 今日幸运值：{luck}\n"
                     f"📈 今日概率加成：{sign}{delta:.2f}%（大部分概率玩法生效，明天再来）")
-        luck = random.randint(1, 100)
+        l_lo = max(1, min(100, cfgi("打卡配置", "每日幸运下限", 1)))
+        l_hi = max(l_lo, min(100, cfgi("打卡配置", "每日幸运上限", 100)))
+        luck = random.randint(l_lo, l_hi)
         delta = daily_luck_delta_pp(luck)
         a.set("daily_luck_date", today)
         a.set("daily_luck_value", str(luck))

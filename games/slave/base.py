@@ -129,6 +129,15 @@ def U(st, qq):
         u["protect_until"] = ""
         u["sign_date"] = ""
         u["consecutive_days"] = "0"
+        try:
+            gid_s = str(getattr(st, "_gid", "") or "")
+            init_c = cfgi("设置", "初始金币", 500)
+            if qq.isdigit() and gid_s.isdigit() and init_c > 0 and coins_get(gid_s, qq) == 0:
+                acct = store.acct(gid_s, qq)
+                if acct.int("sign_count") == 0 and acct.int("deposit") == 0:
+                    coins_add(gid_s, qq, init_c)
+        except Exception:
+            pass
     else:
         u = st[qq]
         try:

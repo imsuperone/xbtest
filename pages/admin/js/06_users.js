@@ -295,10 +295,10 @@ async function importAllUsers() {
 let CMD_CFG = {};           // 运行时配置(嵌套 dict) 供指令页读取/保存
 let KNOWN_CMDS = new Set(); // 引擎指令白名单，供映射校验
 let CMD_ENG = {};           // 指令->所属引擎键，供数值映射与权限显示
-// 引擎->数值节：指令编辑器按所属系统自动列出全部可调数值（奖励/惩罚/概率/价格/间隔）
+// 引擎->数值节：指令编辑器与各系统折叠块按所属系统自动列出全部可调数值（奖励/惩罚/概率/价格/间隔）
 const ENG_NUM_SECTIONS = {
   slave: ["设置", "费用配置", "间隔配置", "概率配置", "祈福配置"],
-  sign: ["签到配置", "抽奖配置", "新手配置", "点赞配置"],
+  sign: ["签到配置", "打卡配置", "抽奖配置", "新手配置", "点赞配置"],
   bank: ["银行配置"], ent: ["娱乐配置"], spirit: ["精灵配置"],
   ride: ["坐骑配置"], guild: ["帮派配置"], adventure: ["冒险配置"],
   superadmin: ["超管配置"],
@@ -311,23 +311,35 @@ const SYS_WAKE = {
 const map2sys = SYS_WAKE;
 // 玩法类指令 -> 关联配置格式(金额/奖励/概率/惩罚) [section, key, label, type]
 const CMD_NUMS = {
-  "签到": [["签到配置", "金钱下限", "现金下限", "int"], ["签到配置", "金钱上限", "现金上限", "int"],
+  "签到": [["签到配置", "基础奖励", "基础奖励", "int"], ["签到配置", "连签加成", "连签加成", "int"],
+    ["签到配置", "金钱下限", "现金下限", "int"], ["签到配置", "金钱上限", "现金上限", "int"],
     ["签到配置", "体力下限", "体力下限", "int"], ["签到配置", "体力上限", "体力上限", "int"],
     ["签到配置", "魅力下限", "魅力下限", "int"], ["签到配置", "魅力上限", "魅力上限", "int"],
-    ["签到配置", "奖券下限", "奖券下限", "int"], ["签到配置", "奖券上限", "奖券上限", "int"]],
+    ["签到配置", "奖券下限", "奖券下限", "int"], ["签到配置", "奖券上限", "奖券上限", "int"],
+    ["签到配置", "体力软上限", "体力软上限", "int"], ["签到配置", "魅力软上限", "魅力软上限", "int"],
+    ["签到配置", "高魅力日衰减比例", "魅力日衰减%", "int"]],
+  "每日运势": [["打卡配置", "最大加成", "最大运势加成", "float"],
+    ["打卡配置", "每日幸运下限", "幸运下限", "int"], ["打卡配置", "每日幸运上限", "幸运上限", "int"]],
   "领取新手礼包": [["新手配置", "现金", "礼包现金", "int"], ["新手配置", "体力", "礼包体力", "int"],
     ["新手配置", "魅力", "礼包魅力", "int"], ["新手配置", "奖券", "礼包奖券", "int"]],
-  "购买体力": [["签到配置", "体力价格", "体力价格", "int"]],
-  "购买魅力": [["签到配置", "魅力价格", "魅力价格", "int"]],
+  "点赞": [["点赞配置", "点赞数", "单次点赞数", "int"]],
+  "购买体力": [["签到配置", "体力价格", "体力单价", "int"], ["签到配置", "购买体力上限", "购买体力上限", "int"],
+    ["签到配置", "每日购买体力上限", "每日购买上限", "int"], ["签到配置", "体力硬上限", "体力硬上限", "int"]],
+  "购买魅力": [["签到配置", "魅力价格", "魅力单价", "int"], ["签到配置", "每日购买魅力上限", "每日购买上限", "int"],
+    ["签到配置", "魅力硬上限", "魅力硬上限", "int"]],
   "抽奖": [["抽奖配置", "中奖率", "中奖率%", "int"], ["抽奖配置", "现金奖", "现金奖", "int"],
     ["抽奖配置", "体力奖", "体力奖", "int"], ["抽奖配置", "魅力奖", "魅力奖", "int"]],
   "存款": [["银行配置", "存款利率", "存款利率%", "int"], ["银行配置", "利息上限", "利息上限", "int"],
-    ["银行配置", "存款期限", "存款期限(天)", "int"], ["银行配置", "存取款消耗体力", "消耗体力", "int"]],
-  "取款": [["银行配置", "存款利率", "存款利率%", "int"], ["银行配置", "利息上限", "利息上限", "int"]],
-  "强制取款": [["银行配置", "存款利率", "存款利率%", "int"], ["银行配置", "利息上限", "利息上限", "int"]],
-  "转账": [["银行配置", "转账最小金额", "最小金额", "int"], ["银行配置", "转账接收额度", "接收额度", "int"],
+    ["银行配置", "每日结息次数", "每日结息次数", "int"], ["银行配置", "存款期限", "存款期限(时)", "int"],
+    ["银行配置", "存取款消耗体力", "消耗体力", "int"]],
+  "取款": [["银行配置", "存款利率", "存款利率%", "int"], ["银行配置", "利息上限", "利息上限", "int"],
+    ["银行配置", "每日结息次数", "每日结息次数", "int"], ["银行配置", "存款期限", "存款期限(时)", "int"],
+    ["银行配置", "存取款消耗体力", "消耗体力", "int"]],
+  "强制取款": [["银行配置", "存款利率", "存款利率%", "int"], ["银行配置", "利息上限", "利息上限", "int"],
+    ["银行配置", "存取款消耗体力", "消耗体力", "int"]],
+  "转账": [["银行配置", "转账最小金额", "最小金额", "int"], ["银行配置", "转账消耗体力", "消耗体力", "int"]],
+  "跨群转账": [["银行配置", "跨群转账手续费", "手续费%", "int"], ["银行配置", "转账最小金额", "最小金额", "int"],
     ["银行配置", "转账消耗体力", "消耗体力", "int"]],
-  "跨群转账": [["银行配置", "跨群转账手续费", "手续费%", "int"], ["银行配置", "转账最小金额", "最小金额", "int"]],
   "发红包": [["银行配置", "红包_最小金额", "最小金额", "int"], ["银行配置", "红包_最大金额", "最大金额", "int"],
     ["银行配置", "红包_发体力", "发体力", "int"], ["银行配置", "红包_间隔时间", "间隔(秒)", "int"]],
   "抢红包": [["银行配置", "红包_抢体力", "抢体力", "int"], ["银行配置", "红包_抢魅力", "抢魅力", "int"],
@@ -337,44 +349,89 @@ const CMD_NUMS = {
     ["银行配置", "赌博限定次数", "限定次数", "int"], ["银行配置", "赌博关押时间", "关押(分)", "int"]],
   "打劫": [["银行配置", "打劫成功概率", "成功概率%", "int"], ["银行配置", "打劫消耗体力", "消耗体力", "int"],
     ["银行配置", "打劫金钱下限", "金钱下限", "int"], ["银行配置", "打劫金钱上限", "金钱上限", "int"],
+    ["银行配置", "打劫失败罚金", "失败罚金", "int"],
     ["银行配置", "打劫魅力减少", "魅力减少", "int"], ["银行配置", "打劫关押时间", "关押(分)", "int"]],
   "打劫银行": [["银行配置", "打劫银行成功概率", "成功概率%", "int"],
-    ["银行配置", "打劫银行消耗体力", "消耗体力", "int"],
+    ["银行配置", "打劫银行消耗体力", "消耗体力", "int"], ["银行配置", "打劫银行间隔", "间隔(分)", "int"],
     ["银行配置", "打劫银行金钱下限", "金钱下限", "int"], ["银行配置", "打劫银行金钱上限", "金钱上限", "int"],
+    ["银行配置", "打劫银行金库初始", "金库初始", "int"], ["银行配置", "打劫银行金库上限", "金库上限", "int"],
+    ["银行配置", "打劫银行金库回流", "每时回流", "int"],
     ["银行配置", "打劫银行魅力减少", "魅力减少", "int"], ["银行配置", "打劫银行关押时间", "关押(分)", "int"]],
   "保释": [["银行配置", "保释金钱下限", "保释金下限", "int"], ["银行配置", "保释金钱上限", "保释金上限", "int"],
     ["银行配置", "保释消耗体力", "消耗体力", "int"], ["银行配置", "保释魅力减少", "魅力减少", "int"]],
   "我要越狱": [["银行配置", "越狱成功概率", "成功概率%", "int"], ["银行配置", "越狱消耗体力", "消耗体力", "int"],
-    ["银行配置", "越狱魅力减少", "魅力减少", "int"], ["银行配置", "越狱关押时间", "关押(分)", "int"]],
+    ["银行配置", "越狱魅力减少", "魅力减少", "int"]],
+  "劫狱": [["银行配置", "劫狱消耗体力", "消耗体力", "int"], ["银行配置", "劫狱间隔", "间隔(分)", "int"],
+    ["银行配置", "劫狱魅力减少", "魅力减少", "int"]],
   "精灵冒险": [["精灵配置", "挑战奖励_经验下限", "经验下限", "int"], ["精灵配置", "挑战奖励_经验上限", "经验上限", "int"],
     ["精灵配置", "挑战奖励_金钱下限", "金钱下限", "int"], ["精灵配置", "挑战奖励_金钱上限", "金钱上限", "int"],
+    ["精灵配置", "挑战扣除_金钱下限", "失败扣钱下限", "int"], ["精灵配置", "挑战扣除_金钱上限", "失败扣钱上限", "int"],
+    ["精灵配置", "挑战扣除_消耗体力", "消耗体力", "int"],
     ["精灵配置", "等级加成下限", "等级加成下限", "int"], ["精灵配置", "等级加成上限", "等级加成上限", "int"],
-    ["精灵配置", "冒险间隔", "冒险间隔(分)", "int"]],
+    ["精灵配置", "冒险间隔", "冒险间隔(分)", "int"], ["精灵配置", "闪光基础概率", "闪光概率%", "int"]],
+  "精灵旅行": [["精灵配置", "旅行时长分钟", "旅行时长(分)", "int"], ["精灵配置", "旅行消耗体力", "消耗体力", "int"],
+    ["精灵配置", "旅行消耗魅力", "消耗魅力", "int"],
+    ["精灵配置", "旅行金币下限", "金币下限", "int"], ["精灵配置", "旅行金币上限", "金币上限", "int"]],
+  "精灵远征": [["精灵配置", "远征时长分钟", "远征时长(分)", "int"], ["精灵配置", "远征单只体力", "单只体力", "int"],
+    ["精灵配置", "远征单只金币下限", "单只金币下限", "int"], ["精灵配置", "远征单只金币上限", "单只金币上限", "int"]],
   "丢弃精灵": [["精灵配置", "魅力减少", "魅力减少", "int"]],
   "保护": [["设置", "保护费用", "保护费用", "int"], ["设置", "保护时长小时", "保护时长(时)", "int"],
     ["间隔配置", "保护间隔", "保护间隔(分)", "int"]],
-  "我要学习": [["设置", "奇遇触发概率", "奇遇概率%", "int"], ["间隔配置", "学习间隔", "学习间隔(分)", "int"]],
-  "讨好": [["概率配置", "讨好概率", "讨好概率%", "int"], ["间隔配置", "讨好间隔", "讨好间隔(分)", "int"], ["费用配置", "讨好消耗魅力", "消耗魅力", "int"]],
-  "造反": [["概率配置", "造反概率", "造反概率%", "int"], ["间隔配置", "造反间隔", "造反间隔(分)", "int"]],
-  "十连抽": [["设置", "十连抽花费", "十连抽花费", "int"]],
-  "三十连抽": [["设置", "三十连抽花费", "三十连抽花费", "int"]],
-  "五十连抽": [["设置", "五十连抽花费", "五十连抽花费", "int"]],
-  "买下": [["间隔配置", "购买间隔", "购买间隔(分)", "int"]],
-  "折磨": [["间隔配置", "折磨间隔", "折磨间隔(分)", "int"]],
-  "买奴隶位": [["设置", "奴隶位价格", "奴隶位价格", "int"]],
-  "我要自由": [["费用配置", "初始身价", "初始身价", "int"]],
-  "打架": [["间隔配置", "打架间隔", "打架间隔(分)", "int"]],
+  "我要学习": [["费用配置", "学习学费下限", "学费下限", "int"], ["费用配置", "学习学费上限", "学费上限", "int"],
+    ["费用配置", "学习经验下限", "经验下限", "int"], ["费用配置", "学习经验上限", "经验上限", "int"],
+    ["设置", "奇遇触发概率", "奇遇概率%", "int"], ["间隔配置", "学习间隔", "学习间隔(分)", "int"]],
+  "讨好": [["概率配置", "讨好概率", "讨好概率%", "int"], ["间隔配置", "讨好间隔", "讨好间隔(分)", "int"],
+    ["费用配置", "讨好消耗魅力", "消耗魅力", "int"],
+    ["费用配置", "讨好收益下限", "收益下限", "int"], ["费用配置", "讨好收益上限", "收益上限", "int"]],
+  "造反": [["概率配置", "造反概率", "造反概率%", "int"], ["间隔配置", "造反间隔", "造反间隔(分)", "int"],
+    ["费用配置", "造反消耗魅力", "消耗魅力", "int"], ["费用配置", "造反失败罚金", "失败罚金", "int"],
+    ["费用配置", "造反掠夺下限", "掠夺下限", "int"], ["费用配置", "造反掠夺上限", "掠夺上限", "int"]],
+  "抽武器": [["设置", "抽武器花费", "单抽花费", "int"], ["设置", "抽武器R概率", "R概率%", "int"],
+    ["设置", "抽武器SR概率", "SR概率%", "int"], ["设置", "抽武器SSR概率", "SSR概率%", "int"]],
+  "十连抽": [["设置", "十连抽花费", "十连抽花费", "int"], ["设置", "抽武器SSR概率", "SSR概率%", "int"]],
+  "三十连抽": [["设置", "三十连抽花费", "三十连抽花费", "int"], ["设置", "抽武器SSR概率", "SSR概率%", "int"]],
+  "五十连抽": [["设置", "五十连抽花费", "五十连抽花费", "int"], ["设置", "抽武器SSR概率", "SSR概率%", "int"]],
+  "买下": [["费用配置", "初始身价", "初始身价", "int"], ["费用配置", "买入身价上涨", "买入涨幅倍率", "float"],
+    ["间隔配置", "购买间隔", "购买间隔(分)", "int"]],
+  "折磨": [["概率配置", "折磨成功率", "折磨成功率%", "int"], ["间隔配置", "折磨间隔", "折磨间隔(分)", "int"],
+    ["费用配置", "变化下限", "金额变化下限", "int"], ["费用配置", "变化上限", "金额变化上限", "int"]],
+  "买奴隶位": [["设置", "奴隶个数", "默认奴隶位", "int"], ["设置", "奴隶个数上限", "奴隶位上限", "int"],
+    ["设置", "奴隶位价格", "买奴隶位价格", "int"]],
+  "我要自由": [["费用配置", "赎身花费倍率", "赎身花费倍率", "float"], ["间隔配置", "赎身间隔", "赎身间隔(分)", "int"],
+    ["间隔配置", "自由间隔", "自由间隔(分)", "int"]],
+  "打架": [["间隔配置", "打架间隔", "打架间隔(分)", "int"], ["费用配置", "打架掠夺上限", "掠夺上限", "int"]],
   "我要祈福": [["祈福配置", "祈福奖励下限", "奖励下限", "int"], ["祈福配置", "祈福奖励上限", "奖励上限", "int"],
+    ["祈福配置", "人品爆发概率", "人品爆发概率%", "int"], ["祈福配置", "人品爆发奖励", "人品爆发奖励", "int"],
+    ["间隔配置", "祈福间隔", "祈福间隔(分)", "int"]],
+  "升星": [["设置", "一星武器概率", "一星概率%", "int"], ["设置", "一星武器花费", "一星花费", "int"], ["设置", "一星武器消耗同武器数量", "一星消耗数", "int"],
+    ["设置", "二星武器概率", "二星概率%", "int"], ["设置", "二星武器花费", "二星花费", "int"], ["设置", "二星武器消耗同武器数量", "二星消耗数", "int"],
+    ["设置", "三星武器概率", "三星概率%", "int"], ["设置", "三星武器花费", "三星花费", "int"], ["设置", "三星武器消耗同武器数量", "三星消耗数", "int"],
+    ["设置", "四星武器概率", "四星概率%", "int"], ["设置", "四星武器花费", "四星花费", "int"], ["设置", "四星武器消耗同武器数量", "四星消耗数", "int"],
+    ["设置", "五星武器概率", "五星概率%", "int"], ["设置", "五星武器花费", "五星花费", "int"], ["设置", "五星武器消耗同武器数量", "五星消耗数", "int"]],
+  "升阶": [["设置", "一阶宝物概率", "一阶概率%", "int"], ["设置", "一阶宝物花费", "一阶花费", "int"], ["设置", "一阶宝物消耗宝物数量", "一阶消耗数", "int"],
+    ["设置", "二阶宝物概率", "二阶概率%", "int"], ["设置", "二阶宝物花费", "二阶花费", "int"], ["设置", "二阶宝物消耗宝物数量", "二阶消耗数", "int"],
+    ["设置", "三阶宝物概率", "三阶概率%", "int"], ["设置", "三阶宝物花费", "三阶花费", "int"], ["设置", "三阶宝物消耗宝物数量", "三阶消耗数", "int"]],
+  "我要打工": [["间隔配置", "打工间隔", "打工间隔(分)", "int"], ["费用配置", "工资比例", "工资比例%", "int"],
+    ["费用配置", "打工收益下限", "打工收益下限", "int"], ["费用配置", "打工收益上限", "打工收益上限", "int"]],
+  "奴隶打工": [["间隔配置", "打工间隔", "打工间隔(分)", "int"], ["费用配置", "工资比例", "工资比例%", "int"],
+    ["费用配置", "打工收益下限", "打工收益下限", "int"], ["费用配置", "打工收益上限", "打工收益上限", "int"]],
+  "打工": [["间隔配置", "打工间隔", "打工间隔(分)", "int"], ["费用配置", "工资比例", "工资比例%", "int"],
+    ["费用配置", "打工收益下限", "打工收益下限", "int"], ["费用配置", "打工收益上限", "打工收益上限", "int"]],
+  "亲自搬砖": [["费用配置", "搬砖消耗体力", "消耗体力", "int"], ["间隔配置", "搬砖间隔", "搬砖间隔(分)", "int"],
+    ["费用配置", "搬砖收益下限", "收益下限", "int"], ["费用配置", "搬砖收益上限", "收益上限", "int"]],
+  "搬砖": [["费用配置", "搬砖消耗体力", "消耗体力", "int"], ["间隔配置", "搬砖间隔", "搬砖间隔(分)", "int"],
+    ["费用配置", "搬砖收益下限", "收益下限", "int"], ["费用配置", "搬砖收益上限", "收益上限", "int"]],
+  "学习": [["费用配置", "学习学费下限", "学费下限", "int"], ["费用配置", "学习学费上限", "学费上限", "int"],
+    ["费用配置", "学习经验下限", "经验下限", "int"], ["费用配置", "学习经验上限", "经验上限", "int"],
+    ["间隔配置", "学习间隔", "学习间隔(分)", "int"], ["设置", "奇遇触发概率", "奇遇概率%", "int"]],
+  "祈福": [["祈福配置", "祈福奖励下限", "奖励下限", "int"], ["祈福配置", "祈福奖励上限", "奖励上限", "int"],
     ["祈福配置", "人品爆发概率", "人品爆发概率%", "int"], ["祈福配置", "人品爆发奖励", "人品爆发奖励", "int"]],
-  "升星": [["设置", "一星武器概率", "一星概率%", "int"], ["设置", "一星武器花费", "一星花费", "int"], ["设置", "一星武器消耗同武器数量", "一星消耗同武数", "int"], ["设置", "二星武器概率", "二星概率%", "int"], ["设置", "二星武器花费", "二星花费", "int"], ["设置", "二星武器消耗同武器数量", "二星消耗", "int"]],
-  "升阶": [["设置", "一阶宝物概率", "一阶概率%", "int"], ["设置", "一阶宝物花费", "一阶花费", "int"]],
-  "我要打工": [["间隔配置", "打工间隔", "打工间隔(分)", "int"], ["费用配置", "工资比例", "工资比例%", "int"]],
-  "奴隶打工": [["间隔配置", "打工间隔", "打工间隔(分)", "int"], ["费用配置", "工资比例", "工资比例%", "int"]],
-  "打工": [["间隔配置", "打工间隔", "打工间隔(分)", "int"]],
-  "学习": [["间隔配置", "学习间隔", "学习间隔(分)", "int"], ["设置", "奇遇触发概率", "奇遇概率%", "int"]],
-  "祈福": [["祈福配置", "祈福奖励下限", "奖励下限", "int"], ["祈福配置", "祈福奖励上限", "奖励上限", "int"]],
   "释放": [["间隔配置", "释放间隔", "释放间隔(分)", "int"]],
-  "抽签": [["娱乐配置", "抽签造价", "抽签造价", "int"], ["娱乐配置", "抽签大吉奖励", "大吉奖励", "int"], ["娱乐配置", "抽签上签奖励", "上签奖励", "int"], ["娱乐配置", "抽签中签奖励", "中签奖励", "int"]],
+  "抽签": [["娱乐配置", "抽签造价", "抽签造价", "int"], ["娱乐配置", "抽签消耗体力", "消耗体力", "int"],
+    ["娱乐配置", "抽签大吉奖励", "大吉奖励", "int"], ["娱乐配置", "抽签上签奖励", "上签奖励", "int"], ["娱乐配置", "抽签中签奖励", "中签奖励", "int"]],
+  "扔炸弹": [["娱乐配置", "扔炸弹_需要金钱", "需要金钱", "int"], ["娱乐配置", "扔炸弹_消耗体力", "消耗体力", "int"],
+    ["娱乐配置", "扔炸弹_成功概率", "成功概率%", "int"], ["娱乐配置", "扔炸弹_魅力减少", "魅力减少", "int"],
+    ["娱乐配置", "扔炸弹_禁言下限", "禁言下限(分)", "int"], ["娱乐配置", "扔炸弹_禁言上限", "禁言上限(分)", "int"]],
   "猜拳": [["娱乐配置", "猜拳奖励金币", "奖励金币", "int"], ["娱乐配置", "猜拳奖励魅力", "奖励魅力", "int"], ["娱乐配置", "猜拳成功概率", "成功概率%", "int"], ["娱乐配置", "猜拳消耗体力", "消耗体力", "int"], ["娱乐配置", "猜拳需要金钱", "需要金钱", "int"]],
   "猜数": [["娱乐配置", "猜数奖励金币", "奖励金币", "int"], ["娱乐配置", "猜数奖励魅力", "奖励魅力", "int"], ["娱乐配置", "猜数消耗体力", "消耗体力", "int"], ["娱乐配置", "猜数需要金钱", "需要金钱", "int"]],
   "急转弯": [["娱乐配置", "急转弯奖励金币", "奖励金币", "int"], ["娱乐配置", "急转弯奖励魅力", "奖励魅力", "int"], ["娱乐配置", "急转弯消耗体力", "消耗体力", "int"], ["娱乐配置", "急转弯需要金钱", "需要金钱", "int"]],
@@ -382,7 +439,48 @@ const CMD_NUMS = {
   "接龙": [["娱乐配置", "接龙奖励金币", "奖励金币", "int"], ["娱乐配置", "接龙奖励魅力", "奖励魅力", "int"], ["娱乐配置", "接龙消耗体力", "消耗体力", "int"], ["娱乐配置", "接龙需要金钱", "需要金钱", "int"]],
   "答题": [["娱乐配置", "答题奖励金币", "奖励金币", "int"], ["娱乐配置", "答题奖励魅力", "奖励魅力", "int"], ["娱乐配置", "答题消耗体力", "消耗体力", "int"], ["娱乐配置", "答题需要金钱", "需要金钱", "int"]],
   "二四点": [["娱乐配置", "二四点奖励金币", "奖励金币", "int"], ["娱乐配置", "二四点奖励魅力", "奖励魅力", "int"], ["娱乐配置", "二四点消耗体力", "消耗体力", "int"], ["娱乐配置", "二四点需要金钱", "需要金钱", "int"]],
+  "创建帮派": [["帮派配置", "创建消耗金钱", "消耗金钱", "int"], ["帮派配置", "创建消耗体力", "消耗体力", "int"],
+    ["帮派配置", "创建需要魅力", "需要魅力", "int"], ["帮派配置", "人数上限", "人数上限", "int"]],
+  "帮派福利": [["帮派配置", "福利基数", "福利基数", "int"], ["帮派配置", "福利加成上限", "加成上限", "int"]],
+  "帮派俸禄": [["帮派配置", "俸禄单阶金额", "单阶俸禄", "int"]],
+  "帮战": [["帮派配置", "帮战次数上限", "每日次数上限", "int"], ["帮派配置", "帮战胜利帮派资金", "胜方帮派资金", "int"],
+    ["帮派配置", "帮战胜利个人奖励", "胜方个人奖励", "int"], ["帮派配置", "帮战失败安慰奖", "败方安慰奖", "int"],
+    ["帮派配置", "帮战获贡下限", "获贡下限", "int"], ["帮派配置", "帮战获贡上限", "获贡上限", "int"]],
+  "开始冒险": [["冒险配置", "冒险消耗体力", "消耗体力", "int"], ["冒险配置", "冒险需要金钱", "需要金钱", "int"],
+    ["冒险配置", "冒险间隔", "冒险间隔(分)", "int"], ["冒险配置", "最大轮数", "最大轮数", "int"],
+    ["冒险配置", "事件金钱下限", "事件金钱下限", "int"], ["冒险配置", "事件金钱上限", "事件金钱上限", "int"],
+    ["冒险配置", "结局金钱下限", "结局金钱下限", "int"], ["冒险配置", "结局金钱上限", "结局金钱上限", "int"]],
 };
+
+// 获取指定系统的全部数值项列表：[{sec, key, desc, val}]
+function _getSystemNumericItems(eng) {
+  const secs = ENG_NUM_SECTIONS[eng] || [];
+  const out = [];
+  const seen = new Set();
+  secs.forEach((sec) => {
+    const grp = (typeof CFG !== "undefined" && CFG.schema && CFG.schema.groups && CFG.schema.groups[sec]) || [];
+    const curSec = CMD_CFG[sec] || {};
+    grp.forEach((it) => {
+      if (it.type !== "int" && it.type !== "float") return;
+      const uk = sec + "__" + it.key;
+      if (seen.has(uk)) return;
+      seen.add(uk);
+      const v = curSec[it.key] !== undefined ? curSec[it.key] : (it.value !== undefined ? it.value : (it.default ?? ""));
+      out.push({ sec, key: it.key, desc: it.desc || "", val: v, type: it.type });
+    });
+    // 兜底：若 CFG.schema 尚未加载，直接从 CMD_CFG[sec] 中提取数值型键值
+    Object.keys(curSec).forEach((k) => {
+      const uk = sec + "__" + k;
+      if (seen.has(uk) || k === "开关" || k === "平衡模式" || k === "调控模式" || k.endsWith("文案") || k.endsWith("词库") || k.endsWith("题库") || k.startsWith("初始精灵")) return;
+      const rawV = curSec[k];
+      if (rawV !== "" && rawV !== null && rawV !== undefined && !isNaN(Number(rawV))) {
+        seen.add(uk);
+        out.push({ sec, key: k, desc: "", val: rawV, type: String(rawV).includes(".") ? "float" : "int" });
+      }
+    });
+  });
+  return out;
+}
 
 // 各玩法指令的默认回复示例(供指令页"默认回复"展示; 覆盖配置留空则用该默认)
 // {变量} 为运行时动态数值占位符
@@ -430,6 +528,13 @@ function _bindCmdListOnce() {
   if (!el || _CMD_LIST_BOUND) return;
   _CMD_LIST_BOUND = true;
   el.addEventListener("click", (e) => {
+    const saveSysBtn = e.target.closest("[data-save-sys-num]");
+    if (saveSysBtn && el.contains(saveSysBtn)) {
+      e.preventDefault();
+      e.stopPropagation();
+      saveSystemNumConfig(saveSysBtn.dataset.saveSysNum, saveSysBtn);
+      return;
+    }
     const addBtn = e.target.closest("#btnCmdAddCustom");
     if (addBtn && el.contains(addBtn)) {
       CMD_EDIT = { sys: "自定义", cmd: "", isNew: true, mapCmd: "" };
@@ -472,29 +577,68 @@ function _bindCmdListOnce() {
   });
 }
 
+async function saveSystemNumConfig(eng, btn) {
+  const container = btn ? btn.closest(".sys-num-panel") : null;
+  if (!container) return;
+  const inputs = container.querySelectorAll("input[data-sys-num]");
+  if (!inputs.length) return;
+  const payload = {};
+  inputs.forEach((inp) => {
+    const sec = inp.dataset.nsec;
+    const key = inp.dataset.nkey;
+    if (!sec || !key) return;
+    if (!payload[sec]) payload[sec] = {};
+    payload[sec][key] = inp.value === "" ? "" : Number(inp.value);
+  });
+  const oldTxt = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "保存中...";
+  try {
+    const r = await getBridge().apiPost("config/save", payload);
+    if (r && r.error) throw new Error(r.error);
+    toast(`已保存「${map2sys[eng] || eng}」共 ${inputs.length} 项玩法数值（即时生效）`, "ok");
+    await loadCommands();
+    if (typeof loadConfig === "function") try { await loadConfig(); } catch (e) {}
+    try { await refreshBalanceBadges(); } catch (e) {}
+  } catch (err) {
+    toast("保存失败: " + err.message, "bad");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldTxt;
+  }
+}
+
 async function loadCommands() {
   try {
-    // 双接口并行（此前串行 2 RTT）
-    const [cmds, cur] = await Promise.all([
+    // 若 CFG.schema 尚未加载，顺带拉取一次保证系统数值面板含完整 schema 描述
+    const tasks = [
       getBridge().apiGet("commands"),
-      getBridge().apiGet("config/get")
-    ]);
+      getBridge().apiGet("config/get"),
+    ];
+    if (!CFG || !CFG.schema || !CFG.schema.groups) {
+      tasks.push(getBridge().apiGet("config/schema").catch(() => null));
+    }
+    const [cmds, cur, schemaRes] = await Promise.all(tasks);
+    if (schemaRes && schemaRes.groups) {
+      CFG.schema = schemaRes;
+    }
     CMD_CFG = cur || {};
     const wakeSec = CMD_CFG["唤醒词配置"] || {};
     const custSec = CMD_CFG["自定义指令配置"] || {};
     const onSec = CMD_CFG["系统开关配置"] || {};       // 系统级启用
     const disSec = CMD_CFG["指令启用配置"] || {};       // 指令级启用(假=禁用)
     const permSec = CMD_CFG["指令权限配置"] || {};       // 指令级权限(超管=仅超管)
-    const setupSec = CMD_CFG["设置"] || {};
     const isOff = (v) => v === "假" || v === "0" || v === "false";
     const isOn = (v) => v === undefined || !isOff(v);
     const el = document.getElementById("cmdList");
     if (!el) return;
-    // 重渲染前记住展开态，渲染后恢复（保存后不再全部收起）
+    // 重渲染前记住展开态（含各系统的数值子面板展开态），渲染后恢复
     let _openSys = null;
+    let _openNumEng = null;
     try {
       _openSys = new Set([...el.querySelectorAll("details.cmd-block[open]")].map((d) => d.dataset.sys));
-    } catch (e) { _openSys = new Set(); }
+      _openNumEng = new Set([...el.querySelectorAll("details.sys-num-panel[open]")].map((d) => d.dataset.eng));
+    } catch (e) { _openSys = new Set(); _openNumEng = new Set(); }
     KNOWN_CMDS = new Set();
     CMD_ENG = {};
     Object.entries(cmds).forEach(([eng, arr]) => (arr || []).forEach((c) => {
@@ -521,14 +665,57 @@ async function loadCommands() {
           return `<a class="cmd-tag ${onBg}" data-on="${cOn ? "1" : "0"}" data-cmd="${esc(c)}" data-sys="${esc(sys)}">` +
             `${cOn ? '<span style="color:var(--ok);font-size:10px">●</span>' : '<span style="color:var(--muted);font-size:10px">○</span>'} ${isAdm ? "🔒" : ""}${esc(c)}</a>`;
         }).join("");
+
+        // 构建本系统专属的完整数值精准调控面板（按配置节分组）
+        const numItems = _getSystemNumericItems(k);
+        let sysNumPanelHtml = "";
+        if (numItems.length > 0) {
+          const bySec = {};
+          numItems.forEach((it) => {
+            if (!bySec[it.sec]) bySec[it.sec] = [];
+            bySec[it.sec].push(it);
+          });
+          const secBlocks = Object.keys(bySec).map((sec) => {
+            const inputsHtml = bySec[sec].map((it) => `
+              <label class="cnum" title="${esc(it.desc || (`[${sec}] ${it.key}`))}" style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:12px">
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(it.key)}</span>
+                <input type="number" step="any" data-sys-num data-nsec="${esc(it.sec)}" data-nkey="${esc(it.key)}" value="${esc(it.val)}" style="width:92px;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--text);text-align:right;font-weight:600">
+              </label>
+            `).join("");
+            return `
+              <div style="margin-bottom:8px">
+                <div style="font-size:11.5px;font-weight:700;color:var(--acc);margin:4px 0 6px 2px">📂 ${esc(sec)}（${bySec[sec].length} 项）</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:6px">${inputsHtml}</div>
+              </div>
+            `;
+          }).join("");
+
+          sysNumPanelHtml = `
+            <details class="sys-num-panel" data-eng="${esc(k)}" style="margin-top:10px;border:1px dashed var(--line);border-radius:10px;padding:8px 10px;background:var(--panel)">
+              <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--acc);display:flex;justify-content:space-between;align-items:center;user-select:none">
+                <span>🎛️ ${esc(sys)} · 玩法数值精准调控（已分配 ${numItems.length} 项参数）</span>
+                <span style="font-size:11px;font-weight:400;color:var(--muted)">点击展开 / 收起逐项微调</span>
+              </summary>
+              <div style="margin-top:10px">
+                ${secBlocks}
+                <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">
+                  <span class="hint" style="font-size:11px">修改后点击右侧按钮即可直接生效，无需逐个打开指令弹窗</span>
+                  <button type="button" class="sm" data-save-sys-num="${esc(k)}">💾 保存${esc(sys)}数值</button>
+                </div>
+              </div>
+            </details>
+          `;
+        }
+
         return `<details class="cmd-block" data-sys="${esc(sys)}"><summary>` +
           `<span class="cmd-sys">${esc(sys)}</span>` +
-          `<span class="cmd-count">${items.length} 条指令</span></summary>` +
+          `<span class="cmd-count">${items.length} 条指令${numItems.length ? ` · ${numItems.length} 项数值` : ""}</span></summary>` +
           `<div class="cmd-wake">` +
           `<div class="cmd-wake-item"><label>启用系统</label><label class="switch"><input type="checkbox" data-syson="${esc(sys)}" ${sysChecked}><span class="slider-toggle"></span></label></div>` +
           `<div class="cmd-wake-item" style="flex:1"><label>唤醒词</label><input data-wake="${esc(sys)}" value="${esc(wake)}" placeholder="可用 | 分隔多个"></div>` +
           `</div>` +
           `<div class="cmd-tags">${tags || '<span class="hint">（交互式/无前缀触发）</span>'}</div>` +
+          sysNumPanelHtml +
           `</details>`;
       })
       .join("");
@@ -549,6 +736,11 @@ async function loadCommands() {
     if (_openSys && _openSys.size) {
       el.querySelectorAll("details.cmd-block").forEach((d) => {
         if (_openSys.has(d.dataset.sys)) d.open = true;
+      });
+    }
+    if (_openNumEng && _openNumEng.size) {
+      el.querySelectorAll("details.sys-num-panel").forEach((d) => {
+        if (_openNumEng.has(d.dataset.eng)) d.open = true;
       });
     }
     _bindCmdListOnce();
@@ -615,9 +807,10 @@ function renderCmdNums(numCmd, isNew) {
     holder.innerHTML = `<small class="hint">纯自定义指令：回复内容即返回文案，无玩法数值；如需调整某引擎指令的数值，请把「映射引擎指令」填成它。</small>`;
     return;
   }
+  const eng = (typeof CMD_ENG !== "undefined" && CMD_ENG[numCmd]) || "";
   let nums = CMD_NUMS[numCmd] || [];
   if (!nums.length && numCmd) {
-    // 通用兜底：按指令名与键名/说明的关键词（二字重叠）精准匹配本系统数值，保证对得上、无关的不出现
+    // 通用兜底：按指令名与键名/说明的关键词（二字重叠）精准匹配本系统数值
     try {
       const _cjk = (s) => (String(s || "").match(/[\u4e00-\u9fff]/g) || []);
       const _bigrams = (s) => {
@@ -626,7 +819,6 @@ function renderCmdNums(numCmd, isNew) {
         return out;
       };
       const _cb = _bigrams(numCmd);
-      const eng = (typeof CMD_ENG !== "undefined" && CMD_ENG[numCmd]) || "";
       const secs = ENG_NUM_SECTIONS[eng] || [];
       const scored = [];
       const seen = {};
@@ -644,18 +836,35 @@ function renderCmdNums(numCmd, isNew) {
         });
       });
       scored.sort((a, b) => b[0] - a[0]);
-      nums = scored.slice(0, 6).map(([s, sec, it]) => [sec, it.key, it.key, it.type]);
+      nums = scored.slice(0, 8).map(([s, sec, it]) => [sec, it.key, it.key, it.type]);
     } catch(e){}
   }
-  if (!nums.length) {
-    holder.innerHTML = `<small class="hint">该指令无关联可调数值。</small>`;
-    return;
+
+  const directKeys = new Set(nums.map(([sec, key]) => `${sec}__${key}`));
+  const allSysItems = eng ? _getSystemNumericItems(eng).filter((it) => !directKeys.has(`${it.sec}__${it.key}`)) : [];
+
+  const directHtml = nums.length
+    ? nums.map(([sec, key, label]) => {
+        const v = (CMD_CFG[sec] || {})[key] ?? "";
+        return `<label class="cnum"><span>${esc(label)}</span>` +
+          `<input type="number" step="any" data-cmd-num data-nsec="${esc(sec)}" data-nkey="${esc(key)}" value="${esc(v)}"></label>`;
+      }).join("")
+    : `<small class="hint" style="grid-column:1/-1">该指令无直接绑定数值，可展开下方本系统全部数值进行调控。</small>`;
+
+  let moreHtml = "";
+  if (allSysItems.length > 0) {
+    const sysName = map2sys[eng] || eng;
+    const moreInputs = allSysItems.map((it) => {
+      return `<label class="cnum" title="[${esc(it.sec)}] ${esc(it.desc || it.key)}"><span>[${esc(it.sec)}] ${esc(it.key)}</span>` +
+        `<input type="number" step="any" data-cmd-num data-nsec="${esc(it.sec)}" data-nkey="${esc(it.key)}" value="${esc(it.val)}"></label>`;
+    }).join("");
+    moreHtml = `<details style="grid-column:1/-1;margin-top:6px;border-top:1px dashed var(--line);padding-top:6px">` +
+      `<summary style="cursor:pointer;font-size:12px;color:var(--acc);font-weight:600">🎛️ 展开「${esc(sysName)}」其余 ${allSysItems.length} 项可调数值</summary>` +
+      `<div class="cmd-nums" style="margin-top:8px">${moreInputs}</div>` +
+      `</details>`;
   }
-  holder.innerHTML = nums.map(([sec, key, label]) => {
-    const v = (CMD_CFG[sec] || {})[key] ?? "";
-    return `<label class="cnum"><span>${esc(label)}</span>` +
-      `<input type="number" data-cmd-num data-nsec="${esc(sec)}" data-nkey="${esc(key)}" value="${esc(v)}"></label>`;
-  }).join("");
+
+  holder.innerHTML = directHtml + moreHtml;
 }
 
 function closeCmdEditor() {

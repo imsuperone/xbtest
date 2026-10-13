@@ -79,7 +79,14 @@ def _MAPS():
 
 
 def _SHOP():
-    return _spirit_section("shop", SD.SHOP)
+    raw = _spirit_section("shop", SD.SHOP)
+    out = dict(raw) if isinstance(raw, dict) else {}
+    for _iname, _ckey in (("洗练果实", "洗练果实价格"), ("闪光结晶", "闪光结晶价格")):
+        if _iname in out and isinstance(out[_iname], dict):
+            _p = _cfgi(_ckey, int(out[_iname].get("price", 0) or 0))
+            if _p > 0:
+                out[_iname] = dict(out[_iname], price=_p)
+    return out
 
 
 def _u(gid, qq):
@@ -168,11 +175,15 @@ def _exp_need(it):
     return need if need >= EXP_FLOOR else EXP_FLOOR
 
 
+def _shiny_rate():
+    return max(1, min(100, _cfgi("闪光基础概率", SHINY_RATE)))
+
+
 def _mk_spr(name, level=1, shiny=None, trait=None):
     """按图鉴生成一只精灵实例(含闪光变异与性格词条)"""
     base = _SPIRITS().get(name, {}) or {}
     if shiny is None:
-        shiny = random.randint(1, 100) <= SHINY_RATE
+        shiny = random.randint(1, 100) <= _shiny_rate()
     if not trait:
         trait = _roll_trait(prefer_rare=bool(shiny))
     stats = _calc_variant_stats(base, shiny=bool(shiny), trait=trait)
@@ -489,13 +500,14 @@ def cmd_adventure(gid, qq, place):
     wild = random.choice(md.get("drops", []) or ["绿毛虫"])
     lb = _cfgi("等级加成下限", 3); ub = _cfgi("等级加成上限", 5)
     wl = int(md.get("lv", 1)) + random.randint(lb, ub)
-    is_shiny = random.randint(1, 100) <= SHINY_RATE
+    is_shiny = random.randint(1, 100) <= _shiny_rate()
     sp["wild"] = {"name": wild, "level": wl, "shiny": 1 if is_shiny else 0}
     # 冒险历练奖励(挑战奖励配置): 经验 + 金币
     exp_lo = _cfgi("挑战奖励_经验下限", 200); exp_hi = _cfgi("挑战奖励_经验上限", 300)
-    gold_hi = _cfgi("挑战奖励_金钱上限", 250)
+    gold_lo = max(0, _cfgi("挑战奖励_金钱下限", 0))
+    gold_hi = max(gold_lo, _cfgi("挑战奖励_金钱上限", 250))
     exp = random.randint(max(1, exp_lo), max(exp_lo, exp_hi))
-    gold = random.randint(0, max(0, gold_hi))
+    gold = random.randint(gold_lo, gold_hi)
     evo_hint = ""
     if act_it.get("level") < _cfgi("最大等级", 100):
         evo_hint = _add_exp(gid, qq, sp, act_it, exp, save_now=False) or ""
@@ -578,7 +590,7 @@ def cmd_catch(gid, qq, ball):
         w_shiny = bool(wild.get("shiny"))
         if not w_shiny and eff >= CATCH_MASTER_EFF:
             # 大师球额外一次闪光激发判定
-            w_shiny = random.randint(1, 100) <= SHINY_RATE
+            w_shiny = random.randint(1, 100) <= _shiny_rate()
         new_spr = _mk_spr(wild["name"], lv, shiny=w_shiny)
         sp.setdefault("list", []).append(new_spr)
     # 单事务原子结算：扣球+清遭遇+入队一次提交；失败则球未扣、精灵未变（禁半成功）
@@ -910,7 +922,9 @@ def cmd_travel(gid, qq, arg=""):
         it = _wsp(sp, t_name) or (sp["list"][0] if sp.get("list") else None)
         charm_val = _u(gid, qq).int("charm")
         drop_item = _pick_shop_drop(charm_val=charm_val, high_tier_bonus=5)
-        gold_gain = random.randint(350, 850)
+        t_lo = max(0, _cfgi("旅行金币下限", 350))
+        t_hi = max(t_lo, _cfgi("旅行金币上限", 850))
+        gold_gain = random.randint(t_lo, t_hi)
         try:
             try:
                 from ..ride import active_ride_info
@@ -1016,7 +1030,9 @@ def cmd_expedition(gid, qq, arg=""):
             team_its = lst[:min(3, len(lst))]
         cnt = max(1, len(team_its))
         total_p = sum(_power(x) for x in team_its)
-        gold_gain = random.randint(350 * cnt, 650 * cnt) + min(1500, total_p // 10)
+        e_lo = max(0, _cfgi("远征单只金币下限", 350))
+        e_hi = max(e_lo, _cfgi("远征单只金币上限", 650))
+        gold_gain = random.randint(e_lo * cnt, e_hi * cnt) + min(1500, total_p // 10)
         try:
             try:
                 from ..ride import active_ride_info
@@ -1064,7 +1080,7 @@ def cmd_expedition(gid, qq, arg=""):
         idle_pool = list(avail_lst)
     idle_pool.sort(key=lambda x: _power(x), reverse=True)
     max_team = max(1, _cfgi("远征最大精灵数", 3))
-    unit_stam = max(1, _cfgi("远征单只消耗体力", 8))
+    unit_stam = max(1, _cfgi("远征单只体力", _cfgi("远征单只消耗体力", 8)))
     dur_min = max(1, _cfgi("远征时长分钟", 120))
 
     with ST._LOCK:
