@@ -72,10 +72,10 @@ STAMINA_HARD_CAP = 1000      # 体力硬上限 / 购买体力上限（1000）
 STAMINA_OVERFLOW_COIN = 4    # 每点溢出体力折算金币数（原15的25%≈4）
 STAMINA_BUY_DAILY_CAP = 1000 # 每日购买体力上限（1000）
 
-CHARM_SOFT_CAP = 300         # 魅力自然获取软上限
-CHARM_HARD_CAP = 500         # 魅力绝对硬上限
+CHARM_SOFT_CAP = 500         # 魅力自然获取软上限
+CHARM_HARD_CAP = 800         # 魅力绝对硬上限
 CHARM_OVERFLOW_COIN = 2      # 每点溢出魅力折算金币数（原10的25%≈2）
-CHARM_DECAY_PCT = 15         # 魅力超出软上限部分每日衰减百分比
-CHARM_BUY_DAILY_CAP = 200    # 每日购买魅力上限
+CHARM_DECAY_PCT = 5          # 魅力超出软上限部分每日衰减百分比（降低衰减速度）
+CHARM_BUY_DAILY_CAP = 800    # 每日购买魅力上限
 
 

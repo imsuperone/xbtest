@@ -170,7 +170,7 @@ async def handle_cfg_save(request, plugin_base=""):
             except Exception:
                 pass
             _coll_failed = []
-            _mem_saved = False
+            _custom_keys = ST._CONFIG.setdefault("_custom_keys", {})
             for sec, kv in norm.items():
                 if sec in getattr(ST, "_COLL_FILES", {}):
                     # 商城/图鉴走独立 sidecar，不进内存/_CONFIG
@@ -182,6 +182,10 @@ async def handle_cfg_save(request, plugin_base=""):
                     continue
                 ST._CONFIG.setdefault(sec, {})
                 ST._CONFIG[sec].update(kv)
+                if isinstance(kv, dict) and not sec.startswith("_") and sec not in ("备份配置", "WebDAV配置"):
+                    for k, v in kv.items():
+                        if v is not None and str(v) != "":
+                            _custom_keys[f"{sec}.{k}"] = str(v)
                 _mem_saved = True
             try:
                 if hasattr(ST, "_bump_config_ver"):

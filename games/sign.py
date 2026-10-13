@@ -737,7 +737,7 @@ _MENU = (
     "💪 购买体力 数量　购买魅力 数量\r\n"
     "🎁 领取新手礼包　👤 我的信息\r\n"
     "📋 打卡\r\n"
-    "🏆 个人排行　财富榜　签到榜　体力榜　魅力榜\r\n"
+    "🏆 个人排行　财富榜　签到榜　魅力榜\r\n"
     "━━━━━━━━━━━━━━━━\r\n"
     "💡 发送对应指令即可游玩"
 )
@@ -772,7 +772,7 @@ def cmd_mine_rank(gid, qq):
             vals_cash[q] = wallet_map.get(q, 0) + int(float(kv.get("deposit", kv.get("cunkuan", 0)) or 0))
             vals_sign[q] = int(float(kv.get("sign_count", 0) or 0))
             vals_stam[q] = max(0, min(1000, int(float(kv.get("stamina", kv.get("tili", 0)) or 0))))
-            vals_charm[q] = max(0, min(500, int(float(kv.get("charm", kv.get("meili", 0)) or 0))))
+            vals_charm[q] = max(0, min(800, int(float(kv.get("charm", kv.get("meili", 0)) or 0))))
         def _pos(d):
             sorted_q = sorted(d.items(), key=lambda x: -x[1])
             for i, (q_, v) in enumerate(sorted_q, 1):
@@ -834,8 +834,6 @@ def handle(gid, qq, raw):
         return cmd_rank(gid, "cash", None)
     if text == "签到榜":
         return cmd_rank(gid, "sign", None)
-    if text in ("体力排行榜", "体力榜"):
-        return cmd_rank(gid, "stamina", None)
     if text in ("魅力排行榜", "魅力榜"):
         return cmd_rank(gid, "charm", None)
     if text in ("签到", "打卡"):
@@ -875,7 +873,6 @@ def handle(gid, qq, raw):
 COMMANDS = (
     "个人财富榜", "财富榜",
     "签到榜",
-    "体力排行榜", "体力榜",
     "魅力排行榜", "魅力榜",
     "每日打卡",
     "签到", "打卡",

@@ -15,20 +15,31 @@ def handle(gid, qq, raw):
         return None
     if text in ST.wake("银行系统", "银行系统"):
         return _MENU
-    # QQ-only 转账目标解析: ST.parse_at(过校验) -> CQ -> @QQ数字 -> 纯QQ，不认昵称
+    # QQ/Nickname 转账目标解析: CQ -> @QQ数字 -> @昵称 -> 纯QQ
     target = None
     t1, r1 = _extract_transfer_target(text, gid)
     if t1:
         target = t1
         text = r1
     else:
-        # 纯QQ字符串兜底 (仅对需要目标的指令)
+        # 纯QQ/纯昵称字符串兜底 (仅对需要目标的指令)
         if any(text.startswith(p) for p in ("转账", "打劫", "劫狱", "保释")):
             m = re.search(r"\b(\d{5,12})\b", text)
             if m:
                 target = m.group(1)
                 text = text.replace(m.group(0), "", 1).strip()
+            elif "@" in text:
+                m_at = re.search(r"@\s*(\S+)", text)
+                if m_at:
+                    cand = m_at.group(1).strip()
+                    t_cand = _find_qq_by_name(gid, cand)
+                    if t_cand:
+                        target = t_cand
+                        text = re.sub(r"@\s*\S+", "", text).strip()
 
+    if target:
+        text = re.sub(r"@\s*\S+", "", text).strip()
+        text = re.sub(r"\s+", " ", text).strip()
 
     # 若目标已提取但 text 仍包含“转账”前缀，保留以便后续命令判断
     n = 0
@@ -62,7 +73,8 @@ def handle(gid, qq, raw):
             if not _rest or _rest.startswith("@"):
                 return "请指定转账目标，格式：【转账 @QQ 金额】"
             return None
-        if not _rest or re.fullmatch(r"\*?\s*\d+", _rest):
+        _rest_clean = re.sub(r"@\S+", "", _rest).strip()
+        if not _rest_clean or re.fullmatch(r"\*?\s*\d+", _rest_clean):
             return cmd_transfer(gid, qq, target, n)
         return None
 
@@ -74,7 +86,8 @@ def handle(gid, qq, raw):
         return cmd_rob_zone(gid, qq)
     if text.startswith("打劫"):
         _rest = text[2:].strip()
-        if not _rest or _rest.startswith("@"):
+        _rest_clean = re.sub(r"@\S+", "", _rest).strip()
+        if not _rest or _rest.startswith("@") or not _rest_clean:
             return cmd_sell_slave(gid, qq, target)
         return None
     if text.startswith("发红包"):
@@ -104,12 +117,14 @@ def handle(gid, qq, raw):
         return cmd_jailbreak(gid, qq)
     if text.startswith("劫狱"):
         _rest = text[2:].strip()
-        if not _rest or _rest.startswith("@"):
+        _rest_clean = re.sub(r"@\S+", "", _rest).strip()
+        if not _rest or _rest.startswith("@") or not _rest_clean:
             return cmd_bail(gid, qq, target or _rest, kind="劫狱")
         return None
     if text.startswith("保释"):
         _rest = text[2:].strip()
-        if not _rest or _rest.startswith("@"):
+        _rest_clean = re.sub(r"@\S+", "", _rest).strip()
+        if not _rest or _rest.startswith("@") or not _rest_clean:
             return cmd_bail(gid, qq, target or _rest)
         return None
     if text == "自我保释":

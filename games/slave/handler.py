@@ -63,6 +63,34 @@ def handle(gid, qq, raw):
 # 注意：变量名刻意避开 _need/_ADMIN_CMDS/_ROUTE_EXACT，调用处用变量引用，
 # 使指令采集器不收录（WebUI 指令页不再出现），行为保持全静默。
 
+def _find_slave_qq_by_name(gid, name, st=None):
+    name = str(name or "").strip()
+    if not name:
+        return None
+    try:
+        from .nick import NOTE_NAMES_BY_GROUP
+        for (g, q), n in NOTE_NAMES_BY_GROUP.items():
+            if (gid is None or str(g) == str(gid)) and n == name:
+                return str(q)
+    except Exception:
+        pass
+    if st is not None:
+        try:
+            for q in st.sections():
+                if st[q].get("name", "").strip() == name:
+                    return str(q)
+        except Exception:
+            pass
+    try:
+        with store._AT_NAMES_LOCK:
+            q = store._AT_NAMES.get(name)
+            if q:
+                return str(q)
+    except Exception:
+        pass
+    return None
+
+
 def _route(gid, qq, raw):
     gid = str(gid); qq = str(qq)
 
@@ -114,12 +142,17 @@ def _route_locked(gid, qq, raw):
     if text.startswith("我的信息"):
         rest = text[len("我的信息"):].strip()
         if target:
-            if not rest:
+            _rest_pure = _re.sub(r"@\S+", "", rest).strip()
+            if not _rest_pure:
                 return cmd_query(gid, qq, target, st)
             return None
         if not rest:
             return cmd_myinfo(gid, qq, st)
         if rest.startswith("@"):
+            cand_name = rest.lstrip("@").strip()
+            t_cand = _find_slave_qq_by_name(gid, cand_name, st)
+            if t_cand:
+                return cmd_query(gid, qq, t_cand, st)
             return "未能找到该成员～格式：【查询 @QQ】"
         return None
     if text.startswith("查询"):
@@ -128,7 +161,8 @@ def _route_locked(gid, qq, raw):
             return None
         rest_after_target = text[len("查询"):].strip()
         if target:
-            if not rest_after_target:
+            _rest_pure = _re.sub(r"@\S+", "", rest_after_target).strip()
+            if not _rest_pure:
                 return cmd_query(gid, qq, target, st)
             return None
         _raw0 = _re.sub(r"\[(?:CQ|DR):(?!(?:at\b))[^\]]+\]", "", str(raw or "")).strip()
@@ -136,6 +170,10 @@ def _route_locked(gid, qq, raw):
         if rest in ("", "我", "自己", "个人", "我的信息", "自己信息", "个人信息"):
             return cmd_myinfo(gid, qq, st)
         if rest.startswith("@"):
+            cand_name = rest.lstrip("@").strip()
+            t_cand = _find_slave_qq_by_name(gid, cand_name, st)
+            if t_cand:
+                return cmd_query(gid, qq, t_cand, st)
             return "未能找到该成员～格式：【查询 @QQ】"
         return None
     for _p, _fn in (
@@ -150,7 +188,12 @@ def _route_locked(gid, qq, raw):
             _rest = text[len(_p):].strip()
             if _rest and not _rest.startswith("@"):
                 return None
-            return _fn(gid, qq, target, st)
+            t_eff = target
+            if not t_eff and _rest.startswith("@"):
+                t_cand = _find_slave_qq_by_name(gid, _rest.lstrip("@").strip(), st)
+                if t_cand:
+                    t_eff = t_cand
+            return _fn(gid, qq, t_eff, st)
     if text in ("买奴隶位", "购买奴隶位"):
         return cmd_buyslot(gid, qq, st)
     if text in ("五十连抽", "50连抽"):

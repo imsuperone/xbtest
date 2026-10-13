@@ -145,15 +145,61 @@ def _cd(a, key, mins):
 
 
 # ---- 监狱(入狱/出狱) ----
+def _find_qq_by_name(gid, name):
+    name = str(name or "").strip()
+    if not name:
+        return None
+    try:
+        from ..slave.nick import NOTE_NAMES_BY_GROUP
+        for (g, q), n in NOTE_NAMES_BY_GROUP.items():
+            if (gid is None or str(g) == str(gid)) and n == name:
+                return str(q)
+    except Exception:
+        pass
+    try:
+        from ..slave.nick import state as _sl_state
+        if gid:
+            st = _sl_state(str(gid))
+            for q in st.sections():
+                if st[q].get("name", "").strip() == name:
+                    return str(q)
+    except Exception:
+        pass
+    try:
+        with ST._AT_NAMES_LOCK:
+            q = ST._AT_NAMES.get(name)
+            if q:
+                return str(q)
+    except Exception:
+        pass
+    return None
+
+
 def _extract_transfer_target(raw, gid=None):
-    """QQ-only 解析 @目标: 仅认 CQ码 -> @QQ数字，@昵称一律不认（防撞名串人）。返回 (target_qq_or_None, remaining_text)。"""
+    """解析 @目标: 优先认 CQ码 -> @QQ数字，若未匹配尝试群内 @昵称 反查。返回 (target_qq_or_None, remaining_text)。"""
     raw = str(raw or "")
+    target = None
     m = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", raw)
     if m:
-        return m.group(1), re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", raw).strip()
-    m = re.search(r"@\s*(\d{5,12})", raw)
-    if m:
-        return m.group(1), re.sub(r"@\s*\d{5,12}", "", raw, count=1).strip()
+        target = m.group(1)
+    else:
+        m = re.search(r"@\s*(\d{5,12})", raw)
+        if m:
+            target = m.group(1)
+        elif gid:
+            m_at = re.search(r"@\s*(\S+)", raw)
+            if m_at:
+                cand = m_at.group(1).strip()
+                t_cand = _find_qq_by_name(gid, cand)
+                if t_cand:
+                    target = t_cand
+
+    if target:
+        # 清除 CQ 码与残留的 @昵称/@QQ 标记，返回纯净的正文指令与金额
+        rem = re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", raw)
+        rem = re.sub(r"@\s*\S+", "", rem).strip()
+        rem = re.sub(r"\s+", " ", rem)
+        return target, rem.strip()
     return None, raw.strip()
 
 
@@ -169,8 +215,14 @@ def _ensure_target_qq(target, gid=None):
         or re.search(r"@\s*(\d{5,12})", s)
         or re.search(r"\b(\d{5,12})\b", s)
     )
-    return m.group(1) if m else None
+    if m:
+        return m.group(1)
+    if gid:
+        cand = _find_qq_by_name(gid, s.lstrip("@").strip())
+        if cand:
+            return cand
+    return None
 
 
 
-__all__ = ["_MENU", "_acct", "_cd", "_disp_name", "_ensure_target_qq", "_extract_transfer_target", "_now_s", "cfgi", "GAMBLE_MULT", "REDPACK_MIN_DIV", "REDPACK_MAX_DIV"]
+__all__ = ["_MENU", "_acct", "_cd", "_disp_name", "_ensure_target_qq", "_extract_transfer_target", "_find_qq_by_name", "_now_s", "cfgi", "GAMBLE_MULT", "REDPACK_MIN_DIV", "REDPACK_MAX_DIV"]

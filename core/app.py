@@ -372,8 +372,8 @@ class XbBot(Star):
                 _scfg["体力硬上限"] = "1000"
                 _scfg["购买体力上限"] = "1000"
                 _scfg["溢出体力折算金币"] = "4"
-                _scfg["魅力软上限"] = "300"
-                _scfg["魅力硬上限"] = "500"
+                _scfg["魅力软上限"] = "500"
+                _scfg["魅力硬上限"] = "800"
                 _scfg["溢出魅力折算金币"] = "2"
                 _need_save = True
                 ST.recall_set("mig_banzhuan_cd_30m", "1")

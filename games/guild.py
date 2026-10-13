@@ -168,9 +168,10 @@ def _spirit_power(gid, qq):
 MENU = (
     "🏰 帮派系统\r\n"
     "━━━━━━━━━━━━━━\r\n"
-    "📇 帮派列表　　🏆 帮派排行　　📋 我的帮派\r\n"
+    "📇 帮派列表　　🏆 帮派排行　　🎖️ 帮派贡献榜\r\n"
+    "📋 我的帮派　　👥 成员列表\r\n"
     "🛠️ 创建帮派 名称　🤝 加入帮派 名称\r\n"
-    "📨 帮派邀请 对方QQ　👥 成员列表\r\n"
+    "📨 帮派邀请 对方QQ\r\n"
     "💸 帮派贡献 金额　📈 我的贡献　🧱 我的修筑\r\n"
     "🎁 领取帮派福利　🚪 退出帮派\r\n"
     "🧱 修筑城墙 数量\r\n"
@@ -731,6 +732,46 @@ def cmd_rank(gid, kind):
     return "\r\n".join(lines) if lines[1:] else "本群暂无帮派~"
 
 
+def cmd_gong_rank(gid):
+    """帮派贡献排行榜: 展示群内所有帮派成员的个人帮贡排行（显示 帮派名 昵称 贡献）"""
+    if ST._DB is None:
+        return "暂无数据。"
+    gid_s = str(gid)
+    now = time.time()
+    cached = _GUILD_MEMBERS_CACHE.get(gid_s)
+    ts = _GUILD_MEMBERS_TS.get(gid_s, 0)
+    if cached is not None and now - ts < _GUILD_TTL:
+        all_members = cached
+    else:
+        with ST._LOCK:
+            rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),)).fetchall() if ST._DB else []
+        all_members = []
+        for qqdb, data in rows:
+            try:
+                raw = json.loads(data)
+                g = json.loads(raw.get("guild", "{}") or "{}")
+            except Exception:
+                continue
+            if g.get("name"):
+                all_members.append((str(qqdb), g))
+        _GUILD_MEMBERS_CACHE[gid_s] = all_members
+        _GUILD_MEMBERS_TS[gid_s] = now
+
+    entries = []
+    for q, g in all_members:
+        gong = int(g.get("gong", 0) or 0)
+        if gong > 0:
+            entries.append((gong, q, str(g.get("name", ""))))
+    entries.sort(key=lambda x: -x[0])
+    if not entries:
+        return "本群暂无帮派成员贡献记录~"
+    lines = ["🏆 帮派贡献排行榜"]
+    for i, (gong, q, gname) in enumerate(entries[:15], 1):
+        name = _gname(gid, q)
+        lines.append(f"{i}. 【{gname}】{name}｜帮贡: {gong}")
+    return "\r\n".join(lines)
+
+
 MEMU_MANAGE = (
     "帮派管理(帮主/护法)：\r\n修改宣言 内容　添加护法 QQ　取消护法 QQ\r\n"
     "移出帮派 QQ　出让帮派 QQ　帮派升级　解散帮派"
@@ -747,6 +788,8 @@ def handle(gid, qq, raw):
         return MENU
     if _need_switch(gid):
         return "【帮派系统】已经被关闭了，无法使用该功能！"
+    if text in ("帮派贡献排行榜", "帮派贡献榜", "帮贡排行榜", "帮贡榜"):
+        return cmd_gong_rank(gid)
     if text == "帮派列表":
         return cmd_list(gid, qq)
     if text == "我的帮派":
@@ -796,4 +839,5 @@ COMMANDS = (
     # V8 并入：原正则刮词域（与 handle 分支对应）
     "同意加入帮派", "同意邀请", "帮派列表", "成员列表",
     "我的修筑", "我的贡献", "接受邀请", "领取帮派福利",
+    "帮派贡献排行榜", "帮派贡献榜", "帮贡排行榜", "帮贡榜",
 )

@@ -94,9 +94,9 @@ PRESETS = {
             "体力软上限": "300", "体力硬上限": "1000",
             "购买体力上限": "1000", "每日购买体力上限": "1000",
             "溢出体力折算金币": "4",
-            "魅力软上限": "300", "魅力硬上限": "500",
-            "每日购买魅力上限": "200", "溢出魅力折算金币": "2",
-            "高魅力日衰减比例": "15",
+            "魅力软上限": "500", "魅力硬上限": "800",
+            "每日购买魅力上限": "800", "溢出魅力折算金币": "2",
+            "高魅力日衰减比例": "5",
         },
         "打卡配置": {
             "最大加成": "0.3", "每日幸运下限": "1", "每日幸运上限": "100",
@@ -256,9 +256,9 @@ PRESETS = {
             "体力软上限": "450", "体力硬上限": "1000",
             "购买体力上限": "1000", "每日购买体力上限": "1000",
             "溢出体力折算金币": "8",
-            "魅力软上限": "350", "魅力硬上限": "500",
-            "每日购买魅力上限": "300", "溢出魅力折算金币": "4",
-            "高魅力日衰减比例": "10",
+            "魅力软上限": "600", "魅力硬上限": "1000",
+            "每日购买魅力上限": "1000", "溢出魅力折算金币": "4",
+            "高魅力日衰减比例": "3",
         },
         "打卡配置": {
             "最大加成": "0.4", "每日幸运下限": "20", "每日幸运上限": "100",
@@ -411,9 +411,9 @@ PRESETS = {
             "体力软上限": "250", "体力硬上限": "1000",
             "购买体力上限": "1000", "每日购买体力上限": "800",
             "溢出体力折算金币": "2",
-            "魅力软上限": "200", "魅力硬上限": "500",
-            "每日购买魅力上限": "120", "溢出魅力折算金币": "1",
-            "高魅力日衰减比例": "20",
+            "魅力软上限": "400", "魅力硬上限": "700",
+            "每日购买魅力上限": "700", "溢出魅力折算金币": "1",
+            "高魅力日衰减比例": "8",
         },
         "打卡配置": {
             "最大加成": "0.2", "每日幸运下限": "1", "每日幸运上限": "100",
@@ -684,6 +684,68 @@ _SINK_KEYS = [
     ("冒险配置", "冒险需要金钱"),
 ]
 
+# 新手/前期消耗保护项：通胀期（sink_mult > 1.0）严禁提价，始终保持 1.0x 基准底价，保护新入坑玩家
+_STARTER_SINK_KEYS = {
+    ("签到配置", "体力价格"),
+    ("签到配置", "魅力价格"),
+    ("设置", "抽武器花费"),
+    ("设置", "一星武器花费"),
+    ("设置", "一阶宝物花费"),
+    ("费用配置", "学习学费下限"),
+    ("费用配置", "学习学费上限"),
+    ("坐骑配置", "价格_老八"),
+    ("坐骑配置", "价格_企鹅"),
+    ("坐骑配置", "价格_伞兵"),
+    ("冒险配置", "冒险需要金钱"),
+}
+
+# 中期消耗过渡项：通胀期平缓微调（吸收 40% 通胀溢价）
+_MID_SINK_KEYS = {
+    ("设置", "十连抽花费"),
+    ("设置", "二星武器花费"),
+    ("设置", "三星武器花费"),
+    ("设置", "二阶宝物花费"),
+    ("坐骑配置", "价格_宝驴"),
+    ("坐骑配置", "价格_保时捷"),
+    ("精灵配置", "洗练果实价格"),
+    ("帮派配置", "创建消耗金钱"),
+    ("银行配置", "打劫失败罚金"),
+    ("费用配置", "造反失败罚金"),
+    ("设置", "奴隶位价格"),
+    ("设置", "保护费用"),
+    ("娱乐配置", "抽签造价"),
+}
+
+# 后期高阶大额消耗项（豪车/4星5星武器升星/高阶宝物升阶/城墙升级/巨额惩罚）：通胀期强力跳高（吸收 160% 通胀回收），强效抽水防通胀
+_LATE_SINK_KEYS = {
+    ("设置", "三十连抽花费"),
+    ("设置", "五十连抽花费"),
+    ("设置", "四星武器花费"),
+    ("设置", "五星武器花费"),
+    ("设置", "三阶宝物花费"),
+    ("坐骑配置", "价格_法拉利"),
+    ("坐骑配置", "价格_玛莎拉蒂"),
+    ("坐骑配置", "价格_劳斯莱斯"),
+    ("坐骑配置", "价格_布加迪威龙"),
+    ("坐骑配置", "价格_私人航空"),
+    ("精灵配置", "闪光结晶价格"),
+    ("帮派配置", "升级花费基数"),
+    ("帮派配置", "修筑价格"),
+    ("银行配置", "保释金钱下限"),
+    ("银行配置", "保释金钱上限"),
+    ("娱乐配置", "扔炸弹_需要金钱"),
+    ("精灵配置", "挑战扣除_金钱下限"),
+    ("精灵配置", "挑战扣除_金钱上限"),
+}
+
+# 新手产出保护项：通胀收紧产出时（faucet_mult < 1.0），新手基础奖励与日常打卡不予削减
+_STARTER_FAUCET_KEYS = {
+    ("签到配置", "基础奖励"),
+    ("签到配置", "连签加成"),
+    ("新手配置", "现金"),
+    ("打卡配置", "每日幸运下限"),
+}
+
 # 下限/上限配对保护，确保缩放后下限 <= 上限
 _MIN_MAX_PAIRS = [
     ("签到配置", "金钱下限", "金钱上限"),
@@ -883,23 +945,41 @@ def build_realtime_preset(base_mode="standard", metrics=None):
     faucet_mult = float(metrics.get("faucet_mult", 1.0))
     sink_mult = float(metrics.get("sink_mult", 1.0))
 
+    if sink_mult > 1.0:
+        # 通胀期：前期不变（1.0x），中期平缓（+40%），后期跳高（+160%）
+        starter_sink_mult = 1.0
+        mid_sink_mult = round(1.0 + (sink_mult - 1.0) * 0.40, 2)
+        late_sink_mult = round(1.0 + (sink_mult - 1.0) * 1.60, 2)
+    else:
+        # 通缩/开荒期：全员享受降价优惠
+        starter_sink_mult = sink_mult
+        mid_sink_mult = sink_mult
+        late_sink_mult = sink_mult
+
     preset = copy.deepcopy(PRESETS[base_mode])
 
-    # 1. 缩放水龙头产出项
+    # 1. 缩放水龙头产出项（新手基础福利免遭削减）
     for sec, key in _FAUCET_KEYS:
         if sec in preset and key in preset[sec]:
             try:
                 base_v = int(float(preset[sec][key]))
-                preset[sec][key] = str(_clean_round(base_v, faucet_mult))
+                eff_faucet = 1.0 if (faucet_mult < 1.0 and (sec, key) in _STARTER_FAUCET_KEYS) else faucet_mult
+                preset[sec][key] = str(_clean_round(base_v, eff_faucet))
             except Exception:
                 pass
 
-    # 2. 缩放金币回收池消耗项
+    # 2. 梯度缩放金币回收池消耗项
     for sec, key in _SINK_KEYS:
         if sec in preset and key in preset[sec]:
             try:
                 base_v = int(float(preset[sec][key]))
-                preset[sec][key] = str(_clean_round(base_v, sink_mult))
+                if (sec, key) in _STARTER_SINK_KEYS:
+                    mult = starter_sink_mult
+                elif (sec, key) in _MID_SINK_KEYS:
+                    mult = mid_sink_mult
+                else:
+                    mult = late_sink_mult
+                preset[sec][key] = str(_clean_round(base_v, mult))
             except Exception:
                 pass
 
@@ -914,17 +994,25 @@ def build_realtime_preset(base_mode="standard", metrics=None):
             except Exception:
                 pass
 
-    # 4. 构建同步坐骑价格字典
+    # 4. 构建同步坐骑价格字典（阶梯调控：入门坐骑通胀不加价，豪车阶梯跳高）
     rides_base = copy.deepcopy(_BUILTIN_RIDES_BASE.get(base_mode, _BUILTIN_RIDES_BASE["standard"]))
+    _STARTER_RIDES = {"老八", "企鹅", "伞兵"}
+    _MID_RIDES = {"宝驴", "保时捷"}
     for rname, rinfo in rides_base.items():
         cfg_key = f"价格_{rname}"
+        if rname in _STARTER_RIDES:
+            rmult = starter_sink_mult
+        elif rname in _MID_RIDES:
+            rmult = mid_sink_mult
+        else:
+            rmult = late_sink_mult
         if "坐骑配置" in preset and cfg_key in preset["坐骑配置"]:
             try:
                 rinfo["price"] = int(float(preset["坐骑配置"][cfg_key]))
             except Exception:
-                rinfo["price"] = _clean_round(rinfo.get("price", 10000), sink_mult)
+                rinfo["price"] = _clean_round(rinfo.get("price", 10000), rmult)
         else:
-            rinfo["price"] = _clean_round(rinfo.get("price", 10000), sink_mult)
+            rinfo["price"] = _clean_round(rinfo.get("price", 10000), rmult)
 
     return preset, rides_base, metrics
 
@@ -1018,6 +1106,13 @@ def apply_balance_config(control_type="fixed", mode="standard"):
     updated_sections = 0
     updated_keys = 0
 
+    # 用户手动自定义锁定的配置项：实时动态调控巡检绝对不予覆盖回滚
+    _custom_map = ST._CONFIG.get("_custom_keys") or {}
+    if control_type == "fixed":
+        # 主动应用固定预设档位时，重置自定义键以便完整生效预设
+        ST._CONFIG["_custom_keys"] = {}
+        _custom_map = {}
+
     for sec, kv in target_preset.items():
         if not isinstance(kv, dict):
             continue
@@ -1034,6 +1129,10 @@ def apply_balance_config(control_type="fixed", mode="standard"):
             sec_dict = {}
             ST._CONFIG[sec] = sec_dict
         for k, v in kv.items():
+            full_k = f"{sec}.{k}"
+            if control_type == "realtime" and full_k in _custom_map:
+                # 用户自定义锁定的值，实时调控自动跳过，绝不回退覆盖
+                continue
             sec_dict[k] = str(v)
             updated_keys += 1
         updated_sections += 1

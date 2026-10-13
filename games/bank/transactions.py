@@ -284,6 +284,18 @@ def cmd_gamble(gid, qq, amount):
     cs = cfgi("银行配置", "赌博消耗体力", 10)
     if a.int("stamina") < cs:
         return "亲，您的体力不足，无法进行赌博！"
+    # 总资产保底 10000：现金+存款 <= 10000 拒绝；下注后总资产 < 10000 拒绝
+    cur_cash_pre = ST.coins_get(gid, qq)
+    cur_dep_pre = a.int("deposit")
+    total_pre = cur_cash_pre + cur_dep_pre
+    if total_pre <= 10000:
+        return f"亲，您的总资产（现金+存款）不足10000{ST.coin_name()}，无法参与赌博！必须保留至少10000保底生活费！"
+    if total_pre - amount < 10000:
+        max_bet = max(0, total_pre - 10000)
+        return (f"亲，赌博后总资产必须保有至少10000{ST.coin_name()}保底生活费！"
+                f"您当前总资产为{total_pre}{ST.coin_name()}，本次最多可下注{max_bet}{ST.coin_name()}！")
+    if cur_cash_pre < amount:
+        return f"亲，您的现金不足，无法进行赌博（不可直接透支银行存款下注，请先前往银行取款）！"
     lim = cfgi("银行配置", "赌博限定次数", 5)
     meli = cfgi("银行配置", "赌博魅力减少", 20)
     jail_mins = cfgi("银行配置", "赌博关押时间", 5)
@@ -298,16 +310,24 @@ def cmd_gamble(gid, qq, amount):
     try:
         with ST._LOCK:
             cur = ST.coins_get(gid, qq)
+            a2 = ST.acct(gid, qq)
+            cur_dep = a2.int("deposit")
+            total_assets = cur + cur_dep
+            if total_assets <= 10000:
+                return f"亲，您的总资产（现金+存款）不足10000{ST.coin_name()}，无法参与赌博！必须保留至少10000保底生活费！"
+            if total_assets - amount < 10000:
+                max_bet = max(0, total_assets - 10000)
+                return (f"亲，赌博后总资产必须保有至少10000{ST.coin_name()}保底生活费！"
+                        f"您当前总资产为{total_assets}{ST.coin_name()}，本次最多可下注{max_bet}{ST.coin_name()}！")
             if cur < amount:
-                return f"亲，您的{ST.coin_name()}不足，无法进行赌博！"
-            cur_st = ST.acct(gid, qq).int("stamina")
+                return f"亲，您的现金不足，无法进行赌博（不可直接透支银行存款下注，请先前往银行取款）！"
+            cur_st = a2.int("stamina")
             if cur_st < cs:
                 return "亲，您的体力不足，无法进行赌博！"
             # 锁内重读日计数：防锁外读到旧值绕过当日上限
             cnt = int(ST.recall_get("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), "0") or 0)
             if cnt >= lim:
                 return "亲，您今日赌博次数已达上限，无法再进行赌博！"
-            a2 = ST.acct(gid, qq)
             a2.set("stamina", str(cur_st - cs))
             if random.random() * 100 < prob:
                 # 成功：-amount +gain
@@ -432,10 +452,7 @@ def cmd_rob_zone(gid, qq):
         cur_charm = a.int("charm")
         want_fine = max(0, cfgi("银行配置", "打劫失败罚金", 500))
         cur_cash = ST.coins_get(gid, qq)
-        cur_dep = a.int("deposit")
-        cash_fine = min(cur_cash, want_fine)
-        dep_fine = min(cur_dep, max(0, want_fine - cash_fine))
-        fine = cash_fine + dep_fine
+        fine = min(cur_cash, want_fine)
         updates = {
             "stamina": str(max(0, cur_st - cs)),
             "charm": str(max(0, cur_charm - meli)),
@@ -444,18 +461,15 @@ def cmd_rob_zone(gid, qq):
             "release_timestamp": str(int(time.time()) + int(jail_mins) * 60),
             "rob_bank_time": now_s,
         }
-        if dep_fine > 0:
-            updates["deposit"] = str(max(0, cur_dep - dep_fine))
         with ST._LOCK:
             staged = _vault_stage_delta(gid, max(0, int(fine or 0)))
             if staged is None:
                 return "银行系统繁忙，本次打劫未结算，请稍后重试！"
-            if ST.txn_coins_acct(gid, qq, -cash_fine, updates) is None:
+            if ST.txn_coins_acct(gid, qq, -fine, updates) is None:
                 return "银行系统繁忙，本次打劫未结算，请稍后重试！"
             _vault_stage_commit_cache(gid, staged)
-        dep_note = f"（含划扣存款{dep_fine}）" if dep_fine > 0 else ""
         return (f"打劫银行失败，打劫银行时被抓！被关监狱{jail_mins}分钟，\r\n"
-                f"罚款{fine}{ST.coin_name()}{dep_note}，魅力-{meli}！")
+                f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
     lo = cfgi("银行配置", "打劫银行金钱下限", 6000)
     hi = cfgi("银行配置", "打劫银行金钱上限", 12000)
     want = max(1, random.randint(lo, hi) if hi >= lo else lo)
@@ -534,8 +548,8 @@ def cmd_sell_slave(gid, qq, target):
     cs = cfgi("银行配置", "打劫消耗体力", 20)
     if a.int("stamina") < cs:
         return "亲，您的体力不足，无法实施打劫！"
-    if ST.coins_get(gid, qq) + a.int("deposit") < 500:
-        return f"亲，您的{ST.coin_name()}不足，无法实施打劫！"
+    if ST.coins_get(gid, qq) < 500:
+        return f"亲，您的现金不足500{ST.coin_name()}，无法实施打劫！"
     if ST.coins_get(gid, target) < 100:
         return "亲，对方是个穷光蛋，无法对他实施打劫！"
     ok, mins = _cd(a, "rob_time", cfgi("银行配置", "打劫关押时间", 5))
@@ -569,11 +583,8 @@ def cmd_sell_slave(gid, qq, target):
         return f"打劫成功！你从 {tn} 处劫走{loot}{ST.coin_name()}！"
 
     cur_cash = ST.coins_get(gid, qq)
-    cur_dep = a.int("deposit")
     want_fine = max(0, cfgi("银行配置", "打劫失败罚金", 1000))
-    cash_fine = min(cur_cash, want_fine)
-    dep_fine = min(cur_dep, max(0, want_fine - cash_fine))
-    fine = cash_fine + dep_fine
+    fine = min(cur_cash, want_fine)
     updates = {
         "stamina": str(max(0, cur_st - cs)),
         "charm": str(max(0, a.int("charm") - meli)),
@@ -582,13 +593,10 @@ def cmd_sell_slave(gid, qq, target):
         "release_timestamp": str(int(time.time()) + int(jail_mins) * 60),
         "rob_time": now_s,
     }
-    if dep_fine > 0:
-        updates["deposit"] = str(max(0, cur_dep - dep_fine))
-    if ST.txn_coins_acct(gid, qq, -cash_fine, updates) is None:
+    if ST.txn_coins_acct(gid, qq, -fine, updates) is None:
         return "银行系统繁忙，本次打劫未结算，未扣除体力和资金，请稍后重试！"
-    dep_note = f"（含划扣存款{dep_fine}）" if dep_fine > 0 else ""
     return (f"打劫失败！实施打劫时被抓！被关监狱{jail_mins}分钟，\r\n"
-            f"罚款{fine}{ST.coin_name()}{dep_note}，魅力-{meli}！")
+            f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
 
 
 # ---- 统一入口 ----
