@@ -56,7 +56,7 @@ def get_note_name(gid, qq, fallback_global=False):
 
 
 def display_name(gid, qq, default=None):
-    """分群优先的只读昵称链（无写副作用）：分群昵称 → 本群卡片 → default（缺省为 qq 本身）。
+    """分群优先的只读昵称链（无写副作用）：分群昵称 → 本群卡片 → 本群档案 → default（缺省为 qq 本身）。
 
     gid 为空时直接回 default，绝不跨群取全局。散落各引擎的
     `get_note_name(gid,x) or fetch_card(gid,x) or str(x)` 一律收口至此。"""
@@ -77,6 +77,15 @@ def display_name(gid, qq, default=None):
                 n = fetch_card(g, q)
                 if n:
                     return n
+            except Exception:
+                pass
+            try:
+                st = state(g)
+                if st is not None and st.has_section(q):
+                    raw = dict(st[q] or {})
+                    n = str(raw.get("name", "")).strip()
+                    if n and _re.sub(r"[\u3000\u3164\u200b\ufeff\u2800-\u28ff\s]", "", n) and n != q:
+                        return n
             except Exception:
                 pass
     except Exception:

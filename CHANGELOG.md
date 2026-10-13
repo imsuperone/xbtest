@@ -1,5 +1,11 @@
 # 更新日志 (Changelog)
 
+## v26w1014a
+
+- **修复帮派邀请（`帮派邀请`）提示输出 QQ 号而非昵称的问题**：
+  - `games/guild.py` 的 `cmd_invite` 改用 `<{_gname(gid, target)}>` 统一格式化目标被邀请人群昵称，与护法、移出、出让帮主及成员列表逻辑严格对齐。
+  - 增强 `games/slave/nick.py` 的 `display_name` 与 `guild._gname`：在内存无当前会话发言卡片时，自动降级回退读取本群持久化档案（`state(gid)[qq]['name']`），彻底杜绝重启机器人后首次邀请显示纯数字 QQ 号的问题。
+
 ## v26w1013d
 
 - **核心平台安全校验与非 QQ 平台隔离**：
