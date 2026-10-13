@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""API helpers — _err / _raw_file_response / get_req_query / get_req_json 统一出口"""
+"""API helpers — _err / no_cache_response / get_req_query / get_req_json 统一出口"""
 import inspect
 import json
 import os
@@ -31,25 +31,6 @@ def no_cache_response(resp):
     except Exception:
         pass
     return resp
-
-
-def _raw_file_response(data_bytes, filename):
-    try:
-        from aiohttp.web import Response as AioResponse  # type: ignore
-        return AioResponse(body=data_bytes, headers={"Content-Disposition": f'attachment; filename="{filename}"', "Content-Type": "application/octet-stream"})
-    except Exception:
-        pass
-    try:
-        from quart import Response as QuartResponse  # type: ignore
-        return QuartResponse(data_bytes, headers={"Content-Disposition": f'attachment; filename="{filename}"'}, mimetype="application/octet-stream")
-    except Exception:
-        pass
-    try:
-        from starlette.responses import Response as StarResponse  # type: ignore
-        return StarResponse(content=data_bytes, headers={"Content-Disposition": f'attachment; filename="{filename}"'}, media_type="application/octet-stream")
-    except Exception:
-        pass
-    return None
 
 
 def get_req_query(request, key, default=""):

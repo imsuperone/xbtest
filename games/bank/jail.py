@@ -55,15 +55,6 @@ def _jail_left(a):
 
 
 
-def _jail_put(a, mins):
-    """判刑入狱 mins 分钟"""
-    _jail_stamp(a)
-    a.set("release_timestamp", str(int(time.time()) + int(mins) * 60))
-    ST.acct_save(a.gid, a.qq)
-
-
-
-
 def _show_jail(a):
     if not _check_jail(a):
         return "亲，您现在已经是自由身了！什么？还想到监狱里过把瘾？那就去打劫或者赌博吧！"
@@ -291,4 +282,4 @@ def cmd_go_jail(gid, qq):
 
 
 
-__all__ = ["_bail_name", "_check_jail", "_jail_exp", "_jail_left", "_jail_put", "_jail_release", "_jail_stamp", "_show_jail", "cmd_bail", "cmd_go_jail", "cmd_jailbreak", "cmd_out_jail"]
+__all__ = ["_bail_name", "_check_jail", "_jail_exp", "_jail_left", "_jail_release", "_jail_stamp", "_show_jail", "cmd_bail", "cmd_go_jail", "cmd_jailbreak", "cmd_out_jail"]

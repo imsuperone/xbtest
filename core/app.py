@@ -118,6 +118,7 @@ except Exception:
 # import 期不建池（工具链 import 零线程）：首个 XbBot 实例化/首消息时懒建，全局单例，永不 shutdown
 _XB_EXEC = None
 _XB_EXEC_WORKERS = 12
+_GROUP_NAME_MEM = {}
 _XB_EXEC_LOCK = _threading_mod.Lock()
 
 
@@ -389,13 +390,12 @@ class XbBot(Star):
         except Exception:
             pass
         # 全库体力/魅力强压执行：首次迁移将全库历史存量 >300 的体力与魅力强制压回 300 软上限（按 25% 折算补贴金币），
-        # 并清理旧键 tili/meili 残留；后续启动持续校验硬上限（体力<=1000，魅力<=500）
+        # 并清理旧键 tili/meili 残留；已完成迁移的实例跳过启动期全表扫描，运行时由各入口硬上限兜底
         try:
-            if ST._DB is not None:
+            if ST._DB is not None and str(ST.recall_get("mig_force_stat_clamp_v2", "") or "") != "1":
                 import json as _mjs
-                _first_clamp = str(ST.recall_get("mig_force_stat_clamp_v2", "") or "") != "1"
-                _stam_lim = 300 if _first_clamp else 1000
-                _charm_lim = 300 if _first_clamp else 500
+                _stam_lim = 300
+                _charm_lim = 300
                 with ST._LOCK:
                     _arows = ST._DB.execute("SELECT gid, qq, data FROM accounts").fetchall()
                     _upd_accts = []
@@ -426,8 +426,7 @@ class XbBot(Star):
                         _comp_coin = 0
                         if _st_v > _stam_lim:
                             _ov_s = _st_v - _stam_lim
-                            if _first_clamp:
-                                _comp_coin += min(_ov_s, 75) * 4
+                            _comp_coin += min(_ov_s, 75) * 4
                             _st_v = _stam_lim
                             _akv["stamina"] = str(_st_v)
                             _changed = True
@@ -435,8 +434,7 @@ class XbBot(Star):
                             _akv["stamina"] = str(_st_v)
                         if _ch_v > _charm_lim:
                             _ov_c = _ch_v - _charm_lim
-                            if _first_clamp:
-                                _comp_coin += min(_ov_c, 75) * 2
+                            _comp_coin += min(_ov_c, 75) * 2
                             _ch_v = _charm_lim
                             _akv["charm"] = str(_ch_v)
                             _changed = True
@@ -467,8 +465,7 @@ class XbBot(Star):
                                 _logger_layer.info(f"[强压迁移] 已压制 {len(_upd_accts)} 个超标账户的体力/魅力存量 (上限={_stam_lim}/{_charm_lim})")
                             except Exception:
                                 pass
-                if _first_clamp:
-                    ST.recall_set("mig_force_stat_clamp_v2", "1")
+                ST.recall_set("mig_force_stat_clamp_v2", "1")
         except Exception:
             pass
         # 接龙奖励全局锁定 20 金币 + 0 魅力：历史旧档（400+2 等）残留会被一次性纠正
@@ -625,7 +622,8 @@ class XbBot(Star):
                     _raw_m = getattr(getattr(event, "message_obj", None), "raw_message", None)
                     if isinstance(_raw_m, dict):
                         _gname = str(_raw_m.get("group_name") or "").strip()
-                if _gname and _gname != gid:
+                if _gname and _gname != gid and _GROUP_NAME_MEM.get(gid) != _gname:
+                    _GROUP_NAME_MEM[gid] = _gname
                     if ST.recall_get(f"group_name_{gid}", "") != _gname:
                         ST.recall_set(f"group_name_{gid}", _gname)
             except Exception:
