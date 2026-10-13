@@ -677,28 +677,28 @@ async function loadCommands() {
           });
           const secBlocks = Object.keys(bySec).map((sec) => {
             const inputsHtml = bySec[sec].map((it) => `
-              <label class="cnum" title="${esc(it.desc || (`[${sec}] ${it.key}`))}" style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:12px">
+              <label class="sys-num-item" title="${esc(it.desc || (`[${sec}] ${it.key}`))}">
                 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(it.key)}</span>
-                <input type="number" step="any" data-sys-num data-nsec="${esc(it.sec)}" data-nkey="${esc(it.key)}" value="${esc(it.val)}" style="width:92px;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--text);text-align:right;font-weight:600">
+                <input type="number" step="any" class="sys-num-input" data-sys-num data-nsec="${esc(it.sec)}" data-nkey="${esc(it.key)}" value="${esc(it.val)}">
               </label>
             `).join("");
             return `
               <div style="margin-bottom:8px">
                 <div style="font-size:11.5px;font-weight:700;color:var(--acc);margin:4px 0 6px 2px">📂 ${esc(sec)}（${bySec[sec].length} 项）</div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:6px">${inputsHtml}</div>
+                <div class="sys-num-grid">${inputsHtml}</div>
               </div>
             `;
           }).join("");
 
           sysNumPanelHtml = `
-            <details class="sys-num-panel" data-eng="${esc(k)}" style="margin-top:10px;border:1px dashed var(--line);border-radius:10px;padding:8px 10px;background:var(--panel)">
-              <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--acc);display:flex;justify-content:space-between;align-items:center;user-select:none">
+            <details class="sys-num-panel" data-eng="${esc(k)}">
+              <summary class="sys-num-summary">
                 <span>🎛️ ${esc(sys)} · 玩法数值精准调控（已分配 ${numItems.length} 项参数）</span>
                 <span style="font-size:11px;font-weight:400;color:var(--muted)">点击展开 / 收起逐项微调</span>
               </summary>
               <div style="margin-top:10px">
                 ${secBlocks}
-                <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">
+                <div class="sys-num-footer">
                   <span class="hint" style="font-size:11px">修改后点击右侧按钮即可直接生效，无需逐个打开指令弹窗</span>
                   <button type="button" class="sm" data-save-sys-num="${esc(k)}">💾 保存${esc(sys)}数值</button>
                 </div>

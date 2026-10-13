@@ -3411,4 +3411,472 @@
   border-color: var(--m3-sys-color-primary) !important;
 }
 
-  
+/* ===== 智能数值调控弹窗 & 玩法数值面板（双模式 + 移动端自适应 26w1013c） ===== */
+#appModal.bal-modal .cmd-modal-box {
+  width: min(680px, 95vw) !important;
+  max-height: 90vh !important;
+}
+#appModal.bal-modal .cmd-modal-body {
+  padding: 16px 20px !important;
+  overflow-x: hidden !important;
+}
+.bal-drift-banner {
+  font-size: 12px;
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+.bal-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.bal-mode-tab {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+  white-space: normal !important;
+  box-sizing: border-box;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.12s ease;
+  user-select: none;
+}
+.bal-mode-tab:hover {
+  border-color: var(--m3-sys-color-outline, var(--acc));
+}
+.bal-mode-tab.active-fixed {
+  border-color: var(--acc) !important;
+  background: var(--accSoft) !important;
+}
+.bal-mode-tab.active-realtime {
+  border-color: #6366f1 !important;
+  background: rgba(99, 102, 241, 0.12) !important;
+}
+.bal-mode-tab-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.3;
+  word-break: break-word;
+}
+.bal-mode-tab-sub {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.bal-rt-panel {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.06);
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+.bal-rt-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bal-rt-title {
+  font-weight: 700;
+  font-size: 12.5px;
+  color: #6366f1;
+}
+.bal-rt-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+  font-weight: 600;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bal-rt-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.bal-rt-kpi {
+  background: var(--panel);
+  padding: 6px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+.bal-rt-kpi-lbl {
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bal-rt-kpi-val {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bal-rt-mult-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.bal-rt-mult-item {
+  background: var(--panel);
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.bal-rt-note {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.bal-opt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.bal-opt-card {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--line) !important;
+  border-radius: 12px;
+  background: var(--panel);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.bal-opt-card.active {
+  border: 2px solid var(--acc) !important;
+  background: var(--accSoft);
+}
+.bal-opt-card input[type="radio"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.bal-opt-body {
+  flex: 1;
+  min-width: 0;
+}
+.bal-opt-title {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.bal-sum-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 6px;
+}
+.bal-sum-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  line-height: 1.3;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  max-width: 100%;
+}
+.bal-sum-pill strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.bal-sum-pill.tag-rt {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #6366f1;
+  font-weight: 600;
+}
+.bal-sum-pill.tag-fix {
+  background: var(--accSoft);
+  border-color: var(--acc);
+  color: var(--acc);
+  font-weight: 600;
+}
+
+.bal-detail-box {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+.bal-detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.bal-detail-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.4;
+  min-width: 0;
+}
+#appModal .bal-detail-box input.bal-search-input:not([type="checkbox"]):not([type="radio"]) {
+  font-size: 12px !important;
+  padding: 5px 10px !important;
+  border-radius: 8px !important;
+  min-width: 190px;
+  width: auto;
+  height: 30px !important;
+}
+.bal-sys-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.bal-sys-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--muted);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+.bal-sys-pill.active {
+  border-color: var(--acc);
+  background: var(--accSoft);
+  color: var(--acc);
+  font-weight: 700;
+}
+.bal-detail-table-wrap {
+  max-height: 230px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  padding: 6px;
+}
+.bal-param-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 5px;
+}
+.bal-param-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 11.5px;
+  gap: 6px;
+  min-width: 0;
+}
+.bal-param-row.is-diff {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.07);
+}
+
+/* 玩法与指令页：各系统专属数值精准调控面板 */
+.sys-num-panel {
+  margin-top: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--panel);
+}
+.sys-num-summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--acc);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  user-select: none;
+}
+.sys-num-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 6px;
+}
+.sys-num-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 12px;
+  min-width: 0;
+}
+.sys-num-Panel-input,
+.sys-num-panel input.sys-num-input:not([type="checkbox"]):not([type="radio"]) {
+  width: 92px !important;
+  min-width: 72px !important;
+  padding: 3px 7px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  text-align: right;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.sys-num-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 640px) {
+  #appModal.bal-modal .cmd-modal-box {
+    width: 96vw !important;
+    max-height: 92vh !important;
+    border-radius: 16px !important;
+  }
+  #appModal.bal-modal .cmd-modal-header {
+    padding: 12px 14px 10px !important;
+  }
+  #appModal.bal-modal .cmd-modal-header h3 {
+    font-size: 14px !important;
+  }
+  #appModal.bal-modal .cmd-modal-body {
+    padding: 12px 14px !important;
+  }
+  #appModal.bal-modal .cmd-modal-footer {
+    padding: 10px 14px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #appModal.bal-modal .cmd-modal-footer button {
+    flex: 1 1 auto;
+    min-width: 110px;
+    font-size: 12.5px;
+    padding: 9px 12px;
+  }
+  .bal-mode-tab {
+    padding: 8px 10px;
+  }
+  .bal-mode-tab-title {
+    font-size: 12px;
+  }
+  .bal-mode-tab-sub {
+    font-size: 10.5px;
+  }
+  .bal-rt-panel {
+    padding: 10px;
+  }
+  .bal-rt-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .bal-rt-mult-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .bal-opt-card {
+    padding: 9px 10px;
+    gap: 8px;
+  }
+  .bal-opt-title {
+    font-size: 12.5px;
+  }
+  .bal-sum-pill {
+    font-size: 10.5px;
+    padding: 2px 6px;
+  }
+  .bal-detail-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  #appModal .bal-detail-box input.bal-search-input:not([type="checkbox"]):not([type="radio"]) {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .bal-sys-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .bal-sys-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .bal-param-grid {
+    grid-template-columns: 1fr;
+  }
+  .sys-num-grid {
+    grid-template-columns: 1fr;
+  }
+  .sys-num-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sys-num-footer button {
+    width: 100%;
+  }
+}
+@media (max-width: 380px) {
+  .bal-mode-grid {
+    grid-template-columns: 1fr;
+  }
+}

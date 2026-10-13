@@ -275,15 +275,15 @@ async function openAutoBalanceModal() {
       const mm = st.mismatch_count ?? st.mismatch ?? 0;
       const _mlabel = (BALANCE_MODE_META[activeMode] || {}).label || activeMode;
       if (curCtrl === "realtime") {
-        _driftInfo = `<div style="font-size:12px;color:#6366f1;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.35);border-radius:10px;padding:9px 12px;margin-bottom:12px">
+        _driftInfo = `<div class="bal-drift-banner" style="color:#6366f1;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.35)">
           ⚡ 当前运行：<strong>实时调整模式</strong>（基准：${_mlabel} · <strong>${esc(rt.phase || "⚖️ 均衡稳态期")}</strong>）
           <div style="margin-top:3px;font-size:11.5px;color:var(--muted)">${esc(rt.summary || "系统正根据全服实时资产动态调节产出与回收倍率")}</div>
         </div>`;
       } else if (mm > 0) {
         const _names = (st.mismatches || []).map((x) => `${x.key}=${x.actual}`).join("、");
-        _driftInfo = `<div style="font-size:12px;color:var(--warn);background:var(--warnSoft);border:1px solid var(--warn);border-radius:10px;padding:8px 12px;margin-bottom:12px">⚠️ 当前处于<strong>固定模式</strong>，但与「${_mlabel}」有 ${mm} 项自定义偏移${_names ? "（" + esc(_names) + "）" : ""}。可在下方查看具体数值对比，或重新应用预设对齐。</div>`;
+        _driftInfo = `<div class="bal-drift-banner" style="color:var(--warn);background:var(--warnSoft);border:1px solid var(--warn)">⚠️ 当前处于<strong>固定模式</strong>，但与「${_mlabel}」有 ${mm} 项自定义偏移${_names ? "（" + esc(_names) + "）" : ""}。可在下方查看具体数值对比，或重新应用预设对齐。</div>`;
       } else {
-        _driftInfo = `<div style="font-size:12px;color:var(--ok);background:var(--okSoft);border:1px solid var(--ok);border-radius:10px;padding:8px 12px;margin-bottom:12px">📌 当前运行：<strong>固定模式 · ${_mlabel}</strong>（全系统数值参数 100% 同步生效中）</div>`;
+        _driftInfo = `<div class="bal-drift-banner" style="color:var(--ok);background:var(--okSoft);border:1px solid var(--ok)">📌 当前运行：<strong>固定模式 · ${_mlabel}</strong>（全系统数值参数 100% 同步生效中）</div>`;
       }
     }
   } catch (e) { activeMode = "standard"; }
@@ -297,102 +297,108 @@ async function openAutoBalanceModal() {
   const buildCardSummary = (ctrl, m) => {
     const p = getPresetFor(ctrl, m);
     if (!p || !Object.keys(p).length) return "";
-    const tag = ctrl === "realtime" ? `<span style="color:#6366f1;font-weight:600">[实时动态值]</span> ` : `<span style="color:var(--acc);font-weight:600">[固定预设值]</span> `;
-    return `${tag}签到 <strong>${gv(p,"签到配置","金钱下限")}~${gv(p,"签到配置","金钱上限")}</strong>(连签+${gv(p,"签到配置","连签加成")}) | ` +
-      `搬砖 <strong>${gv(p,"费用配置","搬砖收益下限")}~${gv(p,"费用配置","搬砖收益上限")}</strong> / 打工 <strong>${gv(p,"费用配置","打工收益下限")}~${gv(p,"费用配置","打工收益上限")}</strong> | ` +
-      `单抽 <strong>${gv(p,"设置","抽武器花费")}</strong> / 十连 <strong>${gv(p,"设置","十连抽花费")}</strong> | ` +
-      `初始身价 <strong>${gv(p,"费用配置","初始身价")}</strong> | ` +
-      `奴隶位 <strong>默认${gv(p,"设置","奴隶个数")} / 上限${gv(p,"设置","奴隶个数上限")}</strong>(买位${gv(p,"设置","奴隶位价格")}) | ` +
-      `存款利率 <strong>${gv(p,"银行配置","存款利率")}%</strong>(上限${gv(p,"银行配置","利息上限")}/日结${gv(p,"银行配置","每日结息次数")}次) | ` +
-      `精灵挑战 <strong>${gv(p,"精灵配置","挑战奖励_金钱下限")}~${gv(p,"精灵配置","挑战奖励_金钱上限")}</strong> | ` +
-      `企鹅坐骑 <strong>${gv(p,"坐骑配置","价格_企鹅")}</strong>`;
+    const tagCls = ctrl === "realtime" ? "tag-rt" : "tag-fix";
+    const tagTxt = ctrl === "realtime" ? "⚡ 实时动态值" : "📌 固定预设值";
+    const pills = [
+      `<span class="bal-sum-pill ${tagCls}">${tagTxt}</span>`,
+      `<span class="bal-sum-pill">签到 <strong>${gv(p,"签到配置","金钱下限")}~${gv(p,"签到配置","金钱上限")}</strong> (+${gv(p,"签到配置","连签加成")})</span>`,
+      `<span class="bal-sum-pill">搬砖 <strong>${gv(p,"费用配置","搬砖收益下限")}~${gv(p,"费用配置","搬砖收益上限")}</strong></span>`,
+      `<span class="bal-sum-pill">打工 <strong>${gv(p,"费用配置","打工收益下限")}~${gv(p,"费用配置","打工收益上限")}</strong></span>`,
+      `<span class="bal-sum-pill">抽卡 <strong>${gv(p,"设置","抽武器花费")} / 十连${gv(p,"设置","十连抽花费")}</strong></span>`,
+      `<span class="bal-sum-pill">初始身价 <strong>${gv(p,"费用配置","初始身价")}</strong></span>`,
+      `<span class="bal-sum-pill">奴隶位 <strong>${gv(p,"设置","奴隶个数")}/${gv(p,"设置","奴隶个数上限")}</strong> (买位${gv(p,"设置","奴隶位价格")})</span>`,
+      `<span class="bal-sum-pill">利率 <strong>${gv(p,"银行配置","存款利率")}%</strong> (上限${gv(p,"银行配置","利息上限")}/日${gv(p,"银行配置","每日结息次数")}次)</span>`,
+      `<span class="bal-sum-pill">精灵挑战 <strong>${gv(p,"精灵配置","挑战奖励_金钱下限")}~${gv(p,"精灵配置","挑战奖励_金钱上限")}</strong></span>`,
+      `<span class="bal-sum-pill">企鹅坐骑 <strong>${gv(p,"坐骑配置","价格_企鹅")}</strong></span>`,
+    ];
+    return pills.join("");
   };
 
   content.innerHTML = `
     ${_driftInfo}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-      <button type="button" id="balTabFixed" style="padding:10px 12px;border-radius:10px;border:2px solid ${curCtrl === "fixed" ? "var(--acc)" : "var(--line)"};background:${curCtrl === "fixed" ? "var(--accSoft)" : "var(--panel)"};color:var(--text);font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-        <div>📌 固定预设模式</div>
-        <div style="font-size:11px;font-weight:400;color:var(--muted);margin-top:2px">标准 / 休闲 / 硬核三档静态锁定</div>
-      </button>
-      <button type="button" id="balTabRealtime" style="padding:10px 12px;border-radius:10px;border:2px solid ${curCtrl === "realtime" ? "#6366f1" : "var(--line)"};background:${curCtrl === "realtime" ? "rgba(99,102,241,0.12)" : "var(--panel)"};color:var(--text);font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-        <div>⚡ 实时调整模式</div>
-        <div style="font-size:11px;font-weight:400;color:var(--muted);margin-top:2px">感知全服资产与通胀率自动调节</div>
-      </button>
+    <div class="bal-mode-grid">
+      <div role="button" tabindex="0" id="balTabFixed" class="bal-mode-tab ${curCtrl === "fixed" ? "active-fixed" : ""}">
+        <div class="bal-mode-tab-title">📌 固定预设模式</div>
+        <div class="bal-mode-tab-sub">标准 / 休闲 / 硬核三档静态锁定</div>
+      </div>
+      <div role="button" tabindex="0" id="balTabRealtime" class="bal-mode-tab ${curCtrl === "realtime" ? "active-realtime" : ""}">
+        <div class="bal-mode-tab-title">⚡ 实时调整模式</div>
+        <div class="bal-mode-tab-sub">感知全服资产与通胀率自动调节</div>
+      </div>
     </div>
 
-    <div id="balRealtimePanel" style="display:${curCtrl === "realtime" ? "block" : "none"};padding:12px;border-radius:12px;border:1px solid rgba(99,102,241,0.35);background:rgba(99,102,241,0.06);margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
-        <span style="font-weight:700;font-size:12.5px;color:#6366f1">📡 全服实时经济遥测指标</span>
-        <span id="balRtPhaseBadge" style="font-size:11.5px;padding:2px 8px;border-radius:999px;background:rgba(99,102,241,0.15);color:#6366f1;font-weight:600">${esc(rt.phase || "⚖️ 均衡稳态期")} · 通胀指数 ${rt.inflation_index ?? 0}</span>
+    <div id="balRealtimePanel" class="bal-rt-panel" style="display:${curCtrl === "realtime" ? "block" : "none"}">
+      <div class="bal-rt-head">
+        <span class="bal-rt-title">📡 全服实时经济遥测指标</span>
+        <span id="balRtPhaseBadge" class="bal-rt-badge">${esc(rt.phase || "⚖️ 均衡稳态期")} · 通胀指数 ${rt.inflation_index ?? 0}</span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;text-align:center">
-        <div style="background:var(--panel);padding:6px;border-radius:8px;border:1px solid var(--line)">
-          <div style="font-size:10.5px;color:var(--muted)">活跃玩家</div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmt(rt.player_count)} 人</div>
+      <div class="bal-rt-kpi-grid">
+        <div class="bal-rt-kpi">
+          <div class="bal-rt-kpi-lbl">活跃玩家</div>
+          <div class="bal-rt-kpi-val">${fmt(rt.player_count)} 人</div>
         </div>
-        <div style="background:var(--panel);padding:6px;border-radius:8px;border:1px solid var(--line)">
-          <div style="font-size:10.5px;color:var(--muted)">中位资产</div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmt(rt.median_wealth)}</div>
+        <div class="bal-rt-kpi">
+          <div class="bal-rt-kpi-lbl">中位资产</div>
+          <div class="bal-rt-kpi-val">${fmt(rt.median_wealth)}</div>
         </div>
-        <div style="background:var(--panel);padding:6px;border-radius:8px;border:1px solid var(--line)">
-          <div style="font-size:10.5px;color:var(--muted)">人均资产</div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmt(rt.avg_wealth)}</div>
+        <div class="bal-rt-kpi">
+          <div class="bal-rt-kpi-lbl">人均资产</div>
+          <div class="bal-rt-kpi-val">${fmt(rt.avg_wealth)}</div>
         </div>
-        <div style="background:var(--panel);padding:6px;border-radius:8px;border:1px solid var(--line)">
-          <div style="font-size:10.5px;color:var(--muted)">前10%占比</div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${Math.round((rt.top10_share || 0) * 100)}%</div>
+        <div class="bal-rt-kpi">
+          <div class="bal-rt-kpi-lbl">前10%占比</div>
+          <div class="bal-rt-kpi-val">${Math.round((rt.top10_share || 0) * 100)}%</div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
-        <div style="background:var(--panel);padding:7px 10px;border-radius:8px;border:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+      <div class="bal-rt-mult-grid">
+        <div class="bal-rt-mult-item">
           <span style="font-size:11.5px;color:var(--muted)">💧 水龙头产出倍率</span>
           <strong id="balRtFaucetMult" style="font-size:13.5px;color:var(--ok)">${rt.faucet_mult ?? 1.0}x</strong>
         </div>
-        <div style="background:var(--panel);padding:7px 10px;border-radius:8px;border:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+        <div class="bal-rt-mult-item">
           <span style="font-size:11.5px;color:var(--muted)">🔥 金币回收消耗倍率</span>
           <strong id="balRtSinkMult" style="font-size:13.5px;color:#d97706">${rt.sink_mult ?? 1.0}x</strong>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.45">
+      <div class="bal-rt-note">
         💡 <strong>实时调控原理：</strong>每 10 分钟自动采集全服【现金+存款】分布（65%中位数+35%均值防巨鲸失真）。开荒期自动提产出降物价；通胀期自动收紧水龙头、抬升抽卡/升星/坐骑/罚款回收池。下方可切换不同基准档位查看实时折算后的具体数值：
       </div>
     </div>
 
-    <div id="balPresetListTitle" style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px">
-      ${curCtrl === "realtime" ? "🎯 选择实时调整的【基准锚点档位】（点击任意档位即可在下方预览实时折算后的完整数值）：" : "📌 选择固定模式下的【预设档位】（点击任意档位即可在下方预览全部 8 大系统的完整数值）："}
+    <div id="balPresetListTitle" style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;line-height:1.4">
+      ${curCtrl === "realtime" ? "🎯 选择实时调整的【基准锚点档位】（点击任意档位即可预览实时折算后的完整数值）：" : "📌 选择固定模式下的【预设档位】（点击任意档位即可预览全部 8 大系统的完整数值）："}
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-      <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:${activeMode === "standard" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
-        <input type="radio" name="balanceMode" value="standard" ${activeMode === "standard" ? "checked" : ""} style="margin-top:3px">
-        <div style="flex:1">
-          <div style="font-weight:600;color:var(--text);font-size:13px">🟢 标准平衡模式（推荐 · 经济稳健）</div>
-          <div id="balCardSum_standard" style="font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.5">${buildCardSummary(curCtrl, "standard")}</div>
+    <div class="bal-opt-list">
+      <label class="bal-opt-card ${activeMode === "standard" ? "active" : ""}">
+        <input type="radio" name="balanceMode" value="standard" ${activeMode === "standard" ? "checked" : ""}>
+        <div class="bal-opt-body">
+          <div class="bal-opt-title">🟢 标准平衡模式（推荐 · 经济稳健）</div>
+          <div id="balCardSum_standard" class="bal-sum-pills">${buildCardSummary(curCtrl, "standard")}</div>
         </div>
       </label>
-      <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:${activeMode === "casual" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
-        <input type="radio" name="balanceMode" value="casual" ${activeMode === "casual" ? "checked" : ""} style="margin-top:3px">
-        <div style="flex:1">
-          <div style="font-weight:600;color:var(--text);font-size:13px">🟡 休闲高福利模式（高爆率 · 爽游节奏）</div>
-          <div id="balCardSum_casual" style="font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.5">${buildCardSummary(curCtrl, "casual")}</div>
+      <label class="bal-opt-card ${activeMode === "casual" ? "active" : ""}">
+        <input type="radio" name="balanceMode" value="casual" ${activeMode === "casual" ? "checked" : ""}>
+        <div class="bal-opt-body">
+          <div class="bal-opt-title">🟡 休闲高福利模式（高爆率 · 爽游节奏）</div>
+          <div id="balCardSum_casual" class="bal-sum-pills">${buildCardSummary(curCtrl, "casual")}</div>
         </div>
       </label>
-      <label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:${activeMode === "hardcore" ? "2px solid var(--acc)" : "1px solid var(--line)"};border-radius:12px;cursor:pointer">
-        <input type="radio" name="balanceMode" value="hardcore" ${activeMode === "hardcore" ? "checked" : ""} style="margin-top:3px">
-        <div style="flex:1">
-          <div style="font-weight:600;color:var(--text);font-size:13px">🔴 硬核博弈模式（防通胀 · 高对抗）</div>
-          <div id="balCardSum_hardcore" style="font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.5">${buildCardSummary(curCtrl, "hardcore")}</div>
+      <label class="bal-opt-card ${activeMode === "hardcore" ? "active" : ""}">
+        <input type="radio" name="balanceMode" value="hardcore" ${activeMode === "hardcore" ? "checked" : ""}>
+        <div class="bal-opt-body">
+          <div class="bal-opt-title">🔴 硬核博弈模式（防通胀 · 高对抗）</div>
+          <div id="balCardSum_hardcore" class="bal-sum-pills">${buildCardSummary(curCtrl, "hardcore")}</div>
         </div>
       </label>
     </div>
 
-    <div style="border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px 12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-        <div style="font-size:12.5px;font-weight:700;color:var(--text)" id="balDetailTitle">📋 具体数值全览</div>
-        <input type="search" id="balDetailSearch" placeholder="🔍 搜索参数名（如：奴隶、利率、抽武器、企鹅）" style="font-size:11.5px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);min-width:210px">
+    <div class="bal-detail-box">
+      <div class="bal-detail-head">
+        <div class="bal-detail-title" id="balDetailTitle">📋 具体数值全览</div>
+        <input type="search" id="balDetailSearch" class="bal-search-input" placeholder="🔍 搜索参数名（如：奴隶、利率、抽武器、企鹅）">
       </div>
-      <div id="balSysTabs" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
-      <div id="balDetailTableWrap" style="max-height:240px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:6px"></div>
+      <div id="balSysTabs" class="bal-sys-tabs"></div>
+      <div id="balDetailTableWrap" class="bal-detail-table-wrap"></div>
     </div>
   `;
 
@@ -412,7 +418,7 @@ async function openAutoBalanceModal() {
     const allTabs = [{ id: "all", name: "全部系统" }, ...sysSections];
     sysTabsEl.innerHTML = allTabs.map((t) => {
       const active = t.id === selectedSysId;
-      return `<button type="button" data-sys-tab="${esc(t.id)}" style="font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid ${active ? "var(--acc)" : "var(--line)"};background:${active ? "var(--accSoft)" : "var(--panel)"};color:${active ? "var(--acc)" : "var(--muted)"};font-weight:${active ? "700" : "500"};cursor:pointer">${esc(t.name)}</button>`;
+      return `<span role="button" tabindex="0" data-sys-tab="${esc(t.id)}" class="bal-sys-pill ${active ? "active" : ""}">${esc(t.name)}</span>`;
     }).join("");
     sysTabsEl.querySelectorAll("[data-sys-tab]").forEach((btn) => {
       btn.onclick = () => {
@@ -464,7 +470,7 @@ async function openAutoBalanceModal() {
           totalCount++;
           if (isDiff) diffCount++;
           rows.push(`
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:6px;border:1px solid ${isDiff ? "rgba(245,158,11,0.45)" : "var(--line)"};background:${isDiff ? "rgba(245,158,11,0.07)" : "var(--panel)"};font-size:11.5px;gap:6px">
+            <div class="bal-param-row ${isDiff ? "is-diff" : ""}">
               <div style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="[${esc(sec)}] ${esc(k)}">
                 <span style="color:var(--muted);font-size:10.5px">[${esc(sec)}]</span> <strong>${esc(k)}</strong>
               </div>
@@ -481,7 +487,7 @@ async function openAutoBalanceModal() {
         blocks.push(`
           <div style="margin-bottom:8px">
             <div style="font-size:11.5px;font-weight:700;color:var(--acc);margin:4px 0 6px 2px">${esc(sysObj.name)}（${rows.length} 项）</div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:5px">${rows.join("")}</div>
+            <div class="bal-param-grid">${rows.join("")}</div>
           </div>
         `);
       }
@@ -505,18 +511,16 @@ async function openAutoBalanceModal() {
   const updateCtrlUI = (nextCtrl) => {
     curCtrl = nextCtrl;
     if (tabFixed) {
-      tabFixed.style.borderColor = curCtrl === "fixed" ? "var(--acc)" : "var(--line)";
-      tabFixed.style.background = curCtrl === "fixed" ? "var(--accSoft)" : "var(--panel)";
+      tabFixed.classList.toggle("active-fixed", curCtrl === "fixed");
     }
     if (tabRealtime) {
-      tabRealtime.style.borderColor = curCtrl === "realtime" ? "#6366f1" : "var(--line)";
-      tabRealtime.style.background = curCtrl === "realtime" ? "rgba(99,102,241,0.12)" : "var(--panel)";
+      tabRealtime.classList.toggle("active-realtime", curCtrl === "realtime");
     }
     if (rtPanel) rtPanel.style.display = curCtrl === "realtime" ? "block" : "none";
     if (listTitle) {
       listTitle.textContent = curCtrl === "realtime"
-        ? "🎯 选择实时调整的【基准锚点档位】（点击任意档位即可在下方预览实时折算后的完整数值）："
-        : "📌 选择固定模式下的【预设档位】（点击任意档位即可在下方预览全部 8 大系统的完整数值）：";
+        ? "🎯 选择实时调整的【基准锚点档位】（点击任意档位即可预览实时折算后的完整数值）："
+        : "📌 选择固定模式下的【预设档位】（点击任意档位即可预览全部 8 大系统的完整数值）：";
     }
     if (okBtn) {
       okBtn.textContent = curCtrl === "realtime" ? "⚡ 开启并立即执行实时调控" : "📌 应用所选固定预设";
@@ -534,8 +538,8 @@ async function openAutoBalanceModal() {
   radios.forEach(r => {
     r.onchange = () => {
       radios.forEach(x => {
-        x.closest("label").style.borderColor = x.checked ? "var(--acc)" : "var(--line)";
-        x.closest("label").style.borderWidth = x.checked ? "2px" : "1px";
+        const lbl = x.closest("label");
+        if (lbl) lbl.classList.toggle("active", x.checked);
       });
       renderDetailTable();
     };
@@ -581,7 +585,7 @@ async function openAutoBalanceModal() {
       }
     };
   }
-  modal.className = "show";
+  modal.className = "show bal-modal";
 }
 
 async function saveConfig() {
