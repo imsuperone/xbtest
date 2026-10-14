@@ -125,7 +125,7 @@ def U(st, qq):
         u["weapon"] = ""
         u["treasure"] = ""
         u["weapon_exp"] = "0"
-        u["slave_slots"] = str(cfgi("设置", "奴隶个数", 2))
+        u["slave_slots"] = str(cfgi("设置", "奴隶个数", 5))
         u["protect_until"] = ""
         u["sign_date"] = ""
         u["consecutive_days"] = "0"
@@ -168,14 +168,14 @@ def uset(u, k, v):
 
 
 def max_slave_slots():
-    base_cap = max(1, cfgi("设置", "奴隶个数", 2))
-    return max(base_cap, cfgi("设置", "奴隶个数上限", 5))
+    base_cap = max(1, cfgi("设置", "奴隶个数", 5))
+    return max(base_cap, cfgi("设置", "奴隶个数上限", 10))
 
 
 def user_slave_slots(u):
     """用户当前可用奴隶位：未购买过奴隶位时始终跟随全局配置（自动修复历史残留 5/3/15）；已购买时在 [base_cap, max_cap] 间生效。"""
-    base_cap = max(1, cfgi("设置", "奴隶个数", 2))
-    max_cap = max(base_cap, cfgi("设置", "奴隶个数上限", 5))
+    base_cap = max(1, cfgi("设置", "奴隶个数", 5))
+    max_cap = max(base_cap, cfgi("设置", "奴隶个数上限", 10))
     try:
         bought = str(uget(u, "slot_bought", "") or "").strip() == "1"
         raw = _safe_int(uget(u, "slave_slots", ""), base_cap)

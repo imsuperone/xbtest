@@ -86,6 +86,20 @@ def _bump_config_ver():
             _cgc2()
         except Exception:
             pass
+def _current_stamina_cycle():
+    """每日 12:00 重置周期标识：12 点前属于昨日 12 点周期，12 点后属于今日 12 点周期"""
+    try:
+        import datetime as _dt
+        now = _dt.datetime.now()
+        if now.hour < 12:
+            cdate = now.date() - _dt.timedelta(days=1)
+        else:
+            cdate = now.date()
+        return f"{cdate.isoformat()}_12"
+    except Exception:
+        return "default_12"
+
+
 class Acct:
     __slots__ = ("gid", "qq", "kv", "dirty")
     def __init__(self, gid, qq, kv=None):
@@ -97,33 +111,60 @@ class Acct:
                 kv = translate_dict(kv)
         self.kv = kv if kv is not None else {}
         self.dirty = False
+        self.check_stamina_reset()
+
+    def check_stamina_reset(self):
+        """每日 12:00 自动重置满体力(300)。跨越 12 点节点时自动重置为 300 并标脏。"""
+        try:
+            cur_cycle = _current_stamina_cycle()
+            saved_cycle = self.kv.get("stamina_reset_cycle", "")
+            if saved_cycle != cur_cycle:
+                self.kv["stamina"] = "300"
+                self.kv["stamina_reset_cycle"] = cur_cycle
+                self.dirty = True
+                return True
+        except Exception:
+            pass
+        return False
+
     def get(self, k, d="0"):
         k = cn_to_en(str(k))
+        if k == "stamina":
+            self.check_stamina_reset()
         v = self.kv.get(k, d)
         return str(v) if v is not None else str(d)
+
     def set(self, k, v):
         k = cn_to_en(str(k))
-        if k in ("stamina", "charm"):
+        if k == "stamina":
             try:
-                iv = max(0, int(float(v or 0)))
-                cap = 1000 if k == "stamina" else 500
-                if iv > cap:
-                    iv = cap
+                iv = max(0, min(300, int(float(v or 0))))
+                v = str(iv)
+                if "stamina_reset_cycle" not in self.kv:
+                    self.kv["stamina_reset_cycle"] = _current_stamina_cycle()
+            except Exception:
+                v = "300"
+        elif k == "charm":
+            try:
+                iv = max(0, min(800, int(float(v or 0))))
                 v = str(iv)
             except Exception:
                 pass
         self.kv[k] = str(v)
         self.dirty = True
+
     def int(self, k, d=0):
         k = cn_to_en(str(k))
+        if k == "stamina":
+            self.check_stamina_reset()
         try:
             iv = int(float(self.get(k, str(d))))
         except Exception:
             iv = int(d)
         if k == "stamina":
-            return max(0, min(1000, iv))
+            return max(0, min(300, iv))
         if k == "charm":
-            return max(0, min(500, iv))
+            return max(0, min(800, iv))
         return iv
 class _DirtyDict(dict):
     """单群千人增量落盘：dict 写即标脏，避免 save_group 全量 1000→1"""

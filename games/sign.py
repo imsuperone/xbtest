@@ -602,8 +602,6 @@ def cmd_rank(gid, kind, st):
         return _rank_by(gid, lambda g, q: ST.coins_get(g, q) + ST.acct(g, q).int("deposit"), "财富")
     if kind == "sign":
         return _rank_by(gid, lambda g, q: ST.acct(g, q).int("sign_count"), "签到")
-    if kind == "stamina":
-        return _rank_by(gid, lambda g, q: ST.acct(g, q).int("stamina"), "体力")
     if kind == "charm":
         return _rank_by(gid, lambda g, q: ST.acct(g, q).int("charm"), "魅力")
     if kind == "talk":
@@ -650,8 +648,6 @@ def _render_rank(lst, name, gid, topn=10):
             out.append(f"{i}. {display}  💰 {v} {ST.coin_name()}")
         elif name == "签到":
             out.append(f"{i}. {display}  📅 {v} 次")
-        elif name == "体力":
-            out.append(f"{i}. {display}  ⚡ {v} 点")
         elif name == "魅力":
             out.append(f"{i}. {display}  💄 {v} 点")
         elif name == "发言":
@@ -663,7 +659,7 @@ def _render_rank(lst, name, gid, topn=10):
 
 def _rank_by(gid, fn, name, topn=10):
     """排行来源: 统一委托 store.rank_batch 去重，行数 40→12"""
-    field_map = {"财富": "cash", "签到": "sign", "体力": "stamina", "魅力": "charm"}
+    field_map = {"财富": "cash", "签到": "sign", "魅力": "charm"}
     fld = field_map.get(name)
     if fld and hasattr(ST, "rank_batch"):
         try:
@@ -673,7 +669,7 @@ def _rank_by(gid, fn, name, topn=10):
             pass
     lst = []
     try:
-        if ST._DB is not None and name in ("财富", "签到", "体力", "魅力", "发言"):
+        if ST._DB is not None and name in ("财富", "签到", "魅力", "发言"):
             import json as _js
             with ST._LOCK:
                 wallet_rows = ST._DB.execute("SELECT qq, money FROM wallet WHERE gid=?", (int(gid),)).fetchall()
@@ -696,8 +692,6 @@ def _rank_by(gid, fn, name, topn=10):
                         v = wallet_map.get(q, 0) + int(float(kv.get("deposit", kv.get("cunkuan", 0)) or 0))
                     elif name == "签到":
                         v = int(float(kv.get("sign_count", 0) or 0))
-                    elif name == "体力":
-                        v = max(0, min(1000, int(float(kv.get("stamina", kv.get("tili", 0)) or 0))))
                     elif name == "魅力":
                         v = max(0, min(500, int(float(kv.get("charm", kv.get("meili", 0)) or 0))))
                     elif name == "发言":
@@ -762,16 +756,14 @@ def cmd_mine_rank(gid, qq):
         if str(qq) not in qqs_set:
             qqs_set.add(str(qq))
         qqs = list(qqs_set)
-        # 批量算四列
+        # 批量算三列
         vals_cash = {}
         vals_sign = {}
-        vals_stam = {}
         vals_charm = {}
         for q in qqs:
             kv = acct_data.get(q, {})
             vals_cash[q] = wallet_map.get(q, 0) + int(float(kv.get("deposit", kv.get("cunkuan", 0)) or 0))
             vals_sign[q] = int(float(kv.get("sign_count", 0) or 0))
-            vals_stam[q] = max(0, min(1000, int(float(kv.get("stamina", kv.get("tili", 0)) or 0))))
             vals_charm[q] = max(0, min(800, int(float(kv.get("charm", kv.get("meili", 0)) or 0))))
         def _pos(d):
             sorted_q = sorted(d.items(), key=lambda x: -x[1])
@@ -781,12 +773,10 @@ def cmd_mine_rank(gid, qq):
             return len(sorted_q), 0
         rc, vc = _pos(vals_cash)
         rs, vs = _pos(vals_sign)
-        rt, vt = _pos(vals_stam)
         rm, vm = _pos(vals_charm)
         return ("📊 个人排行\r\n"
                 f"财富：第{rc}名（{vc}{ST.coin_name()}）\r\n"
                 f"签到：第{rs}名（{vs}次）\r\n"
-                f"体力：第{rt}名（{vt}）\r\n"
                 f"魅力：第{rm}名（{vm}）")
     except Exception:
         # 回退旧逻辑
@@ -805,16 +795,13 @@ def cmd_mine_rank(gid, qq):
             return len(paired), 0, 0
         def kc(g, q): return ST.coins_get(g, q) + ST.acct(g, q).int("deposit")
         def ks(g, q): return ST.acct(g, q).int("sign_count")
-        def kt(g, q): return ST.acct(g, q).int("stamina")
         def km(g, q): return ST.acct(g, q).int("charm")
         rc, vc, _ = _rank_pos(kc)
         rs, vs, _ = _rank_pos(ks)
-        rt, vt, _ = _rank_pos(kt)
         rm, vm, _ = _rank_pos(km)
         return ("📊 个人排行\r\n"
                 f"财富：第{rc}名（{vc}{ST.coin_name()}）\r\n"
                 f"签到：第{rs}名（{vs}次）\r\n"
-                f"体力：第{rt}名（{vt}）\r\n"
                 f"魅力：第{rm}名（{vm}）")
 
 

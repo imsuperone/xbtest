@@ -88,8 +88,6 @@ async def handle_stats(request=None):
 async def handle_rank(request=None):
     from .web_utils import get_req_query
     rtype = get_req_query(request, "type", "money")
-    if rtype == "tili":
-        rtype = "stamina"
     if rtype == "meili":
         rtype = "charm"
     if rtype == "cunkuan":
@@ -105,8 +103,6 @@ async def handle_rank(request=None):
                 "money": ("SELECT qq, money FROM wallet ORDER BY money DESC LIMIT 20", None),
                 "sign": ("SELECT qq, CAST(COALESCE(json_extract(data,'$.sign_count'), json_extract(data,'$.签到次数'), '0') AS INTEGER) "
                          "FROM accounts WHERE json_valid(data) ORDER BY 2 DESC LIMIT 20", None),
-                "stamina": ("SELECT qq, CAST(COALESCE(json_extract(data,'$.stamina'), json_extract(data,'$.tili'), '0') AS INTEGER) "
-                           "FROM accounts WHERE json_valid(data) ORDER BY 2 DESC LIMIT 20", None),
                 "charm": ("SELECT qq, CAST(COALESCE(json_extract(data,'$.charm'), json_extract(data,'$.meili'), '0') AS INTEGER) "
                            "FROM accounts WHERE json_valid(data) ORDER BY 2 DESC LIMIT 20", None),
                 "deposit": ("SELECT qq, CAST(COALESCE(json_extract(data,'$.deposit'), json_extract(data,'$.cunkuan'), json_extract(data,'$.存款总数'), '0') AS INTEGER) "

@@ -321,7 +321,7 @@ def cmd_buyslot(gid, qq, st):
     if cur >= cap:
         return _S.T.SLOT_SYS_MAX
     base_price = cfgi("设置", "奴隶位价格", 5000)
-    base_cap = max(1, cfgi("设置", "奴隶个数", 2))
+    base_cap = max(1, cfgi("设置", "奴隶个数", 5))
     price = int(base_price * (SLOT_GROWTH ** max(0, cur - base_cap)))
     if coins_get(gid, qq) < price:
         return (_S.T.SLOT_NEED.format(price=price) + "\r\n" +

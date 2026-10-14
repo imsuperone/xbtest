@@ -86,12 +86,15 @@ def acct_add(gid, qq, name, delta, floor=0):
         d = int(delta)
         en_name = _S.cn_to_en(str(name))
         if d > 0 and en_name in ("stamina", "charm"):
-            soft_cap = 300
-            hard_cap = 1000 if en_name == "stamina" else 500
-            if cur >= soft_cap:
-                newv = min(hard_cap, cur)
+            if en_name == "stamina":
+                newv = min(300, cur + d)
             else:
-                newv = min(soft_cap, cur + d)
+                soft_cap = 500
+                hard_cap = 800
+                if cur >= soft_cap:
+                    newv = min(hard_cap, cur)
+                else:
+                    newv = min(soft_cap, cur + d)
         else:
             newv = cur + d
         if newv < floor:

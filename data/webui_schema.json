@@ -8,11 +8,11 @@
       },
       "奴隶个数": {
         "type": "int",
-        "default": 2
+        "default": 5
       },
       "奴隶个数上限": {
         "type": "int",
-        "default": 5
+        "default": 10
       },
       "奴隶位价格": {
         "type": "int",
@@ -1456,14 +1456,6 @@
         "type": "string",
         "default": "真"
       },
-      "体力排行榜": {
-        "type": "string",
-        "default": "真"
-      },
-      "体力榜": {
-        "type": "string",
-        "default": "真"
-      },
       "使用精灵球": {
         "type": "string",
         "default": "真"
@@ -2361,14 +2353,6 @@
         "type": "text",
         "default": ""
       },
-      "体力排行榜": {
-        "type": "text",
-        "default": ""
-      },
-      "体力榜": {
-        "type": "text",
-        "default": ""
-      },
       "使用精灵球": {
         "type": "text",
         "default": ""
@@ -3095,14 +3079,6 @@
         "default": "所有人"
       },
       "五十连抽": {
-        "type": "string",
-        "default": "所有人"
-      },
-      "体力排行榜": {
-        "type": "string",
-        "default": "所有人"
-      },
-      "体力榜": {
         "type": "string",
         "default": "所有人"
       },

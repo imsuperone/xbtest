@@ -49,7 +49,7 @@ def _build_status_line(gid, qq, u, acct, slaves):
             parts.append(f"远征({max(1, (int(left_s2) + 59) // 60)}分)" if left_s2 > 0 else "远征可收获!")
     except Exception:
         pass
-    return f"⏳状态：{'｜'.join(parts)}" if parts else ""
+    return f"⏳状态: {' | '.join(parts)}" if parts else ""
 
 
 def cmd_myinfo(gid, qq, st):
@@ -75,17 +75,17 @@ def cmd_myinfo(gid, qq, st):
         t_list = treasures_of(u)
         acct = store.acct(gid, qq)
         dep = acct.int("deposit")
-        tili = acct.int("stamina")
+        tili = min(300, max(0, acct.int("stamina")))
         meili = acct.int("charm")
         jq = acct.int("lottery_tickets")
         lines = [
-            f"📋【{uname(st,qq)}】的档案",
-            f"💰资产：{coins}{coin_name()}｜🏦存款：{dep}｜💎身价：{price}",
-            f"🔋体力：{tili}｜💄魅力：{meili}｜🎫奖券：{jq}｜📖经验：{wexp}",
-            f"👑主人：{uname(st, owner) if owner else _S.T.NO_OWNER}｜{ptxt}｜📅总签{sign_total}·连签{sign_streak}天",
-            f"⚔️武器：{', '.join(f'{w}★{star_of(u,w)}' for w in w_list) if w_list else _S.T.NO_WEAPON}",
-            f"🎁宝物：{', '.join(t_list) if t_list else _S.T.NO_TREASURE}",
-            f"👥奴隶({len(slaves)}/{cap})：{sl_txt}",
+            f"📋[{uname(st,qq)}]的档案",
+            f"💰资产:{coins}{coin_name()} | 🏦存款:{dep} | 💎身价:{price}",
+            f"🔋体力:({tili}/300) | 💄魅力:{meili} | 🎫奖券:{jq} | 📖经验:{wexp}",
+            f"👑主人:{uname(st, owner) if owner else _S.T.NO_OWNER} | {ptxt} | 📅总签{sign_total}·连签{sign_streak}天",
+            f"⚔️武器:{', '.join(f'{w}★{star_of(u,w)}' for w in w_list) if w_list else _S.T.NO_WEAPON}",
+            f"🎁宝物:{', '.join(t_list) if t_list else _S.T.NO_TREASURE}",
+            f"👥奴隶({len(slaves)}/{cap}): {sl_txt}",
         ]
         try:
             try:
@@ -102,7 +102,7 @@ def cmd_myinfo(gid, qq, st):
             guild_txt = f"{g_name}({g_d.get('pos', '成员')})" if g_name else "木有帮派"
         except Exception:
             guild_txt = "木有帮派"
-        lines.append(f"🏎️坐骑：{ride_txt}｜🏰帮派：{guild_txt}")
+        lines.append(f"🏎️坐骑:{ride_txt} | 🏰帮派:{guild_txt}")
         st_line = _build_status_line(gid, qq, u, acct, slaves)
         if st_line:
             lines.append(st_line)
@@ -114,16 +114,16 @@ def cmd_myinfo(gid, qq, st):
             coins = store.coins_get(gid, qq)
             acct = store.acct(gid, qq)
             init_p = cfgi("费用配置", "初始身价", 1000)
-            return ("📋【%s】的档案\r\n"
-                    "💰资产：%d%s｜🏦存款：%d｜💎身价：%d\r\n"
-                    "🔋体力：%d｜💄魅力：%d｜🎫奖券：%d｜📖经验：0\r\n"
-                    "👑主人：木有主人｜无人保护｜📅总签%d·连签%d天\r\n"
-                    "⚔️武器：木有武器\r\n"
-                    "🎁宝物：木有宝物\r\n"
-                    "👥奴隶(0/2)：木有奴隶" % (
+            return ("📋[%s]的档案\r\n"
+                    "💰资产:%d%s | 🏦存款:%d | 💎身价:%d\r\n"
+                    "🔋体力:(%d/300) | 💄魅力:%d | 🎫奖券:%d | 📖经验:0\r\n"
+                    "👑主人:木有主人 | 无人保护 | 📅总签%d·连签%d天\r\n"
+                    "⚔️武器:木有武器\r\n"
+                    "🎁宝物:木有宝物\r\n"
+                    "👥奴隶(0/%d): 木有奴隶" % (
                         name, coins, store.coin_name(), acct.int("deposit"), init_p,
-                        acct.int("stamina"), acct.int("charm"), acct.int("lottery_tickets"),
-                        acct.int("sign_count"), acct.int("consecutive_days")
+                        min(300, max(0, acct.int("stamina"))), acct.int("charm"), acct.int("lottery_tickets"),
+                        acct.int("sign_count"), acct.int("consecutive_days"), max(1, cfgi("设置", "奴隶个数", 5))
                     ))
         except Exception:
             return "个人档案读取异常，请重试。"
