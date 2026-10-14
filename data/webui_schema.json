@@ -205,7 +205,11 @@
       },
       "平衡模式": {
         "type": "string",
-        "default": "standard"
+        "default": "casual"
+      },
+      "调控模式": {
+        "type": "string",
+        "default": "realtime"
       }
     }
   },

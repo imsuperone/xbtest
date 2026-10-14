@@ -131,9 +131,9 @@ async function refreshBalanceBadges() {
   } catch (e) {}
   try {
     const cfg = await getBridge().apiGet("config/get").catch(() => null);
-    const ctrl = (cfg && (cfg._balance_control_type || (cfg["设置"] && cfg["设置"]["调控模式"]))) || "fixed";
-    const m = (cfg && (cfg._active_balance_mode || (cfg["设置"] && cfg["设置"]["平衡模式"]))) || "standard";
-    paint(ctrl === "realtime" ? "realtime" : "fixed", ["standard", "casual", "hardcore"].includes(m) ? m : "standard", 0, (cfg && cfg._realtime_balance_meta) || {}, []);
+    const ctrl = (cfg && (cfg._balance_control_type || (cfg["设置"] && cfg["设置"]["调控模式"]))) || "realtime";
+    const m = (cfg && (cfg._active_balance_mode || (cfg["设置"] && cfg["设置"]["平衡模式"]))) || "casual";
+    paint(ctrl === "fixed" ? "fixed" : "realtime", ["standard", "casual", "hardcore"].includes(m) ? m : "casual", 0, (cfg && cfg._realtime_balance_meta) || {}, []);
   } catch (e) {}
   return null;
 }
@@ -239,8 +239,8 @@ async function openAutoBalanceModal() {
   if (title) title.textContent = "智能数值调控中心（固定模式 / 实时调整模式）";
   if (inputWrap) inputWrap.style.display = "none";
 
-  let curCtrl = "fixed";
-  let activeMode = "standard";
+  let curCtrl = "realtime";
+  let activeMode = "casual";
   let rt = {};
   let rtMap = {};
   let presetsFixed = {};
@@ -260,7 +260,7 @@ async function openAutoBalanceModal() {
   try {
     const st = await refreshBalanceBadges();
     if (st && st.ok) {
-      curCtrl = st.control_type === "realtime" ? "realtime" : "fixed";
+      curCtrl = st.control_type === "fixed" ? "fixed" : "realtime";
       if (st.mode && ["standard", "casual", "hardcore"].includes(st.mode)) {
         activeMode = st.mode;
       }
@@ -286,7 +286,7 @@ async function openAutoBalanceModal() {
         _driftInfo = `<div class="bal-drift-banner" style="color:var(--ok);background:var(--okSoft);border:1px solid var(--ok)">📌 当前运行：<strong>固定模式 · ${_mlabel}</strong>（全系统数值参数 100% 同步生效中）</div>`;
       }
     }
-  } catch (e) { activeMode = "standard"; }
+  } catch (e) { activeMode = "casual"; }
 
   const fmt = (n) => Number(n || 0).toLocaleString();
   const getPresetFor = (ctrl, m) => {

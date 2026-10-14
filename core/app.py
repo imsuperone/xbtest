@@ -196,42 +196,112 @@ _PLUGIN_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def _merge_persistent_config(data_dir):
-    """持久配置优先合并（原 XbBot.__init__ 内联逻辑）：
-    WebUI 保存落盘 data_dir/config.json 与 SQLite sys_config_json；
-    本地持久值绝对优先于宿主传入的旧 config 残留，防止更新/重启后数值回滚。"""
+    """三级高韧性持久配置自愈加载：
+    1. SQLite kv 表 sys_config_json（最抗升级覆盖的持久数据库镜像）
+    2. 外部持久化目录 data_dir/config.json（WebUI 落盘文件）
+    3. 双向自愈：任何一侧缺失自动从另一侧回填；合并时保留 _custom_keys 与用户非空定制值；
+    彻底隔离 AstrBot 宿主旧残留污染，杜绝更新/重启后任何数值被冲回默认值或 3% 利率。
+    """
     try:
         import json as _pjs
+        db_cfg = {}
+        # 1. 优先从 SQLite 镜像读取（升级代码绝不会覆盖 .db 文件）
+        try:
+            if hasattr(ST, "recall_get"):
+                _raw = ST.recall_get("sys_config_json", "")
+                if _raw:
+                    _parsed = _pjs.loads(_raw)
+                    if isinstance(_parsed, dict) and _parsed:
+                        db_cfg = _parsed
+        except Exception:
+            pass
+
+        # 2. 读取持久化目录下的 config.json 文件
+        file_cfg = {}
         _pcfg = os.path.join(data_dir, "config.json")
-        _loaded_file = False
+        if not os.path.isfile(_pcfg):
+            # 自愈探测：如果持久目录无 config.json，尝试从插件包旧 data/ 目录自愈迁移
+            _old_pcfg = os.path.join(_PLUGIN_BASE, "data", "config.json")
+            if os.path.isfile(_old_pcfg):
+                try:
+                    import shutil
+                    shutil.copy2(_old_pcfg, _pcfg)
+                except Exception:
+                    pass
         if os.path.isfile(_pcfg):
-            with open(_pcfg, encoding="utf-8") as _pf:
-                _praw = _pjs.load(_pf)
-            _pnom = _normalize_cfg(_praw) if isinstance(_praw, dict) else {}
-            if _pnom:
-                _loaded_file = True
-            for _sec, _kv in _pnom.items():
-                if isinstance(_kv, dict) and set(_kv.keys()) == {""}:
-                    if str(_kv[""]) != "":
-                        ST._CONFIG[_sec] = _kv[""]
-                    elif _sec not in ST._CONFIG:
-                        ST._CONFIG[_sec] = _kv[""]
-                    continue
-                if isinstance(_kv, dict) and _kv:
-                    _dst = ST._CONFIG.setdefault(_sec, {})
-                    if _sec == "备份配置":
-                        _dst.update(_kv)
-                    else:
-                        for _k, _v in _kv.items():
-                            if str(_v) != "" or _k not in _dst:
-                                _dst[_k] = _v
-        if not _loaded_file and hasattr(ST, "reload_config_from_db"):
-            ST.reload_config_from_db()
+            try:
+                with open(_pcfg, encoding="utf-8") as _pf:
+                    _praw = _pjs.load(_pf)
+                if isinstance(_praw, dict) and _praw:
+                    file_cfg = _normalize_cfg(_praw) if callable(_normalize_cfg) else _praw
+            except Exception:
+                pass
+
+        # 3. 双源深度合并与自愈
+        # 以 DB 镜像为主干底座，叠加上文件非空值，确保即使文件被精简或部分重置，DB 历史配置依旧完整
+        merged = {}
+        for _sec, _kv in db_cfg.items():
+            if _sec in getattr(ST, "_COLL_FILES", {}):
+                continue
+            if isinstance(_kv, dict):
+                merged.setdefault(_sec, {}).update(_kv)
+            else:
+                merged[_sec] = _kv
+
+        for _sec, _kv in file_cfg.items():
+            if _sec in getattr(ST, "_COLL_FILES", {}):
+                continue
+            if isinstance(_kv, dict):
+                _dst = merged.setdefault(_sec, {})
+                for _k, _v in _kv.items():
+                    if _k == "" and str(_v) != "":
+                        merged[_sec] = _v
+                    elif str(_v) != "" or _k not in _dst:
+                        _dst[_k] = _v
+            else:
+                if str(_kv) != "" or _sec not in merged:
+                    merged[_sec] = _kv
+
+        # 4. 用户自定义修改锁定列表 (_custom_keys) 绝对合并
+        _all_custom = {}
+        if isinstance(db_cfg.get("_custom_keys"), dict):
+            _all_custom.update(db_cfg["_custom_keys"])
+        if isinstance(file_cfg.get("_custom_keys"), dict):
+            _all_custom.update(file_cfg["_custom_keys"])
+        if isinstance(ST._CONFIG.get("_custom_keys"), dict):
+            _all_custom.update(ST._CONFIG["_custom_keys"])
+        if _all_custom:
+            merged["_custom_keys"] = _all_custom
+
+        # 5. 回填生效到运行配置，彻底冲刷 AstrBot 宿主旧残留
+        if merged:
+            ST._CONFIG.clear()
+            ST._CONFIG.update(merged)
+            try:
+                if hasattr(ST, "_bump_config_ver"):
+                    ST._bump_config_ver()
+            except Exception:
+                pass
+
+        # 6. 双向镜像互补自愈
+        if not file_cfg and db_cfg:
+            try:
+                ST.save_config()
+            except Exception:
+                pass
+        elif file_cfg and not db_cfg:
+            try:
+                if hasattr(ST, "recall_set"):
+                    _mirror = {s: kv for s, kv in ST._CONFIG.items() if s not in getattr(ST, "_COLL_FILES", {})}
+                    ST.recall_set("sys_config_json", _pjs.dumps(_mirror, ensure_ascii=False))
+            except Exception:
+                pass
     except Exception:
         pass
 
 
 def _apply_fresh_casual(data_dir):
-    """新装默认休闲（仅真新装：无持久配置＋空库；老用户升级绝不覆盖）。
+    """新装默认休闲+实时模式（仅真新装：无持久配置＋空库；老用户升级绝不覆盖）。
     无 AstrBot 下发可用时给出一套完整休闲数值，而非各引擎兜底拼凑的混合态。
     只改内存＋bump（返回 True 表脏），落盘由 XbBot.__init__ 尾部统一一次完成，省重复全量序列化。"""
     try:
@@ -272,8 +342,10 @@ def _apply_fresh_casual(data_dir):
             if isinstance(_kv, dict):
                 ST._CONFIG.setdefault(_sec, {}).update(_kv)
         ST._CONFIG["_active_balance_mode"] = "casual"
+        ST._CONFIG["_balance_control_type"] = "realtime"
         try:
             ST._CONFIG.setdefault("设置", {})["平衡模式"] = "casual"
+            ST._CONFIG.setdefault("设置", {})["调控模式"] = "realtime"
         except Exception:
             pass
         try:
@@ -324,27 +396,41 @@ class XbBot(Star):
             except Exception:
                 pass
         db_path = str(cfg.get("网络", {}).get("db_path", "") or "") or os.path.join(data_dir, "xb.db")
-        ST.init(db_path, cfg)
+        # 宿主配置纯隔离：ST.init 传入 None，禁止宿主旧参数直接塞进 ST._CONFIG
+        ST.init(db_path, None)
+        # 仅同步宿主基础设施级网络配置，业务玩法配置绝对以持久层为准
+        if isinstance(cfg.get("网络"), dict) and cfg["网络"]:
+            ST._CONFIG.setdefault("网络", {}).update(cfg["网络"])
         ST.set_config_path(os.path.join(data_dir, "config.json"))
         ST.set_backup_dir(os.path.join(data_dir, "backups"))
         ST.set_astrbot_config(config)
         _merge_persistent_config(data_dir)
         _need_save = bool(_apply_fresh_casual(data_dir))
-        if isinstance(config, dict) and any(k != "_comment" for k in config.keys()):
-            _need_save = True
+        # 默认模式补全：若未设置调控模式或平衡模式，默认使用 实时模式 + 休闲高福利
+        try:
+            if not ST._CONFIG.get("_balance_control_type") and not ST.cfg("设置", "调控模式", ""):
+                ST._CONFIG["_balance_control_type"] = "realtime"
+                ST._CONFIG.setdefault("设置", {})["调控模式"] = "realtime"
+            if not ST._CONFIG.get("_active_balance_mode") and not ST.cfg("设置", "平衡模式", ""):
+                ST._CONFIG["_active_balance_mode"] = "casual"
+                ST._CONFIG.setdefault("设置", {})["平衡模式"] = "casual"
+        except Exception:
+            pass
         # DB 镜像最后一道兜底：文件也被污染时仍可从库恢复
         try:
             if hasattr(ST, "wd_cfg_restore"):
                 ST.wd_cfg_restore()
         except Exception:
             pass
-        # 一次性迁移修复：清除旧版宿主残留导致的存款利率 3%/2% 回滚，统一对齐为 1%
+        # 迁移防御机制：所有迁移均受 _custom_keys 保护，任何用户手动保存过的自定义项绝对禁动
+        _customs = ST._CONFIG.get("_custom_keys") or {}
         try:
             if str(ST.recall_get("mig_bank_rate_1pct", "") or "") != "1":
-                _bcfg = ST._CONFIG.setdefault("银行配置", {})
-                if str(_bcfg.get("存款利率", "1")) in ("2", "3"):
-                    _bcfg["存款利率"] = "1"
-                    _need_save = True
+                if "银行配置.存款利率" not in _customs:
+                    _bcfg = ST._CONFIG.setdefault("银行配置", {})
+                    if str(_bcfg.get("存款利率", "1")) in ("2", "3"):
+                        _bcfg["存款利率"] = "1"
+                        _need_save = True
                 ST.recall_set("mig_bank_rate_1pct", "1")
         except Exception:
             pass
@@ -352,40 +438,43 @@ class XbBot(Star):
         try:
             if str(ST.recall_get("mig_banzhuan_cd_30m", "") or "") != "1":
                 _icfg = ST._CONFIG.setdefault("间隔配置", {})
-                try:
-                    if int(float(_icfg.get("搬砖间隔", "0") or 0)) < 30:
+                if "间隔配置.搬砖间隔" not in _customs:
+                    try:
+                        if int(float(_icfg.get("搬砖间隔", "0") or 0)) < 30:
+                            _icfg["搬砖间隔"] = "30"
+                            _need_save = True
+                    except Exception:
                         _icfg["搬砖间隔"] = "30"
                         _need_save = True
-                except Exception:
-                    _icfg["搬砖间隔"] = "30"
-                    _need_save = True
                 _fcfg = ST._CONFIG.setdefault("费用配置", {})
-                try:
-                    if int(float(_fcfg.get("搬砖消耗体力", "0") or 0)) < 15:
+                if "费用配置.搬砖消耗体力" not in _customs:
+                    try:
+                        if int(float(_fcfg.get("搬砖消耗体力", "0") or 0)) < 15:
+                            _fcfg["搬砖消耗体力"] = "15"
+                            _need_save = True
+                    except Exception:
                         _fcfg["搬砖消耗体力"] = "15"
                         _need_save = True
-                except Exception:
-                    _fcfg["搬砖消耗体力"] = "15"
-                    _need_save = True
                 _scfg = ST._CONFIG.setdefault("签到配置", {})
-                _scfg["体力软上限"] = "300"
-                _scfg["体力硬上限"] = "1000"
-                _scfg["购买体力上限"] = "1000"
-                _scfg["溢出体力折算金币"] = "4"
-                _scfg["魅力软上限"] = "500"
-                _scfg["魅力硬上限"] = "800"
-                _scfg["溢出魅力折算金币"] = "2"
-                _need_save = True
+                for _sk, _sv in [
+                    ("体力软上限", "300"), ("体力硬上限", "1000"), ("购买体力上限", "1000"),
+                    ("溢出体力折算金币", "4"), ("魅力软上限", "500"), ("魅力硬上限", "800"),
+                    ("溢出魅力折算金币", "2")
+                ]:
+                    if f"签到配置.{_sk}" not in _customs and _sk not in _scfg:
+                        _scfg[_sk] = _sv
+                        _need_save = True
                 ST.recall_set("mig_banzhuan_cd_30m", "1")
             if str(ST.recall_get("mig_slave_work_cd_15m", "") or "") != "1":
                 _icfg2 = ST._CONFIG.setdefault("间隔配置", {})
-                try:
-                    if int(float(_icfg2.get("打工间隔", "0") or 0)) < 15:
+                if "间隔配置.打工间隔" not in _customs:
+                    try:
+                        if int(float(_icfg2.get("打工间隔", "0") or 0)) < 15:
+                            _icfg2["打工间隔"] = "15"
+                            _need_save = True
+                    except Exception:
                         _icfg2["打工间隔"] = "15"
                         _need_save = True
-                except Exception:
-                    _icfg2["打工间隔"] = "15"
-                    _need_save = True
                 ST.recall_set("mig_slave_work_cd_15m", "1")
         except Exception:
             pass
@@ -468,14 +557,17 @@ class XbBot(Star):
                 ST.recall_set("mig_force_stat_clamp_v2", "1")
         except Exception:
             pass
-        # 接龙奖励全局锁定 20 金币 + 0 魅力：历史旧档（400+2 等）残留会被一次性纠正
-        # （只标脏，落盘并入尾部统一 save+sync）
+        # 接龙奖励历史旧档纠偏：仅在首次迁移且用户未自定义锁定时纠偏
         try:
-            _ent = ST._CONFIG.setdefault("娱乐配置", {})
-            if str(_ent.get("接龙奖励金币", "20")) != "20" or str(_ent.get("接龙奖励魅力", "0")) != "0":
-                _ent["接龙奖励金币"] = "20"
-                _ent["接龙奖励魅力"] = "0"
-                _need_save = True
+            if str(ST.recall_get("mig_jielong_seed_v1", "") or "") != "1":
+                _ent = ST._CONFIG.setdefault("娱乐配置", {})
+                if "娱乐配置.接龙奖励金币" not in _customs and "接龙奖励金币" not in _ent:
+                    _ent["接龙奖励金币"] = "20"
+                    _need_save = True
+                if "娱乐配置.接龙奖励魅力" not in _customs and "接龙奖励魅力" not in _ent:
+                    _ent["接龙奖励魅力"] = "0"
+                    _need_save = True
+                ST.recall_set("mig_jielong_seed_v1", "1")
         except Exception:
             pass
         self._db_path = db_path

@@ -787,11 +787,11 @@ def _clean_round(val, mult):
     return max(500, int(round(raw / 500.0) * 500))
 
 
-def compute_realtime_economy(base_mode="standard"):
+def compute_realtime_economy(base_mode="casual"):
     """采集全服真实经济指标（钱包+银行存款+奴隶身价），计算通胀指数与实时产出/回收倍率"""
     if base_mode not in PRESETS:
-        base_mode = "standard"
-    target_wealth = _TARGET_WEALTH_ANCHORS.get(base_mode, 35000)
+        base_mode = "casual"
+    target_wealth = _TARGET_WEALTH_ANCHORS.get(base_mode, 65000)
 
     slave_prices = []
     _lock = getattr(ST, "_LOCK", None)
@@ -935,10 +935,10 @@ def compute_realtime_economy(base_mode="standard"):
     }
 
 
-def build_realtime_preset(base_mode="standard", metrics=None):
+def build_realtime_preset(base_mode="casual", metrics=None):
     """基于基准档位 + 实时经济指标生成动态数值字典与坐骑表"""
     if base_mode not in PRESETS:
-        base_mode = "standard"
+        base_mode = "casual"
     if metrics is None:
         metrics = compute_realtime_economy(base_mode)
 
@@ -1090,11 +1090,11 @@ def _calibrate_slave_prices(target_init_price):
     return calibrated
 
 
-def apply_balance_config(control_type="fixed", mode="standard"):
+def apply_balance_config(control_type="realtime", mode="casual"):
     """统一执行数值调控（供 WebUI 接口、超管指令与实时巡检共用）"""
-    control_type = "realtime" if str(control_type).strip().lower() in ("realtime", "dynamic", "实时", "实时调整", "实时模式") else "fixed"
+    control_type = "fixed" if str(control_type).strip().lower() in ("fixed", "固定", "固定模式") else "realtime"
     if mode not in PRESETS:
-        mode = "standard"
+        mode = "casual"
 
     if control_type == "realtime":
         target_preset, rides_map, rt_metrics = build_realtime_preset(mode)
@@ -1190,16 +1190,16 @@ def maybe_realtime_tick(force=False):
     """轻量级实时巡检钩子（在 router 消息流中调用，非 realtime 模式 O(1) 零开销返回）"""
     global _LAST_REALTIME_TICK_TS
     try:
-        ctrl = str(ST.cfg("设置", "调控模式", "") or ST._CONFIG.get("_balance_control_type", "fixed")).strip().lower()
+        ctrl = str(ST.cfg("设置", "调控模式", "") or ST._CONFIG.get("_balance_control_type", "realtime")).strip().lower()
         if ctrl != "realtime" and not force:
             return None
         now = time.time()
         if not force and (now - _LAST_REALTIME_TICK_TS) < _REALTIME_TICK_INTERVAL:
             return None
         _LAST_REALTIME_TICK_TS = now
-        base_mode = str(ST.cfg("设置", "平衡模式", "") or ST._CONFIG.get("_active_balance_mode", "standard")).strip()
+        base_mode = str(ST.cfg("设置", "平衡模式", "") or ST._CONFIG.get("_active_balance_mode", "casual")).strip()
         if base_mode not in PRESETS:
-            base_mode = "standard"
+            base_mode = "casual"
         prev_meta = ST._CONFIG.get("_realtime_balance_meta") or {}
         metrics = compute_realtime_economy(base_mode)
         if (
@@ -1225,7 +1225,7 @@ def get_balance_state_snapshot():
             _GAME_DEFAULTS = {}
 
     explicit_ctrl = str(ST.cfg("设置", "调控模式", "") or ST._CONFIG.get("_balance_control_type", "")).strip().lower()
-    control_type = "realtime" if explicit_ctrl in ("realtime", "dynamic", "实时") else "fixed"
+    control_type = "fixed" if explicit_ctrl in ("fixed", "固定", "固定模式") else "realtime"
 
     explicit_mode = str(ST.cfg("设置", "平衡模式", "") or ST._CONFIG.get("_active_balance_mode", "")).strip()
     if explicit_mode not in PRESETS:
@@ -1245,7 +1245,7 @@ def get_balance_state_snapshot():
 
     best_mode = explicit_mode if explicit_mode in PRESETS else None
     if not best_mode:
-        best_mode = sorted(PRESETS.keys(), key=lambda m: (len(results[m]), 0 if m == "standard" else 1))[0]
+        best_mode = sorted(PRESETS.keys(), key=lambda m: (len(results[m]), 0 if m == "casual" else 1))[0]
 
     best_mismatches = results.get(best_mode, [])
     realtime_presets = {}
@@ -1301,10 +1301,10 @@ async def handle_config_auto_balance(request):
     p = await get_req_json(request, default={})
     if not isinstance(p, dict):
         p = {}
-    control_type = str(p.get("control_type") or p.get("type") or "fixed").strip().lower()
-    mode = str(p.get("mode") or p.get("base_mode") or "standard").strip()
+    control_type = str(p.get("control_type") or p.get("type") or "realtime").strip().lower()
+    mode = str(p.get("mode") or p.get("base_mode") or "casual").strip()
     if mode not in PRESETS:
-        mode = "standard"
+        mode = "casual"
 
     try:
         res = await asyncio.to_thread(apply_balance_config, control_type, mode)
