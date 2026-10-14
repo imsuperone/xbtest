@@ -529,24 +529,25 @@ def cmd_newbie(gid, qq):
         a = _acct(gid, qq)
         if a.get("novice_gift", "") == "1":
             return "亲，您已经领取过新手礼包了，无法再次领取！"
-        money = cfgi("新手配置", "现金", cfgi("新手配置", "新手金币", cfgi("新手配置", "money", 10000)))
-        tili = cfgi("新手配置", "体力", cfgi("新手配置", "新手体力", cfgi("新手配置", "stamina", 300)))
-        meili = cfgi("新手配置", "魅力", cfgi("新手配置", "新手魅力", cfgi("新手配置", "charm", 100)))
-        jq = cfgi("新手配置", "奖券", cfgi("新手配置", "新手奖券", cfgi("新手配置", "lottery_tickets", 15)))
-        stam_soft = cfgi("签到配置", "体力软上限", STAMINA_SOFT_CAP)
+        money = cfgi("新手配置", "现金", cfgi("新手配置", "新手金币", cfgi("新手配置", "money", 20000)))
+        meili = cfgi("新手配置", "魅力", cfgi("新手配置", "新手魅力", cfgi("新手配置", "charm", 150)))
+        jq = cfgi("新手配置", "奖券", cfgi("新手配置", "新手奖券", cfgi("新手配置", "lottery_tickets", 30)))
         stam_hard = cfgi("签到配置", "体力硬上限", STAMINA_HARD_CAP)
         charm_soft = cfgi("签到配置", "魅力软上限", CHARM_SOFT_CAP)
         charm_hard = cfgi("签到配置", "魅力硬上限", CHARM_HARD_CAP)
-        stam_rate = cfgi("签到配置", "溢出体力折算金币", STAMINA_OVERFLOW_COIN)
         charm_rate = cfgi("签到配置", "溢出魅力折算金币", CHARM_OVERFLOW_COIN)
         # 单事务原子领取：钱包+账户同锁一次提交，避免签到并发时 database is locked
-        # txn 失败返 None：不再用多次独立写入补发，避免礼包半成功。
         cur_stam = int(float(a.get("stamina", "0") or 0))
         cur_charm = int(float(a.get("charm", "0") or 0))
         cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
-        new_stam, eff_stam, _, ov_stam_c, _ = settle_stat_gain(cur_stam, tili, stam_soft, stam_hard, stam_rate)
+        # 体力已由每日重置机制保障（新用户已满 300）；若此前有消耗则补满至 300，避免满体力时输出 +0
+        eff_stam = 0
+        new_stam = cur_stam
+        if cur_stam < stam_hard:
+            eff_stam = stam_hard - cur_stam
+            new_stam = stam_hard
         new_charm, eff_charm, _, ov_charm_c, _ = settle_stat_gain(cur_charm, meili, charm_soft, charm_hard, charm_rate)
-        ov_coins = ov_stam_c + ov_charm_c
+        ov_coins = ov_charm_c
         total_money = money + ov_coins
         if ST.txn_coins_acct(gid, qq, total_money, {
             "novice_gift": "1",
@@ -556,7 +557,6 @@ def cmd_newbie(gid, qq):
         }) is None:
             return "新手礼包系统繁忙，本次未领取成功，请稍后重试！"
         else:
-            # txn 内已覆盖 novice 标记，刷新内存避免旧对象覆盖
             try:
                 a.set("novice_gift", "1")
                 a.set("stamina", str(new_stam))
@@ -566,8 +566,15 @@ def cmd_newbie(gid, qq):
             except Exception:
                 pass
     ov_tip = f"（含溢出属性折算+{ov_coins}{ST.coin_name()}）" if ov_coins > 0 else ""
-    return (f"恭喜您获得新手礼包一份！\r\n"
-            f"{ST.coin_name()}+{total_money}{ov_tip}\r\n体力+{eff_stam}\r\n魅力+{eff_charm}\r\n奖券+{jq}")
+    lines = [
+        "🎁 恭喜您获得新手礼包一份！",
+        f"💵 {ST.coin_name()} +{total_money}{ov_tip}",
+    ]
+    if eff_stam > 0:
+        lines.append(f"⚡ 体力 +{eff_stam}（已补满{stam_hard}）")
+    lines.append(f"💄 魅力 +{eff_charm}")
+    lines.append(f"🎫 奖券 +{jq}")
+    return "\r\n".join(lines)
 
 
 def cmd_like(gid, qq):

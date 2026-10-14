@@ -573,19 +573,19 @@
     "items": {
       "现金": {
         "type": "int",
-        "default": 10000
+        "default": 20000
       },
       "体力": {
         "type": "int",
-        "default": 300
+        "default": 0
       },
       "魅力": {
         "type": "int",
-        "default": 100
+        "default": 150
       },
       "奖券": {
         "type": "int",
-        "default": 15
+        "default": 30
       }
     }
   },
