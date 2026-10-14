@@ -270,7 +270,9 @@ def _name_prefix(qq, reply, slave_mod=None, gid=""):
                     return False
                 except Exception:
                     return False
-            if f"【{nm}】" in head[:60]:
+            if f"[{nm}]" in head[:60] or f"【{nm}】" in head[:60]:
+                return True
+            if (ts.startswith("📋[") or ts.startswith("📋【")) and "的档案" in head[:60]:
                 return True
             return False
         if isinstance(reply, tuple):
