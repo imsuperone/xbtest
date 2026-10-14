@@ -196,6 +196,8 @@ def _route_locked(gid, qq, raw):
             return _fn(gid, qq, t_eff, st)
     if text in ("买奴隶位", "购买奴隶位"):
         return cmd_buyslot(gid, qq, st)
+    if text in ("百连抽", "100连抽"):
+        return cmd_gacha(gid, qq, st, count=100)
     if text in ("五十连抽", "50连抽"):
         return cmd_gacha(gid, qq, st, count=50)
     if text in ("三十连抽", "30连抽"):

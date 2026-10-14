@@ -80,7 +80,7 @@ def cmd_myinfo(gid, qq, st):
         jq = acct.int("lottery_tickets")
         lines = [
             f"📋[{uname(st,qq)}]的档案",
-            f"💰资产:{coins}{coin_name()} | 🏦存款:{dep} | 💎身价:{price}",
+            f"💰资产:{store.fmt_coins(coins)}{coin_name()} | 🏦存款:{store.fmt_coins(dep)} | 💎身价:{store.fmt_coins(price)}",
             f"🔋体力:({tili}/300) | 💄魅力:{meili} | 🎫奖券:{jq} | 📖经验:{wexp}",
             f"👑主人:{uname(st, owner) if owner else _S.T.NO_OWNER} | {ptxt} | 📅总签{sign_total}·连签{sign_streak}天",
             f"⚔️武器:{', '.join(f'{w}★{star_of(u,w)}' for w in w_list) if w_list else _S.T.NO_WEAPON}",
@@ -115,13 +115,13 @@ def cmd_myinfo(gid, qq, st):
             acct = store.acct(gid, qq)
             init_p = cfgi("费用配置", "初始身价", 1000)
             return ("📋[%s]的档案\r\n"
-                    "💰资产:%d%s | 🏦存款:%d | 💎身价:%d\r\n"
+                    "💰资产:%s%s | 🏦存款:%s | 💎身价:%s\r\n"
                     "🔋体力:(%d/300) | 💄魅力:%d | 🎫奖券:%d | 📖经验:0\r\n"
                     "👑主人:木有主人 | 无人保护 | 📅总签%d·连签%d天\r\n"
                     "⚔️武器:木有武器\r\n"
                     "🎁宝物:木有宝物\r\n"
                     "👥奴隶(0/%d): 木有奴隶" % (
-                        name, coins, store.coin_name(), acct.int("deposit"), init_p,
+                        name, store.fmt_coins(coins), store.coin_name(), store.fmt_coins(acct.int("deposit")), store.fmt_coins(init_p),
                         min(300, max(0, acct.int("stamina"))), acct.int("charm"), acct.int("lottery_tickets"),
                         acct.int("sign_count"), acct.int("consecutive_days"), max(1, cfgi("设置", "奴隶个数", 5))
                     ))
@@ -208,7 +208,7 @@ def cmd_rank_price(gid, st):
                  reverse=True)[:10]
     out = ["🏆 身价排行榜"]
     for i, (p, q) in enumerate(lst, 1):
-        out.append(f"{i}. [{uname(st, q)}] {p}")
+        out.append(f"{i}. [{uname(st, q)}] {store.fmt_coins(p)}")
     return "\r\n".join(out)
 def cmd_rank_sign(gid, st):
     """签到排行榜：统一委托 sign.cmd_rank(gid, 'sign', st)，与【签到榜】完全同源"""

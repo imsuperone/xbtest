@@ -347,12 +347,12 @@ def cmd_sign(gid, qq):
     charm_note = f"（{'，'.join(charm_notes)}）" if charm_notes else ""
     return ("🏅 恭喜你签到成功！\r\n"
             "　奖励详情：\r\n"
-            f"　　　💵 {coin} +{base}\r\n"
+            f"　　　💵 {coin} +{ST.fmt_coins(base)}\r\n"
             f"　　　⚡ 体力 +{eff_tili}{stam_note}\r\n"
             f"　　　💄 魅力 +{eff_meili}{charm_note}\r\n"
             f"　　　🎫 奖券 +{juan}\r\n"
-            f"　　　🔥 第{days_cn(chain)}天连签 +{chain_bonus}\r\n"
-            f"当前{coin}：{ST.coins_get(gid, qq)}\r\n"
+            f"　　　🔥 第{days_cn(chain)}天连签 +{ST.fmt_coins(chain_bonus)}\r\n"
+            f"当前{coin}：{ST.fmt_coins(ST.coins_get(gid, qq))}\r\n"
             f"您是今天第{order}个签到者！")
 
 
@@ -393,17 +393,42 @@ def cmd_draw(gid, qq, amount=1):
         _coin_v = cfgi("抽奖配置", "现金奖", 2000)
         _stam_v = cfgi("抽奖配置", "体力奖", 30)
         _charm_v = cfgi("抽奖配置", "魅力奖", 20)
+        _user_total_money = ST.coins_get(gid, qq) + a.int("deposit")
+        _is_whale = _user_total_money >= 1000000
+
         _outcomes = []
         _streak = lose_streak
+        _refund_tickets = 0
+        _items_won = {}
         for _i in range(amount):
             _must = _streak >= 5
             _win = _must or (random.randint(1, 100) <= _rate)
             if _win:
-                _name_cn, _kind, _val = random.choice([
-                    (_coin_name, "coin", _coin_v),
-                    ("体力", "stamina", _stam_v),
-                    ("魅力", "charm", _charm_v),
-                ])
+                _roll_type = random.randint(1, 100)
+                if _roll_type <= 60:
+                    _cand = random.choice(["coin", "stamina", "charm"])
+                    if _cand == "coin":
+                        if _is_whale:
+                            # 巨鲸防通胀：大户抽中现金自动替换为基础道具或体力，杜绝继续向全服印钞
+                            _name_cn, _kind, _val = ("吐司", "item", 1)
+                            _items_won["吐司"] = _items_won.get("吐司", 0) + 1
+                        else:
+                            _name_cn, _kind, _val = (_coin_name, "coin", _coin_v)
+                    elif _cand == "stamina":
+                        _name_cn, _kind, _val = ("体力", "stamina", _stam_v)
+                    else:
+                        _name_cn, _kind, _val = ("魅力", "charm", _charm_v)
+                elif _roll_type <= 85:
+                    # 奖券返还（再来一次）
+                    _t_cnt = random.randint(1, 2)
+                    _refund_tickets += _t_cnt
+                    _name_cn, _kind, _val = ("奖券", "ticket", _t_cnt)
+                else:
+                    # 基础道具奖励（奖券获取极容易，只出日常基础消耗品，保住商城高级道具价值）
+                    _it_name = random.choice(["精灵球", "时间球", "吐司", "攻击之源", "防御之源"])
+                    _items_won[_it_name] = _items_won.get(_it_name, 0) + 1
+                    _name_cn, _kind, _val = (_it_name, "item", 1)
+
                 _outcomes.append((_kind, _name_cn, int(_val)))
                 _streak = 0
             else:
@@ -429,13 +454,26 @@ def cmd_draw(gid, qq, amount=1):
         )
         ov_coins = coin_tili + coin_meili
 
-        # 单事务原子结算：钱包 delta + 奖券/体力/魅力/streak 一次提交
-        _res = ST.txn_coins_acct(gid, qq, total_coin + ov_coins, {
-            "lottery_tickets": str(tickets - amount),
+        _updates = {
+            "lottery_tickets": str(max(0, tickets - amount + _refund_tickets)),
             "stamina": str(new_stam),
             "charm": str(new_charm),
             "lottery_lose_streak": str(_streak),
-        })
+        }
+        if _items_won:
+            try:
+                import json as _json
+                _sp_raw = a.get("spirits", "{}") or "{}"
+                _sp = _json.loads(_sp_raw) if _sp_raw else {}
+                _bag = _sp.setdefault("bag", {})
+                for _ik, _iv in _items_won.items():
+                    _bag[_ik] = int(_bag.get(_ik, 0) or 0) + _iv
+                _updates["spirits"] = _json.dumps(_sp, ensure_ascii=False)
+            except Exception:
+                pass
+
+        # 单事务原子结算：钱包 delta + 奖券/体力/魅力/streak/背包 一次提交
+        _res = ST.txn_coins_acct(gid, qq, total_coin + ov_coins, _updates)
         if _res is None:
             return "抽奖系统繁忙，本次抽奖未结算（奖券未扣除），请稍后重试！"
         try:
@@ -448,6 +486,10 @@ def cmd_draw(gid, qq, amount=1):
         if _o is None:
             return "很遗憾，本次未中奖，再接再厉！"
         _kind, _name_cn, _val = _o
+        if _kind == "ticket":
+            return f"恭喜，欧气爆发！获得 奖券+{_val}（再来一次！）"
+        if _kind == "item":
+            return f"恭喜，欧皇附体！获得珍稀道具「{_name_cn}」×{_val}（已存入背包）"
         ov_tip = f"（满额溢出折算+{ov_coins}{_coin_name}）" if ov_coins > 0 else ""
         return f"恭喜，抽奖成功！获得{_name_cn}+{_val}{ov_tip}"
     # 多连抽汇总（明细仅 amount<=10 时展开，避免刷屏）
@@ -465,6 +507,11 @@ def cmd_draw(gid, qq, amount=1):
         summary += f" 体力+{eff_tili}" + (f"(溢出折算+{coin_tili}{_coin_name})" if coin_tili else "")
     if total_meili:
         summary += f" 魅力+{eff_meili}" + (f"(溢出折算+{coin_meili}{_coin_name})" if coin_meili else "")
+    if _refund_tickets:
+        summary += f" 奖券返还+{_refund_tickets}"
+    if _items_won:
+        _it_str = "、".join(f"「{k}」×{v}" for k, v in _items_won.items())
+        summary += f" 道具：{_it_str}"
     if wins == 0:
         summary += "，很遗憾全未中，下次保底必中！"
     return summary + ("\r\n" + "\r\n".join(out_lines) if amount <= 10 else "")
@@ -652,7 +699,7 @@ def _render_rank(lst, name, gid, topn=10):
         display = f"{nm}({q})" if nm else q
         # 加单位/emoji 隔开，避免 QQ 与数值连在一起像两个 QQ
         if name == "财富":
-            out.append(f"{i}. {display}  💰 {v} {ST.coin_name()}")
+            out.append(f"{i}. {display}  💰 {ST.fmt_coins(v)} {ST.coin_name()}")
         elif name == "签到":
             out.append(f"{i}. {display}  📅 {v} 次")
         elif name == "魅力":
@@ -782,7 +829,7 @@ def cmd_mine_rank(gid, qq):
         rs, vs = _pos(vals_sign)
         rm, vm = _pos(vals_charm)
         return ("📊 个人排行\r\n"
-                f"财富：第{rc}名（{vc}{ST.coin_name()}）\r\n"
+                f"财富：第{rc}名（{ST.fmt_coins(vc)}{ST.coin_name()}）\r\n"
                 f"签到：第{rs}名（{vs}次）\r\n"
                 f"魅力：第{rm}名（{vm}）")
     except Exception:
@@ -807,7 +854,7 @@ def cmd_mine_rank(gid, qq):
         rs, vs, _ = _rank_pos(ks)
         rm, vm, _ = _rank_pos(km)
         return ("📊 个人排行\r\n"
-                f"财富：第{rc}名（{vc}{ST.coin_name()}）\r\n"
+                f"财富：第{rc}名（{ST.fmt_coins(vc)}{ST.coin_name()}）\r\n"
                 f"签到：第{rs}名（{vs}次）\r\n"
                 f"魅力：第{rm}名（{vm}）")
 

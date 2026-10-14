@@ -558,12 +558,14 @@ def _cmd_current_values():
         mm = int(st.get("mismatch_count", 0))
         rt = st.get("realtime_metrics") or {}
         _names = {"standard": "标准平衡模式", "casual": "休闲高福利模式", "hardcore": "硬核博弈模式"}
+        custom_keys = st.get("custom_keys") or []
         if ctrl == "realtime":
             _head = (
                 f"📊 当前数值【⚡ 实时调整模式】（基准：{_names.get(best, best)}）\r\n"
                 f"🌐 经济阶段：{rt.get('phase', '均衡稳态期')}（通胀指数 {rt.get('inflation_index', 0)}）\r\n"
-                f"👥 活跃玩家：{rt.get('player_count', 0)}人 | 中位资产：{rt.get('median_wealth', 0)} | 人均：{rt.get('avg_wealth', 0)}\r\n"
-                f"⚖️ 实时倍率：产出 {rt.get('faucet_mult', 1.0)}x / 回收 {rt.get('sink_mult', 1.0)}x\r\n"
+                f"👥 活跃玩家：{rt.get('player_count', 0)}人 | 中位资产：{ST.fmt_coins(rt.get('median_wealth', 0))} | 人均：{ST.fmt_coins(rt.get('avg_wealth', 0))}\r\n"
+                f"⚖️ 动态倍率：产出 {rt.get('faucet_mult', 1.0)}x / 回收 {rt.get('sink_mult', 1.0)}x\r\n"
+                f"🔄 实时修正：随玩家后续经济与活跃度自动动态校准，手动调控项绝对保护\r\n"
                 f"----------------"
             )
         else:
@@ -572,6 +574,8 @@ def _cmd_current_values():
             else:
                 _head = f"📊 当前数值【📌 固定模式 · 自定义】（基准：{_names.get(best, best)}，偏移{mm}项）"
         _lines = [_head]
+        if custom_keys:
+            _lines.append(f"🔒 手动调控锁定（{len(custom_keys)}项保护）：{', '.join(custom_keys[:5])}{'等' if len(custom_keys) > 5 else ''}")
         _best_pre = _PRE.get(best, {})
         for _sec, _key in _SIG:
             try:
@@ -620,12 +624,14 @@ def _cmd_balance_control(arg):
             base_m = "standard"
         res = _apply_bal("realtime", base_m)
         rt = res.get("realtime_metrics") or {}
+        lock_txt = f"\r\n🔒 已保护锁定项（{len(res['skipped_custom_keys'])}项免受覆盖）：{', '.join(res['skipped_custom_keys'][:4])}" if res.get("skipped_custom_keys") else ""
         return (
             f"⚡ 已开启【实时调整模式】\r\n"
             f"📌 基准档位：{mode_names.get(base_m, base_m)}\r\n"
             f"🌐 当前阶段：{rt.get('phase', '均衡稳态期')}（通胀指数 {rt.get('inflation_index', 0)}）\r\n"
             f"⚖️ 动态倍率：产出 {rt.get('faucet_mult', 1.0)}x / 回收 {rt.get('sink_mult', 1.0)}x\r\n"
             f"✅ 已同步调控 {res.get('updated_sections', 0)} 个模块（{res.get('updated_keys', 0)} 项参数）"
+            f"{lock_txt}"
         )
     if p0 in ("固定", "固定模式", "预设", "fixed"):
         sub = parts[1].lower() if len(parts) >= 2 else "标准"
@@ -633,16 +639,20 @@ def _cmd_balance_control(arg):
         if not m:
             return "格式：数值调控 固定 标准|休闲|硬核\r\n或：数值调控 实时 [标准|休闲|硬核]"
         res = _apply_bal("fixed", m)
+        lock_txt = f"\r\n🔒 已保护锁定项（{len(res['skipped_custom_keys'])}项免受覆盖）：{', '.join(res['skipped_custom_keys'][:4])}" if res.get("skipped_custom_keys") else ""
         return (
             f"📌 已切换至【固定模式 · {mode_names.get(m, m)}】\r\n"
             f"✅ 已写入 {res.get('updated_sections', 0)} 个系统模块（{res.get('updated_keys', 0)} 项数值参数）"
+            f"{lock_txt}"
         )
     if p0 in mode_map:
         m = mode_map[p0]
         res = _apply_bal("fixed", m)
+        lock_txt = f"\r\n🔒 已保护锁定项（{len(res['skipped_custom_keys'])}项免受覆盖）：{', '.join(res['skipped_custom_keys'][:4])}" if res.get("skipped_custom_keys") else ""
         return (
             f"📌 已切换至【固定模式 · {mode_names.get(m, m)}】\r\n"
             f"✅ 已写入 {res.get('updated_sections', 0)} 个系统模块（{res.get('updated_keys', 0)} 项数值参数）"
+            f"{lock_txt}"
         )
     return "格式：\r\n• 数值调控 固定 标准|休闲|硬核\r\n• 数值调控 实时 [标准|休闲|硬核]"
 

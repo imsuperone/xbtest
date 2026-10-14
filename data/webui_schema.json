@@ -40,15 +40,19 @@
       },
       "十连抽花费": {
         "type": "int",
-        "default": 3000
+        "default": 180000
       },
       "三十连抽花费": {
         "type": "int",
-        "default": 8000
+        "default": 500000
       },
       "五十连抽花费": {
         "type": "int",
-        "default": 12000
+        "default": 800000
+      },
+      "百连抽花费": {
+        "type": "int",
+        "default": 1500000
       },
       "抽武器R概率": {
         "type": "int",
@@ -196,7 +200,7 @@
       },
       "抽武器花费": {
         "type": "int",
-        "default": 1988
+        "default": 20000
       },
       "初始金币": {
         "type": "int",

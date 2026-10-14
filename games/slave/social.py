@@ -420,7 +420,7 @@ def cmd_self_work(gid, qq, st):
     extra_str = f" + 额外加成 {extra_bonus}" if extra_bonus > 0 else ""
     lines = [
         f"🧱 {job_act}，{job_tail}！",
-        f"💰 本次工钱：+{pay}{cn}（基础 {base_pay} + 身价/魅力加成 {stat_bonus}{extra_str}）｜🔋 体力 -{cs}",
+        f"💰 本次工钱：+{ST.fmt_coins(pay)}{cn}（基础 {ST.fmt_coins(base_pay)} + 身价/魅力加成 {ST.fmt_coins(stat_bonus)}{extra_str}）｜🔋 体力 -{cs}",
     ]
     if is_crit:
         lines.append(f"✨【工头重赏】触发大单暴击（收益 ×1.5），身价额外上涨 +{worth_up}！")

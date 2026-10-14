@@ -171,7 +171,7 @@ MENU = (
     "📇 帮派列表　　🏆 帮派排行　　🎖️ 帮派贡献榜\r\n"
     "📋 我的帮派　　👥 成员列表\r\n"
     "🛠️ 创建帮派 名称　🤝 加入帮派 名称\r\n"
-    "📨 帮派邀请 对方QQ\r\n"
+    "📨 帮派邀请 @目标\r\n"
     "💸 帮派贡献 金额　📈 我的贡献　🧱 我的修筑\r\n"
     "🎁 领取帮派福利　🚪 退出帮派\r\n"
     "🧱 修筑城墙 数量\r\n"
@@ -328,7 +328,7 @@ def cmd_invite(gid, qq, target):
     if not g.get("name"):
         return "亲，您还没有加入任何帮派！"
     if not target or not target.isdigit():
-        return "亲，帮派邀请格式为：【帮派邀请 @QQ】！"
+        return "亲，帮派邀请格式为：【帮派邀请 @目标】！"
     try:
         from . import slave as SL
         if not SL.exists_user(gid, target):

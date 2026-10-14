@@ -399,7 +399,7 @@ def cmd_buy(gid, qq, name):
     d = shop[name]
     price = int(d.get("price", 0) or 0)
     if price > 0 and ST.coins_get(gid, qq) < price:
-        return f"笑~你没有那么多{ST.coin_name()}（需要{price}）"
+        return f"笑~你没有那么多{ST.coin_name()}（需要{ST.fmt_coins(price)}）"
     sp = _spirits(gid, qq)
     bag = sp.setdefault("bag", {})
     bag[name] = int(bag.get(name, 0)) + 1
@@ -492,10 +492,17 @@ def cmd_adventure(gid, qq, place):
     # 间隔
     key = f"spadv_{gid}_{qq}"
     last = _recall_get(key)
-    gap = _cfgi("冒险间隔", 2) * 60
+    gap = _cfgi("冒险间隔", 5) * 60
     if last and time.time() - float(last) < gap:
         left = int((gap - (time.time() - float(last))) / 60) + 1
         return f"{left}分钟再来冒险吧！"
+
+    # 体力消耗与防脚本校验
+    d_tili = max(2, _cfgi("挑战扣除_消耗体力", 2))
+    cur_st = ST.acct(gid, qq).int("stamina")
+    if cur_st < d_tili:
+        return f"亲，精灵冒险需要消耗 {d_tili} 点体力，您当前体力（{cur_st}）不足！"
+
     # 随机遭遇（含野生闪光变异判定）
     wild = random.choice(md.get("drops", []) or ["绿毛虫"])
     lb = _cfgi("等级加成下限", 3); ub = _cfgi("等级加成上限", 5)
@@ -511,12 +518,11 @@ def cmd_adventure(gid, qq, place):
     evo_hint = ""
     if act_it.get("level") < _cfgi("最大等级", 100):
         evo_hint = _add_exp(gid, qq, sp, act_it, exp, save_now=False) or ""
-    # H: 挑战扣除（fallback全0，没配行为不变；有配则扣钱扣体力并在文案明示）
+    # H: 挑战扣除
     d_lo = _cfgi("挑战扣除_金钱下限", 0)
     d_hi = _cfgi("挑战扣除_金钱上限", 0)
-    d_tili = _cfgi("挑战扣除_消耗体力", 0)
     d_gold = 0
-    d_stam = 0
+    d_stam = d_tili
     if d_hi > 0 or d_lo > 0:
         _dlo, _dhi = (d_lo, d_hi) if d_lo <= d_hi else (d_hi, d_lo)
         _dlo = max(0, _dlo)
@@ -526,13 +532,6 @@ def cmd_adventure(gid, qq, place):
             if d_gold > 0:
                 _real = min(d_gold, ST.coins_get(gid, qq))
                 d_gold = _real
-    if d_tili > 0:
-        try:
-            _cur_st = ST.acct(gid, qq).int("stamina")
-        except Exception:
-            _cur_st = int(d_tili)
-        d_stam = min(int(d_tili), max(0, _cur_st))
-    cur_st = ST.acct(gid, qq).int("stamina")
     updates = {
         "spirits": json.dumps(sp, ensure_ascii=False),
         "stamina": str(max(0, cur_st - d_stam)),
@@ -552,7 +551,7 @@ def cmd_adventure(gid, qq, place):
     wild_label = f"✨[闪光]{wild}" if is_shiny else wild
     return (f"【精灵冒险】来到{place}，遭遇了野生的 Lv.{wl}「{wild_label}」！\r\n"
             f"{shiny_banner}"
-            f"历练奖励：经验+{exp} {ST.coin_name()}+{gold}\r\n"
+            f"历练奖励：经验+{exp} {ST.coin_name()}+{ST.fmt_coins(gold)}\r\n"
             f"{evo_hint}"
             f"{_deduct_msg}"
             "如需收服请发【使用精灵球 精灵球名称】")
@@ -881,24 +880,26 @@ def cmd_bond(gid, qq, arg=""):
 
 
 def _pick_shop_drop(charm_val=0, high_tier_bonus=0):
-    """严格从现有 _SHOP() 商城池抽取战利品；魅力越高/远征规模越大，高阶道具命中率越高"""
+    """从现有 _SHOP() 商城池抽取战利品：三阶分层，顶级极品严格限制在 0.5%~0.8% 超低欧皇概率"""
     shop = _SHOP()
     if not shop:
         return "精灵球"
-    common_pool = []
-    rare_pool = []
-    for k, d in shop.items():
-        price = int((d or {}).get("price", 0) or 0)
-        if price > 2000:
-            rare_pool.append(k)
-        else:
-            common_pool.append(k)
-    if not common_pool:
-        common_pool = list(shop.keys())
-    if not rare_pool:
-        rare_pool = common_pool
-    rare_rate = min(45, 10 + max(0, int(charm_val or 0)) // 20 + int(high_tier_bonus or 0))
-    if random.randint(1, 100) <= rare_rate:
+    # 极品池：商城售价极高的顶级奢侈品（洗练果实1.5w/闪光结晶8.8w/进化液10w），严格控制在 ≤ 0.8%
+    top_pool = [k for k in ("洗练果实", "闪光结晶", "进化液") if k in shop] or ["洗练果实"]
+    # 进阶池：中高阶消耗品（约 8%~12%）
+    rare_pool = [k for k in ("极速球", "大师球", "特攻之源", "奇异甜食") if k in shop] or ["极速球"]
+    # 普通池：日常基础消耗品（约 88%~91%）
+    common_pool = [k for k in ("精灵球", "时间球", "狩猎球", "吐司", "攻击之源", "防御之源", "特防之源") if k in shop] or list(shop.keys())
+
+    # 极品概率：基础 0.5%，满魅力/满远征最多微调到 0.8%（真正欧皇大奖）
+    top_rate = min(0.8, 0.5 + max(0, int(charm_val or 0)) / 2000.0 + int(high_tier_bonus or 0) * 0.05)
+    # 稀有概率：基础 8%，最高 12%
+    rare_rate = min(12.0, 8.0 + max(0, int(charm_val or 0)) / 100.0 + int(high_tier_bonus or 0) * 0.5)
+
+    roll = random.uniform(0, 100)
+    if roll <= top_rate:
+        return random.choice(top_pool)
+    if roll <= top_rate + rare_rate:
         return random.choice(rare_pool)
     return random.choice(common_pool)
 
@@ -951,7 +952,7 @@ def cmd_travel(gid, qq, arg=""):
         return (f"💌【旅行归来】您的精灵「{spr_disp}」漫游归来啦！\r\n"
                 f"📖 旅途见闻：{story}。\r\n"
                 f"🎁 伴手礼：「{drop_item}」×1（已放入背包）\r\n"
-                f"✨ 旅途收获：{ST.coin_name()}+{gold_gain}、经验+{exp_gain}、羁绊+5"
+                f"✨ 旅途收获：{ST.coin_name()}+{ST.fmt_coins(gold_gain)}、经验+{exp_gain}、羁绊+5"
                 + (f"\r\n{evo_note.strip()}" if evo_note else ""))
 
     expd = sp.get("expedition")
@@ -1046,8 +1047,12 @@ def cmd_expedition(gid, qq, arg=""):
         exp_gain = random.randint(260, 420)
         bag = sp.setdefault("bag", {})
         drops = []
-        for _ in range(min(3, cnt)):
-            d_item = _pick_shop_drop(charm_val=charm_val, high_tier_bonus=cnt * 4)
+        # 远征产出调优：保底 1 件道具，队伍≥2只且高战力大成功时有 25% 概率额外带回第2件，杜绝无限批发
+        drop_count = 1
+        if cnt >= 2 and random.randint(1, 100) <= min(25, 10 + cnt * 5):
+            drop_count = 2
+        for _ in range(drop_count):
+            d_item = _pick_shop_drop(charm_val=charm_val, high_tier_bonus=cnt)
             bag[d_item] = int(bag.get(d_item, 0) or 0) + 1
             drops.append(d_item)
         sp.pop("expedition", None)
@@ -1062,7 +1067,7 @@ def cmd_expedition(gid, qq, arg=""):
         drop_summary = "、".join(f"「{d}」" for d in drops)
         evo_txt = ("\r\n🧬 进化喜讯：" + "；".join(evo_msgs)) if evo_msgs else ""
         return (f"🚩【远征凯旋】远征小队（{'、'.join(_fmt_name(x) for x in team_its)}）满载而归！\r\n"
-                f"💰 远征赏金：{ST.coin_name()}+{gold_gain}\r\n"
+                f"💰 远征赏金：{ST.coin_name()}+{ST.fmt_coins(gold_gain)}\r\n"
                 f"📈 全员历练：参战精灵经验各 +{exp_gain}\r\n"
                 f"🎁 战利品：{drop_summary}（已放入背包）"
                 f"{evo_txt}")
@@ -1108,28 +1113,41 @@ def cmd_expedition(gid, qq, arg=""):
 def cmd_pvp(gid, qq, target):
     raw_arg = (target or "").strip()
     if not raw_arg:
-        return "亲，请输入对方QQ：精灵对战 对方QQ"
+        return "亲，请指定对战目标：【精灵对战 @对方】！"
     t = None
-    rest = raw_arg
-    t_at, r_at = ST.parse_at(raw_arg)
-    if t_at:
-        try:
-            _ok = ST.is_qq_mention(t_at, raw_arg) if hasattr(ST, "is_qq_mention") else True
-        except Exception:
-            _ok = True
-        if _ok:
-            t = str(t_at).strip()
-            rest = (r_at or "").strip()
+    import re as _re_pvp
+    # 1. 优先提取 CQ 码中的 QQ
+    m_cq = _re_pvp.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", raw_arg)
+    if m_cq:
+        t = m_cq.group(1)
+    # 2. 匹配 @数字 格式（含 AstrBot 追加的 @QQ）
     if not t:
-        import re as _re_pvp
-        m_qq = _re_pvp.fullmatch(r"@?\s*(\d{5,12})", raw_arg)
+        m_at_qq = _re_pvp.search(r"@\s*(\d{4,12})\b", raw_arg)
+        if m_at_qq:
+            t = m_at_qq.group(1)
+    # 3. 匹配独立纯数字 QQ 串
+    if not t:
+        m_qq = _re_pvp.search(r"(?:^|\s)(\d{4,12})(?:\s|$)", raw_arg)
         if m_qq:
             t = m_qq.group(1)
-            rest = ""
-    if not t or not t.isdigit() or rest:
-        if raw_arg.startswith(("@", "[CQ:at")) or raw_arg[:1].isdigit():
-            return "亲，请输入对方QQ：精灵对战 对方QQ"
-        return None
+    # 4. 尝试 parse_at 提取
+    if not t:
+        t_at, _ = ST.parse_at(raw_arg)
+        if t_at and str(t_at).isdigit():
+            t = str(t_at).strip()
+    # 5. 尝试按群名片/昵称反查 QQ
+    if not t:
+        clean_name = raw_arg.lstrip("@").strip()
+        if clean_name:
+            try:
+                from ..slave.handler import _find_slave_qq_by_name
+                found_q = _find_slave_qq_by_name(gid, clean_name)
+                if found_q and str(found_q).isdigit():
+                    t = str(found_q).strip()
+            except Exception:
+                pass
+    if not t or not t.isdigit():
+        return "亲，请指定对战目标：【精灵对战 @对方】！"
     target = t
     if target == str(qq):
         return "亲，不能与自己进行精灵对战！"
@@ -1171,7 +1189,7 @@ def cmd_pvp(gid, qq, target):
             real = real_stake if _ok is True else 0
         else:
             real = 0
-        reward_txt = f"获得 {real}{ST.coin_name()}！" if real > 0 else "（对方现金为0，本次为荣誉切磋）"
+        reward_txt = f"获得 {ST.fmt_coins(real)} {ST.coin_name()}！" if real > 0 else "（对方现金为0，本次为荣誉切磋）"
         return (f"⚔️ 精灵对战\r\n你(战力{myp}) vs {lstr(target, gid)}(战力{tap})\r\n"
                 f"【你赢！】{reward_txt}")
     real_stake = min(stake, my_cash)
@@ -1185,7 +1203,7 @@ def cmd_pvp(gid, qq, target):
         real = real_stake if _ok is True else 0
     else:
         real = 0
-    lose_txt = f"损失 {real}{ST.coin_name()}！" if real > 0 else "（现金为0，未损失金币）"
+    lose_txt = f"损失 {ST.fmt_coins(real)} {ST.coin_name()}！" if real > 0 else "（现金为0，未损失金币）"
     return (f"⚔️ 精灵对战\r\n你(战力{myp}) vs {lstr(target, gid)}(战力{tap})\r\n"
             f"【你输…】{lose_txt}")
 

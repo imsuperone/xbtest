@@ -4,6 +4,27 @@ import json
 from . import state as _S
 from .state import Acct, _safe_commit, _safe_rollback
 from .db import _ensure_db, _read_conn
+
+
+def fmt_coins(val):
+    """万进位格式化：每4位加一个逗号（例如 10000 -> 1,0000; 100000000 -> 1,0000,0000; 500 -> 500）"""
+    try:
+        n = int(val)
+    except (ValueError, TypeError):
+        return str(val) if val is not None else "0"
+    if n < 0:
+        return "-" + fmt_coins(-n)
+    s = str(n)
+    if len(s) <= 4:
+        return s
+    parts = []
+    while len(s) > 4:
+        parts.append(s[-4:])
+        s = s[:-4]
+    parts.append(s)
+    return ",".join(reversed(parts))
+
+
 def coins_get(gid, qq):
     _ensure_db()
     # 读副本快路径：不持全局写锁，WAL 读与写并行

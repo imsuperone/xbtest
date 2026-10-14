@@ -80,15 +80,26 @@ def cmd_gacha(gid, qq, st, count=1):
     results, imgs, exp_total = [], [], 0
     owned = set(weapons_of(u))
     got_ssr = False
+    ssr_count = 0
     agg = {}
     for i in range(n):
-        roll = _random.uniform(0, 100)
-        acc, rar = 0, "R"
-        for r in ("SSR", "SR", "R"):
-            acc += pr[r]
-            if roll <= acc:
-                rar = r
-                break
+        # 高阶连抽保底机制：五十连抽保底≥1件SSR；百连抽保底≥2件SSR
+        force_ssr = False
+        if n >= 100 and i >= n - 2 and ssr_count < 2:
+            force_ssr = True
+        elif n >= 50 and i == n - 1 and ssr_count < 1:
+            force_ssr = True
+
+        if force_ssr:
+            rar = "SSR"
+        else:
+            roll = _random.uniform(0, 100)
+            acc, rar = 0, "R"
+            for r in ("SSR", "SR", "R"):
+                acc += pr[r]
+                if roll <= acc:
+                    rar = r
+                    break
         pool = _gacha_pool(rar)
         if not pool:
             for alt in ("R", "SR", "SSR"):
@@ -104,6 +115,8 @@ def cmd_gacha(gid, qq, st, count=1):
         e_gain = exp_map.get(rar, 9)
 
         if rar == "SSR":
+            ssr_count += 1
+            got_ssr = True
             if name in owned:
                 exp_total += e_gain
                 cur = int(uget(u, name, "0") or 0) + 1
