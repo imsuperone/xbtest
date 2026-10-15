@@ -399,7 +399,8 @@ function bindTabs() {
   const btns = document.querySelectorAll("#mainTabs button, #sideNav button[data-tab]");
   const TAB_GROUPS = {
     data: ["overview", "rank"],
-    users: ["users", "slave", "spirit_users", "groups"],
+    users: ["users", "slave", "spirit_users"],
+    groups: ["groups"],
     rules: ["config", "cmds"],
     mall: ["shops", "spirits"],
     ops: ["backups", "imgs", "logs", "about"]
