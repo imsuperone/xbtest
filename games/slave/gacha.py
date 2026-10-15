@@ -4,6 +4,12 @@ import os as _os
 import time as _time
 import random as _random
 from . import slave_state as _S
+try:
+    from ...core import storage as ST
+    store = ST
+except ImportError:
+    from core import storage as ST
+    store = ST
 from .base import U, _safe_int, cfgi, coins_add, coins_get, star_of, treasures_of, uget, uset, weapons_of
 from .combat import _treasure_effect, _treasure_names, _weapon_atk_bonus, _weapon_shop, _weapon_shop_raw
 from .nick import uname
@@ -218,38 +224,41 @@ def cmd_treasure_up(gid, qq, tname, st):
     if tname not in treas:
         return _S.T.TUP_NOT_EXIST
     u = U(st, qq)
-    if not treasures_of(u):
+    my_treas = treasures_of(u)
+    if not my_treas:
         return _S.T.TUP_HAVE_NONE
+    if tname not in my_treas:
+        return f"亲，您尚未拥有宝物【{tname}】，无法进行升阶！（可通过【我要学习】奇遇探索获取）"
     stage = int(uget(u, tname + "升阶", "0"))
     if stage >= 3:
         return _S.T.TUP_MAX
     idx = ["一", "二", "三"][stage]
-    need = cfgi("设置", f"{idx}阶宝物消耗宝物数量", stage + 1)
     cost = cfgi("设置", f"{idx}阶宝物花费", 77777)
+    need_exp = cfgi("设置", f"{idx}阶宝物经验", (stage + 1) * 500)
     prob = cfgi("设置", f"{idx}阶宝物概率", 50)
     try:
         from ..sign import eff_prob as _LP2
         prob = _LP2(prob, gid, qq)
     except Exception:
         pass
-    have = _safe_int(uget(u, tname, "0"), 0)
-    if have < need:
-        return _S.T.TUP_NO_ITEM + f"(需{tname}x{need}, 现有{have})"
+    curexp = int(uget(u, "weapon_exp") or 0)
+    if curexp < need_exp:
+        return f"经验不足（需武器经验 {need_exp}，现有 {curexp}），可通过【我要学习】积累经验！"
     if coins_get(gid, qq) < cost:
-        return f"升阶需要{cost}{coin_name()}，哦，攒够了再来吧~"
+        return f"升阶需要 {ST.fmt_coins(cost)}{coin_name()}，余额不足，攒够了再来吧~"
 
     if coins_add(gid, qq, -cost) is None:
         return "宝物升阶系统繁忙，本次未扣款，请稍后重试！"
+    uset(u, "weapon_exp", str(curexp - need_exp))
     if _random.randint(1, 100) > prob:
-        uset(u, tname, str(have - need))
-        return (_S.T.TUP_FAIL + "\r\n" + _S.T.TUP_USED.format(items=f"{tname}x{need}")
-                + "\r\n" + _S.T.TUP_COST.format(cost=cost)
-                + "\r\n" + _S.T.TUP_PROB.format(prob=prob)
-                + "\r\n升阶失败只扣除材料，宝物不会消失哦~")
-    uset(u, tname, str(have - need))
+        return (_S.T.TUP_FAIL
+                + f"\r\n本次升阶花费：{ST.fmt_coins(cost)}{coin_name()}"
+                + f"\r\n本次消耗武器经验：{need_exp}"
+                + f"\r\n本次升阶成功率：{prob}%"
+                + "\r\n升阶失败只扣除费用与经验，宝物完好无损，下次再接再厉~")
     uset(u, tname + "升阶", str(stage + 1))
     eff = _treasure_effect(tname)
-    return (f"✨ [{tname}] 升至{stage+1}阶!\r\n{_S.T.T_STAGE.format(n=stage+1)} "
+    return (f"✨ 恭喜！宝物【{tname}】成功升至 {stage+1} 阶!\r\n{_S.T.T_STAGE.format(n=stage+1)} "
             + eff)
 
 
@@ -351,23 +360,23 @@ def cmd_weapon_menu(gid, qq, st):
 def cmd_treasure_menu(gid, qq, st):
     treas = _treasure_names()
     u = U(st, qq)
+    my_treas = set(treasures_of(u))
 
     def eff(t):
         return _treasure_effect(t)
 
     lines = ["🎁 宝物图鉴", "━━━━━━━━━━━━━━"]
     for t in treas:
-        cnt = _safe_int(uget(u, t, "0"), 0)
         stage = _safe_int(uget(u, t + "升阶", "0"), 0)
-        own = f"✔已持有{cnt}个" if cnt > 0 else "未持有"
+        own = ("✔已持有" + (f" (★{stage}阶)" if stage > 0 else "")) if t in my_treas else "未持有"
         lines.append(f"◆ {t}　{own}")
         e = eff(t)
         if e:
             lines.append(f"　└ {e}")
             if stage:
-                lines[-1] += f"(当前{stage}阶)"
+                lines[-1] += f" (当前{stage}阶)"
     lines.append("━━━━━━━━━━━━━━")
-    lines.append("🍀 获取: 【我要学习】概率奇遇(获取即生效)")
+    lines.append("🍀 获取: 【我要学习】奇遇探索(终身唯一·绝不重复)")
     lines.append("🔺 升阶: 【升阶+宝物名】如【升阶酒神葫芦】")
     lines.append("🔍 详情: 直接发【宝物名】如【酒神葫芦】")
     return "\r\n".join(lines)

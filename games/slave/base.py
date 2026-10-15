@@ -313,7 +313,15 @@ def treasures_of(u):
         _migrate_treasure_keys(u)
     except Exception:
         pass
-    return [t for t in uget(u, "treasure").split("|") if t]
+    lst = [t for t in uget(u, "treasure").split("|") if t]
+    # 终身唯一机制：规整历史遗留的多余宝物计数，去重保持单份
+    for _t in lst:
+        try:
+            if _safe_int(uget(u, _t), 0) > 1:
+                uset(u, _t, "1")
+        except Exception:
+            pass
+    return lst
 
 
 # keymap 补齐 4 内置宝物映射前的旧 escapes：读时一次性搬到新键（只搬空键，不覆盖新数据）。

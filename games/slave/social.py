@@ -114,18 +114,33 @@ def cmd_flatter(gid, qq, st):
 
 
 def _grant_treasure(gid, qq, st):
+    """发放宝物：终身唯一机制。
+    1. 候选池严格排除玩家已持有的宝物，绝对不重复获得；
+    2. 若已集齐所有宝物，返回 (None, reward_coins, reward_exp) 转换为大额奇遇大奖；
+    3. 成功获取新宝物，返回 (t, 0, 0)。
+    """
     treas = _treasure_names()
     if not treas:
         return None
-    t = _random.choice(treas)
     u = U(st, qq)
-    uset(u, t, str(int(uget(u, t, "0")) + 1))
-    # Fix N-C03: maintain 宝物 list
     lst = treasures_of(u)
-    if t not in lst:
+    unowned = [t for t in treas if t not in lst]
+    if unowned:
+        t = _random.choice(unowned)
+        uset(u, t, "1")
         lst.append(t)
         uset(u, "treasure", "|".join(lst))
-    return t
+        return (t, 0, 0)
+    # 全部集齐：转换为大额奇遇大奖（金币 + 经验）
+    bonus_coins = cfgi("费用配置", "宝物集齐金币奖励", 8888)
+    bonus_exp = cfgi("费用配置", "宝物集齐经验奖励", 500)
+    try:
+        coins_add(gid, qq, bonus_coins)
+        cur_wexp = int(uget(u, "weapon_exp", "0") or 0)
+        uset(u, "weapon_exp", str(cur_wexp + bonus_exp))
+    except Exception:
+        pass
+    return (None, bonus_coins, bonus_exp)
 
 
 def cmd_study(gid, qq, st):
@@ -182,9 +197,13 @@ def cmd_study(gid, qq, st):
     except Exception:
         pass
     if _random.randint(1, 100) <= _qiyu_p:
-        t = _grant_treasure(gid, qq, st)
-        if t:
-            tail += f"\r\n🎁 奇遇事件中获得宝物【{t}】!"
+        res = _grant_treasure(gid, qq, st)
+        if res:
+            t, b_coins, b_exp = res
+            if t:
+                tail += f"\r\n🎁 奇遇事件中获得稀世宝物【{t}】!"
+            elif b_coins or b_exp:
+                tail += f"\r\n🌟 奇遇大吉！您已集齐全部稀世宝物，通晓天地之道，额外斩获：{coin_name()}+{ST.fmt_coins(b_coins)}、武器经验+{b_exp}！"
     return head + tail
 
 

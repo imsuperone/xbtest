@@ -78,13 +78,14 @@ def cmd_myinfo(gid, qq, st):
         tili = min(300, max(0, acct.int("stamina")))
         meili = acct.int("charm")
         jq = acct.int("lottery_tickets")
+        t_disp = [f"{t}★{_safe_int(uget(u, t+'升阶', '0'), 0)}" if _safe_int(uget(u, t+'升阶', '0'), 0) > 0 else t for t in t_list]
         lines = [
             f"📋[{uname(st,qq)}]的档案",
             f"💰资产:{store.fmt_coins(coins)}{coin_name()} | 🏦存款:{store.fmt_coins(dep)} | 💎身价:{store.fmt_coins(price)}",
             f"🔋体力:({tili}/300) | 💄魅力:{meili} | 🎫奖券:{jq} | 📖经验:{wexp}",
             f"👑主人:{uname(st, owner) if owner else _S.T.NO_OWNER} | {ptxt} | 📅总签{sign_total}·连签{sign_streak}天",
             f"⚔️武器:{', '.join(f'{w}★{star_of(u,w)}' for w in w_list) if w_list else _S.T.NO_WEAPON}",
-            f"🎁宝物:{', '.join(t_list) if t_list else _S.T.NO_TREASURE}",
+            f"🎁宝物:{', '.join(t_disp) if t_disp else _S.T.NO_TREASURE}",
             f"👥奴隶({len(slaves)}/{cap}): {sl_txt}",
         ]
         try:
