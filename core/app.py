@@ -478,6 +478,29 @@ class XbBot(Star):
                 ST.recall_set("mig_slave_work_cd_15m", "1")
         except Exception:
             pass
+        # 抽奖福利平衡迁移：平滑迁移历史默认高福利至新平衡值（受 _custom_keys 保护）
+        try:
+            if str(ST.recall_get("mig_lottery_rebalance_v26", "") or "") != "1":
+                _lcfg = ST._CONFIG.setdefault("抽奖配置", {})
+                if "抽奖配置.中奖率" not in _customs:
+                    if str(_lcfg.get("中奖率", "45")) in ("70", "80"):
+                        _lcfg["中奖率"] = "45"
+                        _need_save = True
+                if "抽奖配置.现金奖" not in _customs:
+                    if str(_lcfg.get("现金奖", "500")) in ("2000", "4000"):
+                        _lcfg["现金奖"] = "500"
+                        _need_save = True
+                if "抽奖配置.体力奖" not in _customs:
+                    if str(_lcfg.get("体力奖", "10")) in ("30", "50"):
+                        _lcfg["体力奖"] = "10"
+                        _need_save = True
+                if "抽奖配置.魅力奖" not in _customs:
+                    if str(_lcfg.get("魅力奖", "10")) in ("20", "35"):
+                        _lcfg["魅力奖"] = "10"
+                        _need_save = True
+                ST.recall_set("mig_lottery_rebalance_v26", "1")
+        except Exception:
+            pass
         # 全库体力/魅力强压执行：首次迁移将全库历史存量 >300 的体力与魅力强制压回 300 软上限（按 25% 折算补贴金币），
         # 并清理旧键 tili/meili 残留；已完成迁移的实例跳过启动期全表扫描，运行时由各入口硬上限兜底
         try:

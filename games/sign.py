@@ -385,14 +385,14 @@ def cmd_draw(gid, qq, amount=1):
         lose_streak = int(a.get("lottery_lose_streak", "0") or "0")
         # 预摇奖（纯随机，无 IO）：失败路径不再重摇，结果幂等
         _coin_name = ST.coin_name()
-        _rate = cfgi("抽奖配置", "中奖率", 70)
+        _rate = cfgi("抽奖配置", "中奖率", 45)
         try:
             _rate = eff_prob(_rate, gid, qq)
         except Exception:
             pass
-        _coin_v = cfgi("抽奖配置", "现金奖", 2000)
-        _stam_v = cfgi("抽奖配置", "体力奖", 30)
-        _charm_v = cfgi("抽奖配置", "魅力奖", 20)
+        _coin_v = cfgi("抽奖配置", "现金奖", 500)
+        _stam_v = cfgi("抽奖配置", "体力奖", 10)
+        _charm_v = cfgi("抽奖配置", "魅力奖", 10)
         _user_total_money = ST.coins_get(gid, qq) + a.int("deposit")
         _is_whale = _user_total_money >= 1000000
 
@@ -401,11 +401,11 @@ def cmd_draw(gid, qq, amount=1):
         _refund_tickets = 0
         _items_won = {}
         for _i in range(amount):
-            _must = _streak >= 5
+            _must = _streak >= 10
             _win = _must or (random.randint(1, 100) <= _rate)
             if _win:
                 _roll_type = random.randint(1, 100)
-                if _roll_type <= 60:
+                if _roll_type <= 65:
                     _cand = random.choice(["coin", "stamina", "charm"])
                     if _cand == "coin":
                         if _is_whale:
@@ -418,16 +418,16 @@ def cmd_draw(gid, qq, amount=1):
                         _name_cn, _kind, _val = ("体力", "stamina", _stam_v)
                     else:
                         _name_cn, _kind, _val = ("魅力", "charm", _charm_v)
-                elif _roll_type <= 85:
-                    # 奖券返还（再来一次）
-                    _t_cnt = random.randint(1, 2)
-                    _refund_tickets += _t_cnt
-                    _name_cn, _kind, _val = ("奖券", "ticket", _t_cnt)
-                else:
+                elif _roll_type <= 95:
                     # 基础道具奖励（奖券获取极容易，只出日常基础消耗品，保住商城高级道具价值）
                     _it_name = random.choice(["精灵球", "时间球", "吐司", "攻击之源", "防御之源"])
                     _items_won[_it_name] = _items_won.get(_it_name, 0) + 1
                     _name_cn, _kind, _val = (_it_name, "item", 1)
+                else:
+                    # 奖券返还（再来一次：大幅压低概率至 5%，且固定仅返还 1 张，杜绝无限套娃）
+                    _t_cnt = 1
+                    _refund_tickets += _t_cnt
+                    _name_cn, _kind, _val = ("奖券", "ticket", _t_cnt)
 
                 _outcomes.append((_kind, _name_cn, int(_val)))
                 _streak = 0

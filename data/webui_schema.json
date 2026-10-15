@@ -560,19 +560,19 @@
     "items": {
       "中奖率": {
         "type": "int",
-        "default": 70
+        "default": 45
       },
       "现金奖": {
         "type": "int",
-        "default": 2000
+        "default": 500
       },
       "体力奖": {
         "type": "int",
-        "default": 30
+        "default": 10
       },
       "魅力奖": {
         "type": "int",
-        "default": 20
+        "default": 10
       }
     }
   },
