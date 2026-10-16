@@ -1708,10 +1708,6 @@
         "type": "string",
         "default": "真"
       },
-      "强制取款": {
-        "type": "string",
-        "default": "真"
-      },
       "当前冒险": {
         "type": "string",
         "default": "真"
@@ -2250,10 +2246,6 @@
         "default": ""
       },
       "取款": {
-        "type": "text",
-        "default": ""
-      },
-      "强制取款": {
         "type": "text",
         "default": ""
       },
@@ -3331,10 +3323,6 @@
         "default": "所有人"
       },
       "开始答题": {
-        "type": "string",
-        "default": "所有人"
-      },
-      "强制取款": {
         "type": "string",
         "default": "所有人"
       },

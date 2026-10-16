@@ -53,7 +53,7 @@ def handle(gid, qq, raw):
         return None
     if text.startswith("强制取款"):
         if text == "强制取款" or re.fullmatch(r"强制取款\s*(\d+)", text):
-            return cmd_force_withdraw(gid, qq, n)
+            return cmd_withdraw(gid, qq, n)
         return None
     if text.startswith("取款"):
         if text == "取款" or re.fullmatch(r"取款\s*(\d+)", text):
@@ -148,7 +148,7 @@ __all__ = ["handle", "COMMANDS"]
 
 
 COMMANDS = (
-    "存款", "强制取款", "取款", "转账", "跨群转账", "赌博", "打劫银行", "打劫",
+    "存款", "取款", "转账", "跨群转账", "赌博", "打劫银行", "打劫",
     "发红包", "抢红包", "劫狱", "保释", "自我保释",
     "进监狱", "出狱", "越狱",
     # V8 并入：原正则刮词域（与 handle 分支对应）

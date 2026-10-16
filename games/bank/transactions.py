@@ -180,44 +180,8 @@ def cmd_withdraw(gid, qq, amount):
 
 
 def cmd_force_withdraw(gid, qq, amount):
-    """强制取款: 未到期限强制取款无利息，不影响后续利息按剩余计（不重置计时）原子版"""
-    # 读-校验-写全程持 _LOCK：防并发双取
-    with ST._LOCK:
-        a = _acct(gid, qq)
-        if _check_jail(a):
-            return _show_jail(a)
-        dep = a.int("deposit")
-        if amount <= 0:
-            return "提示：强制取款指令格式为【强制取款 金额】，例如：强制取款 1000"
-        if dep < amount:
-            return f"【银行提示】\r\n存款余额不足，当前银行存款总额为 {ST.fmt_coins(dep)} {ST.coin_name()}。"
-        # 原子：钱包 + 存款同事务，避免半成功
-        if ST.txn_coins_acct(gid, qq, amount, {"deposit": str(dep - amount)}) is None:
-            return "【银行提示】\r\n银行系统繁忙，强制取款操作未完成，请稍后重试。"
-
-        new_dep = dep - amount
-        rate = cfgi("银行配置", "存款利率", 1)
-        cap = cfgi("银行配置", "利息上限", 50000)
-        term_h = max(1, cfgi("银行配置", "存款期限", 1))
-        last_ts = float(a.get("withdraw_timestamp", "0") or "0")
-        left_sec = max(0, int(term_h * 3600 - (time.time() - last_ts)))
-        countdown_str = _format_countdown(left_sec)
-        pot_interest = min(cap, int(new_dep * rate / 100.0))
-
-        if new_dep > 0:
-            settle_info = f"未满期限强取无利息，不影响剩余存款计息（距下次结息还剩 {countdown_str}，满期预计利息 {ST.fmt_coins(pot_interest)} {ST.coin_name()}）"
-        else:
-            settle_info = "存款已全部取出，原结息计时结束"
-
-        lines = [
-            "【强制取款】",
-            f"取出金额：{ST.fmt_coins(amount)} {ST.coin_name()}",
-            f"获得利息：0 {ST.coin_name()}（未到结息期强取）",
-            f"剩余存款：{ST.fmt_coins(new_dep)} {ST.coin_name()}",
-            f"钱包余额：{ST.fmt_coins(ST.coins_get(gid, qq))} {ST.coin_name()}",
-            f"结息说明：{settle_info}",
-        ]
-    return "\r\n".join(lines)
+    """强制取款已与普通取款合并（均保留利息计时），保留函数以保证兼容性。"""
+    return cmd_withdraw(gid, qq, amount)
 
 
 def cmd_transfer(gid, qq, target, amount):
