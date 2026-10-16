@@ -94,10 +94,54 @@ def _u(gid, qq):
 
 
 def _spirits(gid, qq):
-    """返回精灵数据 dict"""
+    """返回精灵数据 dict，健壮兼容 dict、JSON 字符串、Python dict 字符串与平铺账户"""
     a = _u(gid, qq)
     try:
-        return json.loads(a.get("spirits", "{}") or "{}")
+        raw = a.get("spirits")
+        if isinstance(raw, dict):
+            sp = raw
+        elif isinstance(raw, str) and raw.strip():
+            try:
+                sp = json.loads(raw)
+            except Exception:
+                try:
+                    import ast as _ast
+                    val = _ast.literal_eval(raw)
+                    if isinstance(val, dict):
+                        sp = val
+                    else:
+                        sp = {}
+                except Exception:
+                    sp = {}
+        else:
+            sp = {}
+        if not sp.get("list") and isinstance(getattr(a, "kv", None), dict) and a.kv.get("list"):
+            sp = a.kv
+        if isinstance(sp, dict):
+            if isinstance(sp.get("list"), str):
+                try:
+                    sp["list"] = json.loads(sp["list"])
+                except Exception:
+                    try:
+                        import ast as _ast
+                        v = _ast.literal_eval(sp["list"])
+                        if isinstance(v, list):
+                            sp["list"] = v
+                    except Exception:
+                        pass
+            if isinstance(sp.get("bag"), str):
+                try:
+                    sp["bag"] = json.loads(sp["bag"])
+                except Exception:
+                    try:
+                        import ast as _ast
+                        v = _ast.literal_eval(sp["bag"])
+                        if isinstance(v, dict):
+                            sp["bag"] = v
+                    except Exception:
+                        pass
+            return sp
+        return {}
     except Exception:
         return {}
 
@@ -117,9 +161,16 @@ def _wsp(sp, name):
 
 def _power(it):
     """精灵总战力 = 等级*(生命+攻击+防御+特攻+特防)//5"""
-    return int(it.get("level", 1)) * (int(it.get("hp", 0)) + int(it.get("atk", 0))
-                                      + int(it.get("def", 0)) + int(it.get("spa", 0))
-                                      + int(it.get("spd", 0))) // POWER_DIV
+    try:
+        lvl = int(it.get("level", 1) or 1)
+        hp = int(it.get("hp", 0) or 0)
+        atk = int(it.get("atk", 0) or 0)
+        defe = int(it.get("def", 0) or 0)
+        spa = int(it.get("spa", 0) or 0)
+        spd = int(it.get("spd", 0) or 0)
+        return lvl * (hp + atk + defe + spa + spd) // POWER_DIV
+    except Exception:
+        return 0
 
 
 _TRAIT_MAP = {name: (mults, desc) for name, _, mults, desc in SPIRIT_TRAITS}
@@ -292,16 +343,36 @@ def cmd_gift(gid, qq):
             % (got_counts["精灵球"], got_counts["大师球"], got_counts["奇异甜食"]))
 
 
-def cmd_my(gid, qq):
-    sp = _spirits(gid, qq)
+def cmd_my(gid, qq, target=None):
+    t_qq = str(target or qq).strip()
+    is_self = (t_qq == str(qq).strip())
+    sp = _spirits(gid, t_qq)
     # 兼容旧库：仅 list 判定，已有精灵但 adopted 缺失时自动补齐
     if not sp.get("list"):
-        return "亲，您还没有精灵，请先领养精灵吧！"
-    if not sp.get("adopted"):
+        if is_self:
+            return "亲，您还没有精灵，请先领养精灵吧！"
+        else:
+            try:
+                from ..slave.handler import display_name
+                t_name = display_name(gid, t_qq, t_qq)
+            except Exception:
+                t_name = t_qq
+            return f"亲，【{t_name}】还没有精灵哦！"
+    if is_self and not sp.get("adopted"):
         sp["adopted"] = 1
         _save(gid, qq, sp)
-    lines = ["以下是您拥有的精灵："]
+    if is_self:
+        lines = ["以下是您拥有的精灵："]
+    else:
+        try:
+            from ..slave.handler import display_name
+            t_name = display_name(gid, t_qq, t_qq)
+        except Exception:
+            t_name = t_qq
+        lines = [f"以下是【{t_name}】拥有的精灵："]
     for it in sp["list"]:
+        if not isinstance(it, dict):
+            continue
         mark = "【出战】" if it.get("name") == sp.get("active") else ""
         trait = it.get("trait") or "温顺"
         lines.append(f"{mark}{_fmt_name(it)} Lv.{it.get('level',1)} [{trait}] 战力:{_power(it)}")
@@ -1289,10 +1360,35 @@ def handle(gid, qq, raw):
 
 
 def _handle_inner(gid, qq, raw):
-    text = (raw or "").strip()
-    if not text:
+    raw_str = (raw or "").strip()
+    if not raw_str:
         return None
-    m = text
+
+    import re as _re_inner
+    target = None
+    t_parsed, clean = ST.parse_at(raw_str)
+    if t_parsed and str(t_parsed).isdigit():
+        target = str(t_parsed).strip()
+
+    bot_uin = ""
+    try:
+        from games import slave as _slv
+        bot_uin = str(getattr(_slv, "BOT_UIN", "") or "")
+    except Exception:
+        try:
+            from .. import slave as _slv
+            bot_uin = str(getattr(_slv, "BOT_UIN", "") or "")
+        except Exception:
+            pass
+
+    if target in (str(qq), bot_uin):
+        target = None
+
+    # 将 clean 文本中残留的 @数字、[CQ:at,qq=数字] 彻底清除，得到干净指令词
+    clean = _re_inner.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", clean)
+    clean = _re_inner.sub(r"@\s*\S+", "", clean).strip()
+
+    m = clean
     if not m:
         return None
     _wake = ST.wake("精灵系统", "精灵系统")
@@ -1306,12 +1402,23 @@ def _handle_inner(gid, qq, raw):
         return cmd_adopt(gid, qq, m[4:].strip())
     if m == "领取精灵礼包":
         return cmd_gift(gid, qq)
-    if m in ("我的精灵", "精灵列表"):
-        return cmd_my(gid, qq)
+    if m.startswith(("我的精灵", "精灵列表")):
+        _pfx = "我的精灵" if m.startswith("我的精灵") else "精灵列表"
+        rest = m[len(_pfx):].strip()
+        if not target and rest.isdigit() and 4 <= len(rest) <= 12:
+            target = rest
+            rest = ""
+        if not rest:
+            return cmd_my(gid, qq, target=target)
+        return None
     if m == "精灵商城":
         return cmd_shop()
-    if m in ("我的背包", "精灵背包"):
-        return cmd_backpack(gid, qq)
+    if m.startswith(("我的背包", "精灵背包")):
+        _pfx = "我的背包" if m.startswith("我的背包") else "精灵背包"
+        rest = m[len(_pfx):].strip()
+        if not rest:
+            return cmd_backpack(gid, qq)
+        return None
     if m == "精灵地图":
         return cmd_map()
     if m.startswith("查看地图"):
@@ -1356,9 +1463,7 @@ def _handle_inner(gid, qq, raw):
         if not _rarg or _rarg in _SPIRITS() or _raw_r[:1].isspace():
             return cmd_recast(gid, qq, _rarg)
         return None
-    if m.startswith("闪光觉醒"):
-        return cmd_awaken_shiny(gid, qq, m[4:].strip())
-    if m.startswith("精灵变异"):
+    if m.startswith(("闪光觉醒", "精灵变异")):
         return cmd_awaken_shiny(gid, qq, m[4:].strip())
     for _tp in ("旅行精灵", "外出漫游", "精灵旅行", "召回旅行"):
         if m.startswith(_tp):
@@ -1367,10 +1472,11 @@ def _handle_inner(gid, qq, raw):
         if m.startswith(_ep):
             return cmd_expedition(gid, qq, m[len(_ep):].strip())
     if m.startswith("精灵对战"):
-        return cmd_pvp(gid, qq, m[4:].strip())
+        _carg = m[4:].strip() or (target or "")
+        return cmd_pvp(gid, qq, _carg)
     if m.startswith("挑战"):
         _raw_c = m[2:]
-        _carg = _raw_c.strip()
+        _carg = _raw_c.strip() or (target or "")
         if not _carg or _carg.startswith(("@", "[CQ:at")) or _carg[:1].isdigit():
             return cmd_pvp(gid, qq, _carg)
         return None

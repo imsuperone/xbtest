@@ -231,21 +231,32 @@ def _matches_engine(raw, engine, store=None, _mod=None):
         return False
     rt = str(raw).strip()
     rt_n = _norm_cmd(rt)
+    # 兼容前导 @bot、@QQ、[CQ:at,qq=...]，去除前导提及以测试前缀匹配
+    try:
+        import re as _re_eng
+        rt_clean = _re_eng.sub(r"^(?:\[CQ:at,qq=\d+[^\]]*\]|@\s*\S+\s*)+", "", rt).strip()
+        rt_n_clean = _norm_cmd(rt_clean) if rt_clean else rt_n
+    except Exception:
+        rt_clean = rt
+        rt_n_clean = rt_n
+
     sysname = _SYS_ENG.get(engine, engine)
     if store and hasattr(store, "wake"):
         try:
             # 前缀匹配：旧实现唤醒词经刮词索引本就是 startswith，语义保持
             for w in store.wake(sysname + "系统", sysname + "系统"):
-                if w and rt_n.startswith(_norm_cmd(w)):
+                nw = _norm_cmd(w)
+                if nw and (rt_n.startswith(nw) or rt_n_clean.startswith(nw)):
                     return True
         except Exception:
             pass
-    if rt in (sysname + "系统", sysname + "菜单", sysname + "帮助"):
+    if rt in (sysname + "系统", sysname + "菜单", sysname + "帮助") or rt_clean in (sysname + "系统", sysname + "菜单", sysname + "帮助"):
         return True
     try:
         if _mod is not None:
             for c in _proto_cmds(_mod):
-                if c and rt_n.startswith(_norm_cmd(c)):
+                nc = _norm_cmd(c)
+                if nc and (rt_n.startswith(nc) or rt_n_clean.startswith(nc)):
                     return True
     except Exception:
         pass
