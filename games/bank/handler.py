@@ -51,10 +51,14 @@ def handle(gid, qq, raw):
             n = 0
 
     if text.startswith("存款"):
+        if text in ("存款全部", "存款所有"):
+            return cmd_deposit(gid, qq, ST.coins_get(gid, qq))
         if text == "存款" or re.fullmatch(r"存款\s*(-?\d+)\s*(?:金币|元|点)?", text):
             return cmd_deposit(gid, qq, n)
         return "提示：存款指令格式为【存款 金额】，例如：存款 1000"
     if text.startswith("取款"):
+        if text in ("取款全部", "取款所有"):
+            return cmd_withdraw(gid, qq, _acct(gid, qq).int("deposit"))
         if text == "取款" or re.fullmatch(r"取款\s*(-?\d+)\s*(?:金币|元|点)?", text):
             return cmd_withdraw(gid, qq, n)
         return "提示：取款指令格式为【取款 金额】，例如：取款 1000"
