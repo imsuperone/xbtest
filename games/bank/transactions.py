@@ -179,11 +179,6 @@ def cmd_withdraw(gid, qq, amount):
     return "\r\n".join(lines)
 
 
-def cmd_force_withdraw(gid, qq, amount):
-    """强制取款已与普通取款合并（均保留利息计时），保留函数以保证兼容性。"""
-    return cmd_withdraw(gid, qq, amount)
-
-
 def cmd_transfer(gid, qq, target, amount):
     # QQ-only: 兼容 CQ / @QQ / 纯QQ 字符串，不认昵称
     target = _ensure_target_qq(target, gid)
@@ -663,7 +658,6 @@ __all__ = [
     "_settle_interest",
     "cmd_cross_transfer",
     "cmd_deposit",
-    "cmd_force_withdraw",
     "cmd_gamble",
     "cmd_rob_zone",
     "cmd_sell_slave",

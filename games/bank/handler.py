@@ -43,22 +43,21 @@ def handle(gid, qq, raw):
 
     # 若目标已提取但 text 仍包含“转账”前缀，保留以便后续命令判断
     n = 0
-    mms = re.findall(r"(\d+)", text)
+    mms = re.findall(r"(-?\d+)", text)
     if mms:
-        n = int(mms[-1])
+        try:
+            n = int(mms[-1])
+        except Exception:
+            n = 0
 
     if text.startswith("存款"):
-        if text == "存款" or re.fullmatch(r"存款\s*(\d+)", text):
+        if text == "存款" or re.fullmatch(r"存款\s*(-?\d+)\s*(?:金币|元|点)?", text):
             return cmd_deposit(gid, qq, n)
-        return None
-    if text.startswith("强制取款"):
-        if text == "强制取款" or re.fullmatch(r"强制取款\s*(\d+)", text):
-            return cmd_withdraw(gid, qq, n)
-        return None
+        return "提示：存款指令格式为【存款 金额】，例如：存款 1000"
     if text.startswith("取款"):
-        if text == "取款" or re.fullmatch(r"取款\s*(\d+)", text):
+        if text == "取款" or re.fullmatch(r"取款\s*(-?\d+)\s*(?:金币|元|点)?", text):
             return cmd_withdraw(gid, qq, n)
-        return None
+        return "提示：取款指令格式为【取款 金额】，例如：取款 1000"
     if text.startswith("跨群转账"):
         _raw_ct = text[4:]
         if not _raw_ct or _raw_ct[:1].isspace() or _raw_ct[:1].isdigit():
@@ -68,15 +67,9 @@ def handle(gid, qq, raw):
             return cmd_cross_transfer(gid, qq, nums[0], int(nums[-1]))
         return None
     if text.startswith("转账"):
-        _rest = text[2:].strip()
         if not target:
-            if not _rest or _rest.startswith("@"):
-                return "请指定转账目标，格式：【转账 @QQ 金额】"
-            return None
-        _rest_clean = re.sub(r"@\S+", "", _rest).strip()
-        if not _rest_clean or re.fullmatch(r"\*?\s*\d+", _rest_clean):
-            return cmd_transfer(gid, qq, target, n)
-        return None
+            return "提示：转账格式为【转账 @目标 金额】，例如：转账 @某某 100"
+        return cmd_transfer(gid, qq, target, n)
 
     if text.startswith("赌博"):
         if text == "赌博" or re.fullmatch(r"赌博\s*(\d+)", text):

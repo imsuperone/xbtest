@@ -186,10 +186,10 @@ def cmd_bomb(gid, qq, arg):
         return "请指定扔炸弹目标，格式：扔炸弹 @QQ"
     target = None
 
-    # 1. CQ 码提取（优先从文本任意位置提取 CQ:at 中的 qq 号）
-    m_cq = _re2.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", arg)
+    # 1. CQ 码 / [At:QQ] 提取（优先从文本任意位置提取中的 qq 号）
+    m_cq = _re2.search(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])", arg)
     if m_cq:
-        target = m_cq.group(1)
+        target = m_cq.group(1) or m_cq.group(2)
 
     # 2. @QQ数字 / 纯QQ数字提取（5-12位数字）
     if not target:

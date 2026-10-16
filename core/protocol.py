@@ -16,7 +16,7 @@ def is_mentioned(store: Any, raw: str) -> bool:
             return hit is not None
     except Exception:
         pass
-    return "[CQ:at" in str(raw or "")
+    return "[CQ:at" in str(raw or "") or "[At:" in str(raw or "")
 
 
 def maintenance_active(store: Any, gid: str) -> bool:

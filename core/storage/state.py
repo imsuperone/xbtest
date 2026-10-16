@@ -11,7 +11,7 @@ except ImportError:
     except Exception:
         def cn_to_en(k): return k
         def translate_dict(d): return d
-_AT_CQ = re.compile(r"\[CQ:at,qq=(\d+)[^\]]*\]")
+_AT_CQ = re.compile(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])")
 _AT_QQ = re.compile(r"@\s*(\d{5,12})")
 _AT_NAME = re.compile(r"@\s*([^@\s，,]+)")
 try:

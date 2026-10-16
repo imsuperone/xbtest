@@ -175,12 +175,12 @@ def _find_qq_by_name(gid, name):
 
 
 def _extract_transfer_target(raw, gid=None):
-    """解析 @目标: 优先认 CQ码 -> @QQ数字，若未匹配尝试群内 @昵称 反查。返回 (target_qq_or_None, remaining_text)。"""
+    """解析 @目标: 优先认 CQ码 / [At:QQ] -> @QQ数字，若未匹配尝试群内 @昵称 反查。返回 (target_qq_or_None, remaining_text)。"""
     raw = str(raw or "")
     target = None
-    m = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", raw)
+    m = re.search(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])", raw)
     if m:
-        target = m.group(1)
+        target = m.group(1) or m.group(2)
     else:
         m = re.search(r"@\s*(\d{5,12})", raw)
         if m:
@@ -194,8 +194,8 @@ def _extract_transfer_target(raw, gid=None):
                     target = t_cand
 
     if target:
-        # 清除 CQ 码与残留的 @昵称/@QQ 标记，返回纯净的正文指令与金额
-        rem = re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", raw)
+        # 清除 CQ 码 / [At:QQ] 与残留的 @昵称/@QQ 标记，返回纯净的正文指令与金额
+        rem = re.sub(r"(?:\[CQ:at,qq=\d+[^\]]*\]|\[At:\s*\d+\])", "", raw)
         rem = re.sub(r"@\s*\S+", "", rem).strip()
         rem = re.sub(r"\s+", " ", rem)
         return target, rem.strip()
@@ -203,19 +203,19 @@ def _extract_transfer_target(raw, gid=None):
 
 
 def _ensure_target_qq(target, gid=None):
-    """cmd_transfer 内部兜底: QQ-only，只认纯QQ / CQ码 / @QQ数字 / 独立数字串，不认昵称"""
+    """cmd_transfer 内部兜底: QQ-only，只认纯QQ / CQ码 / [At:QQ] / @QQ数字 / 独立数字串，不认昵称"""
     if target is None:
         return None
     s = str(target).strip()
     if re.fullmatch(r"\d{5,12}", s):
         return s
     m = (
-        re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", s)
+        re.search(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])", s)
         or re.search(r"@\s*(\d{5,12})", s)
         or re.search(r"\b(\d{5,12})\b", s)
     )
     if m:
-        return m.group(1)
+        return m.group(1) or m.group(2)
     if gid:
         cand = _find_qq_by_name(gid, s.lstrip("@").strip())
         if cand:

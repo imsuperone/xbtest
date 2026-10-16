@@ -57,7 +57,8 @@ def parse_at(text):
     text = str(text or "")
     m = _S._AT_CQ.search(text)
     if m:
-        return m.group(1), _S._AT_CQ.sub("", text).strip()
+        target_qq = m.group(1) or m.group(2)
+        return target_qq, _S._AT_CQ.sub("", text).strip()
     m = _S._AT_QQ.search(text)
     if m:
         return m.group(1), _S._AT_QQ.sub("", text, count=1).strip()
@@ -75,7 +76,7 @@ def parse_at(text):
     return None, text.strip()
 
 def is_qq_mention(t, text):
-    """QQ-only 目标校验单源：t 须以 CQ 码 / @数字 / 独立数字串形式出现在原文中。
+    """QQ-only 目标校验单源：t 须以 CQ 码 / [At:QQ] / @数字 / 独立数字串形式出现在原文中。
 
     @昵称经 parse_at 命中也不认（返 False），调用方据此丢弃昵称目标。
     独立数字与金额数字撞车属病态输入（目标 QQ 恰等于金额数），不处理。"""
@@ -84,7 +85,7 @@ def is_qq_mention(t, text):
         text = str(text or "")
         if not t.isdigit():
             return False
-        if ("[CQ:at,qq=%s" % t) in text:
+        if ("[CQ:at,qq=%s" % t) in text or ("[At:%s" % t) in text or ("[At: %s" % t) in text:
             return True
         if _re2.search(r"@\s*%s(?!\d)" % _re2.escape(t), text):
             return True

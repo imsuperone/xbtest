@@ -1384,8 +1384,8 @@ def _handle_inner(gid, qq, raw):
     if target in (str(qq), bot_uin):
         target = None
 
-    # 将 clean 文本中残留的 @数字、[CQ:at,qq=数字] 彻底清除，得到干净指令词
-    clean = _re_inner.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", clean)
+    # 将 clean 文本中残留的 @数字、[CQ:at,qq=数字]、[At:数字] 彻底清除，得到干净指令词
+    clean = _re_inner.sub(r"(?:\[CQ:at,qq=\d+[^\]]*\]|\[At:\s*\d+\])", "", clean)
     clean = _re_inner.sub(r"@\s*\S+", "", clean).strip()
 
     m = clean
