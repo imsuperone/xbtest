@@ -180,34 +180,45 @@ def cmd_bomb(gid, qq, arg):
         pass
     mute_lo = cfgi("娱乐配置", "扔炸弹_禁言下限", 1)
     mute_hi = cfgi("娱乐配置", "扔炸弹_禁言上限", 5)
-    # 解析目标（QQ-only：CQ码 / @QQ / 纯数字，不认昵称）
+    # 解析目标：支持 CQ 码、@QQ号、纯数字、@群昵称
     arg = (arg or "").strip()
     if not arg:
         return "请指定扔炸弹目标，格式：扔炸弹 @QQ"
     target = None
-    rest = arg
-    m = _re2.fullmatch(r"\[CQ:at,qq=(\d+)[^\]]*\]", arg)
-    if m:
-        target = m.group(1)
-        rest = ""
-    else:
-        t, r = ST.parse_at(arg)
+
+    # 1. CQ 码提取（优先从文本任意位置提取 CQ:at 中的 qq 号）
+    m_cq = _re2.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", arg)
+    if m_cq:
+        target = m_cq.group(1)
+
+    # 2. @QQ数字 / 纯QQ数字提取（5-12位数字）
+    if not target:
+        m_num = _re2.search(r"(?:^|@|\s)(\d{5,12})(?:\s|$)", arg)
+        if m_num:
+            target = m_num.group(1)
+
+    # 3. parse_at 别名/群昵称反查（兼容 @群昵称）
+    if not target:
+        t, _ = ST.parse_at(arg)
+        if t and str(t).isdigit():
+            target = str(t)
+
+    # 4. 尝试从群内昵称/奴隶系统反查
+    if not target and arg.startswith("@"):
+        cand_name = arg.lstrip("@").strip()
         try:
-            _ok = ST.is_qq_mention(t, arg) if hasattr(ST, "is_qq_mention") else True
+            from ..slave.handler import _find_slave_qq_by_name
+            t_cand = _find_slave_qq_by_name(gid, cand_name, ST)
+            if t_cand:
+                target = str(t_cand)
         except Exception:
-            _ok = True
-        if t and _ok:
-            target = t
-            rest = (r or "").strip()
-        if not target:
-            mm = _re2.fullmatch(r"@?\s*(\d{5,12})", arg)
-            if mm:
-                target = mm.group(1)
-                rest = ""
-    if not target or rest:
-        if arg.startswith(("@", "[CQ:at")):
-            return "请指定扔炸弹目标，格式：扔炸弹 @QQ"
-        return None
+            pass
+
+    if not target:
+        return "请指定扔炸弹目标，格式：扔炸弹 @QQ"
+
+    if str(target) == str(qq):
+        return "亲，不能对自己扔炸弹哦！"
     if ST.coins_get(gid, qq) < cost:
         return "笑~你没有那么多%s（扔炸弹需%d）" % (ST.coin_name(), cost)
     if a.int("stamina") < tili:

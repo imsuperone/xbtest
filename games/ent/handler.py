@@ -267,18 +267,27 @@ def handle(gid, qq, raw, is_admin=False):
         if chk:
             return chk
         return _start_24(gid, qq)
-    if text.startswith("猜拳"):
-        if text == "猜拳":
-            return "请输入：猜拳 石头/剪刀/布"
-        m = re.fullmatch(r"猜拳\s*(石头|剪刀|布)", text)
-        if not m:
-            return None
+    if text in ("猜拳", "出拳"):
+        return "请输入：猜拳 石头/剪刀/布"
+    m_mora = re.fullmatch(r"(?:猜拳\s*|我?出)(石头|剪刀|剪子|布)", text)
+    if m_mora:
+        # 防刷屏与宏脚本：3 秒独立冷却
+        cd_key = f"mora_cd_{gid}_{qq}"
+        last_time = int(ST.recall_get(cd_key, "0") or 0)
+        now_ts = int(time.time())
+        if now_ts - last_time < 3:
+            return f"出拳太快啦！歇 {3 - (now_ts - last_time)} 秒再来猜拳吧～"
+        ST.recall_set(cd_key, str(now_ts))
+
         err = _ent_cost(gid, qq, "猜拳")
         if err:
             return err
-        choice = {"石头": 0, "剪刀": 1, "布": 2}[m.group(1)]
+        user_move = m_mora.group(1)
+        if user_move == "剪子":
+            user_move = "剪刀"
+        choice = {"石头": 0, "剪刀": 1, "布": 2}[user_move]
         names = ["石头", "剪刀", "布"]
-        # 胜率走配置 猜拳成功概率%（需求19 默认50）+ 每日打卡幸运加成
+        # 胜率走配置 猜拳成功概率%（默认50）+ 每日打卡幸运加成
         win_prob = cfgi("娱乐配置", "猜拳成功概率", 50)
         try:
             from ..sign import eff_prob as _luck_eff
@@ -287,10 +296,11 @@ def handle(gid, qq, raw, is_admin=False):
             pass
         r = random.random() * 100
         if r < win_prob:
-            ai = (choice + 2) % 3  # 必输给玩家
+            # 玩家胜利：石头(0)赢剪刀(1), 剪刀(1)赢布(2), 布(2)赢石头(0) => AI 须出 (choice + 1) % 3
+            ai = (choice + 1) % 3
             res = f"我出{names[ai]}！你赢了！"
-            coin = cfgi("娱乐配置", "猜拳奖励金币", 58)
-            meili = cfgi("娱乐配置", "猜拳奖励魅力", 1)
+            coin = cfgi("娱乐配置", "猜拳奖励金币", 38)
+            meili = cfgi("娱乐配置", "猜拳奖励魅力", 0)
             if coin and ST.coins_add(gid, qq, coin) is None:
                 return "数据库繁忙，猜拳奖励未到账，请稍后重试。"
             if meili and ST.acct_add(gid, qq, "charm", meili) is None:
@@ -299,10 +309,12 @@ def handle(gid, qq, raw, is_admin=False):
                 res += f" 奖励{coin}{ST.coin_name()}" + (f" 魅力+{meili}" if meili else "")
             return res
         elif r < win_prob + MORA_DRAW_BAND:
+            # 平局：出拳相同
             ai = choice
             return f"我出{names[ai]}！平局！"
         else:
-            ai = (choice + 1) % 3
+            # AI 胜利：剪刀(1)输石头(0), 布(2)输剪刀(1), 石头(0)输布(2) => AI 须出 (choice + 2) % 3
+            ai = (choice + 2) % 3
             return f"我出{names[ai]}！我赢了~"
     # 会话作答
     r = _play(gid, qq, text)
