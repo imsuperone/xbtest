@@ -593,6 +593,23 @@ class XbBot(Star):
                 ST.recall_set("mig_jielong_seed_v1", "1")
         except Exception:
             pass
+        # 精灵冒险历练奖励历史旧档纠偏：将历史 >100 的膨胀数值纠偏至平衡值（20-45经验，10-30金币）
+        try:
+            if str(ST.recall_get("mig_spirit_adv_rebalance_v2", "") or "") != "1":
+                _spcfg = ST._CONFIG.setdefault("精灵配置", {})
+                if "精灵配置.挑战奖励_经验上限" not in _customs:
+                    if int(float(_spcfg.get("挑战奖励_经验上限", "45") or 0)) > 100:
+                        _spcfg["挑战奖励_经验下限"] = "20"
+                        _spcfg["挑战奖励_经验上限"] = "45"
+                        _need_save = True
+                if "精灵配置.挑战奖励_金钱上限" not in _customs:
+                    if int(float(_spcfg.get("挑战奖励_金钱上限", "30") or 0)) > 100:
+                        _spcfg["挑战奖励_金钱下限"] = "10"
+                        _spcfg["挑战奖励_金钱上限"] = "30"
+                        _need_save = True
+                ST.recall_set("mig_spirit_adv_rebalance_v2", "1")
+        except Exception:
+            pass
         self._db_path = db_path
         old_db = str(cfg.get("网络", {}).get("merge_from_db", "") or "")
         if old_db:

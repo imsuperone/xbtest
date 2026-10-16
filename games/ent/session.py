@@ -322,25 +322,35 @@ def _join_game(gid, qq, kind, label):
 
 
 
-def _quit_game(gid, qq, kind, label):
+def _quit_game(gid, qq, kind, label, is_admin=False):
     owner = ST.recall_get(f"{kind}_owner_{gid}")
     if not owner:
+        _clear_active_game(gid)
         return f"当前没有进行中的{label}对局！"
     ans = ST.recall_get(f"{kind}_{gid}_{owner}")
     players = _get_players(gid, f"{kind}_players_")
     ans_part = f"\r\n本题正确答案为：【{ans}】" if ans else ""
 
-    if str(owner) == str(qq):
-        # 开局者退出=结束整局，公布答案
+    if str(owner) == str(qq) or is_admin:
+        # 开局者或管理员退出=结束整局，公布答案
         ST.recall_set(f"{kind}_owner_{gid}", "")
         ST.recall_set(f"{kind}_players_{gid}", "")
         for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
             ST.recall_set(k, "")
-        return f"你已退出{label}，对局结束！{ans_part}"
+        _clear_active_game(gid)
+        prefix = f"【{label}】对局已由管理员结束！" if is_admin and str(owner) != str(qq) else f"你已退出{label}，对局结束！"
+        return f"{prefix}{ans_part}"
 
     if str(qq) in players:
         players.remove(str(qq))
         ST.recall_set(f"{kind}_players_{gid}", ",".join(players))
+        if not players:
+            # 所有人已全部退出，结束对局并公布答案
+            ST.recall_set(f"{kind}_owner_{gid}", "")
+            for k in (f"{kind}_{gid}_{owner}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
+                ST.recall_set(k, "")
+            _clear_active_game(gid)
+            return f"你已退出{label}，所有参与者已全部退出，对局结束！{ans_part}"
         return f"你已退出{label}！"
 
     # 非加入者发送退出：若空闲超过30秒或无其他加入者，允许结束并公布答案
@@ -351,11 +361,12 @@ def _quit_game(gid, qq, kind, label):
     except Exception:
         idle = 0
 
-    if idle > 30 or not players:
+    if idle > 30 or not players or is_admin:
         ST.recall_set(f"{kind}_owner_{gid}", "")
         ST.recall_set(f"{kind}_players_{gid}", "")
         for k in (f"{kind}_{gid}_{owner}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
             ST.recall_set(k, "")
+        _clear_active_game(gid)
         return f"【{label}】对局已结束！{ans_part}"
 
     return f"你不在当前{label}对局中！（开局者发送【退出{label}】可结束对局并公布答案）"

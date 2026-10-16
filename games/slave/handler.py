@@ -60,8 +60,24 @@ def handle(gid, qq, raw):
 # Fix: table-driven exact (re-added)
 # 已退役查询（v0.7.29 删除）：查询更新/查询版本/查询维护 不再越权转发超管；
 # 查询坐骑/精灵/帮派/冒险/查询地图/查询菜单 仅静默放行，避免奴隶查询截胡其他系统。
-# 注意：变量名刻意避开 _need/_ADMIN_CMDS/_ROUTE_EXACT，调用处用变量引用，
+# 注意：变量名刻意避开 _need/_ADMIN_CMDS，调用处用变量引用，
 # 使指令采集器不收录（WebUI 指令页不再出现），行为保持全静默。
+_QUERY_SILENT = ("查询更新", "查询版本", "查询维护", "查询坐骑", "查询精灵", "查询帮派", "查询冒险", "查询地图", "查询菜单")
+_ROUTE_EXACT = {
+    "我要自由": lambda gid, qq, target, st, text: cmd_freedom(gid, qq, st),
+    "武器菜单": lambda gid, qq, target, st, text: cmd_weapon_menu(gid, qq, st),
+    "宝物菜单": lambda gid, qq, target, st, text: cmd_treasure_menu(gid, qq, st),
+    "身价排行榜": lambda gid, qq, target, st, text: cmd_rank_price(gid, st),
+    "身价排行": lambda gid, qq, target, st, text: cmd_rank_price(gid, st),
+    "签到排行榜": lambda gid, qq, target, st, text: cmd_rank_sign(gid, st),
+    "签到排行": lambda gid, qq, target, st, text: cmd_rank_sign(gid, st),
+    "排行榜": lambda gid, qq, target, st, text: cmd_rank(gid, st),
+    "奴隶打工": lambda gid, qq, target, st, text: cmd_work_dispatch(gid, qq, st),
+    "我要打工": lambda gid, qq, target, st, text: cmd_work_dispatch(gid, qq, st),
+    "奴隶收工": lambda gid, qq, target, st, text: cmd_work_collect(gid, qq, st),
+    "搬砖": lambda gid, qq, target, st, text: cmd_self_work(gid, qq, st),
+}
+
 
 def _find_slave_qq_by_name(gid, name, st=None):
     name = str(name or "").strip()
@@ -372,25 +388,6 @@ def clear_user_slave(gid, qq):
                 if hasattr(st, "mark_dirty"):
                     st.mark_dirty(sec)
         save(gid)
-
-
-
-# 使指令采集器不收录（WebUI 指令页不再出现），行为保持全静默。
-_QUERY_SILENT = ("查询更新", "查询版本", "查询维护", "查询坐骑", "查询精灵", "查询帮派", "查询冒险", "查询地图", "查询菜单")
-_ROUTE_EXACT = {
-    "我要自由": lambda gid, qq, target, st, text: cmd_freedom(gid, qq, st),
-    "武器菜单": lambda gid, qq, target, st, text: cmd_weapon_menu(gid, qq, st),
-    "宝物菜单": lambda gid, qq, target, st, text: cmd_treasure_menu(gid, qq, st),
-    "身价排行榜": lambda gid, qq, target, st, text: cmd_rank_price(gid, st),
-    "身价排行": lambda gid, qq, target, st, text: cmd_rank_price(gid, st),
-    "签到排行榜": lambda gid, qq, target, st, text: cmd_rank_sign(gid, st),
-    "签到排行": lambda gid, qq, target, st, text: cmd_rank_sign(gid, st),
-    "排行榜": lambda gid, qq, target, st, text: cmd_rank(gid, st),
-    "奴隶打工": lambda gid, qq, target, st, text: cmd_work_dispatch(gid, qq, st),
-    "我要打工": lambda gid, qq, target, st, text: cmd_work_dispatch(gid, qq, st),
-    "奴隶收工": lambda gid, qq, target, st, text: cmd_work_collect(gid, qq, st),
-    "搬砖": lambda gid, qq, target, st, text: cmd_self_work(gid, qq, st),
-}
 
 
 __all__ = ["clear_user_slave", "handle", "init_slave", "COMMANDS"]

@@ -62,15 +62,15 @@ def _target_name(gid, t):
         g = ST.group(gid)
         if g and t_str in g.users():
             n = g[t_str].get("name")
-            if n:
-                return n
+            if n and str(n).strip() and str(n).strip() != "0":
+                return str(n).strip()
     except Exception:
         pass
     try:
         a = ST.acct(gid, t_str)
-        n = a.get("name")
-        if n:
-            return n
+        n = a.get("name", "")
+        if n and str(n).strip() and str(n).strip() != "0":
+            return str(n).strip()
     except Exception:
         pass
     return t_str
@@ -165,13 +165,13 @@ def _parse_target_amount(arg):
                 t, rest = t_tmp, rest_tmp
     except Exception:
         pass
-    # 2) 直接 CQ 兜底
+    # 2) 直接 CQ / [At:QQ] 兜底
     if not t:
-        m = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", arg)
+        m = re.search(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])", arg)
         if m:
-            t = m.group(1)
-            # rest 为去除 CQ 后的剩余
-            rest = re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", arg, count=1).strip()
+            t = m.group(1) or m.group(2)
+            # rest 为去除 @ 标记后的剩余
+            rest = re.sub(r"(?:\[CQ:at,qq=\d+[^\]]*\]|\[At:\s*\d+\])", "", arg, count=1).strip()
     # 3) @QQ 兜底
     if not t:
         m = re.search(r"@\s*(\d{5,12})", arg)
@@ -202,11 +202,11 @@ def _parse_target_amount(arg):
 
 
 def _looks_like_target_arg(arg):
-    """判断参数是否显式带有 @、CQ 码或纯数字（用于区分输错参数的指令与日常闲聊）"""
+    """判断参数是否显式带有 @、CQ 码、[At:QQ] 或纯数字（用于区分输错参数的指令与日常闲聊）"""
     s = (arg or "").strip()
     if not s:
         return True
-    if s.startswith(("@", "[CQ:at")):
+    if s.startswith(("@", "[CQ:at", "[At:")):
         return True
     if re.match(r"^\d+$", s):
         return True
@@ -291,10 +291,10 @@ def cmd_clear(gid, qq, arg):
     except Exception:
         pass
     if not t:
-        m_cq = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", rest)
+        m_cq = re.search(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])", rest)
         if m_cq:
-            t = m_cq.group(1)
-            rem = re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", rest, count=1).strip()
+            t = m_cq.group(1) or m_cq.group(2)
+            rem = re.sub(r"(?:\[CQ:at,qq=\d+[^\]]*\]|\[At:\s*\d+\])", "", rest, count=1).strip()
     if not t:
         m_qq = re.search(r"@?\s*(\d{5,12})", rest)
         if m_qq:
@@ -302,7 +302,7 @@ def cmd_clear(gid, qq, arg):
             rem = rest.replace(m_qq.group(0), "", 1).strip()
     rem = re.sub(r"@\S+", "", rem).strip()
     if not t or rem:
-        if not rest or rest.startswith(("@", "[CQ:at")):
+        if not rest or rest.startswith(("@", "[CQ:at", "[At:")):
             return "格式：清空{财富/体力/魅力/账户/精灵/用户} @QQ"
         return None
     if kind == "财富":
@@ -380,10 +380,10 @@ def cmd_mute(gid, qq, arg):
         return "格式：禁言 @QQ 分钟"
     target = None
     rest = arg
-    m_cq = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", arg)
+    m_cq = re.search(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])", arg)
     if m_cq:
-        target = m_cq.group(1)
-        rest = re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", arg, count=1).strip()
+        target = m_cq.group(1) or m_cq.group(2)
+        rest = re.sub(r"(?:\[CQ:at,qq=\d+[^\]]*\]|\[At:\s*\d+\])", "", arg, count=1).strip()
     else:
         try:
             t, r = ST.parse_at(arg)
@@ -427,10 +427,10 @@ def cmd_kick(gid, qq, arg):
         return "格式：踢人 @QQ"
     target = None
     rest = ""
-    m_cq = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", arg)
+    m_cq = re.search(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])", arg)
     if m_cq:
-        target = m_cq.group(1)
-        rest = re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", arg, count=1).strip()
+        target = m_cq.group(1) or m_cq.group(2)
+        rest = re.sub(r"(?:\[CQ:at,qq=\d+[^\]]*\]|\[At:\s*\d+\])", "", arg, count=1).strip()
     else:
         try:
             t, r = ST.parse_at(arg)

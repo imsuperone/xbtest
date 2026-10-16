@@ -221,24 +221,22 @@ def handle(gid, qq, raw, is_admin=False):
     if text == "加入二四点":
         return _join_game(gid, qq, "game24", "二四点")
     if text == "退出猜数":
-        res = _quit_game(gid, qq, "guessnum", "猜数")
-        # _quit_game 已清 owner 相关，若是开局者退出则清锁
-        owner = ST.recall_get(f"guessnum_owner_{gid}")
-        if not owner:
+        res = _quit_game(gid, qq, "guessnum", "猜数", is_admin=is_admin)
+        if not ST.recall_get(f"guessnum_owner_{gid}"):
             _clear_active_game(gid)
         return res
     if text in ("退出答题", "结束答题"):
-        res = _quit_game(gid, qq, "quiz", "答题")
+        res = _quit_game(gid, qq, "quiz", "答题", is_admin=is_admin)
         if not ST.recall_get(f"quiz_owner_{gid}"):
             _clear_active_game(gid)
         return res
     if text in ("退出字谜", "退出猜字谜", "结束字谜", "结束猜字谜"):
-        res = _quit_game(gid, qq, "miri", "字谜")
+        res = _quit_game(gid, qq, "miri", "字谜", is_admin=is_admin)
         if not ST.recall_get(f"miri_owner_{gid}"):
             _clear_active_game(gid)
         return res
     if text in ("退出急转弯", "结束急转弯"):
-        res = _quit_game(gid, qq, "trick", "急转弯")
+        res = _quit_game(gid, qq, "trick", "急转弯", is_admin=is_admin)
         if not ST.recall_get(f"trick_owner_{gid}"):
             _clear_active_game(gid)
         return res

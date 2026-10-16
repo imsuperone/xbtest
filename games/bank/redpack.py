@@ -124,6 +124,8 @@ def cmd_recv_red(gid, qq, pwd):
                 lo = 1
             if hi > total:
                 hi = total
+            if lo > hi:
+                lo, hi = hi, lo
             got = random.randint(lo, hi)
             if got > total:
                 got = total
