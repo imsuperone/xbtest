@@ -580,10 +580,10 @@ def cmd_adventure(gid, qq, place):
     wl = int(md.get("lv", 1)) + random.randint(lb, ub)
     is_shiny = random.randint(1, 100) <= _shiny_rate()
     sp["wild"] = {"name": wild, "level": wl, "shiny": 1 if is_shiny else 0}
-    # 冒险历练奖励(挑战奖励配置): 经验 + 金币
-    exp_lo = _cfgi("挑战奖励_经验下限", 200); exp_hi = _cfgi("挑战奖励_经验上限", 300)
-    gold_lo = max(0, _cfgi("挑战奖励_金钱下限", 0))
-    gold_hi = max(gold_lo, _cfgi("挑战奖励_金钱上限", 250))
+    # 冒险历练奖励(挑战奖励配置): 经验 + 金币（调低至符合零门槛休闲玩法期望）
+    exp_lo = _cfgi("挑战奖励_经验下限", 20); exp_hi = _cfgi("挑战奖励_经验上限", 45)
+    gold_lo = max(0, _cfgi("挑战奖励_金钱下限", 10))
+    gold_hi = max(gold_lo, _cfgi("挑战奖励_金钱上限", 30))
     exp = random.randint(max(1, exp_lo), max(exp_lo, exp_hi))
     gold = random.randint(gold_lo, gold_hi)
     evo_hint = ""

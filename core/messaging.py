@@ -391,12 +391,16 @@ async def _do_platform(marker, event, slave_mod=None):
                     await _call("set_group_mute", group_id=int(gid), user_id=int(target), duration=dur)
                 else:
                     raise
-            base = f"已将成员 <{target}> 禁言 {dur // 60} 分钟。"
-            return (extra_text + "\r\n" + base) if extra_text else base
+            if extra_text:
+                return extra_text
+            t_name = resolve_display_name(target, gid=gid, slave_mod=sm)
+            return f"已将成员【{t_name}】禁言 {dur // 60} 分钟。"
         if act == "kick":
             await _call("set_group_kick", group_id=int(gid), user_id=int(target))
-            base = f"已将成员 <{target}> 移出本群。"
-            return (extra_text + "\r\n" + base) if extra_text else base
+            if extra_text:
+                return extra_text
+            t_name = resolve_display_name(target, gid=gid, slave_mod=sm)
+            return f"已将成员【{t_name}】移出本群。"
     except Exception as e:
         if extra_text:
             return extra_text + f"\r\n平台动作执行失败：{e}"

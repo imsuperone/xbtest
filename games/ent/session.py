@@ -232,13 +232,30 @@ def cmd_bomb(gid, qq, arg):
         updates = {"stamina": str(max(0, a.int("stamina") - tili))}
         if ST.txn_coins_acct(gid, qq, -cost, updates, require_funds=True) is None:
             return "数据库繁忙，扔炸弹扣费未成功，请稍后重试。"
+    t_name = str(target)
+    try:
+        from ..bank.common import _disp_name
+        tn = _disp_name(target, gid)
+        if tn and tn != target:
+            t_name = tn
+    except Exception:
+        pass
+    if t_name == str(target):
+        try:
+            from ...core.messaging import resolve_display_name
+            tn = resolve_display_name(target, gid=gid)
+            if tn and tn != target:
+                t_name = tn
+        except Exception:
+            pass
+
     n = random.randint(nmin, nmax)
     if random.randint(1, 100) <= prob:
         mute = random.randint(mute_lo, mute_hi)
         # 已接入 OneBot 禁言
-        return f"__XB_PLATFORM__|mute|{target}|{mute*60}__TEXT__💣 轰！你扔出{n}颗炸弹命中目标！\r\n目标被禁言{mute}分钟！花费{cost}{ST.coin_name()}、{tili}体力"
+        return f"__XB_PLATFORM__|mute|{target}|{mute*60}__TEXT__💣 轰！你扔出{n}颗炸弹命中【{t_name}】！\r\n【{t_name}】被禁言{mute}分钟！花费{cost}{ST.coin_name()}、{tili}体力"
     ST.acct_add(gid, qq, "charm", -meli)
-    return (f"💣 你扔出{n}颗炸弹，可惜被躲开了！\r\n"
+    return (f"💣 你向【{t_name}】扔出{n}颗炸弹，可惜被躲开了！\r\n"
             f"魅力-{meli}，花费{cost}{ST.coin_name()}、{tili}体力")
 
 
@@ -270,7 +287,7 @@ def _start_24(gid, qq):
 
 
 def _get_players(gid, key_prefix):
-    v = ST.recall_get(key_prefix + gid, "")
+    v = ST.recall_get(f"{key_prefix}{gid}", "")
     return [x for x in str(v).split(",") if x]
 
 
@@ -309,18 +326,39 @@ def _quit_game(gid, qq, kind, label):
     owner = ST.recall_get(f"{kind}_owner_{gid}")
     if not owner:
         return f"当前没有进行中的{label}对局！"
+    ans = ST.recall_get(f"{kind}_{gid}_{owner}")
     players = _get_players(gid, f"{kind}_players_")
+    ans_part = f"\r\n本题正确答案为：【{ans}】" if ans else ""
+
     if str(owner) == str(qq):
-        # 开局者退出=结束整局
+        # 开局者退出=结束整局，公布答案
         ST.recall_set(f"{kind}_owner_{gid}", "")
         ST.recall_set(f"{kind}_players_{gid}", "")
-        for k in (f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
+        for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
             ST.recall_set(k, "")
-        return f"你已退出{label}，对局结束！"
+        return f"你已退出{label}，对局结束！{ans_part}"
+
     if str(qq) in players:
         players.remove(str(qq))
         ST.recall_set(f"{kind}_players_{gid}", ",".join(players))
-    return f"你已退出{label}！"
+        return f"你已退出{label}！"
+
+    # 非加入者发送退出：若空闲超过30秒或无其他加入者，允许结束并公布答案
+    try:
+        start_ts = int(ST.recall_get(f"{kind}_start_{gid}", "0") or 0)
+        last_ts = int(ST.recall_get(f"{kind}_last_time_{gid}", "0") or 0)
+        idle = int(time.time()) - max(start_ts, last_ts)
+    except Exception:
+        idle = 0
+
+    if idle > 30 or not players:
+        ST.recall_set(f"{kind}_owner_{gid}", "")
+        ST.recall_set(f"{kind}_players_{gid}", "")
+        for k in (f"{kind}_{gid}_{owner}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
+            ST.recall_set(k, "")
+        return f"【{label}】对局已结束！{ans_part}"
+
+    return f"你不在当前{label}对局中！（开局者发送【退出{label}】可结束对局并公布答案）"
 
 
 

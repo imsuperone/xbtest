@@ -227,17 +227,17 @@ def handle(gid, qq, raw, is_admin=False):
         if not owner:
             _clear_active_game(gid)
         return res
-    if text == "退出答题":
+    if text in ("退出答题", "结束答题"):
         res = _quit_game(gid, qq, "quiz", "答题")
         if not ST.recall_get(f"quiz_owner_{gid}"):
             _clear_active_game(gid)
         return res
-    if text == "退出字谜" or text == "退出猜字谜":
+    if text in ("退出字谜", "退出猜字谜", "结束字谜", "结束猜字谜"):
         res = _quit_game(gid, qq, "miri", "字谜")
         if not ST.recall_get(f"miri_owner_{gid}"):
             _clear_active_game(gid)
         return res
-    if text == "退出急转弯":
+    if text in ("退出急转弯", "结束急转弯"):
         res = _quit_game(gid, qq, "trick", "急转弯")
         if not ST.recall_get(f"trick_owner_{gid}"):
             _clear_active_game(gid)

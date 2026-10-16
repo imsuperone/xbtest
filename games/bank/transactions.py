@@ -12,30 +12,51 @@ from .common import *  # noqa
 from .jail import *  # noqa
 
 
+def _format_countdown(seconds):
+    if seconds <= 0:
+        return "即将结算"
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
+    if h > 0:
+        if s > 0:
+            return f"{h}小时{m}分{s}秒"
+        elif m > 0:
+            return f"{h}小时{m}分"
+        return f"{h}小时"
+    if m > 0:
+        if s > 0:
+            return f"{m}分{s}秒"
+        return f"{m}分"
+    return f"{s}秒"
+
+
 def cmd_deposit(gid, qq, amount):
     if amount <= 0:
-        return "亲，您的格式有误，存款格式为：【存款 金额】！"
+        return "提示：存款指令格式为【存款 金额】，例如：存款 1000"
     # 读-校验-写全程持 _LOCK（RLock 可重入，txn 内复入无死锁）：防同用户并发双花/丢更新
     with ST._LOCK:
         a = _acct(gid, qq)
         if _check_jail(a):
             return _show_jail(a)
         cs = cfgi("银行配置", "存取款消耗体力", 1)
-        if a.int("stamina") < cs:
-            return "亲，您的游戏体力不足，无法进行存款！"
+        cur_st = a.int("stamina")
+        if cur_st < cs:
+            return f"【银行业务提示】\r\n您的体力不足，本次存款需消耗 {cs} 点体力（当前体力：{cur_st} 点）。"
         have = ST.coins_get(gid, qq)
         if have < amount:
-            return f"亲，您的{ST.coin_name()}不足，请重新选择存款数！"
+            return f"【银行业务提示】\r\n您的{ST.coin_name()}不足，当前钱包余额：{ST.fmt_coins(have)} {ST.coin_name()}。"
         rate = cfgi("银行配置", "存款利率", 1)
         cap = cfgi("银行配置", "利息上限", 50000)
         max_daily = cfgi("银行配置", "每日结息次数", 3)
+        term_h = max(1, cfgi("银行配置", "存款期限", 1))
         today_s = str(dt.date.today())
         cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
         interest = _settle_interest(a, rate, cap)
         old = a.int("deposit")
         prev_ts = a.int("withdraw_timestamp")
         updates = {
-            "stamina": str(a.int("stamina") - cs),
+            "stamina": str(cur_st - cs),
             "deposit": str(old + amount + interest),
         }
         if old <= 0 or interest > 0 or prev_ts <= 0:
@@ -44,13 +65,31 @@ def cmd_deposit(gid, qq, amount):
             updates["interest_date"] = today_s
             updates["interest_count"] = str(cur_cnt + 1)
         if ST.txn_coins_acct(gid, qq, -amount, updates, require_funds=True) is None:
-            return "亲，银行系统繁忙，存款未成功，请稍后重试！"
+            return "【银行业务提示】\r\n银行系统繁忙，存款操作未完成，请稍后重试。"
         total = old + amount + interest
-        term_h = max(1, cfgi("银行配置", "存款期限", 1))
-    return (f"存款成功！消耗{cs}点体力，共存入：{ST.fmt_coins(amount)}，\r\n"
-            f"上期结息：{ST.fmt_coins(interest)}，当前总存款：{ST.fmt_coins(total)}，"
-            f"{term_h}小时后可取款！\r\n"
-            f"剩余{ST.coin_name()}：{ST.fmt_coins(ST.coins_get(gid, qq))}")
+        settle_base_ts = float(updates.get("withdraw_timestamp", prev_ts if prev_ts > 0 else time.time()))
+        left_sec = max(0, int(term_h * 3600 - (time.time() - settle_base_ts)))
+        countdown_str = _format_countdown(left_sec)
+        pot_interest = min(cap, int(total * rate / 100.0))
+
+        if max_daily > 0 and (cur_cnt + (1 if interest > 0 else 0)) >= max_daily:
+            settle_info = f"今日结息次数已达上限（{max_daily}次），次日0点重置"
+        else:
+            settle_info = f"结算周期为 {term_h} 小时（距下次结息还剩 {countdown_str}，满期预计收益 {ST.fmt_coins(pot_interest)} {ST.coin_name()}）"
+
+        lines = [
+            "【银行业务回执 · 存款】",
+            f"存入金额：{ST.fmt_coins(amount)} {ST.coin_name()}",
+            f"消耗体力：{cs} 点",
+        ]
+        if interest > 0:
+            lines.append(f"上期结息：+{ST.fmt_coins(interest)} {ST.coin_name()}（已转入存款本金）")
+        lines.extend([
+            f"当前存款：{ST.fmt_coins(total)} {ST.coin_name()}",
+            f"钱包余额：{ST.fmt_coins(ST.coins_get(gid, qq))} {ST.coin_name()}",
+            f"利息结算：{settle_info}",
+        ])
+    return "\r\n".join(lines)
 
 
 def _settle_interest(a, rate, cap):
@@ -86,9 +125,9 @@ def cmd_withdraw(gid, qq, amount):
             return _show_jail(a)
         dep = a.int("deposit")
         if amount <= 0:
-            return "请输入正确格式：取款 金额（正整数）"
+            return "提示：取款指令格式为【取款 金额】，例如：取款 1000"
         if dep < amount:
-            return f"存款不足！当前存款：{ST.fmt_coins(dep)}"
+            return f"【银行业务提示】\r\n存款余额不足，当前银行存款总额为 {ST.fmt_coins(dep)} {ST.coin_name()}。"
         rate = cfgi("银行配置", "存款利率", 1)
         cap = cfgi("银行配置", "利息上限", 50000)
         max_daily = cfgi("银行配置", "每日结息次数", 3)
@@ -96,21 +135,13 @@ def cmd_withdraw(gid, qq, amount):
         today_s = str(dt.date.today())
         cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
         interest = _settle_interest(a, rate, cap)
-        # 利息未到时提示剩余时间与可用强制取款，但仍允许取款（结息次数不外显）
-        if interest == 0 and dep > 0 and not (max_daily > 0 and cur_cnt >= max_daily):
-            try:
-                last = float(a.get("withdraw_timestamp", "0") or "0")
-                left = int(term_h * 3600 - (time.time() - last))
-                if left > 0:
-                    pot = int(dep * rate / 100.0)
-                    pot = min(pot, cap)
-                    interest_note = f"（提示：利息结算需{term_h}小时，还需{left//60}分{left%60}秒，到期可获{ST.fmt_coins(pot)}{ST.coin_name()}，可强取）"
-                else:
-                    interest_note = ""
-            except Exception:
-                interest_note = ""
-        else:
-            interest_note = ""
+
+        # 结算前计算未满期剩余时间
+        last_ts = float(a.get("withdraw_timestamp", "0") or "0")
+        left_sec = max(0, int(term_h * 3600 - (time.time() - last_ts)))
+        countdown_str = _format_countdown(left_sec)
+        pot_interest = min(cap, int(dep * rate / 100.0))
+
         # 取款仅扣除本次取出的存款本金，利息为银行派发的收益额外计入钱包
         new_dep = dep - amount
         updates = {"deposit": str(new_dep), "withdraw_timestamp": str(int(time.time()))}
@@ -118,12 +149,31 @@ def cmd_withdraw(gid, qq, amount):
             updates["interest_date"] = today_s
             updates["interest_count"] = str(cur_cnt + 1)
         if ST.txn_coins_acct(gid, qq, amount + interest, updates) is None:
-            return "亲，银行系统繁忙，取款未成功，请稍后重试！"
-        base = (f"取款成功！获得利息：{ST.fmt_coins(interest)}，本次取款：{ST.fmt_coins(amount)}，\r\n"
-                f"还剩存款：{ST.fmt_coins(new_dep)}，剩余{ST.coin_name()}：{ST.fmt_coins(ST.coins_get(gid, qq))}")
-    if 'interest_note' in locals() and interest_note:
-        base += f"\r\n{interest_note}"
-    return base
+            return "【银行业务提示】\r\n银行系统繁忙，取款操作未完成，请稍后重试。"
+
+        if interest > 0:
+            if new_dep > 0:
+                settle_info = f"剩余存款已开启新一轮结息周期（{term_h}小时后结算）"
+            else:
+                settle_info = "存款已全部取出，本期结息已完成"
+        else:
+            if max_daily > 0 and cur_cnt >= max_daily:
+                settle_info = f"今日结息次数已达上限（{max_daily}次），本次取款未获得利息"
+            else:
+                if new_dep > 0:
+                    settle_info = f"未满结算周期取款无利息（原还剩 {countdown_str}，可获 {ST.fmt_coins(pot_interest)} {ST.coin_name()}）。剩余存款已重置计时（{term_h}小时后结算，保留计时请用【强制取款】）"
+                else:
+                    settle_info = f"未满结算周期提前取款无利息（原还剩 {countdown_str}，到期可获 {ST.fmt_coins(pot_interest)} {ST.coin_name()}）。存款已清空"
+
+        lines = [
+            "【银行业务回执 · 取款】",
+            f"取出金额：{ST.fmt_coins(amount)} {ST.coin_name()}",
+            f"获得利息：+{ST.fmt_coins(interest)} {ST.coin_name()}" if interest > 0 else f"获得利息：0 {ST.coin_name()}",
+            f"剩余存款：{ST.fmt_coins(new_dep)} {ST.coin_name()}",
+            f"钱包余额：{ST.fmt_coins(ST.coins_get(gid, qq))} {ST.coin_name()}",
+            f"结息说明：{settle_info}",
+        ]
+    return "\r\n".join(lines)
 
 
 def cmd_force_withdraw(gid, qq, amount):
@@ -135,36 +185,57 @@ def cmd_force_withdraw(gid, qq, amount):
             return _show_jail(a)
         dep = a.int("deposit")
         if amount <= 0:
-            return "请输入正确格式：强制取款 金额（正整数）"
+            return "提示：强制取款指令格式为【强制取款 金额】，例如：强制取款 1000"
         if dep < amount:
-            return f"存款不足！当前存款：{ST.fmt_coins(dep)}"
-        # 原子：钱包 + 存款同事务，避免半成功（中文文案不变）
+            return f"【银行业务提示】\r\n存款余额不足，当前银行存款总额为 {ST.fmt_coins(dep)} {ST.coin_name()}。"
+        # 原子：钱包 + 存款同事务，避免半成功
         if ST.txn_coins_acct(gid, qq, amount, {"deposit": str(dep - amount)}) is None:
-            return "亲，银行系统繁忙，强制取款未成功，请稍后重试！"
-        # 不重置取款时间戳，利息仍按原剩余金额与原计时继续结算
-        return (f"强制取款成功！因未到取款时间，本次没有利息（不影响后续利息按剩余{ST.fmt_coins(dep - amount)}计）。\r\n"
-                f"本次取款：{ST.fmt_coins(amount)}，还剩存款：{ST.fmt_coins(dep - amount)}，"
-                f"剩余{ST.coin_name()}：{ST.fmt_coins(ST.coins_get(gid, qq))}")
+            return "【银行业务提示】\r\n银行系统繁忙，强制取款操作未完成，请稍后重试。"
+
+        new_dep = dep - amount
+        rate = cfgi("银行配置", "存款利率", 1)
+        cap = cfgi("银行配置", "利息上限", 50000)
+        term_h = max(1, cfgi("银行配置", "存款期限", 1))
+        last_ts = float(a.get("withdraw_timestamp", "0") or "0")
+        left_sec = max(0, int(term_h * 3600 - (time.time() - last_ts)))
+        countdown_str = _format_countdown(left_sec)
+        pot_interest = min(cap, int(new_dep * rate / 100.0))
+
+        if new_dep > 0:
+            settle_info = f"未满期限强取无利息，不影响剩余存款计息（距下次结息还剩 {countdown_str}，满期预计利息 {ST.fmt_coins(pot_interest)} {ST.coin_name()}）"
+        else:
+            settle_info = "存款已全部取出，原结息计时结束"
+
+        lines = [
+            "【银行业务回执 · 强制取款】",
+            f"取出金额：{ST.fmt_coins(amount)} {ST.coin_name()}",
+            f"获得利息：0 {ST.coin_name()}（未到结息期强取）",
+            f"剩余存款：{ST.fmt_coins(new_dep)} {ST.coin_name()}",
+            f"钱包余额：{ST.fmt_coins(ST.coins_get(gid, qq))} {ST.coin_name()}",
+            f"结息说明：{settle_info}",
+        ]
+    return "\r\n".join(lines)
 
 
 def cmd_transfer(gid, qq, target, amount):
     # QQ-only: 兼容 CQ / @QQ / 纯QQ 字符串，不认昵称
     target = _ensure_target_qq(target, gid)
     if amount <= 0 or not target:
-        return "亲，您的格式有误，转账格式为：【转账 @QQ 金额】！"
+        return "提示：转账格式为【转账 @目标 金额】，例如：转账 @某某 100"
     if str(target) == str(qq):
-        return "亲，您不能给自己转账，转账失败！"
+        return "提示：无法对自己进行转账。"
     min_amt = cfgi("银行配置", "转账最小金额", 50)
     if amount < min_amt:
-        return f"亲，转账最小金额为{min_amt}{ST.coin_name()}！"
+        return f"提示：转账最小金额为 {min_amt} {ST.coin_name()}。"
     cs = cfgi("银行配置", "转账消耗体力", 2)
-    if _acct(gid, qq).int("stamina") < cs:
-        return "亲，您的游戏体力不足，无法进行转账！"
+    cur_st = _acct(gid, qq).int("stamina")
+    if cur_st < cs:
+        return f"【银行业务提示】\r\n您的体力不足，本次转账需消耗 {cs} 点体力（当前体力：{cur_st} 点）。"
     cap = cfgi("银行配置", "转账接收额度", getattr(ST, "COIN_CAP", 100000000000))
     if amount > cap:
-        return f"亲，单次转账金额不能超过{cap}{ST.coin_name()}！"
+        return f"提示：单次转账金额不能超过 {cap} {ST.coin_name()}。"
     if ST.coins_get(gid, qq) < amount:
-        return "亲，您的账户余额不足，转账失败！"
+        return f"【银行业务提示】\r\n钱包余额不足，当前持有 {ST.fmt_coins(ST.coins_get(gid, qq))} {ST.coin_name()}。"
     credit = int(amount)
     # 单事务原子转账：体力+双钱包同锁，避免体力扣了但转账失败半成功
     try:
@@ -172,19 +243,19 @@ def cmd_transfer(gid, qq, target, amount):
             # 二次校验（防并发）
             cur_st = ST.acct(gid, qq).int("stamina")
             if cur_st < cs:
-                return "亲，您的游戏体力不足，无法进行转账！"
+                return f"【银行业务提示】\r\n您的体力不足，本次转账需消耗 {cs} 点体力。"
             cur_money = ST.coins_get(gid, qq)
             if cur_money < amount:
-                return "亲，您的账户余额不足，转账失败！"
+                return "【银行业务提示】\r\n账户余额不足，转账失败。"
             # 对方余额与上限（锁内读）
             dst_cur = ST.coins_get(gid, target)
             credit = min(int(amount), max(0, cap - dst_cur))
             if credit <= 0:
-                return "对方钱包已满，无法接收转账！"
+                return "【银行业务提示】\r\n对方钱包已达存储上限，无法接收转账。"
             updates = {"stamina": str(max(0, cur_st - cs))}
             # 用 txn_two_wallets_acct 一并提交：转出方扣体力+扣款，转入方加款
             if ST.txn_two_wallets_acct(gid, qq, target, credit, acct_updates=updates, acct_qq=qq) is None:
-                return "亲，银行系统繁忙，转账未成功，请稍后重试！"
+                return "【银行业务提示】\r\n银行系统繁忙，转账操作未完成，请稍后重试。"
     except Exception:
         # 主路径失败只回滚并返回；禁止拆成多个独立写入补偿。
         try:
@@ -196,7 +267,7 @@ def cmd_transfer(gid, qq, target, amount):
                 ST._ACC_CACHE.pop((str(gid), str(qq)), None)
         except Exception:
             pass
-        return "亲，银行系统繁忙，转账未成功，请稍后重试！"
+        return "【银行业务提示】\r\n银行系统繁忙，转账操作未完成，请稍后重试。"
     try:
         from .. import slave as SL
         try:
@@ -205,7 +276,14 @@ def cmd_transfer(gid, qq, target, amount):
             tn = SL.NOTE_NAMES.get(str(target), str(target))
     except Exception:
         tn = str(target)
-    return f"转账成功！您已向 {tn} 转入{ST.fmt_coins(credit)}{ST.coin_name()}！剩余{ST.coin_name()}：{ST.fmt_coins(ST.coins_get(gid, qq))}"
+    lines = [
+        "【银行业务回执 · 转账】",
+        f"转账目标：{tn}",
+        f"转账金额：{ST.fmt_coins(credit)} {ST.coin_name()}",
+        f"消耗体力：{cs} 点",
+        f"钱包余额：{ST.fmt_coins(ST.coins_get(gid, qq))} {ST.coin_name()}",
+    ]
+    return "\r\n".join(lines)
 
 
 def _gid_known(dest_gid):
@@ -228,14 +306,14 @@ def _gid_known(dest_gid):
 def cmd_cross_transfer(gid, qq, dest_gid, amount):
     """跨群转账：把自己的余额从本群搬进自己在目标群的钱包，手续费销毁（回收通胀）。"""
     if not str(dest_gid).isdigit() or int(dest_gid) <= 0 or amount <= 0:
-        return "亲，跨群转账格式为：【跨群转账 群号 金额】！"
+        return "提示：跨群转账格式为【跨群转账 群号 金额】"
     if str(dest_gid) == str(gid):
-        return "亲，目标群不能是当前群，同群请直接使用【转账】！"
+        return "提示：目标群不能是当前群，同群转账请直接使用【转账】。"
     if not _gid_known(dest_gid):
-        return "亲，目标群不存在或本机器人不在该群，请核对群号！"
+        return "提示：目标群不存在或机器人未加入该群，请核对群号。"
     min_amt = cfgi("银行配置", "转账最小金额", 50)
     if amount < min_amt:
-        return f"亲，跨群转账最小金额为{min_amt}{ST.coin_name()}！"
+        return f"提示：跨群转账最小金额为 {min_amt} {ST.coin_name()}。"
     pct = cfgi("银行配置", "跨群转账手续费", 20)
     try:
         pct = max(0, min(int(pct), 100))
@@ -244,32 +322,38 @@ def cmd_cross_transfer(gid, qq, dest_gid, amount):
     fee = int(amount) * pct // 100
     credit = int(amount) - fee
     if credit <= 0:
-        return f"亲，手续费{pct}%后到账为0，请提高转账金额或降低手续费！"
+        return f"提示：手续费为 {pct}%，扣除后到账为 0，请提高转账金额。"
     cap = cfgi("银行配置", "转账接收额度", getattr(ST, "COIN_CAP", 100000000000))
     if ST.coins_get(gid, qq) < amount:
-        return "亲，您的账户余额不足，跨群转账失败！"
+        return "【银行业务提示】\r\n当前账户余额不足，跨群转账失败。"
     # 源群扣全款 + 目标群入 credit，差额（手续费）销毁：单事务原子，无半成功
     try:
         with ST._LOCK:
             if ST.coins_get(gid, qq) < amount:
-                return "亲，您的账户余额不足，跨群转账失败！"
+                return "【银行业务提示】\r\n当前账户余额不足，跨群转账失败。"
             dst_cur = ST.coins_get(dest_gid, qq)
             if dst_cur + credit > cap:
-                return "亲，对方钱包已达接收额度上限，无法转入！"
+                return "【银行业务提示】\r\n目标群钱包已达额度上限，无法继续转入。"
             ok = ST.txn_cross_group(gid, dest_gid, qq, amount, credit)
             if ok is None:
-                return "亲，银行系统繁忙，跨群转账未成功，请稍后重试！"
+                return "【银行业务提示】\r\n银行系统繁忙，跨群转账操作未完成，请稍后重试。"
             if not ok:
-                return "亲，您的账户余额不足或目标钱包已达上限，跨群转账失败！"
+                return "【银行业务提示】\r\n账户余额不足或目标钱包已达上限，跨群转账失败。"
     except Exception:
         try:
             ST._safe_rollback()
         except Exception:
             pass
-        return "亲，银行系统繁忙，跨群转账未成功，请稍后重试！"
-    return (f"跨群转账成功！\r\n本群支出{ST.fmt_coins(amount)}{ST.coin_name()}，"
-            f"目标群到账{ST.fmt_coins(credit)}{ST.coin_name()}\r\n"
-            f"手续费{ST.fmt_coins(fee)}{ST.coin_name()}（{pct}%）已由系统回收，剩余{ST.coin_name()}：{ST.fmt_coins(ST.coins_get(gid, qq))}")
+        return "【银行业务提示】\r\n银行系统繁忙，跨群转账操作未完成，请稍后重试。"
+    lines = [
+        "【银行业务回执 · 跨群转账】",
+        f"目标群号：{dest_gid}",
+        f"转出金额：{ST.fmt_coins(amount)} {ST.coin_name()}",
+        f"手续费率：{pct}%（扣除 {ST.fmt_coins(fee)} {ST.coin_name()}）",
+        f"实际到账：{ST.fmt_coins(credit)} {ST.coin_name()}",
+        f"本群余额：{ST.fmt_coins(ST.coins_get(gid, qq))} {ST.coin_name()}",
+    ]
+    return "\r\n".join(lines)
 
 
 def cmd_gamble(gid, qq, amount):
