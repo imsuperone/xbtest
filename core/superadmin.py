@@ -189,8 +189,8 @@ def _parse_target_amount(arg):
         if m:
             return m.group(1), int(m.group(2))
         return None, None
-    # 金额：rest 须为纯数字（可选前置 *），防止引用回复聊天时将“扣钱了 100 @QQ”误判为指令
-    rest_clean = rest.strip()
+    # 金额：rest 须为纯数字（可选前置 *，剥离残留的 @昵称），防止引用回复聊天时将“扣钱了 100 @QQ”误判为指令
+    rest_clean = re.sub(r"@\S+", "", rest).strip()
     m = re.fullmatch(r"\*?\s*(\d+)", rest_clean)
     if m:
         try:
@@ -291,15 +291,16 @@ def cmd_clear(gid, qq, arg):
     except Exception:
         pass
     if not t:
-        m_cq = re.fullmatch(r"\[CQ:at,qq=(\d+)[^\]]*\]", rest)
+        m_cq = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", rest)
         if m_cq:
             t = m_cq.group(1)
-            rem = ""
+            rem = re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", rest, count=1).strip()
     if not t:
-        m_qq = re.fullmatch(r"@?\s*(\d{5,12})", rest)
+        m_qq = re.search(r"@?\s*(\d{5,12})", rest)
         if m_qq:
             t = m_qq.group(1)
-            rem = ""
+            rem = rest.replace(m_qq.group(0), "", 1).strip()
+    rem = re.sub(r"@\S+", "", rem).strip()
     if not t or rem:
         if not rest or rest.startswith(("@", "[CQ:at")):
             return "格式：清空{财富/体力/魅力/账户/精灵/用户} @QQ"
@@ -377,27 +378,36 @@ def cmd_mute(gid, qq, arg):
     arg = (arg or "").strip()
     if not arg:
         return "格式：禁言 @QQ 分钟"
-    # 先尝试统一 parse_at 解析（命中须过 QQ-only 校验）
     target = None
     rest = arg
-    try:
-        t, r = ST.parse_at(arg)
-        if t:
-            try:
-                _ok = ST.is_qq_mention(t, arg) if hasattr(ST, "is_qq_mention") else True
-            except Exception:
-                _ok = True
-            if _ok:
-                target = t
-                rest = (r or "").strip()
-    except Exception:
-        pass
+    m_cq = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", arg)
+    if m_cq:
+        target = m_cq.group(1)
+        rest = re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", arg, count=1).strip()
+    else:
+        try:
+            t, r = ST.parse_at(arg)
+            if t:
+                try:
+                    _ok = ST.is_qq_mention(t, arg) if hasattr(ST, "is_qq_mention") else True
+                except Exception:
+                    _ok = True
+                if _ok:
+                    target = str(t).strip()
+                    rest = (r or "").strip()
+        except Exception:
+            pass
+    if not target:
+        m = re.search(r"@?\s*(\d{5,12})\s+(\d+)\s*(?:分钟|分|m|min)?", arg)
+        if m:
+            target = m.group(1)
+            rest = m.group(2)
     if target:
-        if not rest:
+        rest_clean = re.sub(r"@\S+", "", rest).strip()
+        if not rest_clean:
             return "格式：禁言 @QQ 分钟"
-        m2 = re.fullmatch(r"(\d+)\s*(?:分钟|分|m|min)?", rest)
+        m2 = re.fullmatch(r"(\d+)\s*(?:分钟|分|m|min)?", rest_clean)
         if not m2:
-            # 引用回复他人但正文是“禁言原神原神”等普通聊天文本，直接静默
             return None
         mins = int(m2.group(1))
         if mins <= 0:
@@ -405,17 +415,9 @@ def cmd_mute(gid, qq, arg):
         if str(target) == str(qq):
             return "不能对自己执行禁言！"
         return "__XB_PLATFORM__|mute|%s|%d" % (target, mins * 60)
-    m = re.fullmatch(r"@?\s*(\d{5,12})\s+(\d+)\s*(?:分钟|分|m|min)?", arg)
-    if not m:
-        if _looks_like_target_arg(arg):
-            return "格式：禁言 @QQ 分钟"
-        return None
-    t, mins = m.group(1), int(m.group(2))
-    if mins <= 0:
+    if _looks_like_target_arg(arg):
         return "格式：禁言 @QQ 分钟"
-    if str(t) == str(qq):
-        return "不能对自己执行禁言！"
-    return "__XB_PLATFORM__|mute|%s|%d" % (t, mins * 60)
+    return None
 
 
 def cmd_kick(gid, qq, arg):
@@ -425,33 +427,41 @@ def cmd_kick(gid, qq, arg):
         return "格式：踢人 @QQ"
     target = None
     rest = ""
-    try:
-        t, r = ST.parse_at(arg)
-        if t:
-            try:
-                _ok = ST.is_qq_mention(t, arg) if hasattr(ST, "is_qq_mention") else True
-            except Exception:
-                _ok = True
-            if _ok:
-                target = str(t).strip()
-                rest = (r or "").strip()
-    except Exception:
-        pass
-    if target:
-        if rest:
-            return None
+    m_cq = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", arg)
+    if m_cq:
+        target = m_cq.group(1)
+        rest = re.sub(r"\[CQ:at,qq=\d+[^\]]*\]", "", arg, count=1).strip()
     else:
-        m = re.fullmatch(r"@?\s*(\d{5,12})", arg)
-        if not m:
-            if _looks_like_target_arg(arg):
-                return "格式：踢人 @QQ"
+        try:
+            t, r = ST.parse_at(arg)
+            if t:
+                try:
+                    _ok = ST.is_qq_mention(t, arg) if hasattr(ST, "is_qq_mention") else True
+                except Exception:
+                    _ok = True
+                if _ok:
+                    target = str(t).strip()
+                    rest = (r or "").strip()
+        except Exception:
+            pass
+    if not target:
+        m_num = re.search(r"@?\s*(\d{5,12})", arg)
+        if m_num:
+            target = m_num.group(1)
+            rest = arg.replace(m_num.group(0), "", 1).strip()
+
+    rest_clean = re.sub(r"@\S+", "", rest).strip()
+    if target:
+        if rest_clean:
             return None
-        target = m.group(1)
-    if not target.isdigit():
+        if not target.isdigit():
+            return "格式：踢人 @QQ"
+        if target == str(qq):
+            return "不能对自己执行踢人！"
+        return "__XB_PLATFORM__|kick|%s|0" % target
+    if _looks_like_target_arg(arg):
         return "格式：踢人 @QQ"
-    if target == str(qq):
-        return "不能对自己执行踢人！"
-    return "__XB_PLATFORM__|kick|%s|0" % target
+    return None
 
 
 def cmd_backup_xb():
