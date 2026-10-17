@@ -280,6 +280,8 @@
 
     /* M3 top-bar (xbdoc/xbimg pixel-parity transplant; header element keeps legacy layout) */
     .top-bar {
+      position: relative;
+      z-index: 1060;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -3250,6 +3252,8 @@
 
 /* Floating island trigger in top bar */
 .floating-island-trigger {
+  position: relative;
+  z-index: 1060;
   display: inline-flex;
   align-items: center;
   gap: 6px;

@@ -482,6 +482,8 @@ function initSideNavCollapse() {
   const islandToggle = document.getElementById("floatingIslandToggle");
   const backdrop = document.getElementById("islandBackdrop");
   if (!nav) return;
+  if (nav._islandInited) return;
+  nav._islandInited = true;
 
   nav.querySelectorAll("button[data-tab]").forEach((b) => {
     const raw = b.textContent.trim();
@@ -490,24 +492,10 @@ function initSideNavCollapse() {
     b.title = raw;
   });
 
-  const setOpen = (open) => {
-    if (open) {
-      nav.style.transform = "";
-      nav.style.opacity = "";
-      nav.style.transition = "";
-    }
-    nav.classList.toggle("collapsed", !open);
-    if (backdrop) backdrop.classList.toggle("active", open);
-    if (islandToggle) {
-      islandToggle.setAttribute("aria-expanded", open ? "true" : "false");
-      islandToggle.classList.toggle("active", open);
-    }
-  };
-
-  // 默认收起状态
-  setOpen(false);
-
+  // 权威显隐状态标（彻底消除异步动效延迟竞争导致的死锁与失效）
+  let isOpen = false;
   let activeAnimCancel = null;
+
   const cancelActiveAnim = () => {
     if (activeAnimCancel) {
       try { activeAnimCancel(); } catch (e) {}
@@ -518,82 +506,128 @@ function initSideNavCollapse() {
     });
   };
 
-  // 粉末化消散收起 (鸿蒙高密粒子崩解，约 750ms 优雅消散)
-  const closeWithPowder = () => {
-    if (nav.classList.contains("collapsed")) return;
-    cancelActiveAnim();
+  const applyClosedDOM = () => {
+    nav.classList.add("collapsed");
+    nav.style.transform = "";
+    nav.style.opacity = "";
+    nav.style.transition = "";
     if (backdrop) backdrop.classList.remove("active");
     if (islandToggle) {
       islandToggle.setAttribute("aria-expanded", "false");
       islandToggle.classList.remove("active");
     }
-    activeAnimCancel = triggerHarmonyDisintegrate(nav, () => {
-      setOpen(false);
-      nav.style.transform = "";
-      nav.style.opacity = "";
-      nav.style.transition = "";
-      activeAnimCancel = null;
-    });
   };
 
-  // 粒子汇聚进入 (鸿蒙星河粒子逆向聚拢凝结入场，错落优美)
-  const openWithParticles = () => {
-    if (!nav.classList.contains("collapsed")) return;
-    cancelActiveAnim();
+  const applyOpenDOM = () => {
+    nav.classList.remove("collapsed");
+    nav.style.transform = "";
+    nav.style.opacity = "";
+    nav.style.transition = "";
     if (backdrop) backdrop.classList.add("active");
     if (islandToggle) {
       islandToggle.setAttribute("aria-expanded", "true");
       islandToggle.classList.add("active");
     }
-    activeAnimCancel = triggerHarmonyAssemble(nav, islandToggle, () => {
-      nav.classList.remove("collapsed");
-      nav.style.transform = "";
-      nav.style.opacity = "";
-      nav.style.transition = "";
+  };
+
+  // 默认启动状态：强制收起
+  isOpen = false;
+  applyClosedDOM();
+
+  // 关闭悬浮岛 (立即切换权威状态，支持高密粒子粉末崩解动效)
+  const closeIsland = (withAnim = true) => {
+    if (!isOpen) return;
+    isOpen = false;
+    cancelActiveAnim();
+
+    // 立即更新控制按钮与遮罩状态，消除视觉延迟与点击拦截
+    if (islandToggle) {
+      islandToggle.setAttribute("aria-expanded", "false");
+      islandToggle.classList.remove("active");
+    }
+    if (backdrop) backdrop.classList.remove("active");
+
+    if (!withAnim) {
+      applyClosedDOM();
+      return;
+    }
+
+    activeAnimCancel = triggerHarmonyDisintegrate(nav, () => {
+      applyClosedDOM();
       activeAnimCancel = null;
     });
   };
 
-  // 顶栏导航按钮：毫秒级响应，绝无吞点击问题
+  // 展开悬浮岛 (立即切换权威状态，支持星尘逆向聚拢凝结入场)
+  const openIsland = (withAnim = true) => {
+    if (isOpen) return;
+    isOpen = true;
+    cancelActiveAnim();
+
+    if (islandToggle) {
+      islandToggle.setAttribute("aria-expanded", "true");
+      islandToggle.classList.add("active");
+    }
+    if (backdrop) backdrop.classList.add("active");
+
+    if (!withAnim) {
+      applyOpenDOM();
+      return;
+    }
+
+    activeAnimCancel = triggerHarmonyAssemble(nav, islandToggle, () => {
+      applyOpenDOM();
+      activeAnimCancel = null;
+    });
+  };
+
+  // 顶栏导航按钮：权威状态翻转，任意频次极速连击零死锁
   if (islandToggle) {
     islandToggle.addEventListener("click", (e) => {
       e.stopPropagation();
-      const isCollapsed = nav.classList.contains("collapsed");
-      if (isCollapsed) {
-        openWithParticles();
+      if (isOpen) {
+        closeIsland(true);
       } else {
-        closeWithPowder();
+        openIsland(true);
       }
     });
   }
 
-  // 点击头部关闭胶囊：高密粉末化消散
+  // 点击侧边栏关闭胶囊按钮
   if (toggle) {
     toggle.addEventListener("click", (e) => {
       e.stopPropagation();
-      closeWithPowder();
+      closeIsland(true);
     });
   }
 
-  // 点击遮罩空白处：同样高密粉末化消散
+  // 点击遮罩空白处收起
   if (backdrop) {
     backdrop.addEventListener("click", (e) => {
       e.stopPropagation();
-      closeWithPowder();
+      closeIsland(true);
     });
   }
 
-  // 点击侧边栏选项后同样粉末化消散收起
+  // 点击全页面任意空白非导航区域收起
+  document.addEventListener("click", (e) => {
+    if (!isOpen) return;
+    if (nav.contains(e.target)) return;
+    if (islandToggle && islandToggle.contains(e.target)) return;
+    closeIsland(true);
+  });
+
+  // 点击导航选项自动平滑收起
   nav.querySelectorAll("button[data-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      closeWithPowder();
+      closeIsland(true);
     });
   });
 
-  // ESC 按键快速触发粒子粉末化消散
+  // ESC 键收起
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !nav.classList.contains("collapsed")) {
-      closeWithPowder();
+    if (e.key === "Escape" && isOpen) {
+      closeIsland(true);
     }
   });
 }
@@ -692,11 +726,14 @@ function triggerHarmonyDisintegrate(el, onComplete) {
       ctx.restore();
     }
 
-    if (aliveCount > 0 && elapsed < 1100) {
+    if (aliveCount > 0 && elapsed < 950) {
       animId = requestAnimationFrame(render);
     } else {
       cancelAnimationFrame(animId);
       if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      el.style.opacity = "";
+      el.style.transform = "";
+      el.style.transition = "";
       if (onComplete) onComplete();
     }
   }
@@ -706,6 +743,9 @@ function triggerHarmonyDisintegrate(el, onComplete) {
   return () => {
     cancelAnimationFrame(animId);
     if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+    el.style.opacity = "";
+    el.style.transform = "";
+    el.style.transition = "";
   };
 }
 window.triggerHarmonyDisintegrate = triggerHarmonyDisintegrate;
@@ -840,6 +880,9 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
   return () => {
     cancelAnimationFrame(animId);
     if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+    el.style.opacity = "";
+    el.style.transform = "";
+    el.style.transition = "";
   };
 }
 window.triggerHarmonyAssemble = triggerHarmonyAssemble;
