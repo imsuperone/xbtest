@@ -272,6 +272,55 @@ def _parse_custom_qa(raw):
 
 _CHAIN_WORDS_CACHE = None
 _CHAIN_WORDS_CFG_RAW = None
+_FILE_BANKS_CACHE = {}
+
+
+def _load_bank_file(filename, fallback_list):
+    """从 data/questions/<filename> 读取独立题库文件；支持 JSON 与 文本行；带 mtime 缓存实时热重载"""
+    import os
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    q_dir = os.path.join(base_dir, "data", "questions")
+    target_path = os.path.join(q_dir, filename)
+    if not os.path.isfile(target_path):
+        return list(fallback_list)
+    try:
+        mtime = os.path.getmtime(target_path)
+        cache_entry = _FILE_BANKS_CACHE.get(target_path)
+        if cache_entry and cache_entry[0] == mtime:
+            return cache_entry[1]
+        with open(target_path, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+        parsed = []
+        if filename.endswith(".json"):
+            try:
+                import json as _js
+                data = _js.loads(content)
+                if isinstance(data, list):
+                    if filename == "chain.json":
+                        parsed = [str(x).strip() for x in data if str(x).strip()]
+                    else:
+                        for it in data:
+                            if isinstance(it, dict):
+                                q = it.get("q") or it.get("question") or it.get("题干") or ""
+                                a = it.get("a") or it.get("answer") or it.get("答案") or ""
+                                if q and a:
+                                    parsed.append((str(q).strip(), str(a).strip()))
+                            elif isinstance(it, (list, tuple)) and len(it) >= 2:
+                                parsed.append((str(it[0]).strip(), str(it[1]).strip()))
+            except Exception:
+                pass
+        if not parsed:
+            # 兼容非标准 JSON 或自定义文本
+            if filename == "chain.json":
+                parsed = _parse_custom_words(content)
+            else:
+                parsed = _parse_custom_qa(content)
+        if not parsed:
+            parsed = list(fallback_list)
+        _FILE_BANKS_CACHE[target_path] = (mtime, parsed)
+        return parsed
+    except Exception:
+        return list(fallback_list)
 
 
 def _get_chain_words():
@@ -279,7 +328,7 @@ def _get_chain_words():
     raw = ST.cfg("娱乐配置", "接龙词库", "")
     if _CHAIN_WORDS_CACHE is not None and raw == _CHAIN_WORDS_CFG_RAW:
         return _CHAIN_WORDS_CACHE
-    base = list(CHAIN_WORDS)
+    base = _load_bank_file("chain.json", CHAIN_WORDS)
     try:
         custom = _parse_custom_words(raw)
         if custom:
@@ -295,10 +344,8 @@ def _get_chain_words():
     return base
 
 
-
-
 def _get_qa_list(base, cfg_key):
-    """题库三取唯一实现：内置 + 自定义 QA 追加（_get_trick/_get_miri/_get_quiz 薄委托，零语义差）"""
+    """题库三取唯一实现：内置/外部 + 自定义 QA 追加（_get_trick/_get_miri/_get_quiz 薄委托，零语义差）"""
     out = list(base)
     try:
         raw = ST.cfg("娱乐配置", cfg_key, "")
@@ -311,15 +358,76 @@ def _get_qa_list(base, cfg_key):
 
 
 def _get_trick():
-    return _get_qa_list(TRICK, "急转弯题库")
+    base = _load_bank_file("trick.json", TRICK)
+    return _get_qa_list(base, "急转弯题库")
 
 
 def _get_miri():
-    return _get_qa_list(MIRI, "猜字谜题库")
+    base = _load_bank_file("miri.json", MIRI)
+    return _get_qa_list(base, "猜字谜题库")
 
 
 def _get_quiz():
-    return _get_qa_list(QUIZ, "答题题库")
+    base = _load_bank_file("quiz.json", QUIZ)
+    return _get_qa_list(base, "答题题库")
+
+
+def _pick_dedup_qa(kind, gid, qa_list):
+    """短时间内问过的问题不能再次出现（群聊独立滑动窗口去重抽题算法）"""
+    if not qa_list:
+        return ("", "")
+    if len(qa_list) == 1:
+        return qa_list[0]
+
+    # 动态窗口大小：最大不超过题库总数的 45% 或 35 题
+    window_size = max(2, min(35, int(len(qa_list) * 0.45)))
+    recent_raw = ST.recall_get(f"ent_recent_{kind}_{gid}", "") or ""
+    recent_qs = [q.strip() for q in recent_raw.split("|||") if q.strip()] if recent_raw else []
+
+    # 过滤出不在近期出现过的候选集
+    recent_set = set(recent_qs)
+    candidates = [qa for qa in qa_list if qa[0] not in recent_set]
+
+    if not candidates:
+        # 当题库几乎全被抽完一轮时，清退较早的一半历史，释放新空间
+        cut = len(recent_qs) // 2
+        recent_qs = recent_qs[cut:]
+        recent_set = set(recent_qs)
+        candidates = [qa for qa in qa_list if qa[0] not in recent_set]
+        if not candidates:
+            candidates = qa_list
+            recent_qs = []
+
+    chosen = random.choice(candidates)
+    recent_qs.append(chosen[0])
+    if len(recent_qs) > window_size:
+        recent_qs = recent_qs[-window_size:]
+    ST.recall_set(f"ent_recent_{kind}_{gid}", "|||".join(recent_qs))
+    return chosen
+
+
+def _pick_dedup_word(kind, gid, word_list):
+    """接龙首词短期去重"""
+    if not word_list:
+        return ""
+    if len(word_list) == 1:
+        return word_list[0]
+    window_size = max(2, min(30, int(len(word_list) * 0.4)))
+    recent_raw = ST.recall_get(f"ent_recent_{kind}_{gid}", "") or ""
+    recent_ws = [w.strip() for w in recent_raw.split("|||") if w.strip()] if recent_raw else []
+    recent_set = set(recent_ws)
+    candidates = [w for w in word_list if w not in recent_set]
+    if not candidates:
+        cut = len(recent_ws) // 2
+        recent_ws = recent_ws[cut:]
+        recent_set = set(recent_ws)
+        candidates = [w for w in word_list if w not in recent_set] or word_list
+    chosen = random.choice(candidates)
+    recent_ws.append(chosen)
+    if len(recent_ws) > window_size:
+        recent_ws = recent_ws[-window_size:]
+    ST.recall_set(f"ent_recent_{kind}_{gid}", "|||".join(recent_ws))
+    return chosen
 
 
 # ---- 单游戏锁（同一群同时只能一个会话游戏） ----
@@ -473,5 +581,5 @@ def _solve_24_expr(nums):
         return ""
 
 
-__all__ = ["CHAIN_WORDS", "MIRI", "QUIZ", "TRICK", "_CHAIN_WORDS_CACHE", "_CHAIN_WORDS_CFG_RAW", "_MENU", "_PRE_SOLVABLE", "_can_make_24", "_can_make_24_cached", "_ensure_pre_solvable", "_ent_cost", "_fee", "_generate_solvable_24", "_get_chain_words", "_get_miri", "_get_quiz", "_get_trick", "_parse_custom_qa", "_parse_custom_words", "_safe_eval_24", "_solve_24_expr", "cfgi",
+__all__ = ["CHAIN_WORDS", "MIRI", "QUIZ", "TRICK", "_CHAIN_WORDS_CACHE", "_CHAIN_WORDS_CFG_RAW", "_MENU", "_PRE_SOLVABLE", "_can_make_24", "_can_make_24_cached", "_ensure_pre_solvable", "_ent_cost", "_fee", "_generate_solvable_24", "_get_chain_words", "_get_miri", "_get_quiz", "_get_trick", "_parse_custom_qa", "_parse_custom_words", "_safe_eval_24", "_solve_24_expr", "_pick_dedup_qa", "_pick_dedup_word", "cfgi",
   "CHOUQIAN_P1", "CHOUQIAN_P2", "CHOUQIAN_P3", "MORA_DRAW_BAND", "JIELONG_MIN", "JIELONG_MAX"]

@@ -47,8 +47,86 @@ _GAME_KIND_MAP = {
 
 
 
-def _clean_expired_game(gid, max_seconds=30):
-    """自动清理超时闲置或异常遗留的会话游戏锁，避免单群永久卡死（30秒无响应自动结束）"""
+_TIMEOUT_TASKS = {}  # (gid, kind) -> asyncio.Task
+
+
+def _cancel_timeout_task(gid, kind):
+    """取消群内该游戏的后台超时与提醒任务"""
+    task = _TIMEOUT_TASKS.pop((str(gid), str(kind)), None)
+    if task and not task.done():
+        try:
+            task.cancel()
+        except Exception:
+            pass
+
+
+def _start_timeout_task(gid, kind, label, ans_text=""):
+    """开启后台定时监控：40秒无人回答发提醒，60秒自动清理公布答案"""
+    _cancel_timeout_task(gid, kind)
+    try:
+        import asyncio
+        loop = asyncio.get_event_loop()
+        if loop and loop.is_running():
+            task = asyncio.create_task(_async_timeout_monitor(str(gid), str(kind), str(label), str(ans_text)))
+            _TIMEOUT_TASKS[(str(gid), str(kind))] = task
+    except Exception:
+        pass
+
+
+async def _async_timeout_monitor(gid, kind, label, ans_text):
+    """后台监控协程：40s 提醒，60s 超时清理公布答案"""
+    import asyncio
+    try:
+        # 第一阶段：等待 40 秒，发出即将超时提醒
+        await asyncio.sleep(40)
+        cur_owner = ST.recall_get(f"{kind}_owner_{gid}")
+        if not cur_owner:
+            return
+
+        try:
+            from ...core.messaging import send_proactive_group_msg
+        except ImportError:
+            try:
+                from core.messaging import send_proactive_group_msg
+            except ImportError:
+                send_proactive_group_msg = None
+
+        if send_proactive_group_msg:
+            await send_proactive_group_msg(
+                gid,
+                f"⏳【{label}】还有 20 秒回答时间，快开动脑筋想想吧！（若放弃可由管理员或开局者发送【结束{label}】）"
+            )
+
+        # 第二阶段：再等待 20 秒（累计 60 秒），超时彻底自动清理公布答案
+        await asyncio.sleep(20)
+        cur_owner = ST.recall_get(f"{kind}_owner_{gid}")
+        if not cur_owner:
+            return
+
+        ans = ans_text or ST.recall_get(f"{kind}_{gid}_{cur_owner}") or ""
+        ans_part = f"\r\n正确答案为：【{ans}】" if ans else ""
+        ST.recall_set(f"{kind}_owner_{gid}", "")
+        ST.recall_set(f"{kind}_players_{gid}", "")
+        ST.recall_set(f"{kind}_ans_{gid}", "")
+        for k in (f"{kind}_{gid}_{cur_owner}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
+            ST.recall_set(k, "")
+        _clear_active_game(gid)
+
+        if send_proactive_group_msg:
+            await send_proactive_group_msg(
+                gid,
+                f"⌛【{label}】由于长时间无人回答，本轮{label}已自动结束！{ans_part}"
+            )
+    except asyncio.CancelledError:
+        pass
+    except Exception:
+        pass
+    finally:
+        _TIMEOUT_TASKS.pop((str(gid), str(kind)), None)
+
+
+def _clean_expired_game(gid, max_seconds=60):
+    """自动清理超时闲置或异常遗留的会话游戏锁，避免单群永久卡死（默认60秒无响应自动结束）"""
     cur = _active_game(gid)
     if not cur:
         # 清理可能残留的孤儿键值，避免影响后续判断
@@ -91,6 +169,7 @@ def _clean_expired_game(gid, max_seconds=30):
         effective_ts = max(start_ts, last_time)
         # effective_ts <= 0 属于脏数据/孤儿锁，或者距离开局/最后互动超过 max_seconds，均清理
         if effective_ts <= 0 or (now - effective_ts) > max_seconds:
+            _cancel_timeout_task(gid, kind)
             owner = ST.recall_get(f"{kind}_owner_{gid}", "")
             ST.recall_set(f"{kind}_owner_{gid}", "")
             ST.recall_set(f"{kind}_players_{gid}", "")
@@ -126,7 +205,7 @@ def _check_single_game(gid, new_label, sender_qq=None):
     cur = _active_game(gid)
     if cur and cur != new_label:
         return f"已有进行中的【{cur}】游戏，请先结束当前游戏再开新局！（发送【退出{cur}】结束）"
-    # 同类型已在进行中：检查是否开局者重开，或已无互动超过 30 秒，若符合则自动刷新重开
+    # 同类型已在进行中：检查是否开局者重开，或已无互动超过 60 秒，若符合则自动刷新重开
     if cur == new_label:
         kind = _GAME_KIND_MAP.get(cur, "")
         if kind:
@@ -148,12 +227,12 @@ def _check_single_game(gid, new_label, sender_qq=None):
                     last_time = int(ST.recall_get(f"{kind}_last_time_{gid}", "0") or 0)
                 except Exception:
                     last_time = 0
-            # 开局者重开、或者超过30秒无互动、或者无有效owner残留，均直接瞬时刷新重开
+            # 开局者重开、或者超过60秒无互动、或者无有效owner残留，均直接瞬时刷新重开
             try:
                 idle = now - max(start_ts, last_time) if max(start_ts, last_time) > 0 else 999
             except Exception:
                 idle = 999
-            if (not owner) or (sender_qq and str(owner) == str(sender_qq)) or idle > 30:
+            if (not owner) or (sender_qq and str(owner) == str(sender_qq)) or idle > 60:
                 _clean_expired_game(gid, max_seconds=0)
                 return None
         return f"已有进行中的【{cur}】游戏，请先完成或退出后再开新局！（发送【退出{cur}】可重新开局）"
@@ -282,8 +361,9 @@ def _start_24(gid, qq):
     ST.recall_set(f"game24_last_time_{gid}", str(int(time.time())))
     ST.recall_set(f"game24_players_{gid}", "")
     _set_active_game(gid, "二四点")
+    _start_timeout_task(gid, "game24", "二四点", f"参考算式：{ans_expr} = 24")
     return ("🃏 二四点开始！用 + - * / 和括号把下面 4 个数算出 24：\r\n"
-            "【%s】\r\n回复你的算式即可！（其他玩家30秒内发送【加入二四点】加入，发送【退出二四点】结束）"
+            "【%s】\r\n回复你的算式即可！（其他玩家可发送【加入二四点】加入，管理员或开局者发送【结束二四点】）"
             % " ".join(map(str, nums)))
 
 
@@ -326,10 +406,11 @@ def _join_game(gid, qq, kind, label):
 
 
 def _quit_game(gid, qq, kind, label, is_admin=False):
+    """只退出发送者自己（普通成员与管理员发送【退出XX】行为严格一致：只退自己，绝不结束全群游戏）。"""
     owner = ST.recall_get(f"{kind}_owner_{gid}")
     if not owner:
         _clear_active_game(gid)
-        return f"当前没有进行中的{label}对局！"
+        return f"当前没有进行中的【{label}】对局！"
     if kind == "game24":
         ans = ST.recall_get(f"game24_ans_{gid}")
         ans_part = f"\r\n参考算式为：【{ans} = 24】" if ans else ""
@@ -338,45 +419,69 @@ def _quit_game(gid, qq, kind, label, is_admin=False):
         ans_part = f"\r\n本题正确答案为：【{ans}】" if ans else ""
     players = _get_players(gid, f"{kind}_players_")
 
-    if str(owner) == str(qq) or is_admin:
-        # 开局者或管理员退出=结束整局，公布答案
-        ST.recall_set(f"{kind}_owner_{gid}", "")
-        ST.recall_set(f"{kind}_players_{gid}", "")
-        ST.recall_set(f"{kind}_ans_{gid}", "")
-        for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
-            ST.recall_set(k, "")
-        _clear_active_game(gid)
-        prefix = f"【{label}】对局已由管理员结束！" if is_admin and str(owner) != str(qq) else f"你已退出{label}，对局结束！"
-        return f"{prefix}{ans_part}"
-
+    # 1. 如果发送者是普通参与者（在 players 列表中）
     if str(qq) in players:
         players.remove(str(qq))
         ST.recall_set(f"{kind}_players_{gid}", ",".join(players))
-        return f"你已退出{label}！"
+        return f"你已退出【{label}】！"
 
-    # 非加入者发送退出：若空闲超过30秒或管理员协助，允许结束并公布答案
-    try:
-        start_ts = int(ST.recall_get(f"{kind}_start_{gid}", "0") or 0)
-        last_ts = int(ST.recall_get(f"{kind}_last_time_{gid}", "0") or 0)
-        idle = int(time.time()) - max(start_ts, last_ts)
-    except Exception:
-        idle = 0
+    # 2. 如果发送者是开局者 owner
+    if str(owner) == str(qq):
+        # 若还有其他已加入的参与者，将对局所有权移交给下一位继续进行，不影响其他人玩！
+        if players:
+            new_owner = players.pop(0)
+            ST.recall_set(f"{kind}_owner_{gid}", str(new_owner))
+            ST.recall_set(f"{kind}_players_{gid}", ",".join(players))
+            if ans and kind != "game24":
+                ST.recall_set(f"{kind}_{gid}_{new_owner}", ans)
+                ST.recall_set(f"{kind}_{gid}_{qq}", "")
+            return f"你已退出【{label}】！对局已转交其他参与者继续进行~"
+        else:
+            # 只有自己一人在玩，自己退出则对局自然结束
+            _cancel_timeout_task(gid, kind)
+            ST.recall_set(f"{kind}_owner_{gid}", "")
+            ST.recall_set(f"{kind}_players_{gid}", "")
+            ST.recall_set(f"{kind}_ans_{gid}", "")
+            for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
+                ST.recall_set(k, "")
+            _clear_active_game(gid)
+            return f"你已退出【{label}】，因无其他参与者，对局结束！{ans_part}"
 
-    if idle > 30 or is_admin:
-        ST.recall_set(f"{kind}_owner_{gid}", "")
-        ST.recall_set(f"{kind}_players_{gid}", "")
-        ST.recall_set(f"{kind}_ans_{gid}", "")
-        for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
-            ST.recall_set(k, "")
+    # 3. 发送者根本不在对局中
+    return f"你并未参与当前的【{label}】对局哦~（发送【加入{label}】即可加入作答）"
+
+
+def _end_game(gid, qq, kind, label, is_admin=False):
+    """结束当前群内的游戏对局（权限：机器人管理员 或 当前开局者）。"""
+    owner = ST.recall_get(f"{kind}_owner_{gid}")
+    if not owner:
         _clear_active_game(gid)
-        msg_idle = "因超时无互动已自动结束" if idle > 30 and not is_admin else "对局已结束"
-        return f"【{label}】{msg_idle}！{ans_part}"
+        return f"当前没有进行中的【{label}】对局！"
+    if kind == "game24":
+        ans = ST.recall_get(f"game24_ans_{gid}")
+        ans_part = f"\r\n参考算式为：【{ans} = 24】" if ans else ""
+    else:
+        ans = ST.recall_get(f"{kind}_{gid}_{owner}")
+        ans_part = f"\r\n本题正确答案为：【{ans}】" if ans else ""
 
-    return f"你不在当前{label}对局中！（开局者发送【退出{label}】可结束对局并公布答案）"
+    # 权限校验：必须是管理员或者当前开局者
+    if not is_admin and str(owner) != str(qq):
+        return f"只有开局者或管理员可以提前结束【{label}】对局哦！（参与者如需退出请发送【退出{label}】）"
 
+    # 执行清理并公布答案
+    _cancel_timeout_task(gid, kind)
+    ST.recall_set(f"{kind}_owner_{gid}", "")
+    ST.recall_set(f"{kind}_players_{gid}", "")
+    ST.recall_set(f"{kind}_ans_{gid}", "")
+    for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
+        ST.recall_set(k, "")
+    _clear_active_game(gid)
 
-
-
+    if is_admin and str(owner) != str(qq):
+        prefix = f"【{label}】对局已由管理员结束！"
+    else:
+        prefix = f"【{label}】对局已由开局者结束！"
+    return f"{prefix}{ans_part}"
 
 
 def _is_player(gid, qq, kind):
@@ -389,4 +494,9 @@ def _is_player(gid, qq, kind):
 
 
 
-__all__ = ["_GAME_KIND_MAP", "_active_game", "_check_single_game", "_clean_expired_game", "_clear_active_game", "_get_players", "_is_player", "_join_game", "_quit_game", "_set_active_game", "_start_24", "cmd_bomb"]
+__all__ = [
+    "_GAME_KIND_MAP", "_active_game", "_check_single_game", "_clean_expired_game",
+    "_clear_active_game", "_get_players", "_is_player", "_join_game", "_quit_game",
+    "_end_game", "_start_timeout_task", "_cancel_timeout_task", "_set_active_game",
+    "_start_24", "cmd_bomb"
+]

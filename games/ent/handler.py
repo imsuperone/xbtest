@@ -67,7 +67,7 @@ def handle(gid, qq, raw, is_admin=False):
         err = _ent_cost(gid, qq, "接龙")
         if err:
             return err
-        first = random.choice(_get_chain_words())
+        first = _pick_dedup_word("chain", gid, _get_chain_words())
         ST.recall_set(f"chain_owner_{gid}", str(qq))
         ST.recall_set(f"chain_{gid}", first)
         ST.recall_set(f"chain_start_{gid}", str(int(time.time())))
@@ -76,9 +76,10 @@ def handle(gid, qq, raw, is_admin=False):
         ST.recall_set(f"chain_last_qq_{gid}", "")
         ST.recall_set(f"chain_last_time_{gid}", "0")
         _set_active_game(gid, "接龙")
+        _start_timeout_task(gid, "chain", "接龙", first)
         return (f"🧩 接龙开始！机器人先出词：【{first}】\r\n"
                 f"请用尾字「{first[-1]}」接龙（词语2-6字）！\r\n"
-                "其他玩家请在 30 秒内发送【加入接龙】加入！发送【退出接龙】结束。")
+                "其他玩家请发送【加入接龙】加入！开局者或管理员发送【结束接龙】。")
     if text in ("加入接龙", "我加入接龙"):
         _clean_expired_game(gid)
         cur = _active_game(gid)
@@ -130,9 +131,10 @@ def handle(gid, qq, raw, is_admin=False):
         if not owner:
             _clear_active_game(gid)
             return "当前没有进行中的接龙游戏！"
-        if text in ("结束接龙", "重置接龙") and str(owner) != str(qq) and not is_admin:
-            return "只有接龙发起者或机器人管理员可以结束这局接龙！"
-        if text in ("结束接龙", "重置接龙") or str(owner) == str(qq):
+        if text in ("结束接龙", "重置接龙"):
+            if str(owner) != str(qq) and not is_admin:
+                return "只有接龙发起者或机器人管理员可以提前结束这局接龙！（参与者如需退出请发送【退出接龙】）"
+            _cancel_timeout_task(gid, "chain")
             ST.recall_set(f"chain_owner_{gid}", "")
             ST.recall_set(f"chain_{gid}", "")
             ST.recall_set(f"chain_start_{gid}", "")
@@ -141,13 +143,32 @@ def handle(gid, qq, raw, is_admin=False):
             ST.recall_set(f"chain_last_qq_{gid}", "")
             ST.recall_set(f"chain_last_time_{gid}", "")
             _clear_active_game(gid)
-            return "接龙已结束并清理！随时发送【开始接龙】开启新局~"
+            prefix = "【接龙】对局已由管理员结束！" if is_admin and str(owner) != str(qq) else "【接龙】对局已由开局者结束！"
+            return f"{prefix}随时发送【开始接龙】开启新局~"
         else:
             players = _get_players(gid, "chain_players_")
             if str(qq) in players:
                 players.remove(str(qq))
                 ST.recall_set(f"chain_players_{gid}", ",".join(players))
-            return "你已退出接龙！"
+                return "你已退出接龙！"
+            if str(owner) == str(qq):
+                if players:
+                    new_owner = players.pop(0)
+                    ST.recall_set(f"chain_owner_{gid}", str(new_owner))
+                    ST.recall_set(f"chain_players_{gid}", ",".join(players))
+                    return "你已退出接龙！对局已转交其他参与者继续进行~"
+                else:
+                    _cancel_timeout_task(gid, "chain")
+                    ST.recall_set(f"chain_owner_{gid}", "")
+                    ST.recall_set(f"chain_{gid}", "")
+                    ST.recall_set(f"chain_start_{gid}", "")
+                    ST.recall_set(f"chain_players_{gid}", "")
+                    ST.recall_set(f"chain_used_{gid}", "")
+                    ST.recall_set(f"chain_last_qq_{gid}", "")
+                    ST.recall_set(f"chain_last_time_{gid}", "")
+                    _clear_active_game(gid)
+                    return "你已退出接龙，因无其他参与者，对局结束！随时发送【开始接龙】开启新局~"
+            return "你并未参与当前的接龙对局哦~（发送【加入接龙】即可加入）"
     if text == "开始急转弯":
         chk = _check_single_game(gid, "急转弯", sender_qq=qq)
         if chk:
@@ -155,14 +176,15 @@ def handle(gid, qq, raw, is_admin=False):
         err = _ent_cost(gid, qq, "急转弯")
         if err:
             return err
-        q, a = random.choice(_get_trick())
+        q, a = _pick_dedup_qa("trick", gid, _get_trick())
         ST.recall_set(f"trick_{gid}_{qq}", a)
         ST.recall_set(f"trick_owner_{gid}", str(qq))
         ST.recall_set(f"trick_start_{gid}", str(int(time.time())))
         ST.recall_set(f"trick_last_time_{gid}", str(int(time.time())))
         ST.recall_set(f"trick_players_{gid}", "")
         _set_active_game(gid, "急转弯")
-        return "🤔 急转弯：" + q + "\r\n回复你的答案！（其他玩家30秒内发送【加入急转弯】加入）"
+        _start_timeout_task(gid, "trick", "急转弯", a)
+        return "🤔 急转弯：" + q + "\r\n回复你的答案！（其他玩家可发送【加入急转弯】加入，管理员或开局者发送【结束急转弯】）"
     if text == "开始猜字谜":
         chk = _check_single_game(gid, "猜字谜", sender_qq=qq)
         if chk:
@@ -170,14 +192,15 @@ def handle(gid, qq, raw, is_admin=False):
         err = _ent_cost(gid, qq, "猜字谜")
         if err:
             return err
-        q, a = random.choice(_get_miri())
+        q, a = _pick_dedup_qa("miri", gid, _get_miri())
         ST.recall_set(f"miri_{gid}_{qq}", a)
         ST.recall_set(f"miri_owner_{gid}", str(qq))
         ST.recall_set(f"miri_start_{gid}", str(int(time.time())))
         ST.recall_set(f"miri_last_time_{gid}", str(int(time.time())))
         ST.recall_set(f"miri_players_{gid}", "")
         _set_active_game(gid, "猜字谜")
-        return "🔤 字谜：" + q + "\r\n回复你的答案！（其他玩家30秒内发送【加入字谜】加入）"
+        _start_timeout_task(gid, "miri", "字谜", a)
+        return "🔤 字谜：" + q + "\r\n回复你的答案！（其他玩家可发送【加入字谜】加入，管理员或开局者发送【结束字谜】）"
     if text == "开始猜数":
         chk = _check_single_game(gid, "猜数", sender_qq=qq)
         if chk:
@@ -192,9 +215,10 @@ def handle(gid, qq, raw, is_admin=False):
         ST.recall_set(f"guessnum_last_time_{gid}", str(int(time.time())))
         ST.recall_set(f"guessnum_players_{gid}", "")
         _set_active_game(gid, "猜数")
+        _start_timeout_task(gid, "guessnum", "猜数", str(n))
         return ("🎲 猜数开始！我心中想了一个 1-100 之间的数字，\r\n"
                 "请你回复一个数字来猜，我会提示大了/小了！\r\n"
-                "（其他玩家30秒内发送【加入猜数】加入，发送【退出猜数】结束）")
+                "（其他玩家可发送【加入猜数】加入，管理员或开局者发送【结束猜数】）")
     if text == "开始答题":
         chk = _check_single_game(gid, "答题", sender_qq=qq)
         if chk:
@@ -202,14 +226,15 @@ def handle(gid, qq, raw, is_admin=False):
         err = _ent_cost(gid, qq, "答题")
         if err:
             return err
-        q, a = random.choice(_get_quiz())
+        q, a = _pick_dedup_qa("quiz", gid, _get_quiz())
         ST.recall_set(f"quiz_{gid}_{qq}", a)
         ST.recall_set(f"quiz_owner_{gid}", str(qq))
         ST.recall_set(f"quiz_start_{gid}", str(int(time.time())))
         ST.recall_set(f"quiz_last_time_{gid}", str(int(time.time())))
         ST.recall_set(f"quiz_players_{gid}", "")
         _set_active_game(gid, "答题")
-        return "❓ 答题开始！" + q + "\r\n回复你的答案！（其他玩家30秒内发送【加入答题】加入）"
+        _start_timeout_task(gid, "quiz", "答题", a)
+        return "❓ 答题开始！" + q + "\r\n回复你的答案！（其他玩家可发送【加入答题】加入，管理员或开局者发送【结束答题】）"
     if text == "加入猜数":
         return _join_game(gid, qq, "guessnum", "猜数")
     if text == "加入答题":
@@ -221,27 +246,52 @@ def handle(gid, qq, raw, is_admin=False):
     if text == "加入二四点":
         return _join_game(gid, qq, "game24", "二四点")
     if text == "退出猜数":
-        res = _quit_game(gid, qq, "guessnum", "猜数", is_admin=is_admin)
+        res = _quit_game(gid, qq, "guessnum", "猜数")
         if not ST.recall_get(f"guessnum_owner_{gid}"):
             _clear_active_game(gid)
         return res
-    if text in ("退出答题", "结束答题"):
-        res = _quit_game(gid, qq, "quiz", "答题", is_admin=is_admin)
+    if text == "结束猜数":
+        res = _end_game(gid, qq, "guessnum", "猜数", is_admin=is_admin)
+        if not ST.recall_get(f"guessnum_owner_{gid}"):
+            _clear_active_game(gid)
+        return res
+    if text == "退出答题":
+        res = _quit_game(gid, qq, "quiz", "答题")
         if not ST.recall_get(f"quiz_owner_{gid}"):
             _clear_active_game(gid)
         return res
-    if text in ("退出字谜", "退出猜字谜", "结束字谜", "结束猜字谜"):
-        res = _quit_game(gid, qq, "miri", "字谜", is_admin=is_admin)
+    if text == "结束答题":
+        res = _end_game(gid, qq, "quiz", "答题", is_admin=is_admin)
+        if not ST.recall_get(f"quiz_owner_{gid}"):
+            _clear_active_game(gid)
+        return res
+    if text in ("退出字谜", "退出猜字谜"):
+        res = _quit_game(gid, qq, "miri", "字谜")
         if not ST.recall_get(f"miri_owner_{gid}"):
             _clear_active_game(gid)
         return res
-    if text in ("退出急转弯", "结束急转弯"):
-        res = _quit_game(gid, qq, "trick", "急转弯", is_admin=is_admin)
+    if text in ("结束字谜", "结束猜字谜"):
+        res = _end_game(gid, qq, "miri", "字谜", is_admin=is_admin)
+        if not ST.recall_get(f"miri_owner_{gid}"):
+            _clear_active_game(gid)
+        return res
+    if text == "退出急转弯":
+        res = _quit_game(gid, qq, "trick", "急转弯")
         if not ST.recall_get(f"trick_owner_{gid}"):
             _clear_active_game(gid)
         return res
-    if text in ("退出二四点", "结束二四点"):
-        res = _quit_game(gid, qq, "game24", "二四点", is_admin=is_admin)
+    if text == "结束急转弯":
+        res = _end_game(gid, qq, "trick", "急转弯", is_admin=is_admin)
+        if not ST.recall_get(f"trick_owner_{gid}"):
+            _clear_active_game(gid)
+        return res
+    if text == "退出二四点":
+        res = _quit_game(gid, qq, "game24", "二四点")
+        if not ST.recall_get(f"game24_owner_{gid}"):
+            _clear_active_game(gid)
+        return res
+    if text == "结束二四点":
+        res = _end_game(gid, qq, "game24", "二四点", is_admin=is_admin)
         if not ST.recall_get(f"game24_owner_{gid}"):
             _clear_active_game(gid)
         return res
@@ -379,6 +429,7 @@ def _play(gid, qq, text):
             if _is_cmd(text):
                 continue
             if text.strip() == ans:
+                _cancel_timeout_task(gid, kind)
                 S.recall_set(f"{kind}_{gid}_{owner}", "")
                 S.recall_set(f"{kind}_owner_{gid}", "")
                 S.recall_set(f"{kind}_players_{gid}", "")
@@ -392,7 +443,7 @@ def _play(gid, qq, text):
                 if not _reward(gid, qq, coin, meili):
                     return f"恭喜！【{label}】答案正确：{ans}" + _REWARD_FAIL_NOTE
                 return f"恭喜！【{label}】答案正确：{ans} 奖励{coin}{S.coin_name()} 魅力+{meili}"
-            return f"答案不对，再想想~（发送【退出{label}】结束）"
+            return f"答案不对，再想想~（若退出发送【退出{label}】，管理员或开局者发送【结束{label}】）"
     # 猜数(题面存开局者 key, 参与者均可作答)
     elif cur == "猜数":
         owner = S.recall_get(f"guessnum_owner_{gid}")
@@ -425,6 +476,7 @@ def _play(gid, qq, text):
                 v = int(text.strip())
                 n = int(g)
                 if v == n:
+                    _cancel_timeout_task(gid, "guessnum")
                     S.recall_set(f"guessnum_{gid}_{owner}", "")
                     S.recall_set(f"guessnum_owner_{gid}", "")
                     S.recall_set(f"guessnum_players_{gid}", "")
@@ -489,6 +541,7 @@ def _play(gid, qq, text):
                             if val is None:
                                 return "算式有误，请检查（只用 %s 和 +-*/ 括号）：%s" % (" ".join(map(str, nums)), t)
                             if abs(val - 24) < 1e-6:
+                                _cancel_timeout_task(gid, "game24")
                                 S.recall_set(f"game24_{gid}_{owner}", "")
                                 S.recall_set(f"game24_{gid}_{qq}", "")
                                 S.recall_set(f"game24_owner_{gid}", "")
@@ -519,6 +572,7 @@ def _play(gid, qq, text):
                         if val is None:
                             return "算式有误，请检查（只用 %s 和 +-*/ 括号）：%s" % (" ".join(map(str, nums)), t)
                         if abs(val - 24) < 1e-6:
+                            _cancel_timeout_task(gid, "game24")
                             S.recall_set(f"game24_{gid}_{qq}", "")
                             S.recall_set(f"game24_ans_{gid}", "")
                             S.recall_set(f"ent_game_{gid}", "")
@@ -604,4 +658,6 @@ COMMANDS = (
     "加入猜数", "加入答题", "当前接龙", "我加入接龙", "接龙词",
     "接龙进度", "查接龙", "结束接龙", "退出二四点", "退出字谜",
     "退出急转弯", "退出接龙", "退出猜字谜", "退出答题", "重置接龙",
+    # 管理员或开局者专属结束对局指令
+    "结束急转弯", "结束猜数", "结束答题", "结束字谜", "结束猜字谜", "结束二四点",
 )

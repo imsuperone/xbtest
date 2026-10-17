@@ -417,6 +417,28 @@ def set_latest_bot(bot):
     if bot is not None:
         _LATEST_BOT = bot
 
+
+async def send_proactive_group_msg(gid, text):
+    """主动向指定群发送消息（如游戏超时提醒、结题公布答案）。"""
+    if not text or not gid:
+        return False
+    bot = _LATEST_BOT
+    if not bot:
+        return False
+    try:
+        if hasattr(bot, "call_action") and callable(bot.call_action):
+            await bot.call_action("send_group_msg", group_id=int(gid), message=str(text))
+            return True
+        elif hasattr(bot, "call_api") and callable(bot.call_api):
+            await bot.call_api("send_group_msg", group_id=int(gid), message=str(text))
+            return True
+        elif hasattr(bot, "send_group_msg") and callable(bot.send_group_msg):
+            await bot.send_group_msg(group_id=int(gid), message=str(text))
+            return True
+    except Exception:
+        pass
+    return False
+
 async def fetch_group_member_qqs(gid, bot=None, context=None):
     """通过 OneBot / AstrBot 适配器拉取指定群聊的实时在线成员 QQ 集合"""
     b = bot or _LATEST_BOT
