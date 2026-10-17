@@ -3364,7 +3364,7 @@
   pointer-events: auto;
 }
 
-/* Floating island side-nav - 尊享 iOS 级高透磨砂质感与硬件级 120 FPS 极速动效 */
+/* Floating island side-nav - 尊享 iOS 级高透晶莹磨砂质感与硬件级 120 FPS 极速动效 */
 .side-nav.floating-island {
   position: fixed;
   top: 74px;
@@ -3373,12 +3373,12 @@
   width: 260px;
   max-width: calc(100vw - 40px);
   z-index: 1080;
-  background: rgba(255, 255, 255, 0.68);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.82) 0%, rgba(244, 247, 252, 0.72) 100%);
+  -webkit-backdrop-filter: blur(32px) saturate(210%);
+  backdrop-filter: blur(32px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 24px;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.95), 0 20px 48px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.04);
   padding: 10px 12px 14px 12px;
   display: flex;
   flex-direction: column;
@@ -3403,11 +3403,11 @@
 }
 
 [data-theme="dark"] .side-nav.floating-island {
-  background: rgba(26, 31, 38, 0.86);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.46), 0 2px 10px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(155deg, rgba(30, 36, 48, 0.86) 0%, rgba(18, 22, 32, 0.8) 100%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  backdrop-filter: blur(28px) saturate(200%);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.12), 0 24px 52px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .side-nav.floating-island.collapsed {
@@ -3422,12 +3422,15 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 4px 0 10px 0;
-  border-bottom: 1px solid var(--line-subtle);
+  padding: 2px 0 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   margin-bottom: 12px;
   flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
+}
+[data-theme="dark"] .island-head {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 .side-nav .island-close-pill,
 .side-nav button#sideNavToggle {
@@ -3436,26 +3439,27 @@
   min-height: 28px !important;
   max-height: 28px !important;
   border-radius: var(--radius-full) !important;
-  background: var(--panel2) !important;
-  border: 1px solid var(--line) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important; /* 关键：SVG 绝对完美居中 */
+  justify-content: center !important;
   text-align: center !important;
   color: var(--text-secondary) !important;
   cursor: pointer;
   padding: 0 !important;
   margin: 0 !important;
-  box-shadow: var(--shadow-xs);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   transform: none !important;
 }
 .side-nav .island-close-pill:hover,
 .side-nav button#sideNavToggle:hover {
-  background: var(--accSoft2) !important;
+  background: var(--accSoft) !important;
   color: var(--acc) !important;
   border-color: var(--accBorder) !important;
   transform: scale(0.99) !important;
+  box-shadow: 0 2px 8px var(--accSoft) !important;
 }
 .side-nav .island-close-pill:active,
 .side-nav button#sideNavToggle:active {
@@ -3468,6 +3472,19 @@
   color: currentColor;
   flex-shrink: 0;
 }
+[data-theme="dark"] .side-nav .island-close-pill,
+[data-theme="dark"] .side-nav button#sideNavToggle {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12);
+}
+[data-theme="dark"] .side-nav .island-close-pill:hover,
+[data-theme="dark"] .side-nav button#sideNavToggle:hover {
+  background: var(--accSoft) !important;
+  color: var(--acc) !important;
+  border-color: var(--accBorder) !important;
+}
 
 .side-group {
   display: flex;
@@ -3479,13 +3496,24 @@
   margin-bottom: 0;
 }
 .side-group-title {
-  font-size: 12px;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  line-height: 1;
   color: var(--text-secondary);
-  padding: 8px 10px 4px 10px;
+  padding: 4px 6px 2px 6px;
   user-select: none;
-  opacity: 0.85;
-  letter-spacing: 0.3px;
+  opacity: 0.8;
+}
+.side-group-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.01) 100%);
+}
+[data-theme="dark"] .side-group-title::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.01) 100%);
 }
 .side-nav button {
   display: flex;
@@ -3493,8 +3521,8 @@
   gap: 10px;
   width: 100%;
   text-align: left;
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 14px;
   padding: 9px 14px;
   font-size: 13.5px;
@@ -3502,23 +3530,35 @@
   font-weight: 600;
   color: var(--text);
   cursor: pointer;
-  transition: background 0.18s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: background 0.18s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s, border-color 0.18s, box-shadow 0.18s;
   white-space: nowrap;
 }
 .side-nav button:hover {
-  background: var(--panel-hover);
+  background: rgba(255, 255, 255, 0.7);
   color: var(--acc);
-  transform: translateX(4px);
+  border-color: var(--accBorder);
+  transform: translateX(3px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 .side-nav button:active {
-  transform: translateX(2px) scale(0.98);
+  transform: translateX(1px) scale(0.98);
 }
 .side-nav button.on {
-  background: var(--m3-sys-color-primary-container);
-  color: var(--m3-sys-color-on-primary-container);
+  background: var(--m3-sys-color-primary-container) !important;
+  color: var(--m3-sys-color-on-primary-container) !important;
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px var(--accBorder), 0 2px 8px var(--accSoft);
+  border-color: var(--accBorder) !important;
+  box-shadow: inset 0 0 0 1px var(--accBorder), 0 2px 10px var(--accSoft) !important;
   transform: translateX(2px);
+}
+[data-theme="dark"] .side-nav button {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+[data-theme="dark"] .side-nav button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accBorder);
 }
 
 /* 手机端右下角悬浮半屏鸿蒙岛触发按钮 (FAB) - 桌面端默认隐藏 */
@@ -3630,14 +3670,14 @@
     height: auto;
     max-height: 72vh;
     border-radius: 26px 26px 0 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.75);
+    border-top: 1px solid rgba(255, 255, 255, 0.9);
     border-left: none;
     border-right: none;
     border-bottom: none;
-    background: rgba(255, 255, 255, 0.72) !important;
-    -webkit-backdrop-filter: blur(32px) saturate(190%) !important;
-    backdrop-filter: blur(32px) saturate(190%) !important;
-    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.16), 0 -2px 10px rgba(0, 0, 0, 0.06);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(246, 248, 252, 0.78) 100%) !important;
+    -webkit-backdrop-filter: blur(36px) saturate(210%) !important;
+    backdrop-filter: blur(36px) saturate(210%) !important;
+    box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.95), 0 -16px 48px rgba(15, 23, 42, 0.16), 0 -2px 10px rgba(15, 23, 42, 0.06);
     padding: 8px 14px calc(14px + env(safe-area-inset-bottom, 12px)) 14px;
     z-index: 1080;
     transform: translate3d(0, 0, 0);
@@ -3646,9 +3686,9 @@
   }
 
   [data-theme="dark"] .side-nav.floating-island {
-    background: rgba(22, 26, 36, 0.75) !important;
+    background: linear-gradient(180deg, rgba(26, 32, 44, 0.88) 0%, rgba(16, 20, 30, 0.82) 100%) !important;
     border-top-color: rgba(255, 255, 255, 0.16) !important;
-    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 -16px 48px rgba(0, 0, 0, 0.55) !important;
   }
 
   .side-nav.floating-island.collapsed {
@@ -3704,9 +3744,12 @@
   }
   .side-nav.floating-island .side-group-title {
     grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin: 6px 0 2px 4px;
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 13.5px;
+    line-height: 1;
     color: var(--text-muted);
   }
   .side-nav.floating-island button[data-tab] {

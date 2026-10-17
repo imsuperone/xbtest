@@ -428,16 +428,19 @@ function bindTabs() {
     });
   });
 }
-// 悬浮岛式侧边栏交互（触发按钮、手机端FAB、关闭按钮、背景遮罩、ESC快捷键、Tab点击自动收起）
+// 悬浮岛式侧边栏交互（统一全平台驱动：桌面端顶栏按钮 + 手机端 FAB + 遮罩 + 键盘 ESC + 粒子动效）
 function initSideNavCollapse() {
   const nav = document.getElementById("sideNav");
-  const toggle = document.getElementById("sideNavToggle");
-  const islandToggle = document.getElementById("floatingIslandToggle");
-  const mobileFab = document.getElementById("mobileIslandFab");
-  const backdrop = document.getElementById("islandBackdrop");
-  if (!nav) return;
-  if (nav._islandInited) return;
+  if (!nav || nav._islandInited) return;
   nav._islandInited = true;
+
+  const toggle = document.getElementById("sideNavToggle");
+  const islandHead = nav.querySelector(".island-head");
+  const backdrop = document.getElementById("islandBackdrop");
+  const triggers = [
+    document.getElementById("floatingIslandToggle"),
+    document.getElementById("mobileIslandFab")
+  ].filter(Boolean);
 
   nav.querySelectorAll("button[data-tab]").forEach((b) => {
     const raw = b.textContent.trim();
@@ -446,7 +449,6 @@ function initSideNavCollapse() {
     b.title = raw;
   });
 
-  // 权威显隐状态标（彻底消除异步动效延迟竞争导致的死锁与失效）
   let isOpen = false;
   let activeAnimCancel = null;
 
@@ -460,12 +462,12 @@ function initSideNavCollapse() {
     });
   };
 
-  const applyClosedDOM = (instant = false) => {
+  const setControlsState = (open, instant = false) => {
     if (instant) {
       nav.style.transition = "none";
       if (backdrop) backdrop.style.transition = "none";
     }
-    nav.classList.add("collapsed");
+    nav.classList.toggle("collapsed", !open);
     nav.style.transform = "";
     nav.style.opacity = "";
     if (instant) {
@@ -476,150 +478,74 @@ function initSideNavCollapse() {
     } else {
       nav.style.transition = "";
     }
-    if (backdrop) backdrop.classList.remove("active");
-    if (islandToggle) {
-      islandToggle.setAttribute("aria-expanded", "false");
-      islandToggle.classList.remove("active");
-    }
-    if (mobileFab) {
-      mobileFab.setAttribute("aria-expanded", "false");
-      mobileFab.classList.remove("active");
-    }
-  };
-
-  const applyOpenDOM = () => {
-    nav.classList.remove("collapsed");
-    nav.style.transform = "";
-    nav.style.opacity = "";
-    nav.style.transition = "";
-    if (backdrop) backdrop.classList.add("active");
-    if (islandToggle) {
-      islandToggle.setAttribute("aria-expanded", "true");
-      islandToggle.classList.add("active");
-    }
-    if (mobileFab) {
-      mobileFab.setAttribute("aria-expanded", "true");
-      mobileFab.classList.add("active");
-    }
+    if (backdrop) backdrop.classList.toggle("active", open);
+    triggers.forEach((t) => {
+      t.setAttribute("aria-expanded", open ? "true" : "false");
+      t.classList.toggle("active", open);
+    });
   };
 
   // 默认启动状态：强制收起
   isOpen = false;
-  applyClosedDOM(true);
+  setControlsState(false, true);
 
-  // 关闭悬浮岛 (立即切换权威状态，支持高密粒子粉末崩解动效)
+  const getVisibleTrigger = () => {
+    return triggers.find((t) => window.getComputedStyle(t).display !== "none") || triggers[0];
+  };
+
   const closeIsland = (withAnim = true) => {
     if (!isOpen) return;
     isOpen = false;
     cancelActiveAnim();
+    setControlsState(false);
 
-    // 立即更新控制按钮与遮罩状态，消除视觉延迟与点击拦截
-    if (islandToggle) {
-      islandToggle.setAttribute("aria-expanded", "false");
-      islandToggle.classList.remove("active");
-    }
-    if (mobileFab) {
-      mobileFab.setAttribute("aria-expanded", "false");
-      mobileFab.classList.remove("active");
-    }
-    if (backdrop) backdrop.classList.remove("active");
-
-    if (!withAnim) {
-      applyClosedDOM(false);
-      return;
-    }
+    if (!withAnim) return;
 
     activeAnimCancel = triggerHarmonyDisintegrate(nav, () => {
-      applyClosedDOM(true);
+      setControlsState(false, true);
       activeAnimCancel = null;
     });
   };
 
-  // 展开悬浮岛 (立即切换权威状态，支持星尘逆向聚拢凝结入场)
   const openIsland = (withAnim = true) => {
     if (isOpen) return;
     isOpen = true;
     cancelActiveAnim();
+    setControlsState(true);
 
-    if (islandToggle) {
-      islandToggle.setAttribute("aria-expanded", "true");
-      islandToggle.classList.add("active");
-    }
-    if (mobileFab) {
-      mobileFab.setAttribute("aria-expanded", "true");
-      mobileFab.classList.add("active");
-    }
-    if (backdrop) backdrop.classList.add("active");
+    if (!withAnim) return;
 
-    if (!withAnim) {
-      applyOpenDOM();
-      return;
-    }
-
-    const trigger = (window.innerWidth <= 900 && mobileFab) ? mobileFab : islandToggle;
-    activeAnimCancel = triggerHarmonyAssemble(nav, trigger, () => {
-      applyOpenDOM();
+    activeAnimCancel = triggerHarmonyAssemble(nav, getVisibleTrigger(), () => {
+      setControlsState(true);
       activeAnimCancel = null;
     });
   };
 
-  // 顶栏导航按钮：权威状态翻转，任意频次极速连击零死锁
-  if (islandToggle) {
-    islandToggle.addEventListener("click", (e) => {
+  // 触发入口统一绑定（PC 顶栏导航按钮 + 移动端右下角 FAB，一套逻辑全平台复用）
+  triggers.forEach((t) => {
+    t.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (isOpen) {
-        closeIsland(true);
-      } else {
-        openIsland(true);
-      }
+      isOpen ? closeIsland(true) : openIsland(true);
     });
-  }
+  });
 
-  // 手机端右下角悬浮胶囊按钮 (FAB)
-  if (mobileFab) {
-    mobileFab.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (isOpen) {
-        closeIsland(true);
-      } else {
-        openIsland(true);
-      }
-    });
-  }
-
-  // 点击侧边栏关闭胶囊按钮与顶部拖拽条 (iOS 触顶收起)
-  if (toggle) {
-    toggle.addEventListener("click", (e) => {
+  // 收起入口（关闭按钮、顶部拖拽条、遮罩）
+  [toggle, islandHead, backdrop].filter(Boolean).forEach((el) => {
+    el.addEventListener("click", (e) => {
       e.stopPropagation();
       closeIsland(true);
     });
-  }
-  const islandHead = nav.querySelector(".island-head");
-  if (islandHead) {
-    islandHead.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeIsland(true);
-    });
-  }
-
-  // 点击遮罩空白处收起
-  if (backdrop) {
-    backdrop.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeIsland(true);
-    });
-  }
+  });
 
   // 点击全页面任意空白非导航区域收起
   document.addEventListener("click", (e) => {
     if (!isOpen) return;
     if (nav.contains(e.target)) return;
-    if (islandToggle && islandToggle.contains(e.target)) return;
-    if (mobileFab && mobileFab.contains(e.target)) return;
+    if (triggers.some((t) => t.contains(e.target))) return;
     closeIsland(true);
   });
 
-  // 点击导航选项触发粒子粉末崩解收起，并在右侧主视区同步播放切页动效
+  // 点击导航选项触发粒子粉末崩解收起
   nav.querySelectorAll("button[data-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
       closeIsland(true);
@@ -628,9 +554,7 @@ function initSideNavCollapse() {
 
   // ESC 键收起
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && isOpen) {
-      closeIsland(true);
-    }
+    if (e.key === "Escape" && isOpen) closeIsland(true);
   });
 }
 
@@ -646,21 +570,18 @@ function triggerHarmonyDisintegrate(el, onComplete) {
     return () => {};
   }
 
-  const isMobile = window.innerWidth <= 900;
-  // 局部边界画板：手机端全宽覆盖，桌面端局部覆盖 380px 侧抽屉
-  const cWidth = isMobile ? window.innerWidth : Math.min(window.innerWidth, Math.max(380, Math.ceil(rect.right + 60)));
   const canvas = document.createElement("canvas");
   canvas.className = "harmony-powder-canvas";
   canvas.style.position = "fixed";
   canvas.style.left = "0px";
   canvas.style.top = "0px";
-  canvas.style.width = cWidth + "px";
+  canvas.style.width = "100vw";
   canvas.style.height = "100vh";
   canvas.style.pointerEvents = "none";
   canvas.style.zIndex = "9999";
   document.body.appendChild(canvas);
 
-  canvas.width = cWidth;
+  canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   const ctx = canvas.getContext("2d");
 
@@ -670,10 +591,9 @@ function triggerHarmonyDisintegrate(el, onComplete) {
     ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF", "#CBD5E1"]
     : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#2196F3"];
 
-  // 1:1 组件级表面网格微尘采样 (1:1 Physical Powder Density)：
-  // 在组件真实几何轮廓内按网格密集排布 550~650 颗主微尘核，每颗同频衍生 3 颗极细伴生微尘，整屏呈现 2,200 ~ 2,600 颗 1:1 紧密吸附的流体微尘海
-  const cols = isMobile ? 22 : 18;
-  const rows = isMobile ? 28 : 34;
+  // 1:1 组件级表面网格微尘采样 (自适应几何尺寸，整屏呈现 2,000+ 物理紧密细沙)
+  const cols = Math.max(16, Math.min(24, Math.round(rect.width / 14)));
+  const rows = Math.max(20, Math.min(32, Math.round(rect.height / 20)));
   const stepX = rect.width / cols;
   const stepY = rect.height / rows;
   const particles = [];
@@ -686,15 +606,11 @@ function triggerHarmonyDisintegrate(el, onComplete) {
       particles.push({
         x: px,
         y: py,
-        vx: isMobile
-          ? Math.cos(angle) * speed * 0.75 + (Math.random() - 0.5) * 1.4
-          : Math.cos(angle) * speed * 0.65 + (Math.random() - 0.4) * 1.5,
-        vy: isMobile
-          ? Math.sin(angle) * speed * 0.4 - Math.random() * 2.2 - 0.9
-          : Math.sin(angle) * speed * 0.5 - Math.random() * 1.8 - 0.5,
+        vx: Math.cos(angle) * speed * 0.7 + (Math.random() - 0.5) * 1.4,
+        vy: Math.sin(angle) * speed * 0.45 - Math.random() * 2.0 - 0.7,
         size: Math.random() * 1.8 + 0.8,
         alpha: Math.random() * 0.3 + 0.7,
-        decay: isMobile ? Math.random() * 0.02 + 0.016 : Math.random() * 0.018 + 0.014,
+        decay: Math.random() * 0.019 + 0.015,
         color: colors[Math.floor(Math.random() * colors.length)],
         ox1: ((Math.random() - 0.5) * 10) | 0,
         oy1: ((Math.random() - 0.5) * 10) | 0,
@@ -708,9 +624,7 @@ function triggerHarmonyDisintegrate(el, onComplete) {
 
   // 元素本体瞬间微缩并消失，粉末即刻接管视觉呈现，彻底释放毛玻璃 GPU 资源
   el.style.transition = "transform 0.08s ease-out, opacity 0.06s ease-out";
-  el.style.transform = isMobile
-    ? "scale(0.98) translate3d(0, 10px, 0)"
-    : "scale(0.97) translate3d(-6px, -4px, 0)";
+  el.style.transform = "scale(0.975) translate3d(0, 6px, 0)";
   el.style.opacity = "0";
 
   let animId;
@@ -718,7 +632,7 @@ function triggerHarmonyDisintegrate(el, onComplete) {
 
   function render(now) {
     const elapsed = now - startTime;
-    ctx.clearRect(0, 0, cWidth, window.innerHeight);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     let aliveCount = 0;
     for (let i = 0; i < particles.length; i++) {
@@ -740,10 +654,10 @@ function triggerHarmonyDisintegrate(el, onComplete) {
       const rx = (p.x - sz / 2) | 0;
       const ry = (p.y - sz / 2) | 0;
 
-      // 1. 主微粒核 (Master Particle)
+      // 1. 主微粒核
       ctx.fillRect(rx, ry, sz, sz);
 
-      // 2. 1:1 伴生假渲染高密微尘 (同心伴随微尘，4x 假渲染 1:1 高密填充，呈现 2,400+ 物理细沙)
+      // 2. 1:1 伴生高密微尘 (4x 假渲染，实显 2,000+ 物理细沙)
       ctx.fillRect(rx + p.ox1, ry + p.oy1, 1, 1);
       ctx.fillRect(rx + p.ox2, ry + p.oy2, 1, 1);
       if (p.alpha > 0.14) {
@@ -782,12 +696,11 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
     return () => {};
   }
 
-  const isMobile = window.innerWidth <= 900;
-  // 预先显示以便抓取真实布局尺寸
+  // 预先显示以便抓取真实物理尺寸
   el.style.transition = "none";
   el.classList.remove("collapsed");
   el.style.opacity = "0";
-  el.style.transform = isMobile ? "translate3d(0, 16px, 0) scale(0.98)" : "scale(0.96)";
+  el.style.transform = "scale(0.97) translate3d(0, 8px, 0)";
   const rect = el.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) {
     el.style.opacity = "";
@@ -797,30 +710,28 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
     return () => {};
   }
 
-  // 发射源头坐标（手机端自动绑定右下角 FAB）
+  // 发射源头坐标（PC 顶栏按钮 / 手机端 FAB 纯几何坐标自适应）
   const trigRect = triggerEl ? triggerEl.getBoundingClientRect() : {
-    left: isMobile ? window.innerWidth - 70 : rect.left,
-    top: isMobile ? window.innerHeight - 60 : rect.top - 40,
+    left: rect.left,
+    top: rect.top - 40,
     width: 44,
     height: 36
   };
   const originX = trigRect.left + trigRect.width / 2;
   const originY = trigRect.top + trigRect.height / 2;
 
-  // 局部画板：手机端全宽，桌面端覆盖触发器至展开区
-  const cWidth = isMobile ? window.innerWidth : Math.min(window.innerWidth, Math.max(380, Math.ceil(Math.max(rect.right, originX) + 60)));
   const canvas = document.createElement("canvas");
   canvas.className = "harmony-powder-canvas";
   canvas.style.position = "fixed";
   canvas.style.left = "0px";
   canvas.style.top = "0px";
-  canvas.style.width = cWidth + "px";
+  canvas.style.width = "100vw";
   canvas.style.height = "100vh";
   canvas.style.pointerEvents = "none";
   canvas.style.zIndex = "9999";
   document.body.appendChild(canvas);
 
-  canvas.width = cWidth;
+  canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   const ctx = canvas.getContext("2d");
 
@@ -830,9 +741,8 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
     ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF", "#CBD5E1"]
     : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#2196F3"];
 
-  // 1:1 星尘网格对齐汇聚 (600 主星尘核 × 4 = 2,400 颗璀璨星尘快速汇聚，120 FPS 满帧)
-  const cols = isMobile ? 22 : 18;
-  const rows = isMobile ? 26 : 32;
+  const cols = Math.max(16, Math.min(24, Math.round(rect.width / 14)));
+  const rows = Math.max(20, Math.min(32, Math.round(rect.height / 20)));
   const stepX = rect.width / cols;
   const stepY = rect.height / rows;
   const particles = [];
@@ -858,8 +768,6 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
         oy1: ((Math.random() - 0.5) * 10) | 0,
         ox2: ((Math.random() - 0.5) * 18) | 0,
         oy2: ((Math.random() - 0.5) * 18) | 0,
-        ox3: ((Math.random() - 0.5) * 26) | 0,
-        oy3: ((Math.random() - 0.5) * 26) | 0,
       });
     }
   }
@@ -870,7 +778,7 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
 
   function render(now) {
     const elapsed = now - startTime;
-    ctx.clearRect(0, 0, cWidth, window.innerHeight);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     let activeCount = 0;
     for (let i = 0; i < particles.length; i++) {
@@ -898,22 +806,16 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
       // 1. 主星尘微粒核
       ctx.fillRect(rx, ry, sz, sz);
 
-      // 2. 1:1 伴生星尘微粒 (2,400+ 颗实体微粒星尘海)
+      // 2. 伴生星尘微粒
       ctx.fillRect(rx + p.ox1, ry + p.oy1, 1, 1);
       ctx.fillRect(rx + p.ox2, ry + p.oy2, 1, 1);
-      if (alpha > 0.15) {
-        ctx.fillRect(rx + p.ox3, ry + p.oy3, 1, 1);
-      }
     }
 
-    // 粒子汇聚吸附至约 180ms 时，实体卡片以高阶弹性自愈凝结显现
     if (!cardRevealed && elapsed >= 180) {
       cardRevealed = true;
-      el.style.transition = isMobile
-        ? "transform 0.24s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1)"
-        : "transform 0.22s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1)";
+      el.style.transition = "transform 0.22s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1)";
       el.style.opacity = "1";
-      el.style.transform = isMobile ? "translate3d(0, 0, 0) scale(1)" : "scale(1) translate3d(0, 0, 0)";
+      el.style.transform = "scale(1) translate3d(0, 0, 0)";
     }
 
     if (activeCount > 0 && elapsed < 450) {
