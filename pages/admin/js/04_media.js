@@ -443,10 +443,7 @@ function initSideNavCollapse() {
   ].filter(Boolean);
 
   nav.querySelectorAll("button[data-tab]").forEach((b) => {
-    const raw = b.textContent.trim();
-    const i = raw.indexOf(" ");
-    if (i > 0) b.innerHTML = raw.slice(0, i) + '<span class="side-nav-label">' + raw.slice(i + 1) + "</span>";
-    b.title = raw;
+    b.title = b.textContent.trim();
   });
 
   let isOpen = false;

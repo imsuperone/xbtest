@@ -4,7 +4,7 @@
 const EXPORT_MODULES = [
   {
     key: "atlas",
-    title: "📖 精灵与地图图鉴",
+    title: "精灵与地图图鉴",
     desc: "包含精灵属性数值、地图探索配置、掉落概率与商城",
     defaultChecked: true,
     gather: async () => {
@@ -27,7 +27,7 @@ const EXPORT_MODULES = [
   },
   {
     key: "shops",
-    title: "🛒 坐骑商城与武器库",
+    title: "坐骑商城与武器库",
     desc: "包含商城坐骑上架列表、抽奖武器加成与顺序",
     defaultChecked: true,
     gather: (cfg) => {
@@ -50,7 +50,7 @@ const EXPORT_MODULES = [
   },
   {
     key: "treasures",
-    title: "🔮 宝物专有效果库",
+    title: "宝物专有效果库",
     desc: "包含宝物卡片清单、加成效果类型与自定义文案",
     defaultChecked: true,
     gather: (cfg) => {
@@ -88,7 +88,7 @@ const EXPORT_MODULES = [
   },
   {
     key: "rules",
-    title: "⚙️ 玩法规则与数值",
+    title: "玩法规则与数值",
     desc: "包含28大系统玩法数值与自定义指令回复（不含玩家数据）",
     defaultChecked: false,
     gather: (cfg) => {
@@ -104,7 +104,7 @@ const EXPORT_MODULES = [
   },
   {
     key: "users",
-    title: "👤 玩家资产与经济账本",
+    title: "玩家资产与经济账本",
     desc: "包含全群玩家金币钱包、奴隶买卖关系与背包资产",
     defaultChecked: false,
     gather: async () => {
