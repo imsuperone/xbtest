@@ -262,9 +262,9 @@ def cmd_go_jail(gid, qq):
         s_soft = cfgi("签到配置", "体力软上限", STAMINA_SOFT_CAP)
         s_hard = cfgi("签到配置", "体力硬上限", STAMINA_HARD_CAP)
         s_rate = cfgi("签到配置", "溢出体力折算金币", STAMINA_OVERFLOW_COIN)
-        new_st, eff_st, ov_st, ov_coin, _ = settle_stat_gain(cur_st, add_stam, s_soft, s_hard, s_rate)
+        new_st, eff_st, _, ov_coin, _ = settle_stat_gain(cur_st, add_stam, s_soft, s_hard, s_rate)
     except Exception:
-        new_st, eff_st, ov_st, ov_coin = min(1000, cur_st + add_stam), add_stam, 0, 0
+        new_st, eff_st, _, ov_coin = min(1000, cur_st + add_stam), add_stam, 0, 0
     now_s = _now_s()
     rel_ts = str(int(time.time()) + 600)
     if ST.txn_coins_acct(gid, qq, ov_coin, {

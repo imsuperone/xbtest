@@ -111,6 +111,7 @@ def _clean_expired_game(gid, max_seconds=30):
                 ST.recall_set(f"game24_players_{gid}", "")
                 ST.recall_set(f"game24_start_{gid}", "")
                 ST.recall_set(f"game24_owner_{gid}", "")
+                ST.recall_set(f"game24_ans_{gid}", "")
             _clear_active_game(gid)
             return True
     except Exception:
@@ -273,7 +274,9 @@ def _start_24(gid, qq):
     if err:
         return err
     nums = _generate_solvable_24()
+    ans_expr = _solve_24_expr(nums)
     ST.recall_set(f"game24_{gid}_{qq}", "|".join(map(str, nums)))
+    ST.recall_set(f"game24_ans_{gid}", ans_expr)
     ST.recall_set(f"game24_owner_{gid}", str(qq))
     ST.recall_set(f"game24_start_{gid}", str(int(time.time())))
     ST.recall_set(f"game24_last_time_{gid}", str(int(time.time())))
@@ -327,14 +330,19 @@ def _quit_game(gid, qq, kind, label, is_admin=False):
     if not owner:
         _clear_active_game(gid)
         return f"当前没有进行中的{label}对局！"
-    ans = ST.recall_get(f"{kind}_{gid}_{owner}")
+    if kind == "game24":
+        ans = ST.recall_get(f"game24_ans_{gid}")
+        ans_part = f"\r\n参考算式为：【{ans} = 24】" if ans else ""
+    else:
+        ans = ST.recall_get(f"{kind}_{gid}_{owner}")
+        ans_part = f"\r\n本题正确答案为：【{ans}】" if ans else ""
     players = _get_players(gid, f"{kind}_players_")
-    ans_part = f"\r\n本题正确答案为：【{ans}】" if ans else ""
 
     if str(owner) == str(qq) or is_admin:
         # 开局者或管理员退出=结束整局，公布答案
         ST.recall_set(f"{kind}_owner_{gid}", "")
         ST.recall_set(f"{kind}_players_{gid}", "")
+        ST.recall_set(f"{kind}_ans_{gid}", "")
         for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
             ST.recall_set(k, "")
         _clear_active_game(gid)
@@ -347,7 +355,8 @@ def _quit_game(gid, qq, kind, label, is_admin=False):
         if not players:
             # 所有人已全部退出，结束对局并公布答案
             ST.recall_set(f"{kind}_owner_{gid}", "")
-            for k in (f"{kind}_{gid}_{owner}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
+            ST.recall_set(f"{kind}_ans_{gid}", "")
+            for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
                 ST.recall_set(k, "")
             _clear_active_game(gid)
             return f"你已退出{label}，所有参与者已全部退出，对局结束！{ans_part}"
@@ -364,7 +373,8 @@ def _quit_game(gid, qq, kind, label, is_admin=False):
     if idle > 30 or not players or is_admin:
         ST.recall_set(f"{kind}_owner_{gid}", "")
         ST.recall_set(f"{kind}_players_{gid}", "")
-        for k in (f"{kind}_{gid}_{owner}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
+        ST.recall_set(f"{kind}_ans_{gid}", "")
+        for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
             ST.recall_set(k, "")
         _clear_active_game(gid)
         return f"【{label}】对局已结束！{ans_part}"

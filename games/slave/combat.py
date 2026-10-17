@@ -19,7 +19,7 @@ except ImportError:
                                     FIGHT_POOR_LIMIT, FIGHT_CRIT_PER_STAR, FIGHT_CRIT_MULT,
                                     SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS,
                                     WORTH_PCT_CAP)
-from .base import U, _fmt, _safe_int, cd_check, cd_commit, cfg, cfgf, cfgi, cn_fmt, cn_parse, coins_get, protected_until, slaves_of, star_of, total_assets, transfer_cash_or_deposit, treasures_of, uget, user_slave_slots, uset, weapons_of
+from .base import U, _fmt, cd_check, cd_commit, cfg, cfgf, cfgi, cn_fmt, cn_parse, protected_until, slaves_of, star_of, total_assets, transfer_cash_or_deposit, treasures_of, uget, user_slave_slots, uset, weapons_of
 try:
     from ..config.shop import TREASURES as _TREASURES_BUILTIN
 except ImportError:

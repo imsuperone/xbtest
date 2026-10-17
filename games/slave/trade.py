@@ -14,7 +14,7 @@ try:
 except ImportError:
     from games.config.slave import (TORTURE_VICTIM_CD, TORTURE_FALLBACK_LO, TORTURE_FALLBACK_HI,  # type: ignore
                                     TORTURE_FALLBACK_OWNER_DIV, SLOT_GROWTH)
-from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgf, cfgi, cn_fmt, cn_parse, coins_add, coins_get, deduct_cash_or_deposit, max_slave_slots, protected_until, slaves_of, total_assets, uget, user_slave_slots, uset
+from .base import U, _event_delta, _fmt, cd_check, cd_commit, cfgf, cfgi, cn_fmt, cn_parse, coins_add, coins_get, deduct_cash_or_deposit, max_slave_slots, protected_until, slaves_of, uget, user_slave_slots, uset
 from .nick import exists_user, uname
 from .profile import coin_name
 

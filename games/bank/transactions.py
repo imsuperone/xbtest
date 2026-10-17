@@ -312,7 +312,7 @@ def cmd_gamble(gid, qq, amount):
         return (f"亲，赌博后总资产必须保有至少{ST.fmt_coins(10000)}{ST.coin_name()}保底生活费！"
                 f"您当前总资产为{ST.fmt_coins(total_pre)}{ST.coin_name()}，本次最多可下注{ST.fmt_coins(max_bet)}{ST.coin_name()}！")
     if cur_cash_pre < amount:
-        return f"亲，您的现金不足，无法进行赌博（不可直接透支银行存款下注，请先前往银行取款）！"
+        return "亲，您的现金不足，无法进行赌博（不可直接透支银行存款下注，请先前往银行取款）！"
     lim = cfgi("银行配置", "赌博限定次数", 5)
     meli = cfgi("银行配置", "赌博魅力减少", 20)
     jail_mins = cfgi("银行配置", "赌博关押时间", 5)
@@ -323,7 +323,7 @@ def cmd_gamble(gid, qq, amount):
     except Exception:
         pass
     gain = int(amount * GAMBLE_MULT)
-    # 原子化：钱包+体力+魅力+日计数 同锁，避免半成功通胀/并发双花次数
+    # 原子化：钱包+体力+魅力+日计数 统归事务处理，避免半成功/脏读
     try:
         with ST._LOCK:
             cur = ST.coins_get(gid, qq)
@@ -337,7 +337,7 @@ def cmd_gamble(gid, qq, amount):
                 return (f"亲，赌博后总资产必须保有至少{ST.fmt_coins(10000)}{ST.coin_name()}保底生活费！"
                         f"您当前总资产为{ST.fmt_coins(total_assets)}{ST.coin_name()}，本次最多可下注{ST.fmt_coins(max_bet)}{ST.coin_name()}！")
             if cur < amount:
-                return f"亲，您的现金不足，无法进行赌博（不可直接透支银行存款下注，请先前往银行取款）！"
+                return "亲，您的现金不足，无法进行赌博（不可直接透支银行存款下注，请先前往银行取款）！"
             cur_st = a2.int("stamina")
             if cur_st < cs:
                 return "亲，您的体力不足，无法进行赌博！"
@@ -345,18 +345,12 @@ def cmd_gamble(gid, qq, amount):
             cnt = int(ST.recall_get("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), "0") or 0)
             if cnt >= lim:
                 return "亲，您今日赌博次数已达上限，无法再进行赌博！"
-            a2.set("stamina", str(cur_st - cs))
+
             if random.random() * 100 < prob:
-                # 成功：-amount +gain
-                new_money = cur - amount + gain
-                ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_money))
-                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
-                try:
-                    ST._DB.commit()
-                except Exception:
-                    ST._safe_rollback()
-                    raise
-                a2.dirty = False
+                # 成功：净赚 gain - amount
+                updates = {"stamina": str(cur_st - cs)}
+                if ST.txn_coins_acct(gid, qq, gain - amount, updates, require_funds=True) is None:
+                    return "赌博系统繁忙，本次未结算，未扣除资金和体力，请稍后重试！"
                 try:
                     ST.recall_set("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), str(cnt + 1))
                 except Exception:
@@ -364,24 +358,19 @@ def cmd_gamble(gid, qq, amount):
                 return f"赌博成功！你获得了{ST.fmt_coins(gain)}{ST.coin_name()}，净赚{ST.fmt_coins(gain - amount)}！"
             else:
                 # 失败：-amount 魅力 -meli
-                new_money = cur - amount
                 cur_mei = a2.int("charm")
                 meli_eff = max(0, min(int(meli), cur_mei))
-                a2.set("charm", str(cur_mei - meli_eff))
-                ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_money))
-                ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
+                updates = {
+                    "stamina": str(cur_st - cs),
+                    "charm": str(cur_mei - meli_eff),
+                }
                 jail = random.random() < 0.5
                 if jail:
-                    a2.set("jail", "1")
-                    a2.set("jail_start", dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-                    a2.set("release_timestamp", str(int(time.time()) + int(jail_mins) * 60))
-                    ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), json.dumps(a2.kv, ensure_ascii=False)))
-                try:
-                    ST._DB.commit()
-                except Exception:
-                    ST._safe_rollback()
-                    raise
-                a2.dirty = False
+                    updates["jail"] = "1"
+                    updates["jail_start"] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    updates["release_timestamp"] = str(int(time.time()) + int(jail_mins) * 60)
+                if ST.txn_coins_acct(gid, qq, -amount, updates, require_funds=True) is None:
+                    return "赌博系统繁忙，本次未结算，未扣除资金和体力，请稍后重试！"
                 try:
                     ST.recall_set("gamble_%s_%s_%s" % (gid, qq, dt.date.today()), str(cnt + 1))
                 except Exception:
@@ -391,19 +380,7 @@ def cmd_gamble(gid, qq, amount):
                             f"赌博时被抓了！被关监狱{jail_mins}分钟！")
                 return f"赌博失败，损失{ST.fmt_coins(amount)}{ST.coin_name()}，魅力-{meli_eff}……愿赌服输~"
     except Exception:
-        try:
-            ST._safe_rollback()
-        except Exception:
-            pass
-        try:
-            if ST._DB is not None:
-                ST._ACC_CACHE.pop((str(gid), str(qq)), None)
-        except Exception:
-            pass
-        try:
-            a = ST.acct(gid, qq)
-        except Exception:
-            pass
+        pass
     return "赌博系统繁忙，本次未结算，未扣除资金和体力，请稍后重试！"
 
 
@@ -538,14 +515,13 @@ def _vault_stage_commit_cache(gid, staged):
         return
     new_v, _cap = staged
     try:
-        _kvc = getattr(ST, "_KV_CACHE", None)
-        _lock = getattr(ST, "_KV_CACHE_LOCK", None)
-        if _kvc is None or _lock is None:
-            from core.storage import state as _st_state  # type: ignore
-            _kvc, _lock = _st_state._KV_CACHE, _st_state._KV_CACHE_LOCK
-        with _lock:
-            _kvc["bank_vault_%s" % gid] = str(new_v)
-            _kvc["bank_vault_ts_%s" % gid] = str(time.time())
+        st_mod = getattr(ST, "_state", None)
+        _kvc = getattr(ST, "_KV_CACHE", getattr(st_mod, "_KV_CACHE", None))
+        _lock = getattr(ST, "_KV_CACHE_LOCK", getattr(st_mod, "_KV_CACHE_LOCK", None))
+        if _kvc is not None and _lock is not None:
+            with _lock:
+                _kvc["bank_vault_%s" % gid] = str(new_v)
+                _kvc["bank_vault_ts_%s" % gid] = str(time.time())
     except Exception:
         pass
 

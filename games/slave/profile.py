@@ -58,7 +58,9 @@ def cmd_myinfo(gid, qq, st):
         if _S.BOT_UIN and str(qq) == str(_S.BOT_UIN):
             return _S.T.BOT_NO_JOIN
         u = U(st, qq)
-        coins = coins_get(gid, qq)
+        acct = store.acct(gid, qq)
+        coins = store.coins_get(gid, qq)
+        dep = acct.int("deposit")
         price = _safe_int(uget(u, "price"), cfgi("费用配置", "初始身价", 1000))
         owner = uget(u, "owner")
         prot = protected_until(u)
@@ -73,8 +75,6 @@ def cmd_myinfo(gid, qq, st):
         sl_txt = ", ".join(uname(st, s) for s in slaves) or _S.T.NO_SLAVE
         w_list = weapons_of(u)
         t_list = treasures_of(u)
-        acct = store.acct(gid, qq)
-        dep = acct.int("deposit")
         tili = min(300, max(0, acct.int("stamina")))
         meili = acct.int("charm")
         jq = acct.int("lottery_tickets")

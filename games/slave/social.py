@@ -14,7 +14,7 @@ try:
                                 WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WORTH_CAP, WORK_WAGE_FLOOR,
                                 WORK_PCT_CAP, WORK_CRIT_CHANCE, WORK_CRIT_LO, WORK_CRIT_HI,
                                 SELF_WORK_LO, SELF_WORK_HI, SELF_WORK_BONUS_CAP, SELF_WORK_CRIT_CHANCE,
-                                REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
+                                REVOLT_LOOT_LO, REVOLT_LOOT_HI,
                                 TREASURE_GOURD_NAME,
                                 CHARM_PROB_STEP, CHARM_PROB_BONUS, CHARM_PROB_CAP)
 except ImportError:
@@ -23,7 +23,7 @@ except ImportError:
                                     WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WORTH_CAP, WORK_WAGE_FLOOR,
                                     WORK_PCT_CAP, WORK_CRIT_CHANCE, WORK_CRIT_LO, WORK_CRIT_HI,
                                     SELF_WORK_LO, SELF_WORK_HI, SELF_WORK_BONUS_CAP, SELF_WORK_CRIT_CHANCE,
-                                    REVOLT_FINE, REVOLT_LOOT_LO, REVOLT_LOOT_HI,
+                                    REVOLT_LOOT_LO, REVOLT_LOOT_HI,
                                     TREASURE_GOURD_NAME,
                                     CHARM_PROB_STEP, CHARM_PROB_BONUS, CHARM_PROB_CAP)
 from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgi, cn_fmt, cn_parse, coins_add, coins_get, deduct_cash_or_deposit, slaves_of, total_assets, transfer_cash_or_deposit, treasures_of, uget, uset

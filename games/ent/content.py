@@ -432,5 +432,46 @@ def _generate_solvable_24(max_try=100):
     return random.choice(fallback)
 
 
-__all__ = ["CHAIN_WORDS", "MIRI", "QUIZ", "TRICK", "_CHAIN_WORDS_CACHE", "_CHAIN_WORDS_CFG_RAW", "_MENU", "_PRE_SOLVABLE", "_can_make_24", "_can_make_24_cached", "_ensure_pre_solvable", "_ent_cost", "_fee", "_generate_solvable_24", "_get_chain_words", "_get_miri", "_get_quiz", "_get_trick", "_parse_custom_qa", "_parse_custom_words", "_safe_eval_24", "cfgi",
+def _solve_24_expr(nums):
+    """返回 4 个数的一个可行 24 点解法算式，无解或异常返回空字符串。"""
+    def helper(arr):
+        if len(arr) == 1:
+            val, expr = arr[0]
+            if abs(val - 24) < 1e-6:
+                return expr
+            return None
+        seen = set()
+        for i in range(len(arr)):
+            for j in range(len(arr)):
+                if i == j:
+                    continue
+                (a, ea), (b, eb) = arr[i], arr[j]
+                pair = (a, b)
+                if pair in seen:
+                    continue
+                seen.add(pair)
+                rest = [arr[k] for k in range(len(arr)) if k != i and k != j]
+                ops = [
+                    (a + b, f"({ea}+{eb})"),
+                    (a - b, f"({ea}-{eb})"),
+                    (a * b, f"({ea}*{eb})"),
+                ]
+                if abs(b) > 1e-9:
+                    ops.append((a / b, f"({ea}/{eb})"))
+                for c, ec in ops:
+                    res = helper(tuple(rest) + ((c, ec),))
+                    if res is not None:
+                        return res
+        return None
+    try:
+        init_arr = tuple((float(x), str(int(x))) for x in nums)
+        ans = helper(init_arr)
+        if ans and ans.startswith("(") and ans.endswith(")"):
+            ans = ans[1:-1]
+        return ans or ""
+    except Exception:
+        return ""
+
+
+__all__ = ["CHAIN_WORDS", "MIRI", "QUIZ", "TRICK", "_CHAIN_WORDS_CACHE", "_CHAIN_WORDS_CFG_RAW", "_MENU", "_PRE_SOLVABLE", "_can_make_24", "_can_make_24_cached", "_ensure_pre_solvable", "_ent_cost", "_fee", "_generate_solvable_24", "_get_chain_words", "_get_miri", "_get_quiz", "_get_trick", "_parse_custom_qa", "_parse_custom_words", "_safe_eval_24", "_solve_24_expr", "cfgi",
   "CHOUQIAN_P1", "CHOUQIAN_P2", "CHOUQIAN_P3", "MORA_DRAW_BAND", "JIELONG_MIN", "JIELONG_MAX"]

@@ -1,5 +1,25 @@
 # 更新日志 (Changelog)
 
+## v26w1017g
+
+- **银行赌博指令事务标准化重构**：
+  - 彻底淘汰 `cmd_gamble` 中裸调 `ST._DB.execute` 与手动 `commit/rollback` 的旧写法，全量收口到官方统一的 `ST.txn_coins_acct` 事务与脏标状态机，避免脏读及并发跳过缓存。
+  - 清除银行交易中无插值的空 f-string 语法冗余。
+  - 优化金库缓存提交函数 `_vault_stage_commit_cache`，消除高频内联动态导入开销。
+- **24点游戏退出体验与解法公布对齐**：
+  - 新增 24 点快速求解器 `_solve_24_expr`，在开局时自动求解并暂存可行算式。
+  - `退出二四点` / `结束二四点` 统一接入会话退出状态机 `_quit_game`，房主退出、全员离开或群管强制退出时，自动向群内公布参考算式（如 `参考算式为：【(6+(6/3))*3 = 24】`）。
+  - 支持群管理员 `is_admin` 协助结束卡死的 24 点游戏并释放群独占锁。
+- **死代码与无用导入彻底清理**：
+  - 移除 `games/slave/combat.py` 中未使用的 `_safe_int` 与 `coins_get` 导入。
+  - 移除 `games/slave/trade.py` 中未使用的 `_safe_int` 与 `total_assets` 导入。
+  - 移除 `games/slave/social.py` 中未使用的 `REVOLT_FINE` 导入。
+  - 移除 `core/storage/__init__.py` 中未引用的 `_DirtyDict` 导入。
+  - 清理 `games/bank/jail.py` 入狱体力换算中解包后未使用的死变量 `ov_st`。
+- **高频消息热点路径性能优化**：
+  - 预编译 `games/bank/handler.py` 与 `games/slave/handler.py` 中的关键正则模式（QQ 号提取、艾特清理、指令前缀匹配等），降低群聊高频消息下的重复正则编译开销。
+  - 精简 `games/slave/profile.py` 中 `cmd_myinfo` 的个人档案加载，统一变量访问，减少重复查询。
+
 ## v26w1017f
 
 - **超级管理员系统加固与现代事件流适配**：

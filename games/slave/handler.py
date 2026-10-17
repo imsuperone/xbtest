@@ -22,6 +22,9 @@ from .slave_state import _resolve_persistent_data_dir
 _LEGACY_ONCE = {"done": False}  # 旧档迁移＋gacha 预热只跑一次（锁＋flag 防并发双跑）
 _LEGACY_LOCK = _threading.Lock()
 
+_RE_QQ_DIGITS = _re.compile(r"\b(\d{5,12})\b")
+_RE_CQ_CODE = _re.compile(r"\[(?:CQ|DR):[^\]]+\]")
+
 
 def _ensure_legacy_once():
     """懒入口：首个奴隶 handle 时执行一次；init_slave 不再同步做，启动少 listdir＋ini 解析"""
@@ -140,14 +143,14 @@ def _route_locked(gid, qq, raw):
         _need = ("我的信息", "查询", "买下", "折磨", "保护", "释放", "赎身", "打架")
         for _pref in _need:
             if text.startswith(_pref):
-                m = _re.search(r"\b(\d{5,12})\b", text)
+                m = _RE_QQ_DIGITS.search(text)
                 if m:
                     target = m.group(1)
                     text = text.replace(m.group(0), "", 1).strip()
                 break
 
     # 去掉开头的表情码干扰（保留未解析的 @ 文本以便识别无效 @昵称）
-    text = _re.sub(r"\[(?:CQ|DR):[^\]]+\]", "", text).strip()
+    text = _RE_CQ_CODE.sub("", text).strip()
 
     # Fast path: exact commands
     if text in _ROUTE_EXACT:

@@ -9,6 +9,20 @@ from .common import *  # noqa
 from .jail import *  # noqa
 from .redpack import *  # noqa
 from .transactions import *  # noqa
+
+# 预编译高频正则模式
+_RE_QQ_DIGITS = re.compile(r"\b(\d{5,12})\b")
+_RE_AT_NAME = re.compile(r"@\s*(\S+)")
+_RE_AT_CLEAN = re.compile(r"@\s*\S+")
+_RE_MULTI_SPACE = re.compile(r"\s+")
+_RE_NUMS = re.compile(r"(-?\d+)")
+_RE_DIGITS = re.compile(r"(\d+)")
+_RE_DEPOSIT_CMD = re.compile(r"存款\s*(-?\d+)\s*(?:金币|元|点)?")
+_RE_WITHDRAW_CMD = re.compile(r"取款\s*(-?\d+)\s*(?:金币|元|点)?")
+_RE_GAMBLE_CMD = re.compile(r"赌博\s*(\d+)")
+_RE_RECV_RED_PREFIX = re.compile(r"^抢红包\s*")
+
+
 def handle(gid, qq, raw):
     text = (raw or "").strip()
     if not text:
@@ -24,26 +38,26 @@ def handle(gid, qq, raw):
     else:
         # 纯QQ/纯昵称字符串兜底 (仅对需要目标的指令)
         if any(text.startswith(p) for p in ("转账", "打劫", "劫狱", "保释")):
-            m = re.search(r"\b(\d{5,12})\b", text)
+            m = _RE_QQ_DIGITS.search(text)
             if m:
                 target = m.group(1)
                 text = text.replace(m.group(0), "", 1).strip()
             elif "@" in text:
-                m_at = re.search(r"@\s*(\S+)", text)
+                m_at = _RE_AT_NAME.search(text)
                 if m_at:
                     cand = m_at.group(1).strip()
                     t_cand = _find_qq_by_name(gid, cand)
                     if t_cand:
                         target = t_cand
-                        text = re.sub(r"@\s*\S+", "", text).strip()
+                        text = _RE_AT_CLEAN.sub("", text).strip()
 
     if target:
-        text = re.sub(r"@\s*\S+", "", text).strip()
-        text = re.sub(r"\s+", " ", text).strip()
+        text = _RE_AT_CLEAN.sub("", text).strip()
+        text = _RE_MULTI_SPACE.sub(" ", text).strip()
 
     # 若目标已提取但 text 仍包含“转账”前缀，保留以便后续命令判断
     n = 0
-    mms = re.findall(r"(-?\d+)", text)
+    mms = _RE_NUMS.findall(text)
     if mms:
         try:
             n = int(mms[-1])
@@ -53,19 +67,19 @@ def handle(gid, qq, raw):
     if text.startswith("存款"):
         if text in ("存款全部", "存款所有"):
             return cmd_deposit(gid, qq, ST.coins_get(gid, qq))
-        if text == "存款" or re.fullmatch(r"存款\s*(-?\d+)\s*(?:金币|元|点)?", text):
+        if text == "存款" or _RE_DEPOSIT_CMD.fullmatch(text):
             return cmd_deposit(gid, qq, n)
         return "提示：存款指令格式为【存款 金额】，例如：存款 1000"
     if text.startswith("取款"):
         if text in ("取款全部", "取款所有"):
             return cmd_withdraw(gid, qq, _acct(gid, qq).int("deposit"))
-        if text == "取款" or re.fullmatch(r"取款\s*(-?\d+)\s*(?:金币|元|点)?", text):
+        if text == "取款" or _RE_WITHDRAW_CMD.fullmatch(text):
             return cmd_withdraw(gid, qq, n)
         return "提示：取款指令格式为【取款 金额】，例如：取款 1000"
     if text.startswith("跨群转账"):
         _raw_ct = text[4:]
         if not _raw_ct or _raw_ct[:1].isspace() or _raw_ct[:1].isdigit():
-            nums = re.findall(r"(\d+)", text)
+            nums = _RE_DIGITS.findall(text)
             if len(nums) < 2:
                 return "亲，跨群转账格式为：【跨群转账 群号 金额】！"
             return cmd_cross_transfer(gid, qq, nums[0], int(nums[-1]))
@@ -76,14 +90,14 @@ def handle(gid, qq, raw):
         return cmd_transfer(gid, qq, target, n)
 
     if text.startswith("赌博"):
-        if text == "赌博" or re.fullmatch(r"赌博\s*(\d+)", text):
+        if text == "赌博" or _RE_GAMBLE_CMD.fullmatch(text):
             return cmd_gamble(gid, qq, n)
         return None
     if text == "打劫银行":
         return cmd_rob_zone(gid, qq)
     if text.startswith("打劫"):
         _rest = text[2:].strip()
-        _rest_clean = re.sub(r"@\S+", "", _rest).strip()
+        _rest_clean = _RE_AT_CLEAN.sub("", _rest).strip()
         if not _rest or _rest.startswith("@") or not _rest_clean:
             return cmd_sell_slave(gid, qq, target)
         return None
@@ -91,9 +105,9 @@ def handle(gid, qq, raw):
         rest = text[3:].strip()
         if not rest:
             return "亲，发红包格式为：【发红包 金额】或【发红包 金额 口令】！"
-        parts = re.split(r"\s+", rest)
+        parts = _RE_MULTI_SPACE.split(rest)
         amt_s = parts[0] if parts else ""
-        m_amt = re.fullmatch(r"(\d+)", amt_s)
+        m_amt = _RE_DIGITS.fullmatch(amt_s)
         pwd = " ".join(parts[1:]) if len(parts) > 1 else None
         if not m_amt:
             return None
@@ -102,7 +116,7 @@ def handle(gid, qq, raw):
         raw_tail = text[3:]
         pwd = raw_tail.strip()
         if not pwd:
-            pwd = re.sub(r"^抢红包\s*", "", raw or "").strip()
+            pwd = _RE_RECV_RED_PREFIX.sub("", raw or "").strip()
         elif not raw_tail[:1].isspace():
             return None
         return cmd_recv_red(gid, qq, pwd)

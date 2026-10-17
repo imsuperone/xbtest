@@ -17,7 +17,7 @@ from .accounts import *
 from .groups import *
 from .backup import *
 from . import state as _state
-from .state import Acct, Group, _DirtyDict
+from .state import Acct, Group
 
 __all__ = ["register_names","register_name","parse_at","is_qq_mention","set_config","cfg","cfgi","cfgf","cfg_dict","cfg_scope","coin_name","wake",
            "coins_get","coins_add","fmt_coins","txn_coins_acct","txn_two_wallets","txn_two_wallets_acct","txn_cross_group","rank_batch",

@@ -240,26 +240,11 @@ def handle(gid, qq, raw, is_admin=False):
         if not ST.recall_get(f"trick_owner_{gid}"):
             _clear_active_game(gid)
         return res
-    if text == "退出二四点":
-        # 兼容旧单人键与新群组键
-        owner = ST.recall_get(f"game24_owner_{gid}")
-        if owner and str(owner) == str(qq):
-            ST.recall_set(f"game24_owner_{gid}", "")
-            ST.recall_set(f"game24_players_{gid}", "")
-            ST.recall_set(f"game24_start_{gid}", "")
-            ST.recall_set(f"game24_{gid}_{owner}", "")
+    if text in ("退出二四点", "结束二四点"):
+        res = _quit_game(gid, qq, "game24", "二四点", is_admin=is_admin)
+        if not ST.recall_get(f"game24_owner_{gid}"):
             _clear_active_game(gid)
-        else:
-            # 参与者退出
-            players = _get_players(gid, "game24_players_")
-            if str(qq) in players:
-                players.remove(str(qq))
-                ST.recall_set(f"game24_players_{gid}", ",".join(players))
-            ST.recall_set(f"game24_{gid}_{qq}", "")
-            # 若此时无owner或参与者为空但owner仍在，不清锁
-            if not ST.recall_get(f"game24_owner_{gid}"):
-                _clear_active_game(gid)
-        return "已退出二四点！"
+        return res
     if text in ("开始二四点", "二四点"):
         chk = _check_single_game(gid, "二四点", sender_qq=qq)
         if chk:
@@ -510,6 +495,7 @@ def _play(gid, qq, text):
                                 S.recall_set(f"game24_players_{gid}", "")
                                 S.recall_set(f"game24_start_{gid}", "")
                                 S.recall_set(f"game24_last_time_{gid}", "")
+                                S.recall_set(f"game24_ans_{gid}", "")
                                 S.recall_set(f"ent_game_{gid}", "")
                                 coin = cfgi("娱乐配置", "二四点奖励金币", 128)
                                 meili = cfgi("娱乐配置", "二四点奖励魅力", 1)
@@ -534,6 +520,7 @@ def _play(gid, qq, text):
                             return "算式有误，请检查（只用 %s 和 +-*/ 括号）：%s" % (" ".join(map(str, nums)), t)
                         if abs(val - 24) < 1e-6:
                             S.recall_set(f"game24_{gid}_{qq}", "")
+                            S.recall_set(f"game24_ans_{gid}", "")
                             S.recall_set(f"ent_game_{gid}", "")
                             coin = cfgi("娱乐配置", "二四点奖励金币", 128)
                             meili = cfgi("娱乐配置", "二四点奖励魅力", 1)
