@@ -507,44 +507,82 @@ function initSideNavCollapse() {
   // 默认收起状态
   setOpen(false);
 
+  let isAnimating = false;
+
+  // 粉末化消散收起 (鸿蒙粒子崩解)
+  const closeWithPowder = () => {
+    if (nav.classList.contains("collapsed") || isAnimating) return;
+    isAnimating = true;
+    if (backdrop) backdrop.classList.remove("active");
+    if (islandToggle) {
+      islandToggle.setAttribute("aria-expanded", "false");
+      islandToggle.classList.remove("active");
+    }
+    triggerHarmonyDisintegrate(nav, () => {
+      setOpen(false);
+      nav.style.transform = "";
+      nav.style.opacity = "";
+      nav.style.transition = "";
+      isAnimating = false;
+    });
+  };
+
+  // 粒子汇聚进入 (鸿蒙粒子星河凝聚入场)
+  const openWithParticles = () => {
+    if (!nav.classList.contains("collapsed") || isAnimating) return;
+    isAnimating = true;
+    if (backdrop) backdrop.classList.add("active");
+    if (islandToggle) {
+      islandToggle.setAttribute("aria-expanded", "true");
+      islandToggle.classList.add("active");
+    }
+    triggerHarmonyAssemble(nav, islandToggle, () => {
+      nav.classList.remove("collapsed");
+      nav.style.transform = "";
+      nav.style.opacity = "";
+      nav.style.transition = "";
+      isAnimating = false;
+    });
+  };
+
   if (islandToggle) {
     islandToggle.addEventListener("click", (e) => {
       e.stopPropagation();
       const isCollapsed = nav.classList.contains("collapsed");
-      setOpen(isCollapsed);
+      if (isCollapsed) {
+        openWithParticles();
+      } else {
+        closeWithPowder();
+      }
     });
   }
 
+  // 点击关闭按钮：粒子粉末化消散
   if (toggle) {
     toggle.addEventListener("click", (e) => {
       e.stopPropagation();
-      // 触发华为鸿蒙式的粒子粉末化崩解消散动效
-      triggerHarmonyDisintegrate(nav, () => {
-        setOpen(false);
-        nav.style.transform = "";
-        nav.style.opacity = "";
-        nav.style.transition = "";
-      });
+      closeWithPowder();
     });
   }
 
+  // 点击遮罩空白处：同样粒子粉末化消散
   if (backdrop) {
     backdrop.addEventListener("click", () => {
-      setOpen(false);
+      closeWithPowder();
     });
   }
 
-  // 点击侧边栏选项后自动平滑收起悬浮岛，并呈现目标视图
+  // 点击侧边栏选项后同样粉末化消散收起
   nav.querySelectorAll("button[data-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      setOpen(false);
+      closeWithPowder();
     });
   });
 
-  // ESC 按键快速关闭
+  // ESC 按键快速触发粒子粉末化消散
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !nav.classList.contains("collapsed")) {
-      setOpen(false);
+      closeWithPowder();
     }
   });
 }
@@ -581,27 +619,27 @@ function triggerHarmonyDisintegrate(el, onComplete) {
   const isDark = document.documentElement.dataset.theme === "dark";
   const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9";
   const colors = isDark
-    ? [primaryColor, "#8AB8F0", "#D6E8FA", "#434E5E", "#232A33", "#A9C9F5", "#CBD5E1"]
-    : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#B0BEC5"];
+    ? [primaryColor, "#8AB8F0", "#D6E8FA", "#434E5E", "#232A33", "#A9C9F5", "#CBD5E1", "#FFFFFF"]
+    : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#B0BEC5", "#E3F2FD"];
 
-  // 鸿蒙物理粒子群 (180 ~ 240 颗微粉末)
-  const count = Math.min(Math.floor((rect.width * rect.height) / 320), 220);
+  // 密集粉末粒子群 (480 ~ 620 颗高密细粉)
+  const count = Math.min(Math.floor((rect.width * rect.height) / 140), 580);
   const particles = [];
   for (let i = 0; i < count; i++) {
     const px = rect.left + Math.random() * rect.width;
     const py = rect.top + Math.random() * rect.height;
     const angle = Math.random() * Math.PI * 2;
-    const speed = Math.random() * 4 + 1;
+    const speed = Math.random() * 4.2 + 0.8;
     particles.push({
       x: px,
       y: py,
-      vx: Math.cos(angle) * speed * 0.7 + (Math.random() - 0.4) * 2.2,
-      vy: Math.sin(angle) * speed * 0.7 - Math.random() * 2.8 - 0.6, // 微浮向上
-      size: Math.random() * 2.8 + 1.2,
-      alpha: 1,
-      decay: Math.random() * 0.024 + 0.018,
+      vx: Math.cos(angle) * speed * 0.75 + (Math.random() - 0.45) * 2.5,
+      vy: Math.sin(angle) * speed * 0.75 - Math.random() * 3.2 - 0.8, // 鸿蒙微浮力向上袅袅升腾
+      size: Math.random() * 2.4 + 1.0,
+      alpha: Math.random() * 0.3 + 0.7,
+      decay: Math.random() * 0.022 + 0.016,
       color: colors[Math.floor(Math.random() * colors.length)],
-      spin: Math.random() * 0.25 - 0.12,
+      spin: Math.random() * 0.3 - 0.15,
       angle: Math.random() * Math.PI,
     });
   }
@@ -630,7 +668,7 @@ function triggerHarmonyDisintegrate(el, onComplete) {
       p.vy *= 0.94;
       p.vy -= 0.05; // 鸿蒙微浮力
       p.alpha -= p.decay;
-      p.size = Math.max(0.2, p.size * 0.985);
+      p.size = Math.max(0.2, p.size * 0.982);
       p.angle += p.spin;
 
       ctx.save();
@@ -654,6 +692,133 @@ function triggerHarmonyDisintegrate(el, onComplete) {
   animId = requestAnimationFrame(render);
 }
 window.triggerHarmonyDisintegrate = triggerHarmonyDisintegrate;
+
+// ---------- 鸿蒙粒子汇聚进入特效 (HarmonyOS Particle Assembly / Inflow) ----------
+function triggerHarmonyAssemble(el, triggerEl, onComplete) {
+  if (!el) {
+    if (onComplete) onComplete();
+    return;
+  }
+
+  // 预先显示以便抓取真实布局尺寸
+  el.style.transition = "none";
+  el.classList.remove("collapsed");
+  el.style.opacity = "0";
+  el.style.transform = "scale(0.96)";
+  const rect = el.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) {
+    el.style.opacity = "";
+    el.style.transform = "";
+    el.style.transition = "";
+    if (onComplete) onComplete();
+    return;
+  }
+
+  // 发射源头坐标
+  const trigRect = triggerEl ? triggerEl.getBoundingClientRect() : { left: rect.left, top: rect.top - 40, width: 40, height: 30 };
+  const originX = trigRect.left + trigRect.width / 2;
+  const originY = trigRect.top + trigRect.height / 2;
+
+  const canvas = document.createElement("canvas");
+  canvas.className = "harmony-powder-canvas";
+  canvas.style.position = "fixed";
+  canvas.style.left = "0";
+  canvas.style.top = "0";
+  canvas.style.width = "100vw";
+  canvas.style.height = "100vh";
+  canvas.style.pointerEvents = "none";
+  canvas.style.zIndex = "9999";
+  document.body.appendChild(canvas);
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+
+  const isDark = document.documentElement.dataset.theme === "dark";
+  const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9";
+  const colors = isDark
+    ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF"]
+    : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#2196F3"];
+
+  // 480 ~ 580 颗汇聚微粉尘
+  const count = Math.min(Math.floor((rect.width * rect.height) / 150), 520);
+  const particles = [];
+  for (let i = 0; i < count; i++) {
+    const destX = rect.left + Math.random() * rect.width;
+    const destY = rect.top + Math.random() * rect.height;
+    const isFromTrigger = Math.random() < 0.65;
+    const startX = isFromTrigger ? (originX + (Math.random() - 0.5) * 24) : (destX + (Math.random() - 0.5) * 120);
+    const startY = isFromTrigger ? (originY + (Math.random() - 0.5) * 18) : (destY + (Math.random() - 0.5) * 80 - 30);
+
+    particles.push({
+      startX,
+      startY,
+      destX,
+      destY,
+      delay: Math.random() * 90,
+      duration: 220 + Math.random() * 120,
+      size: Math.random() * 2.4 + 1.1,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      swirl: (Math.random() - 0.5) * 16,
+    });
+  }
+
+  let animId;
+  const startTime = performance.now();
+  let cardRevealed = false;
+
+  function render(now) {
+    const elapsed = now - startTime;
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+    let activeCount = 0;
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const t = (elapsed - p.delay) / p.duration;
+      if (t < 0) {
+        activeCount++;
+        continue;
+      }
+      if (t > 1) continue;
+      activeCount++;
+
+      const ease = 1 - Math.pow(1 - t, 3);
+      const curX = p.startX + (p.destX - p.startX) * ease + Math.sin(t * Math.PI) * p.swirl;
+      const curY = p.startY + (p.destY - p.startY) * ease;
+      const alpha = t < 0.2 ? (t / 0.2) : (1 - (t - 0.2) * 0.4);
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      ctx.fillStyle = p.color;
+      ctx.fillRect(curX - p.size / 2, curY - p.size / 2, p.size, p.size);
+      ctx.restore();
+    }
+
+    // 粒子汇聚吸附过半时，实体卡片以高阶弹性自愈凝结
+    if (!cardRevealed && elapsed >= 180) {
+      cardRevealed = true;
+      el.style.transition = "transform 0.26s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.22s ease-out";
+      el.style.opacity = "1";
+      el.style.transform = "scale(1)";
+    }
+
+    if (activeCount > 0 && elapsed < 480) {
+      animId = requestAnimationFrame(render);
+    } else {
+      cancelAnimationFrame(animId);
+      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      el.style.opacity = "";
+      el.style.transform = "";
+      el.style.transition = "";
+      if (onComplete) onComplete();
+    }
+  }
+
+  animId = requestAnimationFrame(render);
+}
+window.triggerHarmonyAssemble = triggerHarmonyAssemble;
 function err(m) {
   const e = document.getElementById("footErr");
   if (e) e.textContent = "加载/操作异常: " + m;
