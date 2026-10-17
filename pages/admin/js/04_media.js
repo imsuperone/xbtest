@@ -491,6 +491,11 @@ function initSideNavCollapse() {
   });
 
   const setOpen = (open) => {
+    if (open) {
+      nav.style.transform = "";
+      nav.style.opacity = "";
+      nav.style.transition = "";
+    }
     nav.classList.toggle("collapsed", !open);
     if (backdrop) backdrop.classList.toggle("active", open);
     if (islandToggle) {
@@ -513,7 +518,13 @@ function initSideNavCollapse() {
   if (toggle) {
     toggle.addEventListener("click", (e) => {
       e.stopPropagation();
-      setOpen(false);
+      // 触发华为鸿蒙式的粒子粉末化崩解消散动效
+      triggerHarmonyDisintegrate(nav, () => {
+        setOpen(false);
+        nav.style.transform = "";
+        nav.style.opacity = "";
+        nav.style.transition = "";
+      });
     });
   }
 
@@ -537,6 +548,112 @@ function initSideNavCollapse() {
     }
   });
 }
+
+// ---------- 鸿蒙组件粉末化消散特效 (HarmonyOS Powder Disintegration) ----------
+function triggerHarmonyDisintegrate(el, onComplete) {
+  if (!el) {
+    if (onComplete) onComplete();
+    return;
+  }
+  const rect = el.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) {
+    if (onComplete) onComplete();
+    return;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.className = "harmony-powder-canvas";
+  canvas.style.position = "fixed";
+  canvas.style.left = "0";
+  canvas.style.top = "0";
+  canvas.style.width = "100vw";
+  canvas.style.height = "100vh";
+  canvas.style.pointerEvents = "none";
+  canvas.style.zIndex = "9999";
+  document.body.appendChild(canvas);
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+
+  const isDark = document.documentElement.dataset.theme === "dark";
+  const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9";
+  const colors = isDark
+    ? [primaryColor, "#8AB8F0", "#D6E8FA", "#434E5E", "#232A33", "#A9C9F5", "#CBD5E1"]
+    : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#B0BEC5"];
+
+  // 鸿蒙物理粒子群 (180 ~ 240 颗微粉末)
+  const count = Math.min(Math.floor((rect.width * rect.height) / 320), 220);
+  const particles = [];
+  for (let i = 0; i < count; i++) {
+    const px = rect.left + Math.random() * rect.width;
+    const py = rect.top + Math.random() * rect.height;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 4 + 1;
+    particles.push({
+      x: px,
+      y: py,
+      vx: Math.cos(angle) * speed * 0.7 + (Math.random() - 0.4) * 2.2,
+      vy: Math.sin(angle) * speed * 0.7 - Math.random() * 2.8 - 0.6, // 微浮向上
+      size: Math.random() * 2.8 + 1.2,
+      alpha: 1,
+      decay: Math.random() * 0.024 + 0.018,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      spin: Math.random() * 0.25 - 0.12,
+      angle: Math.random() * Math.PI,
+    });
+  }
+
+  // 元素本体瞬间崩解淡出并微缩
+  el.style.transition = "transform 0.16s ease-out, opacity 0.14s ease-out";
+  el.style.transform = "scale(0.96) translate3d(0, -4px, 0)";
+  el.style.opacity = "0";
+
+  let animId;
+  const startTime = performance.now();
+
+  function render(now) {
+    const elapsed = now - startTime;
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+    let aliveCount = 0;
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      if (p.alpha <= 0.01) continue;
+      aliveCount++;
+
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.94; // 空气摩擦
+      p.vy *= 0.94;
+      p.vy -= 0.05; // 鸿蒙微浮力
+      p.alpha -= p.decay;
+      p.size = Math.max(0.2, p.size * 0.985);
+      p.angle += p.spin;
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.alpha);
+      ctx.fillStyle = p.color;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+      ctx.restore();
+    }
+
+    if (aliveCount > 0 && elapsed < 850) {
+      animId = requestAnimationFrame(render);
+    } else {
+      cancelAnimationFrame(animId);
+      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      if (onComplete) onComplete();
+    }
+  }
+
+  animId = requestAnimationFrame(render);
+}
+window.triggerHarmonyDisintegrate = triggerHarmonyDisintegrate;
 function err(m) {
   const e = document.getElementById("footErr");
   if (e) e.textContent = "加载/操作异常: " + m;
