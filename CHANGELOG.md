@@ -1,5 +1,18 @@
 # 更新日志 (Changelog)
 
+## v26w1017s
+
+- **WebUI 悬浮岛与抽屉按钮间距舒适化调整（按钮之前间隔太短 稍微拉大一下）**：
+  - 响应用户反馈，彻底告别紧凑拥挤感。在 `.side-nav.floating-island` 中：
+    - 组内按钮间距（`gap`）由原先局促的 `2px` 大幅放宽至舒适的 `7px`（移动端网格 `gap: 8px`）；
+    - 分组间距（`margin-bottom`）从 `2px` 调整至 `14px`，组标题内边距扩大至 `8px 10px 4px 10px`，字号优化为 `12px` 并加入 `0.3px` 字偶距；
+    - 导航按钮内边距扩大至 `9px 14px`（移动端 `10px 14px`），圆角提升至更柔和的 `14px`；
+    - 顶部指示条/关闭区域间距（`margin-bottom`）拉大至 `12px`，整体呼吸感与留白比例完美贴合 iOS 规范。
+- **彻底清理废弃顶部横向标签栏旧代码（记得删掉之前不用的那些导航代码）**：
+  - 彻底删除 `pages/admin/index.html` 中历史残留的双层横向标签 DOM（`#tabGroups` 与 `#mainTabs`）；
+  - 彻底清理 `pages/admin/js/04_media.js:bindTabs()` 中冗余的 `TAB_GROUPS`、`showGroup`、`_groupLastTab` 等历史顶栏联动逻辑，轻量化为单源权威的 `#sideNav` 绑定；
+  - 彻底移除 `pages/admin/admin.css` 中已无任何引用的 `.tab-groups`、`.tabs-wrapper`、`#mainTabs` 等旧版样式规则，代码精简干练，零冗余。
+
 ## v26w1017r
 
 - **WebUI 全面升级 iOS 原生高透磨砂玻璃（透明玻璃质感实装）**：

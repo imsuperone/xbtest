@@ -462,7 +462,7 @@ function initRefreshButton() {
       try { if (typeof loadOverviewReq === "function") jobs.push(loadOverviewReq().catch(() => {})); } catch (e) {}
       try { if (typeof loadAnalytics === "function") jobs.push(loadAnalytics().catch(() => {})); } catch (e) {}
       try {
-        const on = document.querySelector("#mainTabs button.on") || document.querySelector(".tabs button.on");
+        const on = document.querySelector("#sideNav button.on");
         const tab = on && on.dataset ? on.dataset.tab : "";
         let loader = null;
         try { loader = (typeof TAB_LOADERS !== "undefined" && TAB_LOADERS) ? TAB_LOADERS[tab] : null; } catch (e) { loader = null; }

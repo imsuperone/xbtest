@@ -396,24 +396,9 @@ async function uploadImage(file) {
 }
 
 function bindTabs() {
-  const btns = document.querySelectorAll("#mainTabs button, #sideNav button[data-tab]");
-  const TAB_GROUPS = {
-    data: ["overview", "rank"],
-    users: ["users", "slave", "spirit_users"],
-    groups: ["groups"],
-    rules: ["config", "cmds"],
-    mall: ["shops", "spirits"],
-    ops: ["backups", "imgs", "logs", "about"]
-  };
-  const _groupLastTab = {};
-  function tabGroupOf(tab) {
-    for (const g in TAB_GROUPS) if (TAB_GROUPS[g].indexOf(tab) >= 0) return g;
-    return "data";
-  }
+  const btns = document.querySelectorAll("#sideNav button[data-tab]");
   btns.forEach((b) => {
     b.addEventListener("click", () => {
-      _groupLastTab[tabGroupOf(b.dataset.tab)] = b.dataset.tab;
-      document.querySelectorAll("#tabGroups button").forEach((x) => x.classList.toggle("on", x.dataset.group === tabGroupOf(b.dataset.tab)));
       btns.forEach((x) => x.classList.toggle("on", x.dataset.tab === b.dataset.tab));
       document.querySelectorAll(".tab").forEach((t) => t.classList.remove("on"));
       const el = document.getElementById("tab-" + b.dataset.tab);
@@ -424,9 +409,6 @@ function bindTabs() {
         if (typeof startLogsAutoRefresh === "function") startLogsAutoRefresh();
       } else {
         if (typeof stopLogsAutoRefresh === "function") stopLogsAutoRefresh();
-      }
-      if (b.closest("#mainTabs")) {
-        try { b.scrollIntoView({ behavior: "auto", inline: "center", block: "nearest" }); } catch (e) {}
       }
       if (tab === "overview") {
         if (!TAB_DONE.overview) {
@@ -445,40 +427,6 @@ function bindTabs() {
       }
     });
   });
-
-  function showGroup(g) {
-    if (!TAB_GROUPS[g]) g = "data";
-    document.querySelectorAll("#tabGroups button").forEach((x) => x.classList.toggle("on", x.dataset.group === g));
-    btns.forEach((b) => { b.hidden = b.closest("#mainTabs") ? TAB_GROUPS[g].indexOf(b.dataset.tab) < 0 : false; });
-  }
-  document.querySelectorAll("#tabGroups button").forEach((gb) => {
-    gb.addEventListener("click", () => {
-      const g = gb.dataset.group;
-      showGroup(g);
-      const target = _groupLastTab[g] || TAB_GROUPS[g][0];
-      const btn = target && document.querySelector('#mainTabs button[data-tab="' + target + '"]');
-      if (btn) btn.click();
-    });
-  });
-  document.querySelectorAll("#sideNav .side-group").forEach((grp) => {
-    const title = grp.querySelector(".side-group-title");
-    const first = grp.querySelector("button[data-tab]");
-    if (title && first) {
-      title.style.cursor = "pointer";
-      title.addEventListener("click", () => {
-        const g = tabGroupOf(first.dataset.tab);
-        showGroup(g);
-        const target = _groupLastTab[g] || first.dataset.tab;
-        const btn = document.querySelector('#sideNav button[data-tab="' + target + '"]');
-        if (btn) btn.click();
-      });
-    }
-  });
-  const _initOn = document.querySelector("#sideNav button.on") || document.querySelector("#mainTabs button.on");
-  showGroup(tabGroupOf(_initOn ? _initOn.dataset.tab : "overview"));
-  try {
-    document.querySelector("#mainTabs button.on")?.scrollIntoView({ inline: "center", block: "nearest" });
-  } catch (e) {}
 }
 // 悬浮岛式侧边栏交互（触发按钮、手机端FAB、关闭按钮、背景遮罩、ESC快捷键、Tab点击自动收起）
 function initSideNavCollapse() {

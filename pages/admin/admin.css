@@ -521,24 +521,7 @@
       cursor: pointer;
     }
 
-    /* Tabs Dock */
-    .tabs-wrapper {
-      margin-bottom: 20px;
-      background: transparent;
-      padding: 4px 2px 8px 2px;
-      border: none;
-      box-shadow: none;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      position: relative;
-      transition: all 0.25s;
-    }
-    [data-theme="dark"] .tabs-wrapper {
-      background: transparent !important;
-      border-color: transparent !important;
-    }
-    .tabs, .category-tabs-bar {
+    .category-tabs-bar {
       display: flex;
       flex-wrap: nowrap;
       gap: 8px;
@@ -2389,8 +2372,6 @@
         width: 100%;
         justify-content: flex-start;
       }
-      .tabs-wrapper { padding: 3px; border-radius: var(--radius-lg); }
-      .tabs button { padding: 10px 14px; font-size: 13px; min-height: 44px; }
       .ov-req { grid-template-columns: 1fr !important; }
       /* 手机端快捷配置：去卡片边框嵌套，行flush对齐（保存按钮不留幽灵占位） */
       .ov-req { gap: 16px; }
@@ -3265,69 +3246,6 @@
   #tab-shops .tre-card:hover, #tab-shops .sp-card:hover { transform: none; }
 }
 
-/* grouped tabs: 5 categories on top, sub-tabs below */
-.tab-groups {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.tab-groups button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex: 1 1 0;
-  min-width: 0;
-  background: var(--m3-sys-color-surface-container);
-  border: 1px solid var(--m3-sys-color-divider);
-  padding: 10px 12px;
-  font-size: 14px;
-  font-family: inherit;
-  color: var(--m3-sys-color-on-surface);
-  cursor: pointer;
-  border-radius: var(--m3-radius-pill);
-  font-weight: 600;
-  white-space: nowrap;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-.tab-groups button:hover {
-  background: var(--m3-sys-color-surface-container-high);
-  border-color: var(--m3-sys-color-outline);
-}
-.tab-groups button.on {
-  background: var(--m3-sys-color-primary-container);
-  color: var(--m3-sys-color-on-primary-container);
-  border-color: var(--m3-sys-color-primary);
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(103, 80, 164, 0.25);
-}
-#mainTabs button {
-  flex: 1 1 auto;
-  min-width: max-content;
-}
-#mainTabs button[hidden] {
-  display: none;
-}
-@media (max-width: 900px) {
-  .tab-groups {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    /* overflow-x:auto 会让 overflow-y 也变成裁剪态：顶 padding 让选中态边框/阴影
-       完整落在裁剪区内，否则高分屏上按钮顶边框半像素被裁掉（线显示不出来） */
-    padding-top: 4px;
-    padding-bottom: 6px;
-  }
-  .tab-groups::-webkit-scrollbar { display: none; }
-  .tab-groups button {
-    flex: 0 0 auto;
-    min-height: 44px;
-  }
-  .tabs button {
-    min-height: 44px;
-  }
-}
 /* side-nav layout: floating island sidebar, full-width responsive layout */
 .layout {
   display: block;
@@ -3504,9 +3422,9 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 2px 0 8px 0;
+  padding: 4px 0 10px 0;
   border-bottom: 1px solid var(--line-subtle);
-  margin-bottom: 6px;
+  margin-bottom: 12px;
   flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
@@ -3554,21 +3472,20 @@
 .side-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding-bottom: 4px;
-  margin-bottom: 2px;
+  gap: 7px;
+  margin-bottom: 14px;
 }
 .side-group:last-child {
   margin-bottom: 0;
-  padding-bottom: 0;
 }
 .side-group-title {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-secondary);
-  padding: 6px 10px 2px 10px;
+  padding: 8px 10px 4px 10px;
   user-select: none;
   opacity: 0.85;
+  letter-spacing: 0.3px;
 }
 .side-nav button {
   display: flex;
@@ -3578,8 +3495,8 @@
   text-align: left;
   background: transparent;
   border: none;
-  border-radius: 12px;
-  padding: 8px 12px;
+  border-radius: 14px;
+  padding: 9px 14px;
   font-size: 13.5px;
   font-family: inherit;
   font-weight: 600;
@@ -3609,11 +3526,8 @@
   display: none !important;
 }
 
-/* 桌面端 (PC)：隐藏顶部横向标签栏，全屏沉浸，导航由左侧悬浮岛承载 */
+/* 桌面端 (PC)：全屏沉浸，导航由左侧悬浮岛承载 */
 @media (min-width: 901px) {
-  .tab-groups, .tabs-wrapper {
-    display: none !important;
-  }
   .floating-island-trigger {
     display: inline-flex;
   }
@@ -3624,10 +3538,6 @@
 
 /* 移动端 (手机)：底部半屏鸿蒙岛 (Bottom Sheet) + 右下角悬浮胶囊 */
 @media (max-width: 900px) {
-  /* 隐藏顶部双层横向标签栏，彻底释放手机纵向黄金视区 */
-  .tab-groups, .tabs-wrapper {
-    display: none !important;
-  }
   /* 隐藏 PC 顶栏导航按钮，改由右下角单手大拇指 FAB 承载 */
   .floating-island-trigger {
     display: none !important;
@@ -3789,12 +3699,12 @@
   .side-nav.floating-island .side-group {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 8px;
+    margin-bottom: 14px;
   }
   .side-nav.floating-island .side-group-title {
     grid-column: 1 / -1;
-    margin: 4px 0 2px 4px;
+    margin: 6px 0 2px 4px;
     font-size: 12px;
     font-weight: 700;
     color: var(--text-muted);
@@ -3802,7 +3712,7 @@
   .side-nav.floating-island button[data-tab] {
     width: 100%;
     box-sizing: border-box;
-    padding: 10px 12px;
+    padding: 10px 14px;
     font-size: 13.5px;
     border-radius: 14px;
     justify-content: flex-start;
