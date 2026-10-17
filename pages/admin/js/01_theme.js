@@ -37,7 +37,6 @@ function applyAccentColor(hex, save) {
   const v = typeof hex === "string" ? hex.trim() : "";
   const ok = /^#[0-9a-fA-F]{6}$/.test(v);
   const root = document.documentElement;
-  try { localStorage.setItem("xbbot_ui_accent", ok ? v : ""); } catch (e) {}
   if (ok) {
     _CURRENT_ACCENT_COLOR = v;
     const dark = (root.getAttribute("data-theme") || root.dataset.theme || "light") === "dark";
@@ -108,7 +107,6 @@ function applyAccentColor(hex, save) {
       cur.style.background = ok ? v : (getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9");
     } catch (e) {}
   }
-  try { localStorage.setItem("xbbot_ui_accent", ok ? v : ""); } catch (e) {}
 }
 
 const _MOON_SVG_PATH = "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z";
@@ -116,7 +114,6 @@ const _SUN_SVG_PATH = "M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5
 
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
-  try { localStorage.setItem("xbbot_ui_theme", (t === "dark" || t === "light") ? t : ""); } catch (e) {}
   try { document.documentElement.style.colorScheme = t; } catch (e) {}
   const icon = document.getElementById("themeIcon");
   if (icon) {
@@ -184,20 +181,10 @@ async function loadUiPrefs() {
 
 function initTheme() {
   let savedTheme = "";
-  let savedAccent = "";
   try {
-    savedTheme = localStorage.getItem("xbbot_ui_theme") || "";
-    savedAccent = localStorage.getItem("xbbot_ui_accent") || "";
-  } catch (e) {}
-  if (savedTheme !== "dark" && savedTheme !== "light") {
-    try {
-      savedTheme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
-    } catch (e) {
-      savedTheme = "light";
-    }
-  }
-  if (savedAccent && /^#[0-9a-fA-F]{6}$/.test(savedAccent)) {
-    _CURRENT_ACCENT_COLOR = savedAccent;
+    savedTheme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+  } catch (e) {
+    savedTheme = "light";
   }
   applyTheme(savedTheme);
 
