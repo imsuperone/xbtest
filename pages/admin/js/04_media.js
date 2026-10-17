@@ -475,30 +475,63 @@ function bindTabs() {
     document.querySelector("#mainTabs button.on")?.scrollIntoView({ inline: "center", block: "nearest" });
   } catch (e) {}
 }
-// 侧栏收起/展开（仅桌面侧栏可见时生效；状态存 xbbot_side_collapse）
+// 悬浮岛式侧边栏交互（触发按钮、关闭按钮、背景遮罩、ESC快捷键、Tab点击自动收起）
 function initSideNavCollapse() {
   const nav = document.getElementById("sideNav");
   const toggle = document.getElementById("sideNavToggle");
-  if (!nav || !toggle) return;
+  const islandToggle = document.getElementById("floatingIslandToggle");
+  const backdrop = document.getElementById("islandBackdrop");
+  if (!nav) return;
+
   nav.querySelectorAll("button[data-tab]").forEach((b) => {
     const raw = b.textContent.trim();
     const i = raw.indexOf(" ");
     if (i > 0) b.innerHTML = raw.slice(0, i) + '<span class="side-nav-label">' + raw.slice(i + 1) + "</span>";
     b.title = raw;
   });
-  const apply = (col) => {
-    nav.classList.toggle("collapsed", col);
-    toggle.textContent = col ? "»" : "«";
-    toggle.title = col ? "展开导航" : "收起导航";
-    toggle.setAttribute("aria-label", toggle.title);
+
+  const setOpen = (open) => {
+    nav.classList.toggle("collapsed", !open);
+    if (backdrop) backdrop.classList.toggle("active", open);
+    if (islandToggle) islandToggle.setAttribute("aria-expanded", open ? "true" : "false");
   };
-  let col = false;
-  try { col = localStorage.getItem("xbbot_side_collapse") === "1"; } catch (e) {}
-  apply(col);
-  toggle.addEventListener("click", () => {
-    const next = !nav.classList.contains("collapsed");
-    apply(next);
-    try { localStorage.setItem("xbbot_side_collapse", next ? "1" : "0"); } catch (e) {}
+
+  // 默认收起状态
+  setOpen(false);
+
+  if (islandToggle) {
+    islandToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isCollapsed = nav.classList.contains("collapsed");
+      setOpen(isCollapsed);
+    });
+  }
+
+  if (toggle) {
+    toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setOpen(false);
+    });
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", () => {
+      setOpen(false);
+    });
+  }
+
+  // 点击侧边栏选项后自动平滑收起悬浮岛，并呈现目标视图
+  nav.querySelectorAll("button[data-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setOpen(false);
+    });
+  });
+
+  // ESC 按键快速关闭
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !nav.classList.contains("collapsed")) {
+      setOpen(false);
+    }
   });
 }
 function err(m) {

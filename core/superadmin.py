@@ -549,7 +549,7 @@ def _version():
 # ---- 统一入口（测试指令仅超管，WebUI可配但不显示于MENU，已删 个人信息） ----
 # 注意：凡 handle() 响应的别名必须同步进本表；非超管命中一律静默 None（BY DESIGN，见 AIINFO）
 # 超管指令一律精确单触发词，禁冗余别名/模糊词
-_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份", "维护信息", "查看维护", "检查更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表", "测试图片", "webdav测试", "开启维护", "关闭维护", "当前数值", "数值调控")
+_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份", "维护信息", "查看维护", "检查更新", "测试xbtest", "测试testxb", "xbtest", "测试xbtest all", "测试testxb all", "xbtest all", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表", "测试图片", "webdav测试", "开启维护", "关闭维护", "当前数值", "数值调控")
 
 
 def _cmd_current_values():

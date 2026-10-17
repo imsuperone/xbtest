@@ -814,26 +814,34 @@ class XbBot(Star):
                     return
             except Exception:
                 pass
-            if raw.strip() in ("测试testxb", "测试testxb 1"):
+            if raw.strip().startswith(("测试xbtest", "测试testxb", "xbtest")):
                 if not is_admin:
                     try:
                         event.stop_event()
                     except Exception:
                         pass
-                    return  # 全静默（BY DESIGN，见 AIINFO）
+                    yield event.plain_result("亲亲，你没有相关权限哦~该指令仅限机器人管理员使用！")
+                    return
                 try:
-                    mods = {"sign": sign, "spirit": spirit, "ent": ent, "bank": bank,
-                            "slave": slave, "ride": ride, "guild": guild, "adventure": adventure}
-                    async for r in _dispatch_test_menu.handle_test_menu(
-                            event, gid, qq, mods, slave):
-                        yield r
+                    from . import selftest as _selftest_mod
+                    bot = getattr(event, "bot", None)
+                    rep = await _selftest_mod.execute_test_command(raw, gid, qq, is_admin, event=event, bot=bot)
+                    if rep:
+                        if str(rep).startswith("__FORWARD_OK__"):
+                            yield event.plain_result(str(rep)[14:])
+                        else:
+                            yield event.plain_result(rep)
+                    try:
+                        event.stop_event()
+                    except Exception:
+                        pass
                     return
                 except Exception as e:
                     try:
                         event.stop_event()
                     except Exception:
                         pass
-                    yield event.plain_result(f"测试testxb 异常: {e}")
+                    yield event.plain_result(f"自测异常: {e}")
                     return
             if raw.strip() == "超管列表":
                 if not is_admin:

@@ -689,6 +689,29 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
         pass
     if raw.strip() in ("主菜单", "菜单", "系统菜单"):
         return _MAIN_MENU
+    if raw.strip().startswith(("测试xbtest", "测试testxb", "xbtest")):
+        if not is_admin:
+            return "亲亲，你没有相关权限哦~该指令仅限机器人管理员使用！"
+        try:
+            try:
+                from . import selftest as _selftest_mod
+            except ImportError:
+                import core.selftest as _selftest_mod
+            norm_c = raw.strip().lower().replace(" ", "").replace("_", "")
+            if norm_c in ("测试xbtestall", "测试testxball", "xbtestall", "测试全部"):
+                res = _selftest_mod.run_all_probe_suites()
+                return _selftest_mod.format_all_report(*res)
+            # 针对单系统测试
+            arg = raw.strip().replace("测试xbtest", "").replace("测试testxb", "").replace("xbtest", "").strip()
+            if arg:
+                sys_name_map = {"签到": "sign", "精灵": "spirit", "娱乐": "ent", "银行": "bank", "奴隶": "slave", "坐骑": "ride", "帮派": "guild", "冒险": "adventure"}
+                for k, v in sys_name_map.items():
+                    if arg.startswith(k) or arg == v:
+                        r = _selftest_mod.run_system_probes(v)
+                        return _selftest_mod.format_system_report(k + "系统", r)
+            return _selftest_mod.build_test_menu_text()
+        except Exception as e:
+            return f"自测异常: {e}"
     if store:
         try:
             creply, raw = _custom_cmd(raw, store, gid=gid, qq=qq)
