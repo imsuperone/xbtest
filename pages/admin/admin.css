@@ -3293,6 +3293,9 @@
 .floating-island-trigger[aria-expanded="true"] svg {
   transform: rotate(90deg);
 }
+.floating-island-trigger * {
+  pointer-events: none;
+}
 .island-trigger-text {
   font-size: 13px;
   font-weight: 600;
@@ -3370,52 +3373,54 @@
 }
 
 .island-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 2px 8px 4px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 2px 0 8px 0;
   border-bottom: 1px solid var(--line-subtle);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
 }
-.island-handle {
-  width: 36px;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--line);
-  opacity: 0.7;
-  margin-left: 6px;
-  transition: all 0.22s cubic-bezier(0.2, 0, 0, 1);
-}
-.side-nav.floating-island:hover .island-handle {
-  opacity: 1;
-  background: var(--accBorder);
-  width: 44px;
-}
-.island-close-btn {
-  background: var(--panel2);
-  border: 1px solid var(--line);
-  color: var(--text-secondary);
+.side-nav .island-close-pill,
+.side-nav button#sideNavToggle {
+  width: 100% !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  border-radius: var(--radius-full) !important;
+  background: var(--panel2) !important;
+  border: 1px solid var(--line) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important; /* 关键：SVG 绝对完美居中 */
+  text-align: center !important;
+  color: var(--text-secondary) !important;
   cursor: pointer;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-full);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: var(--shadow-xs);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: none !important;
+}
+.side-nav .island-close-pill:hover,
+.side-nav button#sideNavToggle:hover {
+  background: var(--accSoft2) !important;
+  color: var(--acc) !important;
+  border-color: var(--accBorder) !important;
+  transform: scale(0.99) !important;
+}
+.side-nav .island-close-pill:active,
+.side-nav button#sideNavToggle:active {
+  transform: scale(0.97) !important;
+}
+.side-nav .island-close-pill svg,
+.side-nav button#sideNavToggle svg {
+  display: block !important;
+  margin: 0 auto !important;
+  color: currentColor;
   flex-shrink: 0;
-}
-.island-close-btn:hover {
-  background: var(--accSoft2);
-  color: var(--acc);
-  border-color: var(--accBorder);
-  transform: rotate(90deg) scale(1.1);
-}
-.island-close-btn:active {
-  transform: rotate(90deg) scale(0.92);
 }
 
 .side-group {
