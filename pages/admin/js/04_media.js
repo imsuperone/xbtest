@@ -480,11 +480,12 @@ function bindTabs() {
     document.querySelector("#mainTabs button.on")?.scrollIntoView({ inline: "center", block: "nearest" });
   } catch (e) {}
 }
-// 悬浮岛式侧边栏交互（触发按钮、关闭按钮、背景遮罩、ESC快捷键、Tab点击自动收起）
+// 悬浮岛式侧边栏交互（触发按钮、手机端FAB、关闭按钮、背景遮罩、ESC快捷键、Tab点击自动收起）
 function initSideNavCollapse() {
   const nav = document.getElementById("sideNav");
   const toggle = document.getElementById("sideNavToggle");
   const islandToggle = document.getElementById("floatingIslandToggle");
+  const mobileFab = document.getElementById("mobileIslandFab");
   const backdrop = document.getElementById("islandBackdrop");
   if (!nav) return;
   if (nav._islandInited) return;
@@ -532,6 +533,10 @@ function initSideNavCollapse() {
       islandToggle.setAttribute("aria-expanded", "false");
       islandToggle.classList.remove("active");
     }
+    if (mobileFab) {
+      mobileFab.setAttribute("aria-expanded", "false");
+      mobileFab.classList.remove("active");
+    }
   };
 
   const applyOpenDOM = () => {
@@ -543,6 +548,10 @@ function initSideNavCollapse() {
     if (islandToggle) {
       islandToggle.setAttribute("aria-expanded", "true");
       islandToggle.classList.add("active");
+    }
+    if (mobileFab) {
+      mobileFab.setAttribute("aria-expanded", "true");
+      mobileFab.classList.add("active");
     }
   };
 
@@ -560,6 +569,10 @@ function initSideNavCollapse() {
     if (islandToggle) {
       islandToggle.setAttribute("aria-expanded", "false");
       islandToggle.classList.remove("active");
+    }
+    if (mobileFab) {
+      mobileFab.setAttribute("aria-expanded", "false");
+      mobileFab.classList.remove("active");
     }
     if (backdrop) backdrop.classList.remove("active");
 
@@ -584,6 +597,10 @@ function initSideNavCollapse() {
       islandToggle.setAttribute("aria-expanded", "true");
       islandToggle.classList.add("active");
     }
+    if (mobileFab) {
+      mobileFab.setAttribute("aria-expanded", "true");
+      mobileFab.classList.add("active");
+    }
     if (backdrop) backdrop.classList.add("active");
 
     if (!withAnim) {
@@ -591,7 +608,8 @@ function initSideNavCollapse() {
       return;
     }
 
-    activeAnimCancel = triggerHarmonyAssemble(nav, islandToggle, () => {
+    const trigger = (window.innerWidth <= 900 && mobileFab) ? mobileFab : islandToggle;
+    activeAnimCancel = triggerHarmonyAssemble(nav, trigger, () => {
       applyOpenDOM();
       activeAnimCancel = null;
     });
@@ -600,6 +618,18 @@ function initSideNavCollapse() {
   // 顶栏导航按钮：权威状态翻转，任意频次极速连击零死锁
   if (islandToggle) {
     islandToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (isOpen) {
+        closeIsland(true);
+      } else {
+        openIsland(true);
+      }
+    });
+  }
+
+  // 手机端右下角悬浮胶囊按钮 (FAB)
+  if (mobileFab) {
+    mobileFab.addEventListener("click", (e) => {
       e.stopPropagation();
       if (isOpen) {
         closeIsland(true);
@@ -630,6 +660,7 @@ function initSideNavCollapse() {
     if (!isOpen) return;
     if (nav.contains(e.target)) return;
     if (islandToggle && islandToggle.contains(e.target)) return;
+    if (mobileFab && mobileFab.contains(e.target)) return;
     closeIsland(true);
   });
 
@@ -660,8 +691,9 @@ function triggerHarmonyDisintegrate(el, onComplete) {
     return () => {};
   }
 
-  // 局部边界画板：仅覆盖悬浮岛及微散区域（宽约 380px），减少 85% 屏幕像素擦除与合成负荷
-  const cWidth = Math.min(window.innerWidth, Math.max(380, Math.ceil(rect.right + 60)));
+  const isMobile = window.innerWidth <= 900;
+  // 局部边界画板：手机端全宽覆盖，桌面端局部覆盖 380px 侧抽屉
+  const cWidth = isMobile ? window.innerWidth : Math.min(window.innerWidth, Math.max(380, Math.ceil(rect.right + 60)));
   const canvas = document.createElement("canvas");
   canvas.className = "harmony-powder-canvas";
   canvas.style.position = "fixed";
@@ -683,8 +715,10 @@ function triggerHarmonyDisintegrate(el, onComplete) {
     ? [primaryColor, "#8AB8F0", "#D6E8FA", "#434E5E", "#232A33", "#A9C9F5", "#CBD5E1", "#FFFFFF"]
     : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#B0BEC5", "#E3F2FD"];
 
-  // 灵动细腻粉末微粒 (约 240 颗高精粒子，毫秒级轻量渲染，绝对丝滑 120 FPS)
-  const count = Math.min(Math.floor((rect.width * rect.height) / 400), 240);
+  // 手机端精简微粒至约 150 颗稳锁 120 FPS，桌面端 240 颗
+  const count = isMobile
+    ? Math.min(Math.floor((rect.width * rect.height) / 750), 150)
+    : Math.min(Math.floor((rect.width * rect.height) / 400), 240);
   const particles = [];
   for (let i = 0; i < count; i++) {
     const px = rect.left + Math.random() * rect.width;
@@ -694,18 +728,24 @@ function triggerHarmonyDisintegrate(el, onComplete) {
     particles.push({
       x: px,
       y: py,
-      vx: Math.cos(angle) * speed * 0.7 + (Math.random() - 0.45) * 1.8,
-      vy: Math.sin(angle) * speed * 0.7 - Math.random() * 2.0 - 0.5,
+      vx: isMobile
+        ? Math.cos(angle) * speed * 0.8 + (Math.random() - 0.5) * 1.6
+        : Math.cos(angle) * speed * 0.7 + (Math.random() - 0.45) * 1.8,
+      vy: isMobile
+        ? Math.sin(angle) * speed * 0.5 - Math.random() * 2.8 - 1.2
+        : Math.sin(angle) * speed * 0.7 - Math.random() * 2.0 - 0.5,
       size: Math.random() * 2.2 + 1.0,
       alpha: Math.random() * 0.35 + 0.65,
-      decay: Math.random() * 0.018 + 0.014,
+      decay: isMobile ? Math.random() * 0.02 + 0.016 : Math.random() * 0.018 + 0.014,
       color: colors[Math.floor(Math.random() * colors.length)],
     });
   }
 
   // 元素本体瞬间微缩并消失，粉末即刻接管视觉呈现，彻底释放毛玻璃 GPU 资源
   el.style.transition = "transform 0.08s ease-out, opacity 0.06s ease-out";
-  el.style.transform = "scale(0.97) translate3d(-6px, -4px, 0)";
+  el.style.transform = isMobile
+    ? "scale(0.98) translate3d(0, 10px, 0)"
+    : "scale(0.97) translate3d(-6px, -4px, 0)";
   el.style.opacity = "0";
 
   let animId;
@@ -766,11 +806,12 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
     return () => {};
   }
 
+  const isMobile = window.innerWidth <= 900;
   // 预先显示以便抓取真实布局尺寸
   el.style.transition = "none";
   el.classList.remove("collapsed");
   el.style.opacity = "0";
-  el.style.transform = "scale(0.96)";
+  el.style.transform = isMobile ? "translate3d(0, 16px, 0) scale(0.98)" : "scale(0.96)";
   const rect = el.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) {
     el.style.opacity = "";
@@ -780,13 +821,18 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
     return () => {};
   }
 
-  // 发射源头坐标
-  const trigRect = triggerEl ? triggerEl.getBoundingClientRect() : { left: rect.left, top: rect.top - 40, width: 40, height: 30 };
+  // 发射源头坐标（手机端自动绑定右下角 FAB）
+  const trigRect = triggerEl ? triggerEl.getBoundingClientRect() : {
+    left: isMobile ? window.innerWidth - 70 : rect.left,
+    top: isMobile ? window.innerHeight - 60 : rect.top - 40,
+    width: 44,
+    height: 36
+  };
   const originX = trigRect.left + trigRect.width / 2;
   const originY = trigRect.top + trigRect.height / 2;
 
-  // 局部画板：覆盖导航触发器至悬浮岛展开区
-  const cWidth = Math.min(window.innerWidth, Math.max(380, Math.ceil(Math.max(rect.right, originX) + 60)));
+  // 局部画板：手机端全宽，桌面端覆盖触发器至展开区
+  const cWidth = isMobile ? window.innerWidth : Math.min(window.innerWidth, Math.max(380, Math.ceil(Math.max(rect.right, originX) + 60)));
   const canvas = document.createElement("canvas");
   canvas.className = "harmony-powder-canvas";
   canvas.style.position = "fixed";
@@ -808,15 +854,17 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
     ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF"]
     : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#2196F3"];
 
-  // 轻量星尘汇聚 (约 200 颗粒子，毫秒级快速凝聚吸附，120 FPS 满帧)
-  const count = Math.min(Math.floor((rect.width * rect.height) / 450), 200);
+  // 轻量星尘汇聚 (手机端约 140 颗，桌面端 200 颗，毫秒级快速凝聚吸附，120 FPS 满帧)
+  const count = isMobile
+    ? Math.min(Math.floor((rect.width * rect.height) / 800), 140)
+    : Math.min(Math.floor((rect.width * rect.height) / 450), 200);
   const particles = [];
   for (let i = 0; i < count; i++) {
     const destX = rect.left + Math.random() * rect.width;
     const destY = rect.top + Math.random() * rect.height;
-    const isFromTrigger = Math.random() < 0.65;
-    const startX = isFromTrigger ? (originX + (Math.random() - 0.5) * 26) : (destX + (Math.random() - 0.5) * 120);
-    const startY = isFromTrigger ? (originY + (Math.random() - 0.5) * 20) : (destY + (Math.random() - 0.5) * 80 - 20);
+    const isFromTrigger = Math.random() < 0.7;
+    const startX = isFromTrigger ? (originX + (Math.random() - 0.5) * 30) : (destX + (Math.random() - 0.5) * 80);
+    const startY = isFromTrigger ? (originY + (Math.random() - 0.5) * 24) : (destY + (Math.random() - 0.5) * 60 + 20);
 
     particles.push({
       startX,
@@ -824,7 +872,7 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
       destX,
       destY,
       delay: Math.random() * 70,
-      duration: 240 + Math.random() * 110,
+      duration: 230 + Math.random() * 110,
       size: Math.random() * 2.2 + 1.0,
       color: colors[Math.floor(Math.random() * colors.length)],
       swirl: (Math.random() - 0.5) * 16,
@@ -865,9 +913,11 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
     // 粒子汇聚吸附至约 180ms 时，实体卡片以高阶弹性自愈凝结显现
     if (!cardRevealed && elapsed >= 180) {
       cardRevealed = true;
-      el.style.transition = "transform 0.22s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1)";
+      el.style.transition = isMobile
+        ? "transform 0.24s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1)"
+        : "transform 0.22s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1)";
       el.style.opacity = "1";
-      el.style.transform = "scale(1) translate3d(0, 0, 0)";
+      el.style.transform = isMobile ? "translate3d(0, 0, 0) scale(1)" : "scale(1) translate3d(0, 0, 0)";
     }
 
     if (activeCount > 0 && elapsed < 450) {

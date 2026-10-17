@@ -3482,7 +3482,12 @@
   transform: translateX(2px);
 }
 
-/* 桌面端 (PC)：彻底隐藏手机顶部横向标签栏，全屏沉浸，导航由悬浮岛承载 */
+/* 手机端右下角悬浮半屏鸿蒙岛触发按钮 (FAB) - 桌面端默认隐藏 */
+.mobile-island-fab {
+  display: none !important;
+}
+
+/* 桌面端 (PC)：隐藏顶部横向标签栏，全屏沉浸，导航由左侧悬浮岛承载 */
 @media (min-width: 901px) {
   .tab-groups, .tabs-wrapper {
     display: none !important;
@@ -3490,21 +3495,156 @@
   .floating-island-trigger {
     display: inline-flex;
   }
-}
-
-/* 移动端 (手机)：完全保持手机原有原生排版不变，手机不用动 */
-@media (max-width: 900px) {
-  .layout {
-    display: block;
-  }
-  .side-nav.floating-island {
+  .mobile-island-fab {
     display: none !important;
   }
+}
+
+/* 移动端 (手机)：底部半屏鸿蒙岛 (Bottom Sheet) + 右下角悬浮胶囊 */
+@media (max-width: 900px) {
+  /* 隐藏顶部双层横向标签栏，彻底释放手机纵向黄金视区 */
+  .tab-groups, .tabs-wrapper {
+    display: none !important;
+  }
+  /* 隐藏 PC 顶栏导航按钮，改由右下角单手大拇指 FAB 承载 */
   .floating-island-trigger {
     display: none !important;
   }
-  .island-backdrop {
-    display: none !important;
+  .layout {
+    display: block;
+  }
+
+  /* 右下角极简悬浮胶囊按钮 (FAB) - 完美契合单手握持热区 */
+  .mobile-island-fab {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: fixed;
+    right: 18px;
+    bottom: 22px;
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 22px;
+    background: var(--m3-sys-color-primary, #4A90D9);
+    color: #ffffff !important;
+    border: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.12);
+    z-index: 1050;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 700;
+    line-height: 1;
+    user-select: none;
+    touch-action: manipulation;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, opacity 0.2s ease;
+  }
+  .mobile-island-fab:active {
+    transform: scale(0.92);
+  }
+  .mobile-island-fab.active {
+    background: var(--m3-sys-color-primary-container, #3b82f6);
+    color: #ffffff !important;
+    transform: scale(0.96);
+  }
+  .mobile-island-fab svg {
+    flex-shrink: 0;
+    transition: transform 0.26s cubic-bezier(0.34, 1.4, 0.64, 1);
+  }
+  .mobile-island-fab.active svg {
+    transform: rotate(90deg);
+  }
+
+  /* 回到顶部按钮向上避让 FAB */
+  #backTop {
+    bottom: 76px !important;
+    right: 18px !important;
+  }
+
+  /* 移动端底部半屏鸿蒙岛 (Bottom Sheet) - 优雅毛玻璃圆角抽屉 */
+  .side-nav.floating-island {
+    display: flex !important;
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: auto;
+    max-height: 72vh;
+    border-radius: 26px 26px 0 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.45);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    background: rgba(255, 255, 255, 0.88);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.2), 0 -2px 10px rgba(0, 0, 0, 0.08);
+    padding: 10px 14px calc(14px + env(safe-area-inset-bottom, 12px)) 14px;
+    z-index: 1080;
+    transform: translate3d(0, 0, 0);
+    transform-origin: center bottom;
+    transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.26s;
+  }
+
+  [data-theme="dark"] .side-nav.floating-island {
+    background: rgba(26, 31, 38, 0.88);
+    border-top-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.5), 0 -2px 12px rgba(0, 0, 0, 0.25);
+  }
+
+  .side-nav.floating-island.collapsed {
+    transform: translate3d(0, 105%, 0) scale(0.98);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease-out, visibility 0.22s;
+  }
+
+  /* 顶部拖拽胶囊指示条 */
+  .side-nav.floating-island .island-head {
+    padding: 2px 0 6px 0;
+    position: relative;
+    border-bottom: 1px solid var(--line-subtle);
+    margin-bottom: 8px;
+  }
+  .side-nav.floating-island .island-head::before {
+    content: "";
+    display: block;
+    width: 38px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line, rgba(0, 0, 0, 0.2));
+    margin: 0 auto 6px auto;
+  }
+  [data-theme="dark"] .side-nav.floating-island .island-head::before {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  /* 移动端 2 列磁贴网格排版，大拇指单手秒触达 */
+  .side-nav.floating-island .side-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .side-nav.floating-island .side-group-title {
+    grid-column: 1 / -1;
+    margin: 4px 0 2px 4px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+  .side-nav.floating-island button[data-tab] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    border-radius: 14px;
+    justify-content: flex-start;
   }
 }
 
