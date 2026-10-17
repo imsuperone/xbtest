@@ -564,7 +564,7 @@ function initSideNavCollapse() {
     if (backdrop) backdrop.classList.remove("active");
 
     if (!withAnim) {
-      applyClosedDOM(true);
+      applyClosedDOM(false);
       return;
     }
 
@@ -648,7 +648,7 @@ function initSideNavCollapse() {
   });
 }
 
-// ---------- 鸿蒙组件粉末化消散特效 (HarmonyOS Powder Disintegration - 轻量微尘 120 FPS 满帧版) ----------
+// ---------- 鸿蒙组件粉末化消散特效 (HarmonyOS Powder Disintegration - 局部离屏硬件加速 120 FPS 满帧版) ----------
 function triggerHarmonyDisintegrate(el, onComplete) {
   if (!el) {
     if (onComplete) onComplete();
@@ -660,19 +660,20 @@ function triggerHarmonyDisintegrate(el, onComplete) {
     return () => {};
   }
 
+  // 局部边界画板：仅覆盖悬浮岛及微散区域（宽约 380px），减少 85% 屏幕像素擦除与合成负荷
+  const cWidth = Math.min(window.innerWidth, Math.max(380, Math.ceil(rect.right + 60)));
   const canvas = document.createElement("canvas");
   canvas.className = "harmony-powder-canvas";
   canvas.style.position = "fixed";
-  canvas.style.left = "0";
-  canvas.style.top = "0";
-  canvas.style.width = "100vw";
+  canvas.style.left = "0px";
+  canvas.style.top = "0px";
+  canvas.style.width = cWidth + "px";
   canvas.style.height = "100vh";
   canvas.style.pointerEvents = "none";
   canvas.style.zIndex = "9999";
   document.body.appendChild(canvas);
 
-  const dpr = 1;
-  canvas.width = window.innerWidth;
+  canvas.width = cWidth;
   canvas.height = window.innerHeight;
   const ctx = canvas.getContext("2d");
 
@@ -682,8 +683,8 @@ function triggerHarmonyDisintegrate(el, onComplete) {
     ? [primaryColor, "#8AB8F0", "#D6E8FA", "#434E5E", "#232A33", "#A9C9F5", "#CBD5E1", "#FFFFFF"]
     : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#B0BEC5", "#E3F2FD"];
 
-  // 灵动细腻粉末微粒 (约 220 颗高精粒子，毫秒级轻量渲染，绝对丝滑 120 FPS)
-  const count = Math.min(Math.floor((rect.width * rect.height) / 450), 220);
+  // 灵动细腻粉末微粒 (约 240 颗高精粒子，毫秒级轻量渲染，绝对丝滑 120 FPS)
+  const count = Math.min(Math.floor((rect.width * rect.height) / 400), 240);
   const particles = [];
   for (let i = 0; i < count; i++) {
     const px = rect.left + Math.random() * rect.width;
@@ -697,16 +698,14 @@ function triggerHarmonyDisintegrate(el, onComplete) {
       vy: Math.sin(angle) * speed * 0.7 - Math.random() * 2.0 - 0.5,
       size: Math.random() * 2.2 + 1.0,
       alpha: Math.random() * 0.35 + 0.65,
-      decay: Math.random() * 0.016 + 0.012,
+      decay: Math.random() * 0.018 + 0.014,
       color: colors[Math.floor(Math.random() * colors.length)],
-      spin: Math.random() * 0.2 - 0.1,
-      angle: Math.random() * Math.PI,
     });
   }
 
-  // 元素本体瞬间崩解淡出并微缩
-  el.style.transition = "transform 0.18s ease-out, opacity 0.15s ease-out";
-  el.style.transform = "scale(0.96) translate3d(0, -4px, 0)";
+  // 元素本体瞬间微缩并消失，粉末即刻接管视觉呈现，彻底释放毛玻璃 GPU 资源
+  el.style.transition = "transform 0.08s ease-out, opacity 0.06s ease-out";
+  el.style.transform = "scale(0.97) translate3d(-6px, -4px, 0)";
   el.style.opacity = "0";
 
   let animId;
@@ -714,7 +713,7 @@ function triggerHarmonyDisintegrate(el, onComplete) {
 
   function render(now) {
     const elapsed = now - startTime;
-    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    ctx.clearRect(0, 0, cWidth, window.innerHeight);
 
     let aliveCount = 0;
     for (let i = 0; i < particles.length; i++) {
@@ -726,16 +725,17 @@ function triggerHarmonyDisintegrate(el, onComplete) {
       p.y += p.vy;
       p.vx *= 0.965;
       p.vy *= 0.965;
-      p.vy -= 0.035;
+      p.vy -= 0.03;
       p.alpha -= p.decay;
-      p.size = Math.max(0.2, p.size * 0.985);
+      p.size = Math.max(0.4, p.size * 0.985);
 
       ctx.globalAlpha = Math.max(0, p.alpha);
       ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      const sz = p.size | 0 || 1;
+      ctx.fillRect((p.x - sz / 2) | 0, (p.y - sz / 2) | 0, sz, sz);
     }
 
-    if (aliveCount > 0 && elapsed < 800) {
+    if (aliveCount > 0 && elapsed < 650) {
       animId = requestAnimationFrame(render);
     } else {
       cancelAnimationFrame(animId);
@@ -759,7 +759,7 @@ function triggerHarmonyDisintegrate(el, onComplete) {
 }
 window.triggerHarmonyDisintegrate = triggerHarmonyDisintegrate;
 
-// ---------- 鸿蒙粒子汇聚进入特效 (HarmonyOS Particle Assembly - 800 颗高密星尘吸附版) ----------
+// ---------- 鸿蒙粒子汇聚进入特效 (HarmonyOS Particle Assembly - 局部离屏硬件加速 120 FPS 满帧版) ----------
 function triggerHarmonyAssemble(el, triggerEl, onComplete) {
   if (!el) {
     if (onComplete) onComplete();
@@ -785,19 +785,20 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
   const originX = trigRect.left + trigRect.width / 2;
   const originY = trigRect.top + trigRect.height / 2;
 
+  // 局部画板：覆盖导航触发器至悬浮岛展开区
+  const cWidth = Math.min(window.innerWidth, Math.max(380, Math.ceil(Math.max(rect.right, originX) + 60)));
   const canvas = document.createElement("canvas");
   canvas.className = "harmony-powder-canvas";
   canvas.style.position = "fixed";
-  canvas.style.left = "0";
-  canvas.style.top = "0";
-  canvas.style.width = "100vw";
+  canvas.style.left = "0px";
+  canvas.style.top = "0px";
+  canvas.style.width = cWidth + "px";
   canvas.style.height = "100vh";
   canvas.style.pointerEvents = "none";
   canvas.style.zIndex = "9999";
   document.body.appendChild(canvas);
 
-  const dpr = 1;
-  canvas.width = window.innerWidth;
+  canvas.width = cWidth;
   canvas.height = window.innerHeight;
   const ctx = canvas.getContext("2d");
 
@@ -807,8 +808,8 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
     ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF"]
     : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#2196F3"];
 
-  // 轻量星尘汇聚 (约 180 颗粒子，毫秒级快速凝聚吸附，120 FPS 满帧)
-  const count = Math.min(Math.floor((rect.width * rect.height) / 500), 180);
+  // 轻量星尘汇聚 (约 200 颗粒子，毫秒级快速凝聚吸附，120 FPS 满帧)
+  const count = Math.min(Math.floor((rect.width * rect.height) / 450), 200);
   const particles = [];
   for (let i = 0; i < count; i++) {
     const destX = rect.left + Math.random() * rect.width;
@@ -822,8 +823,8 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
       startY,
       destX,
       destY,
-      delay: Math.random() * 80,
-      duration: 260 + Math.random() * 120,
+      delay: Math.random() * 70,
+      duration: 240 + Math.random() * 110,
       size: Math.random() * 2.2 + 1.0,
       color: colors[Math.floor(Math.random() * colors.length)],
       swirl: (Math.random() - 0.5) * 16,
@@ -836,7 +837,7 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
 
   function render(now) {
     const elapsed = now - startTime;
-    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    ctx.clearRect(0, 0, cWidth, window.innerHeight);
 
     let activeCount = 0;
     for (let i = 0; i < particles.length; i++) {
@@ -857,18 +858,19 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
 
       ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
       ctx.fillStyle = p.color;
-      ctx.fillRect(curX - p.size / 2, curY - p.size / 2, p.size, p.size);
+      const sz = p.size | 0 || 1;
+      ctx.fillRect((curX - sz / 2) | 0, (curY - sz / 2) | 0, sz, sz);
     }
 
     // 粒子汇聚吸附至约 180ms 时，实体卡片以高阶弹性自愈凝结显现
     if (!cardRevealed && elapsed >= 180) {
       cardRevealed = true;
-      el.style.transition = "transform 0.22s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.18s ease-out";
+      el.style.transition = "transform 0.22s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1)";
       el.style.opacity = "1";
-      el.style.transform = "scale(1)";
+      el.style.transform = "scale(1) translate3d(0, 0, 0)";
     }
 
-    if (activeCount > 0 && elapsed < 480) {
+    if (activeCount > 0 && elapsed < 450) {
       animId = requestAnimationFrame(render);
     } else {
       cancelAnimationFrame(animId);

@@ -7,7 +7,7 @@ desc: |
   - 28 大系统：奴隶、签到、银行、娱乐、私聊、精灵、坐骑、超管、帮派、冒险等
   - WebUI 管理台集中配置全部系统
   - SQLite 存储，数据目录与正式版完全隔离
-version: "26w1017m"
+version: "26w1017n"
 author: "Light"
 repo: "https://github.com/imsuperone/xbtest"
 support_platforms:
