@@ -3310,7 +3310,7 @@
   top: 76px;
   left: 20px;
   bottom: 24px;
-  width: 260px;
+  width: 268px;
   max-width: calc(100vw - 40px);
   z-index: 1050;
   background: rgba(255, 255, 255, 0.94);
@@ -3324,12 +3324,20 @@
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none !important; /* Firefox: 完全隐藏丑陋的滚动条 */
+  -ms-overflow-style: none !important; /* IE/Edge */
   transform: translateX(0) scale(1);
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 隐藏 Webkit (Chrome/Edge/Safari) 默认滚动条，保留滚轮平滑滚动 */
+.side-nav.floating-island::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 [data-theme="dark"] .side-nav.floating-island {
@@ -3349,45 +3357,55 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 6px 10px 8px;
+  padding: 4px 6px 10px 8px;
   border-bottom: 1px solid var(--line-subtle);
   margin-bottom: 6px;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .island-title-box {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap !important;
+  flex: 1;
+  min-width: 0;
 }
 .island-badge {
   font-size: 16px;
   line-height: 1;
+  flex-shrink: 0;
 }
 .island-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--text);
+  white-space: nowrap !important;
   letter-spacing: 0.5px;
 }
 .island-close-btn {
-  background: var(--panel3);
-  border: none;
+  background: var(--panel2);
+  border: 1px solid var(--line);
   color: var(--text-secondary);
   cursor: pointer;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: var(--radius-full);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  flex-shrink: 0;
 }
 .island-close-btn:hover {
   background: var(--accSoft2);
   color: var(--acc);
-  transform: scale(1.08);
+  border-color: var(--accBorder);
+  transform: scale(1.06);
 }
 .island-close-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
 .side-group {
@@ -3437,14 +3455,29 @@
   box-shadow: inset 0 0 0 1px var(--accBorder);
 }
 
+/* 桌面端 (PC)：彻底隐藏手机顶部横向标签栏，全屏沉浸，导航由悬浮岛承载 */
+@media (min-width: 901px) {
+  .tab-groups, .tabs-wrapper {
+    display: none !important;
+  }
+  .floating-island-trigger {
+    display: inline-flex;
+  }
+}
+
+/* 移动端 (手机)：完全保持手机原有原生排版不变，手机不用动 */
 @media (max-width: 900px) {
+  .layout {
+    display: block;
+  }
   .side-nav.floating-island {
-    top: 64px;
-    left: 12px;
-    bottom: 12px;
-    width: 270px;
-    max-width: calc(100vw - 24px);
-    border-radius: 20px;
+    display: none !important;
+  }
+  .floating-island-trigger {
+    display: none !important;
+  }
+  .island-backdrop {
+    display: none !important;
   }
 }
 
