@@ -258,6 +258,22 @@ def _matches_engine(raw, engine, store=None, _mod=None):
                 nc = _norm_cmd(c)
                 if nc and (rt_n.startswith(nc) or rt_n_clean.startswith(nc)):
                     return True
+            # 动态宝物与武器名单匹配（直接发送宝物/武器名或【宝物/武器名】）
+            if engine == "slave":
+                _clean_q = rt_clean.strip("【】[] ").strip()
+                if _clean_q:
+                    _tn = getattr(_mod, "_treasure_names", None)
+                    if callable(_tn) and _clean_q in _tn():
+                        return True
+                    _wp = getattr(_mod, "_gacha_pool", None)
+                    if callable(_wp):
+                        import os as _os
+                        try:
+                            _ssr = [_os.path.splitext(_os.path.basename(p))[0] for p in _wp("SSR")]
+                            if _clean_q in _ssr:
+                                return True
+                        except Exception:
+                            pass
     except Exception:
         pass
     return False

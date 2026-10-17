@@ -474,6 +474,7 @@ const _TOAST_ICON = {
 };
 const _TOAST_COPY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
 const _TOAST_DONE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+const _TOAST_CLOSE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>';
 
 // 类型自动识别（显式传 type 时以显式为准）：失败类 → bad，进行中/提示 → info，完成类 → ok
 function _toastTypeOf(msg, explicit) {
@@ -546,6 +547,7 @@ function toast(msg, type, duration) {
   body.textContent = text;
   t.appendChild(body);
 
+  // 复制按钮
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "m3-toast-copy";
@@ -554,14 +556,30 @@ function toast(msg, type, duration) {
   btn.innerHTML = _TOAST_COPY_SVG;
   t.appendChild(btn);
 
-  // 长文本给更久，留出阅读与复制时间
-  const life = duration || Math.min(9000, Math.max(3000, 2400 + text.length * 45));
+  // 独立关闭按钮：一键立即关闭通知
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "m3-toast-close";
+  closeBtn.title = "关闭通知";
+  closeBtn.setAttribute("aria-label", "关闭通知");
+  closeBtn.innerHTML = _TOAST_CLOSE_SVG;
+  t.appendChild(closeBtn);
+
+  // 优化时长：成功/提示通知紧凑灵动(2.2s~3.5s)，错误/警告保留充分时间(3.2s~6s)
+  const life = duration || (kind === "bad"
+    ? Math.min(8000, Math.max(3200, 2600 + text.length * 40))
+    : Math.min(5000, Math.max(2200, 1800 + text.length * 30)));
   let timer = 0;
   const dismiss = () => {
     t.classList.add("out");
-    setTimeout(() => t.remove(), 300);
+    setTimeout(() => { try { t.remove(); } catch (e) {} }, 280);
   };
   const arm = (ms) => { clearTimeout(timer); timer = setTimeout(dismiss, ms); };
+
+  closeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dismiss();
+  });
 
   const doCopy = async () => {
     if (await _toastCopy(text)) {
@@ -589,11 +607,31 @@ function toast(msg, type, duration) {
   };
 
   btn.addEventListener("click", (e) => { e.stopPropagation(); doCopy(); });
+
+  // 单击卡片空白区域立即消除，再也不挡任何交互
   t.addEventListener("click", () => {
-    // 用户正在手动选词时不打断
     try { if (String(window.getSelection())) return; } catch (e) {}
-    doCopy();
+    dismiss();
   });
+
+  // 移动端触摸手势：向上轻扫或横向滑动立即退场
+  let _touchY = 0;
+  let _touchX = 0;
+  t.addEventListener("touchstart", (e) => {
+    try {
+      _touchY = e.touches[0].clientY;
+      _touchX = e.touches[0].clientX;
+    } catch (err) {}
+  }, { passive: true });
+  t.addEventListener("touchend", (e) => {
+    try {
+      const diffY = e.changedTouches[0].clientY - _touchY;
+      const diffX = Math.abs(e.changedTouches[0].clientX - _touchX);
+      if (diffY < -20 || diffX > 60) {
+        dismiss();
+      }
+    } catch (err) {}
+  }, { passive: true });
 
   container.appendChild(t);
   while (container.children.length > _TOAST_MAX) container.removeChild(container.firstChild);

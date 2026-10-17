@@ -133,7 +133,7 @@ function spiritAttrCards(spirits, dropNames, assignMaps) {
     });
     return `<div class="sp-card" data-sp="${esc(sn)}">
       <div class="sp-header">
-        <div class="sp-name">✦ <input class="sp-rename-inp" data-sp-rename value="${esc(sn)}" title="直接修改精灵名，回车/失焦生效"></div>
+        <div class="sp-name"><input class="sp-rename-inp" data-sp-rename value="${esc(sn)}" title="直接修改精灵名，回车/失焦生效"></div>
         <button type="button" class="s-del" data-del-spirit="${esc(sn)}" title="移除此精灵">✕ 移除</button>
       </div>
       <div class="sp-core-grid">${coreCells.join("")}</div>
@@ -384,15 +384,15 @@ async function renderAtlas(curCfg){
       if (_orphans.length) {
         const _or = _orphans.filter((n) => !_ql || String(n).toLowerCase().includes(_ql));
         if (_or.length) {
-          h += `<div class="s-mapcard ${SPIRIT_OPEN["__orphans__"] ? "open" : ""}" data-map="__orphans__" style="margin-top:10px"><div class="s-maphead" data-map-toggle="__orphans__"><span class="s-mapname">🧩 未上架精灵 (${_or.length})</span><span class="s-maplv">不在任何地图掉落中</span><span class="s-arr">${SPIRIT_OPEN["__orphans__"] ? "▾" : "▸"}</span></div>${SPIRIT_OPEN["__orphans__"] ? `<div class="s-mapbody"><div class="hint" style="margin-bottom:6px">这些精灵不会在野外遭遇，可编辑后分配进图，或直接移除</div><div class="sp-spirits">${spiritAttrCards(_spirits, _or, _names)}</div></div>` : ``}</div>`;
+          h += `<div class="s-mapcard ${SPIRIT_OPEN["__orphans__"] ? "open" : ""}" data-map="__orphans__" style="margin-top:10px"><div class="s-maphead" data-map-toggle="__orphans__"><span class="s-mapname">未上架精灵 (${_or.length})</span><span class="s-maplv">未在任何地图出没</span><span class="s-arr">${SPIRIT_OPEN["__orphans__"] ? "▾" : "▸"}</span></div>${SPIRIT_OPEN["__orphans__"] ? `<div class="s-mapbody"><div class="hint" style="margin-bottom:6px">这些精灵不会在野外遭遇，可编辑后分配进图，或直接移除</div><div class="sp-spirits">${spiritAttrCards(_spirits, _or, _names)}</div></div>` : ``}</div>`;
         }
       }
-      h += `<div style="margin-top:8px"><button class="ghost sm" id="btnAtlasAddMap">＋ 添加地图</button></div>`;
+      h += `<div style="margin-top:8px"><button class="ghost sm" id="btnAtlasAddMap">添加地图</button></div>`;
       h += `<div class="hint" style="margin-top:6px">地图与属性合并保存、恢复，仅影响精灵范围</div></div>`;
       html += h;
     }
     else html += `<div class="card" style="border:1px solid var(--line);border-radius:var(--radius-xs);padding:8px 10px"><div style="color:var(--muted)">未知分类</div></div>`;
-    html += `</div><div class="hint" style="margin-top:6px">顶栏可搜宝物/地图/精灵；宝物改动即时保存；精灵卡改动点保存精灵；武器坐骑请到🛒商城管理</div>`;
+    html += `</div><div class="hint" style="margin-top:6px">顶栏可搜索宝物/地图/精灵；宝物改动即时生效；精灵改动点击保存精灵生效；武器坐骑请前往商城管理。</div>`;
     box.innerHTML = html;
     box.querySelectorAll("[data-atlas-tab]").forEach((b) => b.addEventListener("click", () => {
       ATLAS_CUR = b.dataset.atlasTab;

@@ -1358,24 +1358,25 @@
 
     /* Atlas & Treasures */
     #atlasBox {
-      background: var(--panel) !important;
-      border: 1.5px solid var(--line) !important;
-      border-radius: var(--radius-xl) !important;
-      padding: 14px 16px;
-      box-shadow: var(--shadow-xs);
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      margin-top: 8px;
     }
     .atlas-top-bar {
       position: sticky;
       top: 0;
       z-index: 5;
       background: var(--panel);
-      padding: 6px 0 10px;
+      padding: 8px 0 12px;
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex-wrap: wrap;
       align-items: center;
       border-bottom: 1px solid var(--line-subtle);
-      margin-bottom: 10px;
+      margin-bottom: 14px;
     }
     .atlas-seg-tabs, .m3-segmented-control, .segmented-choice {
       display: flex;
@@ -1476,22 +1477,22 @@
     .tre-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-      gap: 10px;
+      gap: 12px;
     }
     .tre-card {
-      background: var(--m3-sys-color-surface-container-high) !important;
+      background: var(--m3-sys-color-surface-container) !important;
       border: 1px solid var(--m3-sys-color-divider);
-      border-radius: var(--radius-lg);
-      padding: 10px 12px;
-      box-shadow: var(--shadow-xs);
-      transition: all 0.2s;
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
     [data-theme="dark"] .tre-card {
       background: var(--m3-sys-color-surface-container) !important;
-      border-color: var(--m3-sys-color-divider) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
     }
     .tre-card:hover {
       border-color: var(--accBorder);
@@ -1505,7 +1506,7 @@
       gap: 6px;
     }
     .tre-card-title {
-      font-size: 13px;
+      font-size: 13.5px;
       font-weight: 750;
       color: var(--text);
       display: flex;
@@ -1544,49 +1545,60 @@
       color: var(--bad);
     }
     .tre-card-desc {
-      font-size: 11.5px;
+      font-size: 12px;
       color: var(--text-secondary);
-      background: var(--panel);
-      padding: 6px 8px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--line);
-      line-height: 1.4;
-      min-height: 36px;
+      background: transparent;
+      padding: 2px 0;
+      border: none;
+      line-height: 1.5;
+      min-height: 28px;
     }
 
     /* Map Cards */
     .s-mapcard {
+      background: var(--m3-sys-color-surface-container);
+      border: 1px solid var(--m3-sys-color-divider);
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    [data-theme="dark"] .s-mapcard {
+      background: var(--m3-sys-color-surface-container);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .s-mapcard:hover {
+      border-color: var(--accBorder);
+    }
+    .s-mapcard.open {
+      border-color: var(--accBorder);
       background: var(--panel);
-      border: 1.5px solid var(--line);
-      border-radius: var(--radius-lg);
-      padding: 12px 14px;
-      margin-bottom: 8px;
-      transition: all 0.2s;
     }
     .s-mapbody { display: none; margin-top: 10px; }
     .s-mapcard.open .s-mapbody { display: block; }
     .s-maphead {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       cursor: pointer;
       user-select: none;
       flex-wrap: wrap;
     }
-    .s-mapname { font-weight: 750; font-size: 13.5px; color: var(--text); }
-    .s-maplv { font-size: 11px; font-weight: 600; color: var(--acc); background: var(--accSoft); padding: 2px 7px; border-radius: var(--radius-full); }
-    .s-mapdrop { font-size: 11.5px; color: var(--muted); }
-    .s-arr { font-size: 15px; margin-left: 6px; }
+    .s-mapname { font-weight: 750; font-size: 14px; color: var(--text); }
+    .s-maplv { font-size: 11px; font-weight: 700; color: var(--acc); background: var(--accSoft); padding: 2px 8px; border-radius: var(--radius-full); }
+    .s-mapdrop { font-size: 12px; color: var(--muted); flex: 1 1 140px; min-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .s-arr { font-size: 14px; margin-left: 6px; transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1); color: var(--muted); display: inline-block; }
+    .s-mapcard.open .s-arr { transform: rotate(90deg); color: var(--acc); }
     .s-map-settings {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       flex-wrap: wrap;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      padding: 6px 10px;
-      margin: 8px 0;
+      background: var(--m3-sys-color-surface-container-high);
+      border: 1px solid var(--m3-sys-color-divider);
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin: 10px 0 12px;
     }
     .s-slot-h {
       display: flex;
@@ -1636,26 +1648,26 @@
        ========================================================================= */
     .sp-spirits {
       display: grid !important;
-      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)) !important;
-      gap: 14px !important;
-      margin-top: 12px !important;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+      gap: 12px !important;
+      margin-top: 10px !important;
     }
     .sp-card {
-      border-radius: 16px !important;
-      background: var(--m3-sys-color-surface-container-high) !important;
+      border-radius: 14px !important;
+      background: var(--m3-sys-color-surface-container) !important;
       border: 1px solid var(--m3-sys-color-divider) !important;
-      padding: 14px !important;
-      box-shadow: var(--shadow-xs) !important;
+      padding: 12px !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
       display: flex !important;
       flex-direction: column !important;
-      gap: 10px !important;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      gap: 8px !important;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
       box-sizing: border-box !important;
       overflow: hidden !important;
     }
     [data-theme="dark"] .sp-card {
       background: var(--m3-sys-color-surface-container) !important;
-      border-color: var(--m3-sys-color-divider) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
     }
     .sp-card:hover {
       border-color: var(--accBorder) !important;
@@ -1706,49 +1718,49 @@
       align-items: center !important;
       justify-content: center !important;
       background: var(--m3-sys-color-surface-container-high) !important;
-      padding: 4px 2px !important;
+      padding: 4px 4px !important;
       border-radius: 8px !important;
-      border: none !important;
+      border: 1px solid var(--m3-sys-color-divider) !important;
       box-sizing: border-box !important;
       min-width: 0 !important;
     }
     [data-theme="dark"] .s-slot {
-      background: var(--m3-sys-color-surface-container) !important;
-      border-color: var(--m3-sys-color-divider) !important;
+      background: rgba(255, 255, 255, 0.03) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
     }
     .s-slot-lab {
-      font-size: 10.5px !important;
+      font-size: 10px !important;
       color: var(--muted) !important;
       font-weight: 600 !important;
       line-height: 1 !important;
-      margin-bottom: 3px !important;
+      margin-bottom: 2px !important;
       text-align: center !important;
       user-select: none;
     }
     .s-slot-val {
       width: 100% !important;
       min-width: 0 !important;
-      background: var(--m3-sys-color-surface-container-high) !important;
-      border: 1px solid var(--m3-sys-color-outline-variant) !important;
-      font-size: 12px !important;
+      background: transparent !important;
+      border: none !important;
+      font-size: 12.5px !important;
       font-weight: 700 !important;
       color: var(--text) !important;
       text-align: center !important;
       padding: 0 !important;
       margin: 0 !important;
       outline: none !important;
-      border-radius: 5px !important;
+      border-radius: 4px !important;
       box-sizing: border-box !important;
-      height: 24px !important;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      height: 22px !important;
+      transition: background 0.2s, box-shadow 0.2s;
     }
     [data-theme="dark"] .s-slot-val {
-      background: var(--m3-sys-color-surface-container-highest) !important;
-      border-color: var(--m3-sys-color-divider) !important;
+      background: transparent !important;
+      border: none !important;
     }
     .s-slot-val:focus {
-      border-color: var(--acc) !important;
-      box-shadow: 0 0 0 2px var(--accSoft2) !important;
+      background: var(--panel) !important;
+      box-shadow: 0 0 0 1.5px var(--acc) !important;
     }
     .sp-extra-row {
       display: grid !important;
@@ -2294,8 +2306,8 @@
 
     /* Toast 入场动画（由 .m3-toast 使用） */
     @keyframes toastIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     /* Lightbox */
@@ -2600,37 +2612,47 @@
       z-index: 2;
       user-select: none;
     }
-    /* Toast: 右下堆叠容器 + pill（与 xbimg/xbdoc toast-container/.m3-toast 对等） */
+    /* Toast: 顶部中央悬浮胶囊（iOS灵动岛/macOS Banner规范，再也不挡任何底部按钮/导航岛/弹窗确认键） */
     .toast-container, #toastContainer {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      top: 68px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      z-index: 9999;
+      align-items: center;
+      gap: 8px;
+      z-index: 10000;
       pointer-events: none !important;
+      width: auto;
+      max-width: min(560px, calc(100vw - 32px));
     }
     .toast-container:empty, #toastContainer:empty { display: none; }
     .m3-toast {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 9px 8px 9px 16px;
+      padding: 8px 10px 8px 16px;
       border-radius: var(--radius-full);
       background: var(--m3-sys-color-surface-container-highest);
       color: var(--m3-sys-color-on-surface);
       border: 1px solid var(--m3-sys-color-divider);
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 600;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-      animation: toastIn 0.3s cubic-bezier(0.2, 0, 0, 1);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+      animation: toastIn 0.25s cubic-bezier(0.2, 0, 0, 1);
       pointer-events: auto !important;
       max-width: min(560px, calc(100vw - 32px));
-      line-height: 1.5;
-      transition: opacity 0.28s cubic-bezier(0.4, 0, 1, 1), transform 0.28s cubic-bezier(0.4, 0, 1, 1);
+      line-height: 1.45;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: opacity 0.24s cubic-bezier(0.4, 0, 1, 1), transform 0.24s cubic-bezier(0.4, 0, 1, 1);
     }
-    .m3-toast.out { animation: none; opacity: 0; transform: translateY(14px) scale(0.97); }
+    .m3-toast:hover {
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
+    }
+    .m3-toast.out { animation: none; opacity: 0; transform: translateY(-12px) scale(0.96); pointer-events: none !important; }
     .m3-toast-ic { flex: 0 0 auto; display: grid; place-items: center; width: 20px; height: 20px; }
     .m3-toast-ic svg { display: block; width: 18px; height: 18px; }
     .m3-toast:not(.okk):not(.badk) .m3-toast-ic { color: var(--m3-sys-color-primary); }
@@ -2642,34 +2664,38 @@
       user-select: text;
       -webkit-user-select: text;
     }
-    .m3-toast-copy {
+    .m3-toast-copy, .m3-toast-close {
       flex: 0 0 auto;
       display: grid;
       place-items: center;
-      width: 30px;
-      height: 30px;
+      width: 28px;
+      height: 28px;
       padding: 0;
       border: 0;
       border-radius: 50%;
       background: transparent;
       color: inherit;
-      opacity: 0.55;
+      opacity: 0.6;
       cursor: pointer;
       transition: opacity 0.18s, background 0.18s, transform 0.18s;
     }
-    .m3-toast-copy:hover { opacity: 1; background: rgba(127, 127, 127, 0.18); }
-    .m3-toast-copy:active { transform: scale(0.9); }
-    .m3-toast-copy.done { opacity: 1; }
-    .m3-toast-copy svg { display: block; width: 16px; height: 16px; }
+    .m3-toast-copy:hover, .m3-toast-close:hover { opacity: 1; background: rgba(127, 127, 127, 0.2); }
+    .m3-toast-copy:active, .m3-toast-close:active { transform: scale(0.9); }
+    .m3-toast-copy.done { opacity: 1; color: var(--ok); }
+    .m3-toast-copy svg { display: block; width: 15px; height: 15px; }
+    .m3-toast-close svg { display: block; width: 14px; height: 14px; }
     [data-theme="dark"] .m3-toast {
-      background: var(--m3-sys-color-surface-container-highest);
+      background: rgba(30, 38, 52, 0.94);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
       color: var(--m3-sys-color-on-surface);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.14);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
     }
     .m3-toast.okk { background: var(--m3-status-green); color: #FFFFFF; border-color: transparent; }
     .m3-toast.badk { background: var(--m3-sys-color-error); color: #FFFFFF; border-color: transparent; }
-    [data-theme="dark"] .m3-toast.okk { background: var(--m3-status-green-bg); color: var(--ok); border-color: var(--ok); }
-    [data-theme="dark"] .m3-toast.badk { background: var(--m3-sys-color-error-container); color: var(--m3-sys-color-error); border-color: var(--m3-sys-color-error); }
+    [data-theme="dark"] .m3-toast.okk { background: rgba(30, 70, 45, 0.92); color: #72E59A; border-color: rgba(114, 229, 154, 0.4); }
+    [data-theme="dark"] .m3-toast.badk { background: rgba(85, 25, 28, 0.92); color: #FFB4AB; border-color: rgba(255, 180, 171, 0.4); }
     /* Modal overlay: .open 时 flex+opacity1（与 xbdoc 对等，兼容 beta .show） */
     .modal-overlay {
       position: fixed;
@@ -2822,10 +2848,18 @@
       .bottom-sheet-body { padding: 14px 12px; }
       .bottom-sheet-footer { flex-direction: column; align-items: stretch; gap: 10px; }
       .bottom-sheet-footer .m3-btn { flex: 1; }
-      .toast-container, #toastContainer { left: 16px; right: 16px; align-items: center; }
-      .m3-toast { max-width: calc(100vw - 32px); }
-      /* 手机端通知近乎通栏：999px 胶囊圆角会把多行文字两端挤成大圆弧，改常规 16px 圆角 */
-      .m3-toast { border-radius: 16px; }
+      .toast-container, #toastContainer {
+        top: calc(64px + env(safe-area-inset-top, 0px)) !important;
+        bottom: auto !important;
+        left: 16px !important;
+        right: 16px !important;
+        transform: none !important;
+        width: auto !important;
+        max-width: 440px !important;
+        margin: 0 auto !important;
+        align-items: center !important;
+      }
+      .m3-toast { max-width: calc(100vw - 32px); border-radius: 16px; }
       .xb-confirm-overlay { padding: 16px; align-items: flex-end; }
       .xb-confirm-card { max-width: 100%; }
     }

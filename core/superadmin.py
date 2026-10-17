@@ -150,54 +150,58 @@ def cmd_stats():
 
 # ---- 账户管理 ----
 def _parse_target_amount(arg):
-    """解析 扣钱/充钱 目标与金额: QQ-only（[CQ:at,qq=]/@QQ/纯数字），@昵称不认，金额取末数"""
-    arg = (arg or "").strip()
-    t, rest = None, arg
-    # 1) 统一 @ 解析（命中须过 QQ-only 校验）
-    try:
-        t_tmp, rest_tmp = ST.parse_at(arg)
-        if t_tmp:
-            try:
-                _ok = ST.is_qq_mention(t_tmp, arg) if hasattr(ST, "is_qq_mention") else True
-            except Exception:
-                _ok = True
-            if _ok:
-                t, rest = t_tmp, rest_tmp
-    except Exception:
-        pass
-    # 2) 直接 CQ / [At:QQ] 兜底
+    """解析 扣钱/充钱 目标与金额: QQ-only（[CQ:at,qq=]/[At:QQ]/@QQ/纯数字），兼容长昵称/空格/Emoji/末尾附带@QQ，金额取正整数"""
+    arg = str(arg or "").strip()
+    if not arg:
+        return None, None
+    t, amt = None, None
+
+    # 1. 查找明确的目标 QQ (CQ码 / [At:QQ] / @QQ / 开头QQ)
+    m = re.search(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])", arg)
+    if m:
+        t = m.group(1) or m.group(2)
     if not t:
-        m = re.search(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])", arg)
-        if m:
-            t = m.group(1) or m.group(2)
-            # rest 为去除 @ 标记后的剩余
-            rest = re.sub(r"(?:\[CQ:at,qq=\d+[^\]]*\]|\[At:\s*\d+\])", "", arg, count=1).strip()
-    # 3) @QQ 兜底
-    if not t:
-        m = re.search(r"@\s*(\d{5,12})", arg)
+        # 末尾附带的 @QQ (由 _append_at_segments 产生)
+        m = re.search(r"@(\d{5,12})\s*$", arg)
         if m:
             t = m.group(1)
-            rest = arg.replace(m.group(0), "", 1).strip()
-    # 4) 纯数字开头
     if not t:
+        # @QQ (后跟非数字)
+        m = re.search(r"@\s*(\d{5,12})(?!\d)", arg)
+        if m:
+            t = m.group(1)
+    if not t:
+        # 开头 QQ 数字串
         m = re.match(r"(\d{5,12})\b", arg)
         if m:
             t = m.group(1)
-            rest = arg[len(t):].strip().lstrip("* ").strip()
+
+    # 2. 如果依然没有，测试纯数字双参数格式: QQ 金额
     if not t:
         m = re.fullmatch(r"@?\s*(\d{5,12})\s*\*?\s*(\d+)", arg)
         if m:
             return m.group(1), int(m.group(2))
+
+    if not t:
         return None, None
-    # 金额：rest 须为纯数字（可选前置 *，剥离残留的 @昵称），防止引用回复聊天时将“扣钱了 100 @QQ”误判为指令
-    rest_clean = re.sub(r"@\S+", "", rest).strip()
-    m = re.fullmatch(r"\*?\s*(\d+)", rest_clean)
-    if m:
+
+    # 找到 t 后，从字符串中剔除所有针对 t 的标识（CQ码、[At:QQ]、@QQ 以及作为独立词的 t）
+    rem = re.sub(r"\[CQ:at,qq=" + t + r"[^\]]*\]", " ", arg)
+    rem = re.sub(r"\[At:\s*" + t + r"\]", " ", rem)
+    rem = re.sub(r"@\s*" + t + r"(?!\d)", " ", rem)
+    rem = re.sub(r"@" + t + r"\b", " ", rem)
+    rem = re.sub(r"(?<!\d)" + t + r"(?!\d)", " ", rem, count=1)
+
+    # 提取剩余文本中的金额数字（末尾或被空格/*包围的纯数字串）
+    nums = re.findall(r"(?:^|[\s*])(\d+)(?:\s|$)", rem)
+    if nums:
         try:
-            return t, int(m.group(1))
+            amt = int(nums[-1])
         except Exception:
             pass
-    # 仅剩 t 本身，无金额
+
+    if amt is not None and amt > 0:
+        return t, amt
     return None, None
 
 
