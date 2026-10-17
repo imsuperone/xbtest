@@ -425,7 +425,9 @@ function bindTabs() {
       } else {
         if (typeof stopLogsAutoRefresh === "function") stopLogsAutoRefresh();
       }
-      try { b.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }); } catch (e) {}
+      if (b.closest("#mainTabs")) {
+        try { b.scrollIntoView({ behavior: "auto", inline: "center", block: "nearest" }); } catch (e) {}
+      }
       if (tab === "overview") {
         Promise.resolve(loadOverviewReq()).catch((e) => err("tab overview: " + e.message));
         Promise.resolve(loadStats()).catch(() => {});
@@ -617,10 +619,10 @@ function initSideNavCollapse() {
     closeIsland(true);
   });
 
-  // 点击导航选项自动平滑收起
+  // 点击导航选项自动即时收起，零动效抢占主线程，保证切页 120 FPS 秒开
   nav.querySelectorAll("button[data-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      closeIsland(true);
+      closeIsland(false);
     });
   });
 
@@ -717,13 +719,9 @@ function triggerHarmonyDisintegrate(el, onComplete) {
       p.size = Math.max(0.2, p.size * 0.985);
       p.angle += p.spin;
 
-      ctx.save();
       ctx.globalAlpha = Math.max(0, p.alpha);
       ctx.fillStyle = p.color;
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.angle);
-      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-      ctx.restore();
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     }
 
     if (aliveCount > 0 && elapsed < 950) {

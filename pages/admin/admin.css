@@ -281,7 +281,7 @@
     /* M3 top-bar (xbdoc/xbimg pixel-parity transplant; header element keeps legacy layout) */
     .top-bar {
       position: relative;
-      z-index: 1060;
+      z-index: 100;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -610,19 +610,21 @@
     }
     .tab.on {
       display: block;
-      animation: sectionIn 0.22s cubic-bezier(0.2, 0, 0, 1);
+      animation: sectionIn 0.16s ease-out;
+      will-change: opacity;
     }
     .settings-section.active {
       display: flex;
-      animation: sectionIn 0.22s cubic-bezier(0.2, 0, 0, 1);
+      animation: sectionIn 0.16s ease-out;
+      will-change: opacity;
     }
     @keyframes m3TabFade {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     @keyframes sectionIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     @media (prefers-reduced-motion: reduce) {
       .tab.on, .settings-section.active { animation: none; }
@@ -3252,8 +3254,6 @@
 
 /* Floating island trigger in top bar */
 .floating-island-trigger {
-  position: relative;
-  z-index: 1060;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3332,7 +3332,7 @@
   bottom: 24px;
   width: 260px;
   max-width: calc(100vw - 40px);
-  z-index: 1050;
+  z-index: 1080;
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
