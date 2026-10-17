@@ -610,24 +610,9 @@
     }
     .tab.on {
       display: block;
-      animation: sectionIn 0.16s ease-out;
-      will-change: opacity;
     }
     .settings-section.active {
       display: flex;
-      animation: sectionIn 0.16s ease-out;
-      will-change: opacity;
-    }
-    @keyframes m3TabFade {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    @keyframes sectionIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .tab.on, .settings-section.active { animation: none; }
     }
 
     /* Panels */
@@ -3305,18 +3290,16 @@
   font-weight: 600;
 }
 
-/* Floating island backdrop - 静态毛玻璃，仅动画淡入淡出，绝对锁定 120FPS */
+/* Floating island backdrop - 纯深色优雅半透明遮罩，绝对锁定 120FPS，无 GPU 模糊开销 */
 .island-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 20, 28, 0.38);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(15, 20, 28, 0.42);
   z-index: 1040;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.22s ease-out, visibility 0.22s;
+  transition: opacity 0.2s ease-out, visibility 0.2s;
 }
 .island-backdrop.active {
   opacity: 1;
@@ -3333,12 +3316,10 @@
   width: 260px;
   max-width: calc(100vw - 40px);
   z-index: 1080;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.98);
   border: 1px solid var(--line);
   border-radius: 22px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08);
   padding: 10px 12px 14px 12px;
   display: flex;
   flex-direction: column;
@@ -3352,7 +3333,7 @@
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.26s;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s;
 }
 
 /* 隐藏 Webkit (Chrome/Edge/Safari) 默认滚动条，保留滚轮平滑滚动 */
@@ -3363,7 +3344,7 @@
 }
 
 [data-theme="dark"] .side-nav.floating-island {
-  background: rgba(26, 31, 38, 0.92);
+  background: rgba(26, 31, 38, 0.98);
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.46), 0 2px 10px rgba(0, 0, 0, 0.25);
 }

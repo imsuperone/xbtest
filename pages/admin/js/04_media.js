@@ -429,8 +429,11 @@ function bindTabs() {
         try { b.scrollIntoView({ behavior: "auto", inline: "center", block: "nearest" }); } catch (e) {}
       }
       if (tab === "overview") {
-        Promise.resolve(loadOverviewReq()).catch((e) => err("tab overview: " + e.message));
-        Promise.resolve(loadStats()).catch(() => {});
+        if (!TAB_DONE.overview) {
+          TAB_DONE.overview = true;
+          Promise.resolve(loadOverviewReq()).catch((e) => err("tab overview: " + e.message));
+          Promise.resolve(loadStats()).catch(() => {});
+        }
         return;
       }
       if (!TAB_DONE[tab] && TAB_LOADERS[tab]) {
@@ -508,11 +511,22 @@ function initSideNavCollapse() {
     });
   };
 
-  const applyClosedDOM = () => {
+  const applyClosedDOM = (instant = false) => {
+    if (instant) {
+      nav.style.transition = "none";
+      if (backdrop) backdrop.style.transition = "none";
+    }
     nav.classList.add("collapsed");
     nav.style.transform = "";
     nav.style.opacity = "";
-    nav.style.transition = "";
+    if (instant) {
+      requestAnimationFrame(() => {
+        nav.style.transition = "";
+        if (backdrop) backdrop.style.transition = "";
+      });
+    } else {
+      nav.style.transition = "";
+    }
     if (backdrop) backdrop.classList.remove("active");
     if (islandToggle) {
       islandToggle.setAttribute("aria-expanded", "false");
@@ -534,7 +548,7 @@ function initSideNavCollapse() {
 
   // 默认启动状态：强制收起
   isOpen = false;
-  applyClosedDOM();
+  applyClosedDOM(true);
 
   // 关闭悬浮岛 (立即切换权威状态，支持高密粒子粉末崩解动效)
   const closeIsland = (withAnim = true) => {
@@ -550,12 +564,12 @@ function initSideNavCollapse() {
     if (backdrop) backdrop.classList.remove("active");
 
     if (!withAnim) {
-      applyClosedDOM();
+      applyClosedDOM(true);
       return;
     }
 
     activeAnimCancel = triggerHarmonyDisintegrate(nav, () => {
-      applyClosedDOM();
+      applyClosedDOM(false);
       activeAnimCancel = null;
     });
   };
@@ -634,7 +648,7 @@ function initSideNavCollapse() {
   });
 }
 
-// ---------- 鸿蒙组件粉末化消散特效 (HarmonyOS Powder Disintegration - 800+ 粒子高密慢速流光版) ----------
+// ---------- 鸿蒙组件粉末化消散特效 (HarmonyOS Powder Disintegration - 轻量微尘 120 FPS 满帧版) ----------
 function triggerHarmonyDisintegrate(el, onComplete) {
   if (!el) {
     if (onComplete) onComplete();
@@ -657,11 +671,10 @@ function triggerHarmonyDisintegrate(el, onComplete) {
   canvas.style.zIndex = "9999";
   document.body.appendChild(canvas);
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = window.innerWidth * dpr;
-  canvas.height = window.innerHeight * dpr;
+  const dpr = 1;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
   const ctx = canvas.getContext("2d");
-  ctx.scale(dpr, dpr);
 
   const isDark = document.documentElement.dataset.theme === "dark";
   const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9";
@@ -669,25 +682,24 @@ function triggerHarmonyDisintegrate(el, onComplete) {
     ? [primaryColor, "#8AB8F0", "#D6E8FA", "#434E5E", "#232A33", "#A9C9F5", "#CBD5E1", "#FFFFFF"]
     : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#B0BEC5", "#E3F2FD"];
 
-  // 极高密度粉末微粒 (750 ~ 880 颗微粉尘)
-  const count = Math.min(Math.floor((rect.width * rect.height) / 95), 850);
+  // 灵动细腻粉末微粒 (约 220 颗高精粒子，毫秒级轻量渲染，绝对丝滑 120 FPS)
+  const count = Math.min(Math.floor((rect.width * rect.height) / 450), 220);
   const particles = [];
   for (let i = 0; i < count; i++) {
     const px = rect.left + Math.random() * rect.width;
     const py = rect.top + Math.random() * rect.height;
     const angle = Math.random() * Math.PI * 2;
-    // 稍稍慢一点点：速度调平缓，增强烟尘微粒的优雅悬浮感
-    const speed = Math.random() * 3.6 + 0.6;
+    const speed = Math.random() * 3.2 + 0.6;
     particles.push({
       x: px,
       y: py,
-      vx: Math.cos(angle) * speed * 0.7 + (Math.random() - 0.45) * 2.0,
-      vy: Math.sin(angle) * speed * 0.7 - Math.random() * 2.2 - 0.5, // 向上轻盈袅袅微升
-      size: Math.random() * 2.2 + 0.9,
+      vx: Math.cos(angle) * speed * 0.7 + (Math.random() - 0.45) * 1.8,
+      vy: Math.sin(angle) * speed * 0.7 - Math.random() * 2.0 - 0.5,
+      size: Math.random() * 2.2 + 1.0,
       alpha: Math.random() * 0.35 + 0.65,
-      decay: Math.random() * 0.014 + 0.009, // 衰减稍慢，约 700~900ms 优雅消隐
+      decay: Math.random() * 0.016 + 0.012,
       color: colors[Math.floor(Math.random() * colors.length)],
-      spin: Math.random() * 0.22 - 0.11,
+      spin: Math.random() * 0.2 - 0.1,
       angle: Math.random() * Math.PI,
     });
   }
@@ -712,19 +724,18 @@ function triggerHarmonyDisintegrate(el, onComplete) {
 
       p.x += p.vx;
       p.y += p.vy;
-      p.vx *= 0.965; // 空气摩擦稍弱，更轻盈
+      p.vx *= 0.965;
       p.vy *= 0.965;
-      p.vy -= 0.035; // 烟尘微浮
+      p.vy -= 0.035;
       p.alpha -= p.decay;
       p.size = Math.max(0.2, p.size * 0.985);
-      p.angle += p.spin;
 
       ctx.globalAlpha = Math.max(0, p.alpha);
       ctx.fillStyle = p.color;
       ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     }
 
-    if (aliveCount > 0 && elapsed < 950) {
+    if (aliveCount > 0 && elapsed < 800) {
       animId = requestAnimationFrame(render);
     } else {
       cancelAnimationFrame(animId);
@@ -785,11 +796,10 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
   canvas.style.zIndex = "9999";
   document.body.appendChild(canvas);
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = window.innerWidth * dpr;
-  canvas.height = window.innerHeight * dpr;
+  const dpr = 1;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
   const ctx = canvas.getContext("2d");
-  ctx.scale(dpr, dpr);
 
   const isDark = document.documentElement.dataset.theme === "dark";
   const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9";
@@ -797,27 +807,26 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
     ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF"]
     : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#2196F3"];
 
-  // 700 ~ 850 颗汇聚微粉尘
-  const count = Math.min(Math.floor((rect.width * rect.height) / 100), 800);
+  // 轻量星尘汇聚 (约 180 颗粒子，毫秒级快速凝聚吸附，120 FPS 满帧)
+  const count = Math.min(Math.floor((rect.width * rect.height) / 500), 180);
   const particles = [];
   for (let i = 0; i < count; i++) {
     const destX = rect.left + Math.random() * rect.width;
     const destY = rect.top + Math.random() * rect.height;
     const isFromTrigger = Math.random() < 0.65;
-    const startX = isFromTrigger ? (originX + (Math.random() - 0.5) * 26) : (destX + (Math.random() - 0.5) * 140);
-    const startY = isFromTrigger ? (originY + (Math.random() - 0.5) * 20) : (destY + (Math.random() - 0.5) * 90 - 30);
+    const startX = isFromTrigger ? (originX + (Math.random() - 0.5) * 26) : (destX + (Math.random() - 0.5) * 120);
+    const startY = isFromTrigger ? (originY + (Math.random() - 0.5) * 20) : (destY + (Math.random() - 0.5) * 80 - 20);
 
-    // 稍稍慢一点点：流淌时长拉伸至 340~480ms，更加连贯细腻
     particles.push({
       startX,
       startY,
       destX,
       destY,
-      delay: Math.random() * 120,
-      duration: 320 + Math.random() * 160,
+      delay: Math.random() * 80,
+      duration: 260 + Math.random() * 120,
       size: Math.random() * 2.2 + 1.0,
       color: colors[Math.floor(Math.random() * colors.length)],
-      swirl: (Math.random() - 0.5) * 20,
+      swirl: (Math.random() - 0.5) * 16,
     });
   }
 
@@ -846,22 +855,20 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
       const curY = p.startY + (p.destY - p.startY) * ease;
       const alpha = t < 0.25 ? (t / 0.25) : (1 - (t - 0.25) * 0.45);
 
-      ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
       ctx.fillStyle = p.color;
       ctx.fillRect(curX - p.size / 2, curY - p.size / 2, p.size, p.size);
-      ctx.restore();
     }
 
-    // 粒子汇聚吸附至约 260ms 时，实体卡片以高阶弹性自愈凝结显现
-    if (!cardRevealed && elapsed >= 260) {
+    // 粒子汇聚吸附至约 180ms 时，实体卡片以高阶弹性自愈凝结显现
+    if (!cardRevealed && elapsed >= 180) {
       cardRevealed = true;
-      el.style.transition = "transform 0.28s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.24s ease-out";
+      el.style.transition = "transform 0.22s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.18s ease-out";
       el.style.opacity = "1";
       el.style.transform = "scale(1)";
     }
 
-    if (activeCount > 0 && elapsed < 650) {
+    if (activeCount > 0 && elapsed < 480) {
       animId = requestAnimationFrame(render);
     } else {
       cancelAnimationFrame(animId);
