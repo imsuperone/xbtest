@@ -679,7 +679,7 @@ function initSideNavCollapse() {
   });
 }
 
-// ---------- 鸿蒙组件粉末化消散特效 (HarmonyOS Powder Disintegration - 局部离屏硬件加速 120 FPS 满帧版) ----------
+// ---------- 鸿蒙组件粉末化消散特效 (HarmonyOS Powder Disintegration - 假渲染超高密粒子 120 FPS 满帧引擎) ----------
 function triggerHarmonyDisintegrate(el, onComplete) {
   if (!el) {
     if (onComplete) onComplete();
@@ -715,10 +715,11 @@ function triggerHarmonyDisintegrate(el, onComplete) {
     ? [primaryColor, "#8AB8F0", "#D6E8FA", "#434E5E", "#232A33", "#A9C9F5", "#CBD5E1", "#FFFFFF"]
     : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#B0BEC5", "#E3F2FD"];
 
-  // 手机端精简微粒至约 150 颗稳锁 120 FPS，桌面端 240 颗
+  // 假渲染粒子引擎 (Fake-Rendering Instancing)：
+  // 仅计算 180~240 颗主粒子物理，每个主粒子同频衍生 2 颗假渲染伴生星尘 (3x 视觉密度，实显 540~720 颗高密粒子海，120 FPS 满帧丝滑)
   const count = isMobile
-    ? Math.min(Math.floor((rect.width * rect.height) / 750), 150)
-    : Math.min(Math.floor((rect.width * rect.height) / 400), 240);
+    ? Math.min(Math.floor((rect.width * rect.height) / 650), 180)
+    : Math.min(Math.floor((rect.width * rect.height) / 380), 240);
   const particles = [];
   for (let i = 0; i < count; i++) {
     const px = rect.left + Math.random() * rect.width;
@@ -738,6 +739,11 @@ function triggerHarmonyDisintegrate(el, onComplete) {
       alpha: Math.random() * 0.35 + 0.65,
       decay: isMobile ? Math.random() * 0.02 + 0.016 : Math.random() * 0.018 + 0.014,
       color: colors[Math.floor(Math.random() * colors.length)],
+      // 伴生假渲染微粒相对偏移量 (免实时随机与三角运算开销)
+      ox1: ((Math.random() - 0.5) * 16) | 0,
+      oy1: ((Math.random() - 0.5) * 16) | 0,
+      ox2: ((Math.random() - 0.5) * 26) | 0,
+      oy2: ((Math.random() - 0.5) * 26) | 0,
     });
   }
 
@@ -772,7 +778,21 @@ function triggerHarmonyDisintegrate(el, onComplete) {
       ctx.globalAlpha = Math.max(0, p.alpha);
       ctx.fillStyle = p.color;
       const sz = p.size | 0 || 1;
-      ctx.fillRect((p.x - sz / 2) | 0, (p.y - sz / 2) | 0, sz, sz);
+      const rx = (p.x - sz / 2) | 0;
+      const ry = (p.y - sz / 2) | 0;
+
+      // 1. 主微粒核 (Master Particle)
+      ctx.fillRect(rx, ry, sz, sz);
+
+      // 2. 伴生卫星假微粒 1 (同心伴随尘埃，3x 假渲染高密填充)
+      const sz1 = (sz * 0.75) | 0 || 1;
+      ctx.fillRect(rx + p.ox1, ry + p.oy1, sz1, sz1);
+
+      // 3. 伴生卫星假微粒 2 (外围弥散微尘)
+      if (p.alpha > 0.12) {
+        const sz2 = (sz * 0.5) | 0 || 1;
+        ctx.fillRect(rx + p.ox2, ry + p.oy2, sz2, sz2);
+      }
     }
 
     if (aliveCount > 0 && elapsed < 520) {
@@ -799,7 +819,7 @@ function triggerHarmonyDisintegrate(el, onComplete) {
 }
 window.triggerHarmonyDisintegrate = triggerHarmonyDisintegrate;
 
-// ---------- 鸿蒙粒子汇聚进入特效 (HarmonyOS Particle Assembly - 局部离屏硬件加速 120 FPS 满帧版) ----------
+// ---------- 鸿蒙粒子汇聚进入特效 (HarmonyOS Particle Assembly - 假渲染超高密星尘 120 FPS 满帧引擎) ----------
 function triggerHarmonyAssemble(el, triggerEl, onComplete) {
   if (!el) {
     if (onComplete) onComplete();
@@ -854,10 +874,10 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
     ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF"]
     : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#2196F3"];
 
-  // 轻量星尘汇聚 (手机端约 140 颗，桌面端 200 颗，毫秒级快速凝聚吸附，120 FPS 满帧)
+  // 假渲染高密星尘汇聚 (180~220 主核 × 3 = 540~660 颗璀璨星尘快速汇聚，120 FPS 满帧)
   const count = isMobile
-    ? Math.min(Math.floor((rect.width * rect.height) / 800), 140)
-    : Math.min(Math.floor((rect.width * rect.height) / 450), 200);
+    ? Math.min(Math.floor((rect.width * rect.height) / 700), 180)
+    : Math.min(Math.floor((rect.width * rect.height) / 400), 220);
   const particles = [];
   for (let i = 0; i < count; i++) {
     const destX = rect.left + Math.random() * rect.width;
@@ -876,6 +896,10 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
       size: Math.random() * 2.2 + 1.0,
       color: colors[Math.floor(Math.random() * colors.length)],
       swirl: (Math.random() - 0.5) * 16,
+      ox1: ((Math.random() - 0.5) * 14) | 0,
+      oy1: ((Math.random() - 0.5) * 14) | 0,
+      ox2: ((Math.random() - 0.5) * 24) | 0,
+      oy2: ((Math.random() - 0.5) * 24) | 0,
     });
   }
 
@@ -907,7 +931,21 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
       ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
       ctx.fillStyle = p.color;
       const sz = p.size | 0 || 1;
-      ctx.fillRect((curX - sz / 2) | 0, (curY - sz / 2) | 0, sz, sz);
+      const rx = (curX - sz / 2) | 0;
+      const ry = (curY - sz / 2) | 0;
+
+      // 1. 主星尘微粒核
+      ctx.fillRect(rx, ry, sz, sz);
+
+      // 2. 假渲染伴生星尘 1 (3x 视觉密集体感)
+      const sz1 = (sz * 0.7) | 0 || 1;
+      ctx.fillRect(rx + p.ox1, ry + p.oy1, sz1, sz1);
+
+      // 3. 假渲染伴生星尘 2
+      if (alpha > 0.15) {
+        const sz2 = (sz * 0.5) | 0 || 1;
+        ctx.fillRect(rx + p.ox2, ry + p.oy2, sz2, sz2);
+      }
     }
 
     // 粒子汇聚吸附至约 180ms 时，实体卡片以高阶弹性自愈凝结显现

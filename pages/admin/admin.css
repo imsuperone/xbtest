@@ -3250,40 +3250,70 @@
   min-width: 0;
 }
 
-/* Floating island trigger in top bar */
+/* Floating island trigger in top bar - 液态流光玻璃按钮 (Liquid Glass) */
 .floating-island-trigger {
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: var(--panel2);
+  gap: 7px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(240, 246, 255, 0.45) 50%, rgba(225, 238, 255, 0.6) 100%);
+  -webkit-backdrop-filter: blur(18px) saturate(190%) contrast(105%);
+  backdrop-filter: blur(18px) saturate(190%) contrast(105%);
   color: var(--text);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   padding: 6px 14px;
   border-radius: var(--radius-full);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: var(--shadow-xs);
+  transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.95), inset 0 -1px 2px rgba(74, 144, 217, 0.1), 0 4px 16px rgba(74, 144, 217, 0.14), 0 1px 3px rgba(0, 0, 0, 0.05);
   user-select: none;
   line-height: 1.2;
 }
+.floating-island-trigger::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg, transparent 0%, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%, transparent 100%);
+  background-size: 250% 100%;
+  opacity: 0.85;
+  pointer-events: none;
+  animation: liquidSheen 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+[data-theme="dark"] .floating-island-trigger {
+  background: linear-gradient(135deg, rgba(42, 54, 72, 0.75) 0%, rgba(26, 34, 48, 0.5) 50%, rgba(32, 45, 64, 0.65) 100%);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.35), inset 0 -1px 2px rgba(0, 0, 0, 0.45), 0 6px 20px rgba(0, 0, 0, 0.35);
+  color: var(--text);
+}
+[data-theme="dark"] .floating-island-trigger::after {
+  background: linear-gradient(115deg, transparent 0%, transparent 35%, rgba(255, 255, 255, 0.2) 50%, transparent 65%, transparent 100%);
+  background-size: 250% 100%;
+}
 .floating-island-trigger:hover {
-  background: var(--accSoft);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(220, 236, 255, 0.6) 100%);
   border-color: var(--accBorder);
   color: var(--acc);
   transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 4px 12px var(--accSoft2);
+  box-shadow: inset 0 1px 2px #ffffff, 0 6px 20px var(--accSoft2);
+}
+[data-theme="dark"] .floating-island-trigger:hover {
+  background: linear-gradient(135deg, rgba(55, 70, 95, 0.85) 0%, rgba(35, 48, 68, 0.65) 100%);
+  color: var(--acc);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.45), 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 .floating-island-trigger:active {
   transform: scale(0.95);
 }
 .floating-island-trigger.active,
 .floating-island-trigger[aria-expanded="true"] {
-  background: var(--accSoft2);
+  background: linear-gradient(135deg, rgba(74, 144, 217, 0.25) 0%, rgba(74, 144, 217, 0.12) 100%);
   color: var(--acc);
   border-color: var(--acc);
-  box-shadow: 0 0 0 3px var(--accSoft);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 0 0 3px var(--accSoft);
   transform: scale(0.98);
 }
 .floating-island-trigger svg {
@@ -3301,6 +3331,10 @@
 .island-trigger-text {
   font-size: 13px;
   font-weight: 600;
+}
+@keyframes liquidSheen {
+  0%, 25% { background-position: 200% 0; }
+  65%, 100% { background-position: -200% 0; }
 }
 
 /* Floating island backdrop - 极致高透毛玻璃弥散遮罩，独立硬件加速合成层 */
@@ -3514,22 +3548,25 @@
     display: block;
   }
 
-  /* 右下角极简悬浮胶囊按钮 (FAB) - 完美契合单手握持热区 */
+  /* 右下角极简悬浮胶囊按钮 (FAB) - 尊享液态流光玻璃 (Liquid Glass) 质感与微流光特效 */
   .mobile-island-fab {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 7px;
     position: fixed;
     right: 18px;
     bottom: 22px;
     height: 44px;
     padding: 0 18px;
     border-radius: 22px;
-    background: var(--m3-sys-color-primary, #4A90D9);
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(74, 144, 217, 0.84) 0%, rgba(56, 122, 194, 0.7) 50%, rgba(38, 100, 170, 0.82) 100%);
+    -webkit-backdrop-filter: blur(20px) saturate(200%);
+    backdrop-filter: blur(20px) saturate(200%);
     color: #ffffff !important;
-    border: none;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.85), inset 0 -1.5px 3px rgba(0, 0, 0, 0.18), 0 10px 28px rgba(74, 144, 217, 0.42), 0 2px 8px rgba(0, 0, 0, 0.15);
     z-index: 1050;
     cursor: pointer;
     font-size: 14px;
@@ -3539,12 +3576,33 @@
     user-select: none;
     touch-action: manipulation;
     transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, opacity 0.2s ease;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+  .mobile-island-fab::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(115deg, transparent 0%, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%, transparent 100%);
+    background-size: 250% 100%;
+    opacity: 0.85;
+    pointer-events: none;
+    animation: liquidSheen 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  [data-theme="dark"] .mobile-island-fab {
+    background: linear-gradient(135deg, rgba(138, 184, 240, 0.38) 0%, rgba(74, 144, 217, 0.24) 50%, rgba(30, 58, 85, 0.48) 100%);
+    border-color: rgba(138, 184, 240, 0.45);
+    box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.5), inset 0 -1.5px 3px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 18px rgba(138, 184, 240, 0.25);
+  }
+  [data-theme="dark"] .mobile-island-fab::after {
+    background: linear-gradient(115deg, transparent 0%, transparent 35%, rgba(255, 255, 255, 0.25) 50%, transparent 65%, transparent 100%);
+    background-size: 250% 100%;
   }
   .mobile-island-fab:active {
     transform: scale(0.92);
   }
   .mobile-island-fab.active {
-    background: var(--m3-sys-color-primary-container, #3b82f6);
+    background: linear-gradient(135deg, rgba(46, 99, 160, 0.9) 0%, rgba(30, 70, 120, 0.85) 100%);
     color: #ffffff !important;
     transform: scale(0.96);
   }
@@ -3583,7 +3641,7 @@
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     backdrop-filter: blur(20px) saturate(180%);
     box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.2), 0 -2px 10px rgba(0, 0, 0, 0.08);
-    padding: 10px 14px calc(14px + env(safe-area-inset-bottom, 12px)) 14px;
+    padding: 8px 14px calc(14px + env(safe-area-inset-bottom, 12px)) 14px;
     z-index: 1080;
     transform: translate3d(0, 0, 0);
     transform-origin: center bottom;
@@ -3604,24 +3662,63 @@
     transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease-out, visibility 0.22s;
   }
 
-  /* 顶部拖拽胶囊指示条 */
+  /* 顶部拖拽胶囊指示条与关闭按钮布局修复（指示条居中，关闭按钮右上角独立定位，彻底解决排版错位） */
   .side-nav.floating-island .island-head {
-    padding: 2px 0 6px 0;
-    position: relative;
+    display: block !important;
+    position: relative !important;
+    padding: 6px 0 10px 0 !important;
+    min-height: 28px !important;
     border-bottom: 1px solid var(--line-subtle);
     margin-bottom: 8px;
+    width: 100%;
+    box-sizing: border-box;
   }
   .side-nav.floating-island .island-head::before {
     content: "";
     display: block;
-    width: 38px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--line, rgba(0, 0, 0, 0.2));
-    margin: 0 auto 6px auto;
+    width: 44px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--line, rgba(0, 0, 0, 0.22));
+    margin: 4px auto 0 auto;
   }
   [data-theme="dark"] .side-nav.floating-island .island-head::before {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.28);
+  }
+
+  .side-nav.floating-island .island-close-pill,
+  .side-nav.floating-island button#sideNavToggle {
+    position: absolute !important;
+    right: 4px !important;
+    top: 2px !important;
+    width: 28px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    border-radius: 50% !important;
+    background: var(--panel2) !important;
+    border: 1px solid var(--line) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: var(--text-secondary) !important;
+    cursor: pointer;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: var(--shadow-xs);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: none !important;
+  }
+  .side-nav.floating-island .island-close-pill:hover,
+  .side-nav.floating-island button#sideNavToggle:hover {
+    background: var(--accSoft2) !important;
+    color: var(--acc) !important;
+    border-color: var(--accBorder) !important;
+    transform: scale(1.05) !important;
+  }
+  .side-nav.floating-island .island-close-pill:active,
+  .side-nav.floating-island button#sideNavToggle:active {
+    transform: scale(0.92) !important;
   }
 
   /* 移动端 2 列磁贴网格排版，大拇指单手秒触达 */
