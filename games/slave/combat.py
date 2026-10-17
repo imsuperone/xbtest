@@ -19,7 +19,7 @@ except ImportError:
                                     FIGHT_POOR_LIMIT, FIGHT_CRIT_PER_STAR, FIGHT_CRIT_MULT,
                                     SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS,
                                     WORTH_PCT_CAP)
-from .base import U, _fmt, cd_check, cd_commit, cfg, cfgf, cfgi, cn_fmt, cn_parse, protected_until, slaves_of, star_of, total_assets, transfer_cash_or_deposit, treasures_of, uget, user_slave_slots, uset, weapons_of
+from .base import U, _fmt, _safe_int, cd_check, cd_commit, cfg, cfgf, cfgi, cn_fmt, cn_parse, protected_until, slaves_of, star_of, total_assets, transfer_cash_or_deposit, treasures_of, uget, user_slave_slots, uset, weapons_of
 try:
     from ..config.shop import TREASURES as _TREASURES_BUILTIN
 except ImportError:
@@ -170,15 +170,32 @@ def _has_treasure_type(owned, ttype, fallbacks=()):
     return False
 
 
-def _treasure_pct_total(owned, ttype, cap=100):
-    """持有宝物某百分比型加成之和（钳位 0..cap，默认 100；多效果宝物按行累加）"""
+def _treasure_stage_mult(stage):
+    """阶数增幅倍率：0阶=1.0, 1阶=1.35, 2阶=1.75, 3阶=2.25, 4阶=2.85, 5阶=3.60"""
+    try:
+        stg = max(0, min(5, int(stage or 0)))
+        return (1.0, 1.35, 1.75, 2.25, 2.85, 3.60)[stg]
+    except Exception:
+        return 1.0
+
+
+def _treasure_pct_total(owned, ttype, cap=100, u=None):
+    """持有宝物某百分比型加成之和（支持按星阶倍率放大，钳位 0..cap；多效果宝物按行累加）"""
     s = 0
     try:
         for t in (owned or []):
+            stg = 0
+            if u is not None:
+                try:
+                    stg = _safe_int(uget(u, str(t) + "升阶", "0"), 0)
+                except Exception:
+                    stg = 0
+            mult = _treasure_stage_mult(stg)
             for tt, vv in _treasure_effect_list(str(t)):
                 if tt == str(ttype or ""):
                     try:
-                        s += max(0, int(vv or 0))
+                        base_v = max(0, int(vv or 0))
+                        s += int(round(base_v * mult))
                     except Exception:
                         pass
     except Exception:
@@ -190,15 +207,23 @@ def _treasure_pct_total(owned, ttype, cap=100):
     return max(0, min(s, cap))
 
 
-def _treasure_atk_total(owned):
-    """持有宝物攻击加成之和（战斗力外挂项，不钳位；多效果宝物按行累加）"""
+def _treasure_atk_total(owned, u=None):
+    """持有宝物攻击加成之和（战斗力外挂项，支持按星阶倍率放大，不钳位；多效果宝物按行累加）"""
     s = 0
     try:
         for t in (owned or []):
+            stg = 0
+            if u is not None:
+                try:
+                    stg = _safe_int(uget(u, str(t) + "升阶", "0"), 0)
+                except Exception:
+                    stg = 0
+            mult = _treasure_stage_mult(stg)
             for tt, vv in _treasure_effect_list(str(t)):
                 if tt == "atk":
                     try:
-                        s += max(0, int(vv or 0))
+                        base_v = max(0, int(vv or 0))
+                        s += int(round(base_v * mult))
                     except Exception:
                         pass
     except Exception:
@@ -309,10 +334,10 @@ def battle_power(st, qq):
     for s in slaves_of(st, qq):
         p += int(uget(U(st, s), "price") or 0)
     try:
-        _wb = _treasure_pct_total(treasures_of(u), "worth", WORTH_PCT_CAP)
+        _wb = _treasure_pct_total(treasures_of(u), "worth", WORTH_PCT_CAP, u=u)
     except Exception:
         _wb = 0
-    base_bp = p + p * _wb // 100 + atk_of(st, qq) + _treasure_atk_total(treasures_of(u))
+    base_bp = p + p * _wb // 100 + atk_of(st, qq) + _treasure_atk_total(treasures_of(u), u=u)
     try:
         gid = getattr(st, "_gid", "")
         if gid:

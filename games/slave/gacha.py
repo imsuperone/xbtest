@@ -218,6 +218,16 @@ def cmd_starup(gid, qq, wname, st):
 
 
 
+# 宝物升阶阶梯配置：0->1(100%必定), 1->2(100%必定), 2->3(70%), 3->4(45%), 4->5(25%)
+_TREAS_UP_TIERS = [
+    ("一", 20000, 300, 100, "★1阶·初窥门径"),
+    ("二", 80000, 800, 100, "★2阶·炉火纯青"),
+    ("三", 250000, 2000, 70, "★3阶·通玄入微"),
+    ("四", 600000, 4000, 45, "★4阶·天地造化"),
+    ("五", 1500000, 8000, 25, "★5阶·极道至尊"),
+]
+
+
 def cmd_treasure_up(gid, qq, tname, st):
     tname = tname.strip("+＋ ").strip()
     treas = _treasure_names()
@@ -229,37 +239,86 @@ def cmd_treasure_up(gid, qq, tname, st):
         return _S.T.TUP_HAVE_NONE
     if tname not in my_treas:
         return f"亲，您尚未拥有宝物【{tname}】，无法进行升阶！（可通过【我要学习】奇遇探索获取）"
-    stage = int(uget(u, tname + "升阶", "0"))
-    if stage >= 3:
-        return _S.T.TUP_MAX
-    idx = ["一", "二", "三"][stage]
-    cost = cfgi("设置", f"{idx}阶宝物花费", 77777)
-    need_exp = cfgi("设置", f"{idx}阶宝物经验", (stage + 1) * 500)
-    prob = cfgi("设置", f"{idx}阶宝物概率", 50)
-    try:
-        from ..sign import eff_prob as _LP2
-        prob = _LP2(prob, gid, qq)
-    except Exception:
-        pass
+    stage = _safe_int(uget(u, tname + "升阶", "0"), 0)
+    if stage >= len(_TREAS_UP_TIERS):
+        return f"✨ 宝物【{tname}】已达到最高境界【★5阶·极道至尊】，天地造化已臻化境，属性值已达巅峰极限，不需要再升阶了哦~"
+    idx, def_cost, def_exp, def_prob, tier_title = _TREAS_UP_TIERS[stage]
+    cost = cfgi("设置", f"{idx}阶宝物花费", def_cost)
+    need_exp = cfgi("设置", f"{idx}阶宝物经验", def_exp)
+    
+    # 前两阶（1阶、2阶）天命庇佑，恒定 100% 必定成功；后三阶（3~5阶）改为概率突破
+    if stage < 2:
+        prob = 100
+        is_guaranteed = True
+    else:
+        prob = cfgi("设置", f"{idx}阶宝物概率", def_prob)
+        try:
+            from ..sign import eff_prob as _LP2
+            prob = _LP2(prob, gid, qq)
+        except Exception:
+            pass
+        prob = max(1, min(95, prob))
+        is_guaranteed = False
+
     curexp = int(uget(u, "weapon_exp") or 0)
     if curexp < need_exp:
-        return f"经验不足（需武器经验 {need_exp}，现有 {curexp}），可通过【我要学习】积累经验！"
+        return f"武器经验不足（升至【{tier_title}】需武器经验 {need_exp}，现有 {curexp}），可通过【我要学习】积累经验！"
     if coins_get(gid, qq) < cost:
-        return f"升阶需要 {ST.fmt_coins(cost)}{coin_name()}，余额不足，攒够了再来吧~"
+        return f"升阶需要 {ST.fmt_coins(cost)}{coin_name()}，当前金币不足，多打工攒够了再来吧~"
 
     if coins_add(gid, qq, -cost) is None:
         return "宝物升阶系统繁忙，本次未扣款，请稍后重试！"
     uset(u, "weapon_exp", str(curexp - need_exp))
-    if _random.randint(1, 100) > prob:
-        return (_S.T.TUP_FAIL
-                + f"\r\n本次升阶花费：{ST.fmt_coins(cost)}{coin_name()}"
-                + f"\r\n本次消耗武器经验：{need_exp}"
-                + f"\r\n本次升阶成功率：{prob}%"
-                + "\r\n升阶失败只扣除费用与经验，宝物完好无损，下次再接再厉~")
+
+    # 概率判定（仅后三阶触发）
+    if not is_guaranteed and _random.randint(1, 100) > prob:
+        return (
+            f"🍂【宝物升阶 · 突破未成】\r\n"
+            f"━━━━━━━━━━━━━━\r\n"
+            f"天地灵气稍显紊乱，本次升阶未能一举突破！\r\n"
+            f"📊 境界挑战：★{stage}阶 ➔ ★{stage+1}阶\r\n"
+            f"🎯 本次成功率：{prob}%\r\n"
+            f"💰 本次消耗金钱：{ST.fmt_coins(cost)}{coin_name()}\r\n"
+            f"🔮 本次消耗经验：{need_exp} 武器经验\r\n"
+            f"━━━━━━━━━━━━━━\r\n"
+            f"🛡️ 宝物受到器灵庇佑【完好无损】（不碎宝、不降阶）！\r\n"
+            f"💪 失败乃成功之母，灵力已在宝物体内沉淀，下次必能气运突破！"
+        )
+
     uset(u, tname + "升阶", str(stage + 1))
     eff = _treasure_effect(tname)
-    return (f"✨ 恭喜！宝物【{tname}】成功升至 {stage+1} 阶!\r\n{_S.T.T_STAGE.format(n=stage+1)} "
-            + eff)
+    next_stage = stage + 1
+    if next_stage < len(_TREAS_UP_TIERS):
+        nxt_idx, nxt_def_cost, nxt_def_exp, nxt_def_prob, nxt_title = _TREAS_UP_TIERS[next_stage]
+        nxt_cost = cfgi("设置", f"{nxt_idx}阶宝物花费", nxt_def_cost)
+        nxt_exp = cfgi("设置", f"{nxt_idx}阶宝物经验", nxt_def_exp)
+        nxt_prob_str = "100% 必定成功" if next_stage < 2 else f"约 {nxt_def_prob}% 概率"
+        next_info = f"\r\n💡 下一境界【{nxt_title}】需消耗：{ST.fmt_coins(nxt_cost)}{coin_name()} + {nxt_exp}经验（{nxt_prob_str}）"
+    else:
+        next_info = "\r\n👑 该宝物已登峰造极，达到 ★5阶 满阶极限！"
+
+    if is_guaranteed:
+        return (
+            f"✨【宝物升阶 · 必定成功】\r\n"
+            f"━━━━━━━━━━━━━━\r\n"
+            f"🎉 灵光凝聚，宝华毕现！\r\n"
+            f"恭喜您，宝物【{tname}】成功升至 ★{stage+1}阶！\r\n"
+            f"✨ 当前境界：【{tier_title}】（前两阶天命庇佑，100% 必定成功）\r\n"
+            f"📜 宝物效果：{eff}\r\n"
+            f"💰 本次消耗：{ST.fmt_coins(cost)}{coin_name()}，武器经验：{need_exp}"
+            f"{next_info}"
+        )
+    else:
+        return (
+            f"🌟【宝物升阶 · 鸿运突破】\r\n"
+            f"━━━━━━━━━━━━━━\r\n"
+            f"🔥 天降祥瑞，宝气通天！在 {prob}% 的概率下逆天突破成功！\r\n"
+            f"恭喜您，宝物【{tname}】成功突破升至 ★{stage+1}阶！\r\n"
+            f"✨ 当前境界：【{tier_title}】\r\n"
+            f"📜 宝物效果：{eff}\r\n"
+            f"💰 本次消耗：{ST.fmt_coins(cost)}{coin_name()}，武器经验：{need_exp}"
+            f"{next_info}"
+        )
 
 
 
@@ -376,6 +435,7 @@ def cmd_treasure_menu(gid, qq, st):
             if stage:
                 lines[-1] += f" (当前{stage}阶)"
     lines.append("━━━━━━━━━━━━━━")
+    lines.append("境界: ★1~★2阶必定成功 → ★3~★5阶概率突破(属性倍增)")
     lines.append("🍀 获取: 【我要学习】奇遇探索(终身唯一·绝不重复)")
     lines.append("🔺 升阶: 【升阶+宝物名】如【升阶酒神葫芦】")
     lines.append("🔍 详情: 直接发【宝物名】如【酒神葫芦】")

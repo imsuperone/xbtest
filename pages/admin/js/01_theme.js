@@ -863,3 +863,25 @@ function downloadBase64File(base64Data, filename) {
   } catch (err) { toast("下载文件失败: " + err.message, "bad"); }
 }
 
+// 模态弹窗/抽屉开关侦听：弹窗打开时给 body 添加 modal-open，彻底下沉隐藏右下角悬浮胶囊，防止阻挡底部保存/取消
+try {
+  const checkModalActive = () => {
+    const hasModal = !!(
+      document.querySelector("#appModal.show, #appModal.open, #cmdModal.show, #exportHubModal.open, #importHubModal.open, .modal-overlay.open, .modal-overlay.show")
+    );
+    if (hasModal) document.body.classList.add("modal-open");
+    else document.body.classList.remove("modal-open");
+  };
+  const mo = new MutationObserver(checkModalActive);
+  window.addEventListener("DOMContentLoaded", () => {
+    ["appModal", "cmdModal", "exportHubModal", "importHubModal"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) mo.observe(el, { attributes: true, attributeFilter: ["class", "style"] });
+    });
+    document.querySelectorAll(".modal-overlay").forEach(el => {
+      mo.observe(el, { attributes: true, attributeFilter: ["class", "style"] });
+    });
+    checkModalActive();
+  });
+} catch (e) {}
+

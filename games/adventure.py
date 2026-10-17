@@ -95,7 +95,9 @@ def _menu_text():
         "　• 开启冒险：冒险 地图名（如：冒险 海底神殿）\r\n"
         "　• 推进剧情：直接发送数字 1 / 2 / 3 或【选择 1】\r\n"
         "　• 进度查询：当前冒险\r\n"
-        "　• 提前撤退：结束冒险（需消耗复活币×1）\r\n"
+        "　• 提前撤离：提前撤离 / 撤退（安全带回战利品，无需复活币）\r\n"
+        "　• 结束冒险：结束冒险 / 放弃冒险（主动终止本次探险）\r\n"
+        "　• 护身还魂：复活币（遭遇致死绝境时自动护体满血复活）\r\n"
         "　• 荣誉榜单：复活币排行\r\n"
         "━━━━━━━━━━━━━━\r\n"
         f"💡 每次探险消耗 {_cs} 体力 + {_cost}{ST.coin_name()}，生死抉择，奇遇由你书写！"
@@ -249,9 +251,15 @@ def cmd_choose(gid, qq, n):
     elif kind == "neutral":
         outcome = f"{event_text}\r\n—— 你以少量代价换得通行，未得也未失（选择{choice}）"
     else:
+        # 遭遇险境/陷阱/致死事件
         if _revive(gid, qq) > 0 and ST.acct_add(gid, qq, "revive_coins", -1) is not None:
-            outcome = (f"{event_text}\r\n🛡️ 遭遇陷阱/诅咒！危急关头自动消耗【复活币×1】护体，"
-                       f"免除全部损失化险为夷！（剩余复活币：{_revive(gid, qq)}）")
+            rv_left = _revive(gid, qq)
+            outcome = (
+                f"{event_text}\r\n"
+                f"🛡️【死里逃生 · 复活币护体】\r\n"
+                f"你遭遇了致死险境！危急关头怀中的【复活币】碎裂绽放奇迹金光，替你抵挡了致命伤害，护佑你原地满血复活！\r\n"
+                f"✨ 消耗复活币 × 1（剩余复活币：{rv_left}），冒险得以继续前进！"
+            )
         else:
             trap_lo = max(100, min(lo, hi) // 2)
             trap_hi = max(trap_lo, max(lo, hi) * 2 // 3)
@@ -263,13 +271,21 @@ def cmd_choose(gid, qq, n):
             fine = cash_fine + dep_fine
             if fine > 0:
                 updates = {"deposit": str(max(0, cur_dep - dep_fine))} if dep_fine > 0 else None
-                if ST.txn_coins_acct(gid, qq, -cash_fine, updates) is None:
-                    outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，但损失结算繁忙未扣除，请稍后重试。"
-                else:
-                    dep_note = f"（含划扣存款{dep_fine}）" if dep_fine > 0 else ""
-                    outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，损失{fine}{ST.coin_name()}{dep_note}，狼狈脱险……（选择{choice}的代价）"
-            else:
-                outcome = f"{event_text}\r\n💀 遭遇陷阱/诅咒，身无分文的你狼狈脱险……（选择{choice}的代价）"
+                ST.txn_coins_acct(gid, qq, -cash_fine, updates)
+            # 身上没有复活币，致死判定直接结束冒险！
+            _save(gid, qq, {})
+            dep_note = f"（含扣除存款 {dep_fine}）" if dep_fine > 0 else ""
+            loss_txt = f"损失 {fine} {ST.coin_name()}{dep_note}" if fine > 0 else "身无分文"
+            return (
+                f"💀【{m} · 探险失利】\r\n"
+                f"━━━━━━━━━━━━━━\r\n"
+                f"{event_text}\r\n"
+                f"━━━━━━━━━━━━━━\r\n"
+                f"💥 致命重创！你做出了极其危险的错误抉择，且身上【没有可用复活币】！\r\n"
+                f"你在生命悬于一线之际被迫【结束冒险】狼狈逃生！\r\n"
+                f"💔 遗失本次探索收获，{loss_txt}。\r\n"
+                f"💡 提示：可通过日常签到/奇遇探索获取【复活币】，生死关头可保你一命！随时发送【冒险 地图】重整旗鼓。"
+            )
 
     _save(gid, qq, adv)
     if adv["round"] >= max_round:
@@ -313,7 +329,7 @@ def cmd_choose(gid, qq, n):
         f"🎯【前路抉择】（直接回复数字 1 / 2 / 3 推进）：\r\n"
         + "\r\n".join(next_choices) + "\r\n"
         "━━━━━━━━━━━━━━\r\n"
-        "💡 直接发送 1 / 2 / 3 继续推进，或发送【结束冒险】消耗复活币提前撤退！"
+        "💡 直接发送 1 / 2 / 3 继续推进，见好就收可随时发送【提前撤离】安全结算！"
     )
 
 
@@ -325,16 +341,35 @@ def cmd_current(gid, qq):
         adv["map"], adv.get("round", 1), adv.get("last_choice", 0) or "无", _revive(gid, qq)))
 
 
+def cmd_evacuate(gid, qq):
+    adv = _cur(gid, qq)
+    if not adv.get("map"):
+        return "您当前没有进行中的冒险。"
+    m = adv["map"]
+    r = adv.get("round", 1)
+    _save(gid, qq, {})
+    return (
+        f"🏃【{m} · 安全撤离】\r\n"
+        f"━━━━━━━━━━━━━━\r\n"
+        f"你审时度势，在第 {r} 轮果断选择了提前安全撤离！\r\n"
+        f"沿途搜集到的战利品已悉数带回，毫发无损。\r\n"
+        f"💡 探险见好就收乃智者所为，随时发送【冒险 地图】再次启程！"
+    )
+
+
 def cmd_end(gid, qq):
     adv = _cur(gid, qq)
     if not adv.get("map"):
         return "您当前没有进行中的冒险。"
-    if _revive(gid, qq) <= 0:
-        return "没有复活币，无法提前结束冒险！"
-    if ST.acct_add(gid, qq, "revive_coins", -1) is None:
-        return "数据库繁忙，复活币扣除未成功，请稍后重试。"
-    m = adv["map"]; _save(gid, qq, {})
-    return ("【%s】冒险已提前结束！复活币-1，当前还剩%d个" % (m, _revive(gid, qq)))
+    m = adv["map"]
+    r = adv.get("round", 1)
+    _save(gid, qq, {})
+    return (
+        f"🏁【{m} · 冒险已结束】\r\n"
+        f"━━━━━━━━━━━━━━\r\n"
+        f"已主动终止本次第 {r} 轮冒险，探险记录已归档。\r\n"
+        f"💡 如需保留收益安全撤离，后续也可直接使用【提前撤离】指令。"
+    )
 
 
 def cmd_rank(gid, qq):
@@ -378,7 +413,9 @@ def handle(gid, qq, raw):
         return _menu_text()
     if text == "当前冒险":
         return cmd_current(gid, qq)
-    if text in ("结束冒险", "结束冒险(消耗复活币)", "结束冒险（消耗复活币）"):
+    if text in ("提前撤离", "撤离", "撤退", "安全撤离"):
+        return cmd_evacuate(gid, qq)
+    if text in ("结束冒险", "放弃冒险", "结束冒险(消耗复活币)", "结束冒险（消耗复活币）"):
         return cmd_end(gid, qq)
     if text == "复活币排行":
         return cmd_rank(gid, qq)
@@ -403,6 +440,6 @@ def handle(gid, qq, raw):
     return None
 
 
-COMMANDS = ("冒险", "adventure", "选择", "当前冒险", "结束冒险",
+COMMANDS = ("冒险", "adventure", "选择", "当前冒险", "提前撤离", "撤离", "撤退", "安全撤离", "结束冒险", "放弃冒险",
             # V8 并入：原正则刮词域（与 handle 分支对应）
             "复活币排行")

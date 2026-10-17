@@ -42,19 +42,19 @@
       --m3-sys-color-on-primary: #FFFFFF;
       --m3-sys-color-primary-container: #D9E8F7;
       --m3-sys-color-on-primary-container: #0F2B46;
-      --m3-sys-color-surface: #F4F7FB;
-      --m3-sys-color-on-surface: #191C20;
-      --m3-sys-color-surface-container: #E8EDF4;
+      --m3-sys-color-surface: #F8FAFC;
+      --m3-sys-color-on-surface: #0F172A;
+      --m3-sys-color-surface-container: #F1F5F9;
       --m3-sys-color-surface-container-high: #FFFFFF;
-      --m3-sys-color-surface-container-highest: #DFE6EF;
-      --m3-sys-color-outline: #73777F;
-      --m3-sys-color-outline-variant: #C3C6CF;
-      --m3-sys-color-divider: rgba(90, 100, 115, 0.14);
-      --m3-sys-color-secondary-container: #DDE3EA;
-      --m3-sys-color-on-secondary-container: #1A1C1E;
-      --m3-sys-color-error: #B3261E;
-      --m3-sys-color-error-container: #F9DEDC;
-      --m3-sys-color-on-error-container: #410002;
+      --m3-sys-color-surface-container-highest: #E2E8F0;
+      --m3-sys-color-outline: #64748B;
+      --m3-sys-color-outline-variant: #CBD5E1;
+      --m3-sys-color-divider: rgba(100, 116, 139, 0.12);
+      --m3-sys-color-secondary-container: #E2E8F0;
+      --m3-sys-color-on-secondary-container: #0F172A;
+      --m3-sys-color-error: #EF4444;
+      --m3-sys-color-error-container: rgba(239, 68, 68, 0.08);
+      --m3-sys-color-on-error-container: #DC2626;
       --m3-status-cyan: #0288D1;
       --m3-status-cyan-bg: #E1F5FE;
       --m3-status-amber: #E65100;
@@ -578,26 +578,33 @@
       min-height: 32px;
     }
     [data-theme="dark"] .tabs button, [data-theme="dark"] .cat-tab {
-      color: var(--m3-sys-color-on-surface) !important;
+      color: #E2E8F0 !important;
+      background: rgba(255, 255, 255, 0.06) !important;
+      border: 1px solid rgba(255, 255, 255, 0.14) !important;
     }
     .tabs button:hover, .cat-tab:hover {
       color: var(--text);
       background: var(--m3-sys-color-surface-container-high);
       border-color: var(--m3-sys-color-outline);
     }
+    [data-theme="dark"] .tabs button:hover, [data-theme="dark"] .cat-tab:hover {
+      color: #FFFFFF !important;
+      background: rgba(255, 255, 255, 0.12) !important;
+      border-color: rgba(255, 255, 255, 0.28) !important;
+    }
     .tabs button.on, .cat-tab.active {
       background: var(--m3-sys-color-primary-container) !important;
       color: var(--m3-sys-color-on-primary-container) !important;
       border-color: var(--m3-sys-color-primary) !important;
       font-weight: 700 !important;
-      box-shadow: 0 2px 8px rgba(103, 80, 164, 0.25) !important;
+      box-shadow: 0 2px 8px rgba(74, 144, 217, 0.25) !important;
     }
     [data-theme="dark"] .tabs button.on, [data-theme="dark"] .cat-tab.active {
-      background: var(--m3-sys-color-primary-container) !important;
-      color: var(--m3-sys-color-on-primary-container) !important;
-      border-color: var(--m3-sys-color-primary) !important;
+      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
+      color: #FFFFFF !important;
+      border-color: #60A5FA !important;
       font-weight: 700 !important;
-      box-shadow: 0 2px 8px rgba(103, 80, 164, 0.25) !important;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4) !important;
     }
     .cat-icon { font-size: 16px; }
 
@@ -774,12 +781,26 @@
       box-shadow: var(--shadow-xs);
     }
     button.del, .btn.del, button.ghost.del, .s-del, .m3-btn-danger {
-      color: var(--m3-sys-color-on-error-container) !important;
-      background: var(--m3-sys-color-error-container) !important;
-      border: none !important;
+      color: #DC2626 !important;
+      background: rgba(239, 68, 68, 0.08) !important;
+      border: 1px solid rgba(239, 68, 68, 0.22) !important;
     }
     button.del:hover, .btn.del:hover, button.ghost.del:hover, .s-del:hover, .m3-btn-danger:hover {
-      filter: brightness(0.95);
+      background: #EF4444 !important;
+      color: #FFFFFF !important;
+      border-color: #EF4444 !important;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25) !important;
+    }
+    [data-theme="dark"] button.del, [data-theme="dark"] .btn.del, [data-theme="dark"] button.ghost.del, [data-theme="dark"] .s-del, [data-theme="dark"] .m3-btn-danger {
+      color: #FCA5A5 !important;
+      background: rgba(239, 68, 68, 0.14) !important;
+      border: 1px solid rgba(239, 68, 68, 0.35) !important;
+    }
+    [data-theme="dark"] button.del:hover, [data-theme="dark"] .btn.del:hover, [data-theme="dark"] button.ghost.del:hover, [data-theme="dark"] .s-del:hover, [data-theme="dark"] .m3-btn-danger:hover {
+      background: #EF4444 !important;
+      color: #FFFFFF !important;
+      border-color: #EF4444 !important;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4) !important;
     }
     button.sm, .btn.sm, .m3-btn-sm {
       padding: 6px 12px;
@@ -1556,25 +1577,28 @@
 
     /* Map Cards */
     .s-mapcard {
-      background: var(--m3-sys-color-surface-container);
-      border: 1px solid var(--m3-sys-color-divider);
-      border-radius: 14px;
-      padding: 12px 16px;
-      margin-bottom: 10px;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+      background: var(--panel) !important;
+      border: 1px solid var(--line) !important;
+      border-radius: 16px !important;
+      padding: 14px 18px !important;
+      margin-bottom: 12px !important;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03) !important;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
     [data-theme="dark"] .s-mapcard {
-      background: var(--m3-sys-color-surface-container);
-      border-color: rgba(255, 255, 255, 0.08);
+      background: rgba(30, 41, 59, 0.65) !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
     }
     .s-mapcard:hover {
-      border-color: var(--accBorder);
+      border-color: var(--accBorder) !important;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06) !important;
     }
     .s-mapcard.open {
-      border-color: var(--accBorder);
-      background: var(--panel);
+      border-color: var(--accBorder) !important;
+      background: var(--panel) !important;
     }
-    .s-mapbody { display: none; margin-top: 10px; }
+    .s-mapbody { display: none; margin-top: 12px; }
     .s-mapcard.open .s-mapbody { display: block; }
     .s-maphead {
       display: flex;
@@ -1584,9 +1608,9 @@
       user-select: none;
       flex-wrap: wrap;
     }
-    .s-mapname { font-weight: 750; font-size: 14px; color: var(--text); }
+    .s-mapname { font-weight: 750; font-size: 14.5px; color: var(--text); }
     .s-maplv { font-size: 11px; font-weight: 700; color: var(--acc); background: var(--accSoft); padding: 2px 8px; border-radius: var(--radius-full); }
-    .s-mapdrop { font-size: 12px; color: var(--muted); flex: 1 1 140px; min-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .s-mapdrop { font-size: 12.5px; color: var(--muted); flex: 1 1 140px; min-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .s-arr { font-size: 14px; margin-left: 6px; transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1); color: var(--muted); display: inline-block; }
     .s-mapcard.open .s-arr { transform: rotate(90deg); color: var(--acc); }
     .s-map-settings {
@@ -1594,11 +1618,15 @@
       align-items: center;
       gap: 10px;
       flex-wrap: wrap;
-      background: var(--m3-sys-color-surface-container-high);
-      border: 1px solid var(--m3-sys-color-divider);
-      border-radius: 10px;
-      padding: 8px 12px;
-      margin: 10px 0 12px;
+      background: var(--m3-sys-color-surface-container) !important;
+      border: 1px solid var(--line) !important;
+      border-radius: 12px !important;
+      padding: 10px 14px !important;
+      margin: 12px 0 14px !important;
+    }
+    [data-theme="dark"] .s-map-settings {
+      background: rgba(15, 23, 42, 0.5) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
     }
     .s-slot-h {
       display: flex;
@@ -1612,18 +1640,23 @@
       flex: 1 1 0 !important;
       min-width: 0 !important;
       width: 100% !important;
-      border-radius: var(--radius-sm) !important;
-      padding: 3px 8px !important;
-      font-size: 12px !important;
-      height: 28px !important;
-      border: 1px solid var(--m3-sys-color-divider) !important;
-      background: var(--m3-sys-color-surface-container) !important;
+      border-radius: 8px !important;
+      padding: 4px 10px !important;
+      font-size: 12.5px !important;
+      height: 30px !important;
+      border: 1px solid var(--line) !important;
+      background: var(--panel) !important;
       color: var(--text) !important;
       box-sizing: border-box !important;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+    }
+    .s-slot-val-inline:focus {
+      border-color: var(--acc) !important;
+      box-shadow: 0 0 0 3px var(--accSoft) !important;
     }
     [data-theme="dark"] .s-slot-val-inline {
-      background: var(--m3-sys-color-surface-container) !important;
-      border-color: var(--m3-sys-color-divider) !important;
+      background: rgba(30, 41, 59, 0.8) !important;
+      border-color: rgba(255, 255, 255, 0.14) !important;
     }
     /* 地图设置：推荐等级输入框紧凑化，出没精灵自适应长框 */
     .s-map-settings .s-slot-h {
@@ -1654,20 +1687,19 @@
     }
     .sp-card {
       border-radius: 14px !important;
-      background: var(--m3-sys-color-surface-container) !important;
-      border: 1px solid var(--m3-sys-color-divider) !important;
+      background: var(--panel) !important;
+      border: 1px solid var(--line) !important;
       padding: 12px !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03) !important;
       display: flex !important;
       flex-direction: column !important;
       gap: 8px !important;
       transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
       box-sizing: border-box !important;
-      overflow: hidden !important;
     }
     [data-theme="dark"] .sp-card {
-      background: var(--m3-sys-color-surface-container) !important;
-      border-color: rgba(255, 255, 255, 0.08) !important;
+      background: rgba(30, 41, 59, 0.6) !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
     }
     .sp-card:hover {
       border-color: var(--accBorder) !important;
@@ -2413,39 +2445,36 @@
         gap: 10px !important;
       }
       #analyticsKpiGrid .ov-kpi-card {
-        display: grid !important;
-        grid-template-columns: 1fr auto !important;
-        grid-template-rows: auto auto !important;
-        grid-template-areas:
-          "head num"
-          "sub  num" !important;
-        align-items: center !important;
-        justify-content: space-between !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
         min-height: unset !important;
-        padding: 13px 16px !important;
+        padding: 14px 16px !important;
         border-radius: 16px !important;
-        gap: 6px 12px !important;
+        gap: 6px !important;
       }
       #analyticsKpiGrid .ov-kpi-head {
-        grid-area: head !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
         margin: 0 !important;
       }
       #analyticsKpiGrid .ov-kpi-label {
         font-size: 13px !important;
-        white-space: nowrap !important;
-      }
-      #analyticsKpiGrid .ov-kpi-sub {
-        grid-area: sub !important;
-        margin: 0 !important;
-        max-width: 100% !important;
+        color: var(--muted) !important;
       }
       #analyticsKpiGrid .ov-kpi-num {
-        grid-area: num !important;
+        margin: 4px 0 2px 0 !important;
+        text-align: left !important;
+        font-size: 24px !important;
+        font-weight: 800 !important;
+        line-height: 1.25 !important;
+        word-break: break-all !important;
+      }
+      #analyticsKpiGrid .ov-kpi-sub {
         margin: 0 !important;
-        text-align: right !important;
-        font-size: 21px !important;
-        align-self: center !important;
-        white-space: nowrap !important;
+        font-size: 11.5px !important;
       }
       #btnDbDoctorOv {
         width: 100% !important;
@@ -3711,9 +3740,9 @@
 
 /* 移动端 (手机)：底部半屏鸿蒙岛 (Bottom Sheet) + 右下角悬浮胶囊 */
 @media (max-width: 900px) {
-  /* 手机端顶栏导航按钮常驻保留，触达与全平台体验无缝统一 */
+  /* 手机端顶栏导航按钮隐藏，仅保留右下角单一悬浮胶囊（去冗余收口） */
   .floating-island-trigger {
-    display: inline-flex !important;
+    display: none !important;
   }
   .layout {
     display: block;
@@ -3788,6 +3817,29 @@
   #backTop {
     bottom: 76px !important;
     right: 18px !important;
+  }
+
+  /* 弹窗/底抽屉开启时，右下角悬浮胶囊与回到顶部自动隐去，杜绝遮挡底部保存/取消按钮 */
+  #appModal.show ~ #mobileIslandFab,
+  #appModal.open ~ #mobileIslandFab,
+  #cmdModal.show ~ #mobileIslandFab,
+  #exportHubModal.open ~ #mobileIslandFab,
+  #importHubModal.open ~ #mobileIslandFab,
+  .modal-overlay.open ~ #mobileIslandFab,
+  .modal-overlay.show ~ #mobileIslandFab,
+  body:has(#appModal.show) #mobileIslandFab,
+  body:has(#appModal.open) #mobileIslandFab,
+  body:has(#cmdModal.show) #mobileIslandFab,
+  body:has(.modal-overlay.open) #mobileIslandFab,
+  body:has(.modal-overlay.show) #mobileIslandFab,
+  body.modal-open #mobileIslandFab,
+  #appModal.show ~ #backTop,
+  #appModal.open ~ #backTop,
+  body.modal-open #backTop {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(30px) scale(0.8) !important;
+    visibility: hidden !important;
   }
 
   /* 移动端底部半屏抽屉 (iOS Bottom Sheet) - 优雅高透毛玻璃圆角抽屉 */
@@ -4414,16 +4466,16 @@
   justify-content: space-between;
   border-radius: 20px !important;
   padding: 18px 20px !important;
-  background: var(--m3-sys-color-surface-container) !important;
-  border: 1px solid var(--m3-sys-color-divider) !important;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+  background: #FFFFFF !important;
+  border: 1px solid rgba(226, 232, 240, 0.85) !important;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04) !important;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
   min-height: 124px;
 }
 .ov-kpi-card:hover {
-  transform: translateY(-3px) !important;
+  transform: translateY(-2px) !important;
   border-color: var(--accBorder) !important;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
 }
 .ov-kpi-head {
   display: flex;

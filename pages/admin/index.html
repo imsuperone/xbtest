@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light dark">
   <title>小白测试版 - 小白机器人</title>
-  <link rel="stylesheet" href="./admin.css?v=26w1017y">
+  <link rel="stylesheet" href="./admin.css?v=26w1017z">
   <!-- 主题色/深浅色优先读取本地缓存实现首帧零阻塞渲染，未缓存时最多挂起 150ms -->
   <style>
     html[data-boot] { visibility: hidden; background: #f4f6f8; }
@@ -40,7 +40,7 @@
           <span class="island-trigger-text">导航</span>
         </button>
         <div class="brand-text">
-          <h1>小白测试版 <span class="version-tag" data-ver="26w1017y">v26w1017y</span></h1>
+          <h1>小白测试版 <span class="version-tag" data-ver="26w1017z">v26w1017z</span></h1>
         </div>
       </div>
       <div class="top-bar-actions" style="position:relative">
@@ -734,8 +734,8 @@
           <div>作者：<b>Light</b></div>
           <div>插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
           <div>仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
-          <div>当前版本：<b id="aboutVersion">v26w1017y</b></div>
-          <div>前端版本：<b id="aboutFrontendVer">v26w1017y</b></div>
+          <div>当前版本：<b id="aboutVersion">v26w1017z</b></div>
+          <div>前端版本：<b id="aboutFrontendVer">v26w1017z</b></div>
         </div>
       </div>
     </div>
@@ -845,8 +845,11 @@
   <div id="appModal">
     <div class="cmd-modal-box" style="width:min(520px,94vw)">
       <div class="cmd-modal-header">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="m3-icon-circle" id="appModalIcon" style="font-size:22px">ℹ️</div>
+          <div class="m3-icon-circle" id="appModalIcon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            </svg>
+          </div>
           <h3 id="appModalTitle" style="margin:0;font-size:16.5px;font-weight:700">系统提示</h3>
         </div>
         <button id="appModalClose" class="iconBtn" style="width:34px;height:34px;font-size:16px;border-radius:50%" title="关闭">✕</button>
@@ -1028,16 +1031,16 @@
       </div>
     </div>
   </div>
-    <script defer src="./js/00_core.js?v=26w1017y"></script>
-  <script defer src="./js/01_theme.js?v=26w1017y"></script>
-  <script defer src="./js/02_export.js?v=26w1017y"></script>
-  <script defer src="./js/03_import.js?v=26w1017y"></script>
-  <script defer src="./js/04_media.js?v=26w1017y"></script>
-  <script defer src="./js/05_config.js?v=26w1017y"></script>
-  <script defer src="./js/06_users.js?v=26w1017y"></script>
-  <script defer src="./js/07_spirit.js?v=26w1017y"></script>
-  <script defer src="./js/08_shop.js?v=26w1017y"></script>
-  <script defer src="./js/09_views.js?v=26w1017y"></script>
-  <script defer src="./js/10_ops.js?v=26w1017y"></script>
+    <script defer src="./js/00_core.js?v=26w1017z"></script>
+  <script defer src="./js/01_theme.js?v=26w1017z"></script>
+  <script defer src="./js/02_export.js?v=26w1017z"></script>
+  <script defer src="./js/03_import.js?v=26w1017z"></script>
+  <script defer src="./js/04_media.js?v=26w1017z"></script>
+  <script defer src="./js/05_config.js?v=26w1017z"></script>
+  <script defer src="./js/06_users.js?v=26w1017z"></script>
+  <script defer src="./js/07_spirit.js?v=26w1017z"></script>
+  <script defer src="./js/08_shop.js?v=26w1017z"></script>
+  <script defer src="./js/09_views.js?v=26w1017z"></script>
+  <script defer src="./js/10_ops.js?v=26w1017z"></script>
 </body>
 </html>

@@ -319,7 +319,7 @@ def cmd_work_collect(gid, qq, st):
 
     ratio = cfgi("费用配置", "工资比例", 50)
     try:
-        _work_bonus = _treasure_pct_total(treasures_of(u), "work", WORK_PCT_CAP)
+        _work_bonus = _treasure_pct_total(treasures_of(u), "work", WORK_PCT_CAP, u=u)
     except Exception:
         _work_bonus = 0
     total = _safe_int(uget(u, "work_wage"), 0)
@@ -404,7 +404,7 @@ def cmd_self_work(gid, qq, st):
     stat_bonus = min(SELF_WORK_BONUS_CAP, price // 30 + charm * 3)
     pay = base_pay + stat_bonus
     try:
-        _wb = _treasure_pct_total(treasures_of(u), "work", WORK_PCT_CAP)
+        _wb = _treasure_pct_total(treasures_of(u), "work", WORK_PCT_CAP, u=u)
     except Exception:
         _wb = 0
     try:
