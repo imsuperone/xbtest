@@ -569,7 +569,7 @@ function initSideNavCollapse() {
     }
 
     activeAnimCancel = triggerHarmonyDisintegrate(nav, () => {
-      applyClosedDOM(false);
+      applyClosedDOM(true);
       activeAnimCancel = null;
     });
   };
@@ -633,10 +633,10 @@ function initSideNavCollapse() {
     closeIsland(true);
   });
 
-  // 点击导航选项自动即时收起，零动效抢占主线程，保证切页 120 FPS 秒开
+  // 点击导航选项触发粒子粉末崩解收起，并在右侧主视区同步播放切页动效
   nav.querySelectorAll("button[data-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      closeIsland(false);
+      closeIsland(true);
     });
   });
 
@@ -735,7 +735,7 @@ function triggerHarmonyDisintegrate(el, onComplete) {
       ctx.fillRect((p.x - sz / 2) | 0, (p.y - sz / 2) | 0, sz, sz);
     }
 
-    if (aliveCount > 0 && elapsed < 650) {
+    if (aliveCount > 0 && elapsed < 520) {
       animId = requestAnimationFrame(render);
     } else {
       cancelAnimationFrame(animId);
