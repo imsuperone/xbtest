@@ -352,17 +352,9 @@ def _quit_game(gid, qq, kind, label, is_admin=False):
     if str(qq) in players:
         players.remove(str(qq))
         ST.recall_set(f"{kind}_players_{gid}", ",".join(players))
-        if not players:
-            # 所有人已全部退出，结束对局并公布答案
-            ST.recall_set(f"{kind}_owner_{gid}", "")
-            ST.recall_set(f"{kind}_ans_{gid}", "")
-            for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
-                ST.recall_set(k, "")
-            _clear_active_game(gid)
-            return f"你已退出{label}，所有参与者已全部退出，对局结束！{ans_part}"
         return f"你已退出{label}！"
 
-    # 非加入者发送退出：若空闲超过30秒或无其他加入者，允许结束并公布答案
+    # 非加入者发送退出：若空闲超过30秒或管理员协助，允许结束并公布答案
     try:
         start_ts = int(ST.recall_get(f"{kind}_start_{gid}", "0") or 0)
         last_ts = int(ST.recall_get(f"{kind}_last_time_{gid}", "0") or 0)
@@ -370,14 +362,15 @@ def _quit_game(gid, qq, kind, label, is_admin=False):
     except Exception:
         idle = 0
 
-    if idle > 30 or not players or is_admin:
+    if idle > 30 or is_admin:
         ST.recall_set(f"{kind}_owner_{gid}", "")
         ST.recall_set(f"{kind}_players_{gid}", "")
         ST.recall_set(f"{kind}_ans_{gid}", "")
         for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
             ST.recall_set(k, "")
         _clear_active_game(gid)
-        return f"【{label}】对局已结束！{ans_part}"
+        msg_idle = "因超时无互动已自动结束" if idle > 30 and not is_admin else "对局已结束"
+        return f"【{label}】{msg_idle}！{ans_part}"
 
     return f"你不在当前{label}对局中！（开局者发送【退出{label}】可结束对局并公布答案）"
 
