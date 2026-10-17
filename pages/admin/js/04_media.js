@@ -493,7 +493,10 @@ function initSideNavCollapse() {
   const setOpen = (open) => {
     nav.classList.toggle("collapsed", !open);
     if (backdrop) backdrop.classList.toggle("active", open);
-    if (islandToggle) islandToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    if (islandToggle) {
+      islandToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      islandToggle.classList.toggle("active", open);
+    }
   };
 
   // 默认收起状态

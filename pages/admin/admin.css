@@ -3261,7 +3261,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: var(--shadow-xs);
   user-select: none;
   line-height: 1.2;
@@ -3270,15 +3270,28 @@
   background: var(--accSoft);
   border-color: var(--accBorder);
   color: var(--acc);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 4px 12px var(--accSoft2);
 }
 .floating-island-trigger:active {
-  transform: translateY(0);
+  transform: scale(0.95);
+}
+.floating-island-trigger.active,
+.floating-island-trigger[aria-expanded="true"] {
+  background: var(--accSoft2);
+  color: var(--acc);
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--accSoft);
+  transform: scale(0.98);
 }
 .floating-island-trigger svg {
   flex-shrink: 0;
   color: currentColor;
+  transition: transform 0.28s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.floating-island-trigger.active svg,
+.floating-island-trigger[aria-expanded="true"] svg {
+  transform: rotate(90deg);
 }
 .island-trigger-text {
   font-size: 13px;
@@ -3289,48 +3302,53 @@
 .island-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 20, 28, 0.42);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(15, 20, 28, 0.36);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
   z-index: 1040;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.26s;
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s;
 }
 .island-backdrop.active {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Floating island side-nav */
+/* Floating island side-nav with fluid spring physics */
 .side-nav.floating-island {
   position: fixed;
-  top: 76px;
+  top: 74px;
   left: 20px;
   bottom: 24px;
-  width: 268px;
+  width: 260px;
   max-width: calc(100vw - 40px);
   z-index: 1050;
   background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  backdrop-filter: blur(32px) saturate(190%);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
   border: 1px solid var(--line);
-  border-radius: 24px;
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16), 0 4px 14px rgba(0, 0, 0, 0.08);
-  padding: 14px 12px 14px 12px;
+  border-radius: 22px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.16), 0 4px 14px rgba(0, 0, 0, 0.08);
+  padding: 10px 12px 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   overflow-y: auto;
-  scrollbar-width: none !important; /* Firefox: 完全隐藏丑陋的滚动条 */
-  -ms-overflow-style: none !important; /* IE/Edge */
-  transform: translateX(0) scale(1);
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  transform-origin: 32px 0px;
+  transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
   opacity: 1;
+  filter: blur(0px);
   visibility: visible;
   pointer-events: auto;
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.38s cubic-bezier(0.18, 0.92, 0.22, 1.15), opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1), filter 0.26s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.38s;
 }
 
 /* 隐藏 Webkit (Chrome/Edge/Safari) 默认滚动条，保留滚轮平滑滚动 */
@@ -3343,88 +3361,85 @@
 [data-theme="dark"] .side-nav.floating-island {
   background: rgba(26, 31, 38, 0.92);
   border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.48), 0 4px 16px rgba(0, 0, 0, 0.32);
+  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.50), 0 4px 16px rgba(0, 0, 0, 0.32);
 }
 
 .side-nav.floating-island.collapsed {
-  transform: translateX(calc(-100% - 36px)) scale(0.96);
+  transform: translate3d(-10px, -16px, 0) scale3d(0.90, 0.90, 1);
   opacity: 0;
+  filter: blur(8px);
   visibility: hidden;
   pointer-events: none;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease-out, filter 0.18s ease-out, visibility 0.22s;
 }
 
 .island-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 6px 10px 8px;
+  padding: 2px 2px 8px 4px;
   border-bottom: 1px solid var(--line-subtle);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
 }
-.island-title-box {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap !important;
-  flex: 1;
-  min-width: 0;
+.island-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  opacity: 0.7;
+  margin-left: 6px;
+  transition: all 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
-.island-badge {
-  font-size: 16px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-.island-title {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--text);
-  white-space: nowrap !important;
-  letter-spacing: 0.5px;
+.side-nav.floating-island:hover .island-handle {
+  opacity: 1;
+  background: var(--accBorder);
+  width: 44px;
 }
 .island-close-btn {
   background: var(--panel2);
   border: 1px solid var(--line);
   color: var(--text-secondary);
   cursor: pointer;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--radius-full);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   flex-shrink: 0;
 }
 .island-close-btn:hover {
   background: var(--accSoft2);
   color: var(--acc);
   border-color: var(--accBorder);
-  transform: scale(1.06);
+  transform: rotate(90deg) scale(1.1);
 }
 .island-close-btn:active {
-  transform: scale(0.96);
+  transform: rotate(90deg) scale(0.92);
 }
 
 .side-group {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-bottom: 6px;
-  margin-bottom: 4px;
+  padding-bottom: 4px;
+  margin-bottom: 2px;
 }
 .side-group:last-child {
   margin-bottom: 0;
   padding-bottom: 0;
 }
 .side-group-title {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   color: var(--text-secondary);
-  padding: 6px 10px 3px 10px;
+  padding: 6px 10px 2px 10px;
   user-select: none;
+  opacity: 0.85;
 }
 .side-nav button {
   display: flex;
@@ -3435,24 +3450,29 @@
   background: transparent;
   border: none;
   border-radius: 12px;
-  padding: 9px 12px;
-  font-size: 14px;
+  padding: 8px 12px;
+  font-size: 13.5px;
   font-family: inherit;
   font-weight: 600;
   color: var(--text);
   cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  transition: background 0.18s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s;
   white-space: nowrap;
 }
 .side-nav button:hover {
   background: var(--panel-hover);
   color: var(--acc);
+  transform: translateX(4px);
+}
+.side-nav button:active {
+  transform: translateX(2px) scale(0.98);
 }
 .side-nav button.on {
   background: var(--m3-sys-color-primary-container);
   color: var(--m3-sys-color-on-primary-container);
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px var(--accBorder);
+  box-shadow: inset 0 0 0 1px var(--accBorder), 0 2px 8px var(--accSoft);
+  transform: translateX(2px);
 }
 
 /* 桌面端 (PC)：彻底隐藏手机顶部横向标签栏，全屏沉浸，导航由悬浮岛承载 */
