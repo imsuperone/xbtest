@@ -278,14 +278,14 @@ async function renderAtlas(curCfg){
       }
     } catch(e) { Treas = ["酒神葫芦", "四象护符", "金蟾", "玉如意", "雷公锤", "夜明珠"]; }
     const _spiritMaps = (() => { try { return Object.keys((SPIRIT && SPIRIT.maps) || {}); } catch (e) { return []; } })();
-    const _tabs = [["treasure", "🎁 宝物", Treas.length], ["spirit", "✨ 精灵", _spiritMaps.length]];
+    const _tabs = [["treasure", "宝物", Treas.length], ["spirit", "精灵", _spiritMaps.length]];
     const _q = String((typeof window._ATLAS_Q !== "undefined" && window._ATLAS_Q) || "").trim();
     const _ql = _q.toLowerCase();
     let html = `<div class="atlas-top-bar">`
       + `<div class="atlas-seg-tabs">`
       + _tabs.map(([k, label, n]) => `<button type="button" class="atlas-seg-btn ${ATLAS_CUR === k ? "active" : ""}" data-atlas-tab="${k}" title="切换到${label}">${label} (${n})</button>`).join("")
       + `</div>`
-      + `<div class="atlas-search-wrap"><span class="atlas-search-ic">🔍</span><input id="atlasSearch" placeholder="搜索宝物 / 地图 / 精灵…" value="${esc(_q)}"></div>`
+      + `<div class="atlas-search-wrap"><span class="atlas-search-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></span><input id="atlasSearch" placeholder="搜索宝物 / 地图 / 精灵…" value="${esc(_q)}"></div>`
       + `</div><div class="atlas-body-flow">`;
     // 内置回退与后端 games/config/shop.py TREASURES 同构（含真实 type/value，改后端表时此处同改）
     const _TREAS_BUILTIN = {
@@ -566,7 +566,7 @@ function openTreasureEditModal(name, isNew) {
   const inputWrap = document.getElementById("appModalInputWrap");
   const cancelBtn = document.getElementById("appModalCancel");
   const okBtn = document.getElementById("appModalOk");
-  if (icon) icon.textContent = "🎁";
+  if (icon) icon.textContent = "";
   if (title) title.textContent = (isNew ? "添加宝物「" : "编辑宝物「") + name + "」";
   if (inputWrap) inputWrap.style.display = "none";
   content.innerHTML = `
@@ -635,7 +635,7 @@ function openTreasureEditModal(name, isNew) {
 }
 
 function refreshSpiritViews() {
-  // 上方地图编辑区已并入总览 ✨ 精灵页签，此处只刷总览与道具商城
+  // 上方地图编辑区已并入总览精灵页签，此处只刷总览与道具商城
   try { if (typeof ATLAS_CUR !== "undefined" && ATLAS_CUR === "spirit") renderAtlas(); } catch (e) {}
   try { if (typeof renderShop === "function") renderShop(); } catch (e) {}
 }
@@ -691,7 +691,7 @@ function spiritMapCardsHTML(mapNames, maps, spirits, q) {
     const open = q ? true : !!SPIRIT_OPEN[mname];
     return `<div class="s-mapcard ${open ? "open" : ""}" data-map="${esc(mname)}">
       <div class="s-maphead" data-map-toggle="${esc(mname)}">
-        <span class="s-mapname">🗺 ${esc(mname)}</span>
+        <span class="s-mapname">${esc(mname)}</span>
         <span class="s-maplv">Lv.${esc(d.lv ?? 1)}</span>
         <span class="s-mapdrop">${esc(drops.join("、"))}</span>
         <span style="display:inline-flex;gap:2px;margin-left:auto"><button class="ghost sm" data-map-up="${esc(mname)}" title="上移">↑</button><button class="ghost sm" data-map-down="${esc(mname)}" title="下移">↓</button></span>
@@ -912,7 +912,7 @@ function openSpiritAddModal(defMap) {
   const inputWrap = document.getElementById("appModalInputWrap");
   const cancelBtn = document.getElementById("appModalCancel");
   const okBtn = document.getElementById("appModalOk");
-  if (icon) icon.textContent = "✨";
+  if (icon) icon.textContent = "";
   if (title) title.textContent = "添加精灵" + (defMap && defMap !== "__orphans__" ? "→" + defMap : "");
   if (inputWrap) inputWrap.style.display = "none";
   content.innerHTML = `
@@ -1093,7 +1093,7 @@ function openShopItemAddModal(q) {
   const inputWrap = document.getElementById("appModalInputWrap");
   const cancelBtn = document.getElementById("appModalCancel");
   const okBtn = document.getElementById("appModalOk");
-  if (icon) icon.textContent = "🎒";
+  if (icon) icon.textContent = "";
   if (title) title.textContent = "添加精灵道具";
   if (inputWrap) inputWrap.style.display = "none";
   content.innerHTML = `

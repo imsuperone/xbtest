@@ -29,7 +29,7 @@ function showImportInspectModal(filename, parsedData) {
 
   const fnEl = document.getElementById("importHubFileName");
   const infoEl = document.getElementById("importHubFileInfo");
-  if (fnEl) fnEl.textContent = `📄 文件：${filename}`;
+  if (fnEl) fnEl.textContent = `文件：${filename}`;
   if (infoEl) {
     const ver = parsedData.from_version || parsedData.version || "未知";
     const time = parsedData.exported_at ? new Date(parsedData.exported_at).toLocaleString() : "未知";
@@ -39,7 +39,7 @@ function showImportInspectModal(filename, parsedData) {
   const listEl = document.getElementById("importHubModulesList");
   if (listEl) {
     if (modules.length === 0) {
-      listEl.innerHTML = `<div style="padding:16px;text-align:center;color:var(--bad);background:var(--badSoft);border-radius:10px">⚠️ 无法在当前文件中识别出有效的插件模块，请确认文件格式是否正确。</div>`;
+      listEl.innerHTML = `<div style="padding:16px;text-align:center;color:var(--bad);background:var(--badSoft);border-radius:10px">无法在当前文件中识别出有效的插件模块，请确认文件格式是否正确。</div>`;
     } else {
       listEl.innerHTML = modules.map(m => `
         <div class="hub-mod-card${m.checked ? " picked" : ""}" style="padding:12px 14px">
@@ -154,7 +154,7 @@ function initImportHubEvents() {
     } catch (err) {
       toast("导入失败: " + (err.message || err), "bad");
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = "✅ 确认导入所选项目"; }
+      if (btn) { btn.disabled = false; btn.textContent = "确认导入所选项目"; }
     }
   });
 }
@@ -391,7 +391,7 @@ function bindGroupsAdd() {
     } catch(e) { toast("添加失败: " + e.message, "bad"); }
     finally {
       btn.disabled = false;
-      btn.textContent = "➕ 添加";
+      btn.textContent = "添加";
     }
   };
   inp.onkeydown = (e) => { if (e.key === "Enter") btn.onclick(); };

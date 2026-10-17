@@ -120,10 +120,10 @@ function renderBackups(d, _q) {
     if (q && !x.name.toLowerCase().includes(q)) return;
     const selCls = window.BACKUP_SELECTED === x.path ? ' selected' : '';
     html += `<div class="bk-item${selCls}" data-bkdir="${esc(x.path)}" data-bksel="${esc(x.path)}">
-      <div class="bk-icon">📁</div>
+      <div class="bk-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></div>
       <div class="bk-info">
         <div class="bk-name">${esc(x.name)}</div>
-        <div class="bk-meta"><span>📅 日期目录 (双击进入)</span><span>🕒 ${esc(x.mtime || "")}</span></div>
+        <div class="bk-meta"><span>日期目录 (双击进入)</span><span>${esc(x.mtime || "")}</span></div>
       </div>
       <button class="ghost sm" style="pointer-events:none">进入 ➔</button>
     </div>`;
@@ -132,12 +132,12 @@ function renderBackups(d, _q) {
     if (q && !x.name.toLowerCase().includes(q)) return;
     const selCls = window.BACKUP_SELECTED === x.path ? ' selected' : '';
     html += `<div class="bk-item${selCls}" data-bkfile="${esc(x.path)}" data-bksel="${esc(x.path)}">
-      <div class="bk-icon">💾</div>
+      <div class="bk-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 12v7H5v-7h14m0-2H5c-1.11 0-2 .9-2 2v7c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7c0-1.1-.9-2-2-2zm-1-7v2H6V3h12m0-2H6c-1.1 0-2 .9-2 2v4h16V3c0-1.1-.9-2-2-2z"/></svg></div>
       <div class="bk-info">
         <div class="bk-name">${esc(x.name)}</div>
-        <div class="bk-meta"><span>📦 大小: ${esc(x.size || "0KB")}</span><span>🕒 备份时间: ${esc(x.mtime || "")}</span></div>
+        <div class="bk-meta"><span>大小: ${esc(x.size || "0KB")}</span><span>备份时间: ${esc(x.mtime || "")}</span></div>
       </div>
-      <span style="font-size:12px;color:var(--muted)">${selCls ? '✓ 已选中' : '单击选中'}</span>
+      <span style="font-size:12px;color:var(--muted)">${selCls ? '已选中' : '单击选中'}</span>
     </div>`;
   });
   html += `</div>`;
@@ -161,10 +161,10 @@ function renderBackups(d, _q) {
 document.getElementById("btnBackupNow")?.addEventListener("click", async () => {
   const btn = document.getElementById("btnBackupNow");
   if (btn && btn.disabled) return;
-  const origTxt = btn ? btn.textContent : "⚡ 立即备份";
+  const origTxt = btn ? btn.textContent : "立即备份";
   if (btn) {
     btn.disabled = true;
-    btn.textContent = "⏳ 正在生成备份...";
+    btn.textContent = "正在生成备份...";
   }
   toast("正在打包并生成本地数据冷备...", "ok", 3000);
   try {
@@ -192,10 +192,10 @@ document.getElementById("btnWebDAVTest")?.addEventListener("click", async () => 
   const btn = document.getElementById("btnWebDAVTest");
   const msgEl = document.getElementById("backupCfgMsg");
   if (btn && btn.disabled) return;
-  const origTxt = btn ? btn.textContent : "☁️ 测试 WebDAV";
+  const origTxt = btn ? btn.textContent : "测试 WebDAV";
   if (btn) {
     btn.disabled = true;
-    btn.textContent = "⏳ 测试连接中...";
+    btn.textContent = "测试连接中...";
   }
   if (msgEl) {
     msgEl.textContent = "正在发起 WebDAV 连接测试...";
@@ -213,20 +213,20 @@ document.getElementById("btnWebDAVTest")?.addEventListener("click", async () => 
     const res = await getBridge().apiPost("backup/webdav/test", payload);
     if (res && res.ok) {
       const succMsg = res.msg || "WebDAV 连接与鉴权成功";
-      if (msgEl) { msgEl.textContent = "✅ " + succMsg; msgEl.className = "msg ok"; }
+      if (msgEl) { msgEl.textContent = succMsg; msgEl.className = "msg ok"; }
       toast("WebDAV 测试成功: " + succMsg, "ok", 6000);
       await loadRemoteWebDAVFiles();
     } else {
       const errMsg = (res && res.msg) ? res.msg : ((res && res.error) ? res.error : "未知错误");
-      if (msgEl) { msgEl.textContent = "❌ " + errMsg; msgEl.className = "msg bad"; }
+      if (msgEl) { msgEl.textContent = errMsg; msgEl.className = "msg bad"; }
       toast("WebDAV 测试失败: " + errMsg, "bad", 8000);
-      uiAlert(errMsg, "WebDAV 测试失败", "⚠️");
+      uiAlert(errMsg, "WebDAV 测试失败");
     }
   } catch (err) {
     const errMsg = err.message || String(err);
-    if (msgEl) { msgEl.textContent = "❌ " + errMsg; msgEl.className = "msg bad"; }
+    if (msgEl) { msgEl.textContent = errMsg; msgEl.className = "msg bad"; }
     toast("WebDAV 测试异常: " + errMsg, "bad", 8000);
-    uiAlert(errMsg, "WebDAV 测试异常", "⚠️");
+    uiAlert(errMsg, "WebDAV 测试异常");
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -240,10 +240,10 @@ document.getElementById("btnWebDAVBackupNow")?.addEventListener("click", async (
   const btn = document.getElementById("btnWebDAVBackupNow");
   const msgEl = document.getElementById("backupCfgMsg");
   if (btn && btn.disabled) return;
-  const origTxt = btn ? btn.textContent : "☁️ 立即上传云端";
+  const origTxt = btn ? btn.textContent : "立即上传云端";
   if (btn) {
     btn.disabled = true;
-    btn.textContent = "⏳ 正在上传云端...";
+    btn.textContent = "正在上传云端...";
   }
 
   const sel = window.BACKUP_SELECTED || "";
@@ -256,7 +256,7 @@ document.getElementById("btnWebDAVBackupNow")?.addEventListener("click", async (
       desc = sel.split("/").pop();
     } else {
       // .zip 等非备份文件禁默默传最新：此前静默改传，用户以为传了选中包
-      if (msgEl) { msgEl.textContent = "❌ 请先选中 .db/.json 备份文件（不可上传 .zip 包）"; msgEl.className = "msg bad"; }
+      if (msgEl) { msgEl.textContent = "请先选中 .db/.json 备份文件（不可上传 .zip 包）"; msgEl.className = "msg bad"; }
       toast("请先选中 .db/.json 备份文件", "bad");
       if (btn) { btn.disabled = false; btn.textContent = origTxt; }
       return;
@@ -272,21 +272,21 @@ document.getElementById("btnWebDAVBackupNow")?.addEventListener("click", async (
     const res = await getBridge().apiPost("backup/webdav/upload", payload);
     if (res && res.ok) {
       const succMsg = res.msg || "已上传至 WebDAV 云端";
-      if (msgEl) { msgEl.textContent = "✅ " + succMsg; msgEl.className = "msg ok"; }
+      if (msgEl) { msgEl.textContent = succMsg; msgEl.className = "msg ok"; }
       toast("WebDAV 云备份成功: " + succMsg, "ok", 6000);
       await loadBackups(BACKUP_DIR);
       await loadRemoteWebDAVFiles();
     } else {
       const errMsg = (res && res.msg) ? res.msg : "未能完成上传";
-      if (msgEl) { msgEl.textContent = "❌ " + errMsg; msgEl.className = "msg bad"; }
+      if (msgEl) { msgEl.textContent = errMsg; msgEl.className = "msg bad"; }
       toast("WebDAV 上传失败: " + errMsg, "bad", 8000);
-      uiAlert(errMsg, "WebDAV 上传失败", "⚠️");
+      uiAlert(errMsg, "WebDAV 上传失败");
     }
   } catch (err) {
     const errMsg = err.message || String(err);
-    if (msgEl) { msgEl.textContent = "❌ " + errMsg; msgEl.className = "msg bad"; }
+    if (msgEl) { msgEl.textContent = errMsg; msgEl.className = "msg bad"; }
     toast("WebDAV 上传异常: " + errMsg, "bad", 8000);
-    uiAlert(errMsg, "WebDAV 上传异常", "⚠️");
+    uiAlert(errMsg, "WebDAV 上传异常");
   } finally {
     if (btn) {
       btn.disabled = false;

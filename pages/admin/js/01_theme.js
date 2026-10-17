@@ -703,7 +703,7 @@ function showExportModal({ filename, blob, blobUrl, rawText, base64Data }) {
   const cancelBtn = document.getElementById("appModalCancel");
   const okBtn = document.getElementById("appModalOk");
 
-  if (icon) icon.textContent = "📥";
+  if (icon) icon.textContent = "";
   if (title) title.textContent = "导出文件就绪";
   if (inputWrap) inputWrap.style.display = "none";
 
@@ -711,12 +711,12 @@ function showExportModal({ filename, blob, blobUrl, rawText, base64Data }) {
   if (content) {
     content.innerHTML = `
       <div class="m3-card" style="margin:4px 0 10px;padding:14px 16px;font-size:12.5px">
-        <div style="font-weight:600;color:var(--text);margin-bottom:4px;word-break:break-all;font-size:13px">📄 ${esc(filename)} ${sizeKb ? `<span class="badge badge-primary" style="margin-left:6px">${sizeKb} KB</span>` : ""}</div>
+        <div style="font-weight:600;color:var(--text);margin-bottom:4px;word-break:break-all;font-size:13px">${esc(filename)} ${sizeKb ? `<span class="badge badge-primary" style="margin-left:6px">${sizeKb} KB</span>` : ""}</div>
         <div style="color:var(--muted);font-size:11.5px;line-height:1.5">文件已生成完成。若浏览器未自动弹出保存提示，请点击下方按钮手动保存：</div>
       </div>
       <div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap">
-        <a href="${blobUrl}" download="${esc(filename)}" id="btnModalSaveFileLink" class="m3-btn" style="display:inline-flex;align-items:center;gap:5px;padding:8px 18px;font-size:13px;text-decoration:none;cursor:pointer;pointer-events:auto;z-index:2">⬇️ 保存文件到电脑</a>
-        ${rawText ? `<button id="btnCopyExportData" class="m3-btn secondary-btn ghost" style="padding:8px 14px;font-size:12.5px;cursor:pointer;pointer-events:auto;z-index:2">📋 复制全部内容</button>` : ""}
+        <a href="${blobUrl}" download="${esc(filename)}" id="btnModalSaveFileLink" class="m3-btn" style="display:inline-flex;align-items:center;gap:5px;padding:8px 18px;font-size:13px;text-decoration:none;cursor:pointer;pointer-events:auto;z-index:2">保存文件到电脑</a>
+        ${rawText ? `<button id="btnCopyExportData" class="m3-btn secondary-btn ghost" style="padding:8px 14px;font-size:12.5px;cursor:pointer;pointer-events:auto;z-index:2">复制全部内容</button>` : ""}
       </div>
       ${rawText ? `<div style="margin-top:10px"><div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">数据预览（点击文本框可自动全选）：</div><textarea readonly style="width:100%;height:100px;background:var(--panel);color:var(--text);font-family:monospace;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:8px;outline:none;resize:vertical;line-height:1.4" onclick="this.select()">${esc(rawText.slice(0, 5000))}${rawText.length > 5000 ? "\n\n... (数据过长已截断预览，点击上方按钮复制全部数据)" : ""}</textarea></div>` : ""}
     `;
@@ -729,8 +729,8 @@ function showExportModal({ filename, blob, blobUrl, rawText, base64Data }) {
   if (copyBtn && rawText) {
     copyBtn.onclick = () => {
       copyToClipboard(rawText);
-      copyBtn.textContent = "✅ 已复制到剪贴板";
-      setTimeout(() => { copyBtn.textContent = "📋 复制全部内容"; }, 2000);
+      copyBtn.textContent = "已复制到剪贴板";
+      setTimeout(() => { copyBtn.textContent = "复制全部内容"; }, 2000);
     };
   }
 

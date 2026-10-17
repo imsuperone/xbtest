@@ -189,7 +189,7 @@ async function cleanLeftUsers() {
   const gid = (document.getElementById("userGidFilter")?.value || USER_GID_FILTER || "").trim();
   const scopeText = gid ? `群 ${gid}` : "全库所有群聊";
   const ok = await uiConfirm(
-    `⚠️ 确认清理【${scopeText}】的退群人员？
+    `确认清理【${scopeText}】的退群人员？
 
 将对比群聊实时成员列表，删除已退群人员的钱包货币、奴隶身价关系、精灵背包与全部档案数据。`,
     "清理退群人员"
@@ -690,14 +690,14 @@ async function loadCommands() {
           sysNumPanelHtml = `
             <details class="sys-num-panel" data-eng="${esc(k)}">
               <summary class="sys-num-summary">
-                <span>🎛️ ${esc(sys)} · 玩法数值精准调控（已分配 ${numItems.length} 项参数）</span>
+                <span>${esc(sys)} · 玩法数值精准调控（已分配 ${numItems.length} 项参数）</span>
                 <span style="font-size:11px;font-weight:400;color:var(--muted)">点击展开 / 收起逐项微调</span>
               </summary>
               <div style="margin-top:10px">
                 ${secBlocks}
                 <div class="sys-num-footer">
                   <span class="hint" style="font-size:11px">修改后点击右侧按钮即可直接生效，无需逐个打开指令弹窗</span>
-                  <button type="button" class="sm" data-save-sys-num="${esc(k)}">💾 保存${esc(sys)}数值</button>
+                  <button type="button" class="sm" data-save-sys-num="${esc(k)}">保存${esc(sys)}数值</button>
                 </div>
               </div>
             </details>

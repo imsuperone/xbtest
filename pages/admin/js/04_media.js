@@ -11,11 +11,11 @@ function _updateImgSelectedDisplay() {
   if (!btnDel) return;
   if (IMG_SELECTED) {
     const fn = IMG_SELECTED.split("/").pop() || IMG_SELECTED;
-    btnDel.innerHTML = `🗑️ 删除选中 <span style="font-size:11px;opacity:0.85;font-weight:400">(${esc(fn)})</span>`;
+    btnDel.innerHTML = `删除选中 <span style="font-size:11px;opacity:0.85;font-weight:400">(${esc(fn)})</span>`;
     btnDel.title = `删除当前选中的文件或文件夹: ${IMG_SELECTED}`;
     if (btnRename) btnRename.title = `重命名当前选中的文件或文件夹: ${IMG_SELECTED}`;
   } else {
-    btnDel.innerHTML = `🗑️ 删除选中`;
+    btnDel.innerHTML = `删除选中`;
     btnDel.title = "请先单击选中要删除的文件或文件夹";
     if (btnRename) btnRename.title = "请先单击选中要重命名的文件或文件夹";
   }
@@ -60,7 +60,7 @@ function renderImages(d) {
     if (q && !x.name.toLowerCase().includes(q)) return;
     const selCls = IMG_SELECTED === x.path ? ' selected' : '';
     html += `<div class="fcard${selCls}" data-imgdir="${esc(x.path)}" title="${esc(x.name)} (双击进入)">
-      <div class="fi">📁</div>
+      <div class="fi"><svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></div>
       <div class="fn">${esc(x.name)}</div>
     </div>`;
   });
@@ -71,20 +71,10 @@ function renderImages(d) {
     const isImg = ["png","jpg","jpeg","gif","webp","bmp","ico"].includes(ext);
     if (isShopPick && !isImg) return;
     const selCls = IMG_SELECTED === x.path ? ' selected' : '';
-    let ficon = "📄";
-    if (isImg) ficon = "";
-    else if (ext === "json") ficon = "📄";
-    else if (ext === "md") ficon = "📝";
-    else if (ext === "txt") ficon = "📃";
-    else if (ext === "py") ficon = "🐍";
-    else if (ext === "db" || ext === "db-wal" || ext === "db-shm") ficon = "🗄️";
-    else if (ext === "ini") ficon = "⚙️";
-    else if (ext === "zip") ficon = "🗜️";
-    else if (ext === "log") ficon = "📜";
 
     html += `<div class="icard${selCls}" data-imgsrc="${esc(x.img || "")}" data-imgname="${esc(x.name)}" data-selpath="${esc(x.path)}" title="${esc(x.name)} (双击看大图/单击选中)">
-      ${isImg ? `<button type="button" class="img-preview-badge" data-action="preview" title="查看大图" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;z-index:2">👁️</button>` : ""}
-      ${ficon ? `<div class="fi">${ficon}</div>` : `<img class="icard-img" loading="lazy" decoding="async" src="${esc(_safeImgSrc(x.img))}" alt="" style="height:88px;width:100%;object-fit:cover;border-radius:var(--radius-md);display:block">`}
+      ${isImg ? `<button type="button" class="img-preview-badge" data-action="preview" title="查看大图" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg></button>` : ""}
+      ${!isImg ? `<div class="fi"><span class="badge" style="font-size:11px;font-weight:700">${esc((ext || "FILE").toUpperCase())}</span></div>` : `<img class="icard-img" loading="lazy" decoding="async" src="${esc(_safeImgSrc(x.img))}" alt="" style="height:88px;width:100%;object-fit:cover;border-radius:var(--radius-md);display:block">`}
       <div class="nm">${esc(x.name)}</div>
     </div>`;
   });
@@ -171,7 +161,7 @@ function showTextPreview(name, text, truncated, filePath) {
   const modalBox = modal.querySelector(".cmd-modal-box");
   if (modalBox) modalBox.classList.add("modal-wide");
 
-  if (icon) icon.textContent = "✏️";
+  if (icon) icon.textContent = "";
   if (title) title.textContent = String(name || "文本编辑器");
   if (inputWrap) inputWrap.style.display = "none";
 
@@ -188,7 +178,7 @@ function showTextPreview(name, text, truncated, filePath) {
             <span class="badge badge-success" style="margin-left:6px" id="textEditorDirtyBadge">未修改</span>
           </span>
           <div style="display:flex;gap:6px;align-items:center">
-            <button id="btnCopyTextPreview" class="ghost sm" style="padding:4px 12px;cursor:pointer">📋 复制</button>
+            <button id="btnCopyTextPreview" class="ghost sm" style="padding:4px 12px;cursor:pointer">复制</button>
           </div>
         </div>
         <textarea class="text-editor-textarea" id="textEditorArea" spellcheck="false" placeholder="在此编辑文件内容…">${esc(initialText)}</textarea>
@@ -233,8 +223,8 @@ function showTextPreview(name, text, truncated, filePath) {
   if (copyBtn && ta) {
     copyBtn.onclick = () => {
       copyToClipboard(ta.value);
-      copyBtn.textContent = "✅ 已复制";
-      setTimeout(() => { copyBtn.textContent = "📋 复制"; }, 1800);
+      copyBtn.textContent = "已复制";
+      setTimeout(() => { copyBtn.textContent = "复制"; }, 1800);
     };
   }
 
@@ -264,7 +254,7 @@ function showTextPreview(name, text, truncated, filePath) {
     closeBtn.onclick = doClose;
   }
   if (okBtn) {
-    okBtn.textContent = "💾 保存文件";
+    okBtn.textContent = "保存文件";
     okBtn.onclick = async () => {
       if (!filePath) {
         toast("无法识别文件路径", "bad");
@@ -292,7 +282,7 @@ function showTextPreview(name, text, truncated, filePath) {
       } finally {
         if (okBtn) {
           okBtn.disabled = false;
-          okBtn.textContent = "💾 保存文件";
+          okBtn.textContent = "保存文件";
         }
       }
     };

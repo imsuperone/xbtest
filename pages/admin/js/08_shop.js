@@ -178,7 +178,7 @@ document.querySelectorAll("#varsHelp .var-tag").forEach(el => {
   });
 });
 
-// 精灵图鉴（地图/属性在总览 ✨ 精灵页签分系统保存恢复，道具在商城页；加载按钮已删，Tab 打开自动拉取）
+// 精灵图鉴（地图/属性在图鉴列表页签分系统保存恢复，道具在商城页；加载按钮已删，Tab 打开自动拉取）
 document.getElementById("btnSpiritExport")?.addEventListener("click", exportSpirits);
 document.getElementById("btnPresetExport")?.addEventListener("click", exportPreset);
 document.getElementById("btnPresetImport")?.addEventListener("click", importPreset);
@@ -319,7 +319,7 @@ function renderPoolBox(forceOpen=false){
       const _paAtk = Math.max(0, Number(pa.atk) || 0);
       const _paDesc = String(pa.desc || "");
       html+=`<div data-pool-item="${esc(rar)}|${esc(name)}" style="margin-top:6px">`+
-        `<div style="font-size:11px;color:var(--muted);margin:0 2px 2px">📌 默认：攻击加成 +${esc(_paAtk)}${_paDesc ? " · " + esc(_paDesc.slice(0, 20)) : " · 无描述"} · 星级基础另计（★0+100→★5+1600）</div>`+
+        `<div style="font-size:11px;color:var(--muted);margin:0 2px 2px">默认：攻击加成 +${esc(_paAtk)}${_paDesc ? " · " + esc(_paDesc.slice(0, 20)) : " · 无描述"} · 星级基础另计（★0+100→★5+1600）</div>`+
         `<div class="s-fields">`+
         `<div class="s-row" style="font-weight:600;min-width:90px"><div style="padding-top:4px">✦ ${esc(name)}</div></div>`+
         `<div class="s-row"><small>稀有度</small><select data-pool-rar>${["SSR","SR","R"].map((r)=>`<option value="${r}"${r===rar?" selected":""}>${r}</option>`).join("")}</select></div>`+
@@ -541,7 +541,7 @@ function openPoolAddModal(defRar) {
   const inputWrap = document.getElementById("appModalInputWrap");
   const cancelBtn = document.getElementById("appModalCancel");
   const okBtn = document.getElementById("appModalOk");
-  if (icon) icon.textContent = "🎰";
+  if (icon) icon.textContent = "";
   if (title) title.textContent = "添加武器";
   if (inputWrap) inputWrap.style.display = "none";
   content.innerHTML = `
@@ -808,7 +808,7 @@ function openRideAddModal() {
   const inputWrap = document.getElementById("appModalInputWrap");
   const cancelBtn = document.getElementById("appModalCancel");
   const okBtn = document.getElementById("appModalOk");
-  if (icon) icon.textContent = "🐴";
+  if (icon) icon.textContent = "";
   if (title) title.textContent = "添加坐骑";
   if (inputWrap) inputWrap.style.display = "none";
   content.innerHTML = `

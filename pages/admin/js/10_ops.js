@@ -59,15 +59,15 @@ async function loadRemoteWebDAVFiles(fromCache) {
       html += `
         <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel);padding:10px 14px;border-radius:10px;border:1px solid var(--line);flex-wrap:wrap;gap:8px">
           <div style="display:flex;align-items:center;gap:10px;min-width:200px">
-            <span style="font-size:20px">${isDb ? "🗄️" : "📄"}</span>
+            <span class="ov-kpi-badge ${isDb ? 'ok' : ''}">${isDb ? 'DB' : 'FILE'}</span>
             <div>
               <div style="font-weight:600;font-size:13px;word-break:break-all">${esc(f.name)}</div>
               <div class="hint" style="font-size:11.5px;margin-top:2px">大小: ${esc(f.size || "-")} · 修改时间: ${esc(shDate)}</div>
             </div>
           </div>
           <div style="display:flex;gap:6px;align-items:center">
-            ${isDb ? `<button class="ghost" data-wdrestore="${esc(f.name)}" style="color:var(--acc);border-color:var(--accBorder);font-size:12px;padding:4px 10px">🔄 快捷恢复</button>` : ""}
-            <button class="ghost" data-wddelete="${esc(f.name)}" style="color:var(--bad);border-color:rgba(239,68,68,0.3);font-size:12px;padding:4px 10px" title="从 WebDAV 云端删除此备份文件">🗑️ 删除</button>
+            ${isDb ? `<button class="ghost" data-wdrestore="${esc(f.name)}" style="color:var(--acc);border-color:var(--accBorder);font-size:12px;padding:4px 10px">快捷恢复</button>` : ""}
+            <button class="ghost" data-wddelete="${esc(f.name)}" style="color:var(--bad);border-color:rgba(239,68,68,0.3);font-size:12px;padding:4px 10px" title="从 WebDAV 云端删除此备份文件">删除</button>
           </div>
         </div>
       `;
@@ -106,11 +106,11 @@ async function loadRemoteWebDAVFiles(fromCache) {
           } else {
             const err = (r && r.msg) ? r.msg : ((r && r.error) ? r.error : "恢复失败");
             toast(`恢复失败: ${err}`, "bad", 8000);
-            uiAlert(err, "云端恢复失败", "⚠️");
+            uiAlert(err, "云端恢复失败");
           }
         } catch (e) {
           toast(`恢复异常: ${e.message}`, "bad", 8000);
-          uiAlert(e.message || String(e), "云端恢复异常", "⚠️");
+          uiAlert(e.message || String(e), "云端恢复异常");
         } finally {
           btn.disabled = false;
           btn.textContent = origText;
@@ -129,7 +129,7 @@ async function loadRemoteWebDAVFiles(fromCache) {
         if (!ok) return;
         const origText = btn.textContent;
         btn.disabled = true;
-        btn.textContent = "⏳ 删除中...";
+        btn.textContent = "删除中...";
         toast(`正在删除云端备份 [${fname}]...`, "ok", 4000);
         try {
           const r = await getBridge().apiPost("backup/webdav/delete", { file: fname });
@@ -139,11 +139,11 @@ async function loadRemoteWebDAVFiles(fromCache) {
           } else {
             const err = (r && r.msg) ? r.msg : ((r && r.error) ? r.error : "删除失败");
             toast(`删除失败: ${err}`, "bad", 8000);
-            uiAlert(err, "删除云端备份失败", "⚠️");
+            uiAlert(err, "删除云端备份失败");
           }
         } catch (e) {
           toast(`删除异常: ${e.message}`, "bad", 8000);
-          uiAlert(e.message || String(e), "删除云端备份异常", "⚠️");
+          uiAlert(e.message || String(e), "删除云端备份异常");
         } finally {
           btn.disabled = false;
           btn.textContent = origText;
@@ -205,7 +205,7 @@ document.getElementById("btnBackupExportSel")?.addEventListener("click", async (
   } catch (err) { toast("导出失败: " + err.message, "bad"); }
 });
 document.getElementById("btnClearAll")?.addEventListener("click", async () => {
-  if (!(await uiConfirm("⚠️ 确认清空所有数据？将删除全部钱包、账户、群数据与备份，且不可恢复。", "危险：清空所有数据"))) return;
+  if (!(await uiConfirm("确认清空所有数据？将删除全部钱包、账户、群数据与备份，且不可恢复。", "危险：清空所有数据"))) return;
   const input = await uiPrompt("为防止误操作，请输入“确认删除”以继续：", "", "清空所有数据");
   if (input !== "确认删除") { toast("输入不正确，已取消清空", "bad"); return; }
   if (!(await uiConfirm("再次确认：清空所有数据？", "再次确认清空"))) return;
@@ -444,7 +444,7 @@ async function openAirdropModal() {
   const cancelBtn = document.getElementById("appModalCancel");
   const okBtn = document.getElementById("appModalOk");
 
-  if (icon) icon.textContent = "🎁";
+  if (icon) icon.textContent = "";
   if (title) title.textContent = "批量资产空投";
   if (inputWrap) inputWrap.style.display = "none";
 
@@ -454,25 +454,25 @@ async function openAirdropModal() {
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div>
-        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px">🎯 目标群聊 (留空则面向全库所有活跃玩家)：</label>
+        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px">目标群聊 (留空则面向全库所有活跃玩家)：</label>
         <input id="dropGid" placeholder="输入群号 (留空全库)" style="width:100%;padding:7px 10px;border-radius:8px">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
         <div>
-          <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px">💰 赠送货币：</label>
+          <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px">赠送货币：</label>
           <input type="number" id="dropMoney" value="1000" style="width:100%;padding:7px 10px;border-radius:8px">
         </div>
         <div>
-          <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px">⚡ 赠送体力：</label>
+          <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px">赠送体力：</label>
           <input type="number" id="dropStamina" value="100" style="width:100%;padding:7px 10px;border-radius:8px">
         </div>
         <div>
-          <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px">🎟️ 抽奖券：</label>
+          <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px">抽奖券：</label>
           <input type="number" id="dropTickets" value="5" style="width:100%;padding:7px 10px;border-radius:8px">
         </div>
       </div>
       <div>
-        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px">📝 空投事由 / 备注：</label>
+        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px">空投事由 / 备注：</label>
         <input id="dropReason" value="节日全员福利空投" style="width:100%;padding:7px 10px;border-radius:8px">
       </div>
     </div>
@@ -484,7 +484,7 @@ async function openAirdropModal() {
     cancelBtn.onclick = () => { modal.className = ""; };
   }
   if (okBtn) {
-    okBtn.textContent = "🚀 发送全员空投";
+    okBtn.textContent = "发送全员空投";
     okBtn.onclick = async () => {
       const gid = (document.getElementById("dropGid")?.value || "").trim();
       const money = parseInt(document.getElementById("dropMoney")?.value || 0, 10);
