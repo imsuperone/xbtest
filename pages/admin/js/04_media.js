@@ -639,9 +639,16 @@ function initSideNavCollapse() {
     });
   }
 
-  // 点击侧边栏关闭胶囊按钮
+  // 点击侧边栏关闭胶囊按钮与顶部拖拽条 (iOS 触顶收起)
   if (toggle) {
     toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeIsland(true);
+    });
+  }
+  const islandHead = nav.querySelector(".island-head");
+  if (islandHead) {
+    islandHead.addEventListener("click", (e) => {
       e.stopPropagation();
       closeIsland(true);
     });
@@ -679,7 +686,7 @@ function initSideNavCollapse() {
   });
 }
 
-// ---------- 鸿蒙组件粉末化消散特效 (HarmonyOS Powder Disintegration - 假渲染超高密粒子 120 FPS 满帧引擎) ----------
+// ---------- 鸿蒙组件粉末化消散特效 (HarmonyOS 1:1 Physical Powder Disintegration - 120 FPS 满帧引擎) ----------
 function triggerHarmonyDisintegrate(el, onComplete) {
   if (!el) {
     if (onComplete) onComplete();
@@ -712,39 +719,43 @@ function triggerHarmonyDisintegrate(el, onComplete) {
   const isDark = document.documentElement.dataset.theme === "dark";
   const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9";
   const colors = isDark
-    ? [primaryColor, "#8AB8F0", "#D6E8FA", "#434E5E", "#232A33", "#A9C9F5", "#CBD5E1", "#FFFFFF"]
-    : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#B0BEC5", "#E3F2FD"];
+    ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF", "#CBD5E1"]
+    : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#2196F3"];
 
-  // 假渲染粒子引擎 (Fake-Rendering Instancing)：
-  // 仅计算 180~240 颗主粒子物理，每个主粒子同频衍生 2 颗假渲染伴生星尘 (3x 视觉密度，实显 540~720 颗高密粒子海，120 FPS 满帧丝滑)
-  const count = isMobile
-    ? Math.min(Math.floor((rect.width * rect.height) / 650), 180)
-    : Math.min(Math.floor((rect.width * rect.height) / 380), 240);
+  // 1:1 组件级表面网格微尘采样 (1:1 Physical Powder Density)：
+  // 在组件真实几何轮廓内按网格密集排布 550~650 颗主微尘核，每颗同频衍生 3 颗极细伴生微尘，整屏呈现 2,200 ~ 2,600 颗 1:1 紧密吸附的流体微尘海
+  const cols = isMobile ? 22 : 18;
+  const rows = isMobile ? 28 : 34;
+  const stepX = rect.width / cols;
+  const stepY = rect.height / rows;
   const particles = [];
-  for (let i = 0; i < count; i++) {
-    const px = rect.left + Math.random() * rect.width;
-    const py = rect.top + Math.random() * rect.height;
-    const angle = Math.random() * Math.PI * 2;
-    const speed = Math.random() * 3.2 + 0.6;
-    particles.push({
-      x: px,
-      y: py,
-      vx: isMobile
-        ? Math.cos(angle) * speed * 0.8 + (Math.random() - 0.5) * 1.6
-        : Math.cos(angle) * speed * 0.7 + (Math.random() - 0.45) * 1.8,
-      vy: isMobile
-        ? Math.sin(angle) * speed * 0.5 - Math.random() * 2.8 - 1.2
-        : Math.sin(angle) * speed * 0.7 - Math.random() * 2.0 - 0.5,
-      size: Math.random() * 2.2 + 1.0,
-      alpha: Math.random() * 0.35 + 0.65,
-      decay: isMobile ? Math.random() * 0.02 + 0.016 : Math.random() * 0.018 + 0.014,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      // 伴生假渲染微粒相对偏移量 (免实时随机与三角运算开销)
-      ox1: ((Math.random() - 0.5) * 16) | 0,
-      oy1: ((Math.random() - 0.5) * 16) | 0,
-      ox2: ((Math.random() - 0.5) * 26) | 0,
-      oy2: ((Math.random() - 0.5) * 26) | 0,
-    });
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const px = rect.left + (c + Math.random()) * stepX;
+      const py = rect.top + (r + Math.random()) * stepY;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 2.8 + 0.4;
+      particles.push({
+        x: px,
+        y: py,
+        vx: isMobile
+          ? Math.cos(angle) * speed * 0.75 + (Math.random() - 0.5) * 1.4
+          : Math.cos(angle) * speed * 0.65 + (Math.random() - 0.4) * 1.5,
+        vy: isMobile
+          ? Math.sin(angle) * speed * 0.4 - Math.random() * 2.2 - 0.9
+          : Math.sin(angle) * speed * 0.5 - Math.random() * 1.8 - 0.5,
+        size: Math.random() * 1.8 + 0.8,
+        alpha: Math.random() * 0.3 + 0.7,
+        decay: isMobile ? Math.random() * 0.02 + 0.016 : Math.random() * 0.018 + 0.014,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        ox1: ((Math.random() - 0.5) * 10) | 0,
+        oy1: ((Math.random() - 0.5) * 10) | 0,
+        ox2: ((Math.random() - 0.5) * 18) | 0,
+        oy2: ((Math.random() - 0.5) * 18) | 0,
+        ox3: ((Math.random() - 0.5) * 26) | 0,
+        oy3: ((Math.random() - 0.5) * 26) | 0,
+      });
+    }
   }
 
   // 元素本体瞬间微缩并消失，粉末即刻接管视觉呈现，彻底释放毛玻璃 GPU 资源
@@ -769,9 +780,9 @@ function triggerHarmonyDisintegrate(el, onComplete) {
 
       p.x += p.vx;
       p.y += p.vy;
-      p.vx *= 0.965;
-      p.vy *= 0.965;
-      p.vy -= 0.03;
+      p.vx *= 0.962;
+      p.vy *= 0.962;
+      p.vy -= 0.035;
       p.alpha -= p.decay;
       p.size = Math.max(0.4, p.size * 0.985);
 
@@ -784,14 +795,11 @@ function triggerHarmonyDisintegrate(el, onComplete) {
       // 1. 主微粒核 (Master Particle)
       ctx.fillRect(rx, ry, sz, sz);
 
-      // 2. 伴生卫星假微粒 1 (同心伴随尘埃，3x 假渲染高密填充)
-      const sz1 = (sz * 0.75) | 0 || 1;
-      ctx.fillRect(rx + p.ox1, ry + p.oy1, sz1, sz1);
-
-      // 3. 伴生卫星假微粒 2 (外围弥散微尘)
-      if (p.alpha > 0.12) {
-        const sz2 = (sz * 0.5) | 0 || 1;
-        ctx.fillRect(rx + p.ox2, ry + p.oy2, sz2, sz2);
+      // 2. 1:1 伴生假渲染高密微尘 (同心伴随微尘，4x 假渲染 1:1 高密填充，呈现 2,400+ 物理细沙)
+      ctx.fillRect(rx + p.ox1, ry + p.oy1, 1, 1);
+      ctx.fillRect(rx + p.ox2, ry + p.oy2, 1, 1);
+      if (p.alpha > 0.14) {
+        ctx.fillRect(rx + p.ox3, ry + p.oy3, 1, 1);
       }
     }
 
@@ -819,7 +827,7 @@ function triggerHarmonyDisintegrate(el, onComplete) {
 }
 window.triggerHarmonyDisintegrate = triggerHarmonyDisintegrate;
 
-// ---------- 鸿蒙粒子汇聚进入特效 (HarmonyOS Particle Assembly - 假渲染超高密星尘 120 FPS 满帧引擎) ----------
+// ---------- 鸿蒙粒子汇聚进入特效 (HarmonyOS 1:1 Physical Assembly - 120 FPS 满帧引擎) ----------
 function triggerHarmonyAssemble(el, triggerEl, onComplete) {
   if (!el) {
     if (onComplete) onComplete();
@@ -871,36 +879,41 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
   const isDark = document.documentElement.dataset.theme === "dark";
   const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9";
   const colors = isDark
-    ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF"]
+    ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF", "#CBD5E1"]
     : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#2196F3"];
 
-  // 假渲染高密星尘汇聚 (180~220 主核 × 3 = 540~660 颗璀璨星尘快速汇聚，120 FPS 满帧)
-  const count = isMobile
-    ? Math.min(Math.floor((rect.width * rect.height) / 700), 180)
-    : Math.min(Math.floor((rect.width * rect.height) / 400), 220);
+  // 1:1 星尘网格对齐汇聚 (600 主星尘核 × 4 = 2,400 颗璀璨星尘快速汇聚，120 FPS 满帧)
+  const cols = isMobile ? 22 : 18;
+  const rows = isMobile ? 26 : 32;
+  const stepX = rect.width / cols;
+  const stepY = rect.height / rows;
   const particles = [];
-  for (let i = 0; i < count; i++) {
-    const destX = rect.left + Math.random() * rect.width;
-    const destY = rect.top + Math.random() * rect.height;
-    const isFromTrigger = Math.random() < 0.7;
-    const startX = isFromTrigger ? (originX + (Math.random() - 0.5) * 30) : (destX + (Math.random() - 0.5) * 80);
-    const startY = isFromTrigger ? (originY + (Math.random() - 0.5) * 24) : (destY + (Math.random() - 0.5) * 60 + 20);
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const destX = rect.left + (c + Math.random()) * stepX;
+      const destY = rect.top + (r + Math.random()) * stepY;
+      const isFromTrigger = Math.random() < 0.72;
+      const startX = isFromTrigger ? (originX + (Math.random() - 0.5) * 36) : (destX + (Math.random() - 0.5) * 90);
+      const startY = isFromTrigger ? (originY + (Math.random() - 0.5) * 28) : (destY + (Math.random() - 0.5) * 70 + 20);
 
-    particles.push({
-      startX,
-      startY,
-      destX,
-      destY,
-      delay: Math.random() * 70,
-      duration: 230 + Math.random() * 110,
-      size: Math.random() * 2.2 + 1.0,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      swirl: (Math.random() - 0.5) * 16,
-      ox1: ((Math.random() - 0.5) * 14) | 0,
-      oy1: ((Math.random() - 0.5) * 14) | 0,
-      ox2: ((Math.random() - 0.5) * 24) | 0,
-      oy2: ((Math.random() - 0.5) * 24) | 0,
-    });
+      particles.push({
+        startX,
+        startY,
+        destX,
+        destY,
+        delay: Math.random() * 80,
+        duration: 220 + Math.random() * 110,
+        size: Math.random() * 1.8 + 0.8,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        swirl: (Math.random() - 0.5) * 16,
+        ox1: ((Math.random() - 0.5) * 10) | 0,
+        oy1: ((Math.random() - 0.5) * 10) | 0,
+        ox2: ((Math.random() - 0.5) * 18) | 0,
+        oy2: ((Math.random() - 0.5) * 18) | 0,
+        ox3: ((Math.random() - 0.5) * 26) | 0,
+        oy3: ((Math.random() - 0.5) * 26) | 0,
+      });
+    }
   }
 
   let animId;
@@ -937,14 +950,11 @@ function triggerHarmonyAssemble(el, triggerEl, onComplete) {
       // 1. 主星尘微粒核
       ctx.fillRect(rx, ry, sz, sz);
 
-      // 2. 假渲染伴生星尘 1 (3x 视觉密集体感)
-      const sz1 = (sz * 0.7) | 0 || 1;
-      ctx.fillRect(rx + p.ox1, ry + p.oy1, sz1, sz1);
-
-      // 3. 假渲染伴生星尘 2
+      // 2. 1:1 伴生星尘微粒 (2,400+ 颗实体微粒星尘海)
+      ctx.fillRect(rx + p.ox1, ry + p.oy1, 1, 1);
+      ctx.fillRect(rx + p.ox2, ry + p.oy2, 1, 1);
       if (alpha > 0.15) {
-        const sz2 = (sz * 0.5) | 0 || 1;
-        ctx.fillRect(rx + p.ox2, ry + p.oy2, sz2, sz2);
+        ctx.fillRect(rx + p.ox3, ry + p.oy3, 1, 1);
       }
     }
 

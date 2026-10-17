@@ -2129,46 +2129,116 @@
     .bk-name { font-size: 12.5px; font-weight: 650; color: var(--text); }
     .bk-meta { font-size: 11px; color: var(--muted); }
 
-    /* Hub & Export Modal */
-    .preset-pill, .hub-solo-btn {
-      background: var(--m3-sys-color-surface-container);
-      border: 1px solid var(--m3-sys-color-divider);
-      color: var(--text);
+    /* Hub & Export Modal - 尊享 iOS / VisionOS 高透磨砂玻璃美学 */
+    #exportHubModal .m3-modal-box {
+      border-radius: 26px !important;
+      background: rgba(255, 255, 255, 0.82) !important;
+      -webkit-backdrop-filter: blur(32px) saturate(200%) !important;
+      backdrop-filter: blur(32px) saturate(200%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.65) !important;
+      box-shadow: 0 28px 64px rgba(0, 0, 0, 0.18), inset 0 1px 1.5px rgba(255, 255, 255, 0.8) !important;
+    }
+    [data-theme="dark"] #exportHubModal .m3-modal-box {
+      background: rgba(26, 32, 44, 0.82) !important;
+      border-color: rgba(255, 255, 255, 0.14) !important;
+      box-shadow: 0 32px 72px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+    }
+    #exportHubModal .m3-modal-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--line-subtle);
+    }
+    #exportHubClose,
+    #importHubClose {
+      width: 30px !important;
+      height: 30px !important;
+      border-radius: 50% !important;
+      background: rgba(120, 120, 128, 0.14) !important;
+      border: none !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 13px !important;
+      color: var(--muted) !important;
+      cursor: pointer !important;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    #exportHubClose:hover,
+    #importHubClose:hover {
+      background: rgba(120, 120, 128, 0.26) !important;
+      color: var(--text) !important;
+      transform: scale(1.06) !important;
+    }
+    #exportHubDoExport {
+      background: linear-gradient(135deg, var(--acc), var(--acc-active)) !important;
+      color: #ffffff !important;
+      border: none !important;
+      border-radius: 999px !important;
+      font-weight: 700 !important;
+      padding: 9px 24px !important;
+      box-shadow: 0 4px 16px var(--accSoft2) !important;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    #exportHubDoExport:hover {
+      transform: translateY(-1px) scale(1.02) !important;
+      box-shadow: 0 6px 20px var(--accSoft2) !important;
+    }
+    .preset-pill {
+      background: rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--line);
+      color: var(--text-secondary);
       border-radius: var(--radius-full);
       padding: 6px 14px;
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .preset-pill:hover, .hub-solo-btn:hover {
-      background: var(--m3-sys-color-primary-container);
-      border-color: var(--m3-sys-color-primary);
-      color: var(--m3-sys-color-on-primary-container);
+    [data-theme="dark"] .preset-pill {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .preset-pill:hover {
+      background: var(--accSoft);
+      border-color: var(--accBorder);
+      color: var(--acc);
+      transform: translateY(-1px);
     }
     .hub-mod-card {
-      background: var(--panel);
+      background: rgba(255, 255, 255, 0.65);
       border: 1px solid var(--line);
-      border-radius: var(--radius-lg);
-      padding: 10px 12px 10px 16px;
+      border-radius: 16px;
+      padding: 12px 16px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
       position: relative;
       cursor: pointer;
-      transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     }
-    .hub-mod-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    [data-theme="dark"] .hub-mod-card {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.09);
+    }
+    .hub-mod-card:hover {
+      border-color: var(--accBorder);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+    }
+    .hub-mod-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
     .hub-checkbox-label {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       cursor: pointer;
-      font-weight: 650;
-      font-size: 12.5px;
+      font-weight: 700;
+      font-size: 13.5px;
       color: var(--text);
     }
-    /* 隐藏原生勾选框：卡片本身即是唯一选中态，不再双控 */
     .hub-checkbox-label input[type="checkbox"] {
       position: absolute;
       opacity: 0;
@@ -2176,32 +2246,50 @@
       width: 0;
       height: 0;
     }
-
-    /* 选中态：描边+底色+左侧色条+标题变色，未选中标题置灰，一眼可辨 */
+    /* 选中态：圆润晶莹高亮卡片 */
     .hub-mod-card.picked {
-      border: 1.5px solid var(--acc);
+      border-color: var(--acc);
       background: var(--accSoft);
-      box-shadow: 0 0 0 1px var(--acc);
+      box-shadow: 0 4px 18px var(--accSoft2);
     }
-    .hub-mod-card.picked::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 8px;
-      bottom: 8px;
-      width: 4px;
-      border-radius: 4px;
-      background: var(--acc);
+    .hub-mod-card.picked .hub-mod-title {
+      color: var(--acc);
     }
-    .hub-mod-card.picked .hub-mod-title { color: var(--acc); }
-    .hub-mod-card:not(.picked) .hub-mod-title { color: var(--text-secondary); }
-    .hub-mod-desc { font-size: 11px; color: var(--muted); margin-left: 22px; }
-    .m3-summary-banner {
-      background: var(--panel);
+    .hub-mod-card:not(.picked) .hub-mod-title {
+      color: var(--text-secondary);
+      opacity: 0.85;
+    }
+    .hub-mod-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      padding-left: 2px;
+    }
+    .hub-solo-btn {
+      background: transparent;
       border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      padding: 8px 10px;
-      margin-top: 6px;
+      color: var(--muted);
+      border-radius: var(--radius-full);
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      flex-shrink: 0;
+    }
+    .hub-solo-btn:hover {
+      background: var(--accSoft2);
+      border-color: var(--accBorder);
+      color: var(--acc);
+      transform: scale(1.02);
+    }
+    .m3-summary-banner {
+      background: var(--accSoft);
+      border: 1px solid var(--accBorder);
+      border-radius: 14px;
+      padding: 10px 14px;
+      margin-top: 10px;
+      color: var(--text);
     }
 
     /* Toast 入场动画（由 .m3-toast 使用） */
@@ -3250,25 +3338,25 @@
   min-width: 0;
 }
 
-/* Floating island trigger in top bar - 液态流光玻璃按钮 (Liquid Glass) */
+/* Floating island trigger in top bar - 尊享 iOS 原生高透磨砂玻璃 (iOS Translucent Frosted Glass) */
 .floating-island-trigger {
   position: relative;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(240, 246, 255, 0.45) 50%, rgba(225, 238, 255, 0.6) 100%);
-  -webkit-backdrop-filter: blur(18px) saturate(190%) contrast(105%);
-  backdrop-filter: blur(18px) saturate(190%) contrast(105%);
+  background: rgba(255, 255, 255, 0.38);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  backdrop-filter: blur(24px) saturate(190%);
   color: var(--text);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.72);
   padding: 6px 14px;
   border-radius: var(--radius-full);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.95), inset 0 -1px 2px rgba(74, 144, 217, 0.1), 0 4px 16px rgba(74, 144, 217, 0.14), 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.9), 0 4px 16px rgba(0, 0, 0, 0.06);
   user-select: none;
   line-height: 1.2;
 }
@@ -3284,33 +3372,33 @@
   animation: liquidSheen 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 [data-theme="dark"] .floating-island-trigger {
-  background: linear-gradient(135deg, rgba(42, 54, 72, 0.75) 0%, rgba(26, 34, 48, 0.5) 50%, rgba(32, 45, 64, 0.65) 100%);
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.35), inset 0 -1px 2px rgba(0, 0, 0, 0.45), 0 6px 20px rgba(0, 0, 0, 0.35);
-  color: var(--text);
+  background: rgba(30, 36, 48, 0.38);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.25), 0 6px 20px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
 }
 [data-theme="dark"] .floating-island-trigger::after {
   background: linear-gradient(115deg, transparent 0%, transparent 35%, rgba(255, 255, 255, 0.2) 50%, transparent 65%, transparent 100%);
   background-size: 250% 100%;
 }
 .floating-island-trigger:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(220, 236, 255, 0.6) 100%);
-  border-color: var(--accBorder);
+  background: rgba(255, 255, 255, 0.58);
+  border-color: rgba(255, 255, 255, 0.95);
   color: var(--acc);
   transform: translateY(-1px) scale(1.02);
   box-shadow: inset 0 1px 2px #ffffff, 0 6px 20px var(--accSoft2);
 }
 [data-theme="dark"] .floating-island-trigger:hover {
-  background: linear-gradient(135deg, rgba(55, 70, 95, 0.85) 0%, rgba(35, 48, 68, 0.65) 100%);
+  background: rgba(45, 55, 75, 0.55);
   color: var(--acc);
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.45), 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 .floating-island-trigger:active {
   transform: scale(0.95);
 }
 .floating-island-trigger.active,
 .floating-island-trigger[aria-expanded="true"] {
-  background: linear-gradient(135deg, rgba(74, 144, 217, 0.25) 0%, rgba(74, 144, 217, 0.12) 100%);
+  background: rgba(74, 144, 217, 0.22);
   color: var(--acc);
   border-color: var(--acc);
   box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 0 0 3px var(--accSoft);
@@ -3358,7 +3446,7 @@
   pointer-events: auto;
 }
 
-/* Floating island side-nav - 尊享毛玻璃质感与硬件级 120 FPS 极速动效 */
+/* Floating island side-nav - 尊享 iOS 级高透磨砂质感与硬件级 120 FPS 极速动效 */
 .side-nav.floating-island {
   position: fixed;
   top: 74px;
@@ -3367,12 +3455,12 @@
   width: 260px;
   max-width: calc(100vw - 40px);
   z-index: 1080;
-  background: rgba(255, 255, 255, 0.86);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  border-radius: 22px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.68);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 24px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.05);
   padding: 10px 12px 14px 12px;
   display: flex;
   flex-direction: column;
@@ -3548,7 +3636,7 @@
     display: block;
   }
 
-  /* 右下角极简悬浮胶囊按钮 (FAB) - 尊享液态流光玻璃 (Liquid Glass) 质感与微流光特效 */
+  /* 右下角极简悬浮胶囊按钮 (FAB) - 尊享 iOS 原生高透磨砂玻璃 (iOS Translucent Frosted Glass) */
   .mobile-island-fab {
     display: inline-flex !important;
     align-items: center;
@@ -3561,12 +3649,12 @@
     padding: 0 18px;
     border-radius: 22px;
     overflow: hidden;
-    background: linear-gradient(135deg, rgba(74, 144, 217, 0.84) 0%, rgba(56, 122, 194, 0.7) 50%, rgba(38, 100, 170, 0.82) 100%);
-    -webkit-backdrop-filter: blur(20px) saturate(200%);
-    backdrop-filter: blur(20px) saturate(200%);
-    color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.55);
-    box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.85), inset 0 -1.5px 3px rgba(0, 0, 0, 0.18), 0 10px 28px rgba(74, 144, 217, 0.42), 0 2px 8px rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.42);
+    -webkit-backdrop-filter: blur(25px) saturate(190%);
+    backdrop-filter: blur(25px) saturate(190%);
+    color: var(--text) !important;
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.9), 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
     z-index: 1050;
     cursor: pointer;
     font-size: 14px;
@@ -3575,8 +3663,7 @@
     line-height: 1;
     user-select: none;
     touch-action: manipulation;
-    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, opacity 0.2s ease;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, opacity 0.2s ease, background 0.2s ease;
   }
   .mobile-island-fab::after {
     content: "";
@@ -3590,21 +3677,21 @@
     animation: liquidSheen 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
   [data-theme="dark"] .mobile-island-fab {
-    background: linear-gradient(135deg, rgba(138, 184, 240, 0.38) 0%, rgba(74, 144, 217, 0.24) 50%, rgba(30, 58, 85, 0.48) 100%);
-    border-color: rgba(138, 184, 240, 0.45);
-    box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.5), inset 0 -1.5px 3px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 18px rgba(138, 184, 240, 0.25);
+    background: rgba(30, 36, 48, 0.45);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 10px 32px rgba(0, 0, 0, 0.45);
+    color: #ffffff !important;
   }
   [data-theme="dark"] .mobile-island-fab::after {
-    background: linear-gradient(115deg, transparent 0%, transparent 35%, rgba(255, 255, 255, 0.25) 50%, transparent 65%, transparent 100%);
+    background: linear-gradient(115deg, transparent 0%, transparent 35%, rgba(255, 255, 255, 0.2) 50%, transparent 65%, transparent 100%);
     background-size: 250% 100%;
   }
   .mobile-island-fab:active {
     transform: scale(0.92);
+    background: rgba(255, 255, 255, 0.58);
   }
-  .mobile-island-fab.active {
-    background: linear-gradient(135deg, rgba(46, 99, 160, 0.9) 0%, rgba(30, 70, 120, 0.85) 100%);
-    color: #ffffff !important;
-    transform: scale(0.96);
+  [data-theme="dark"] .mobile-island-fab:active {
+    background: rgba(45, 55, 75, 0.65);
   }
   .mobile-island-fab svg {
     flex-shrink: 0;
@@ -3620,7 +3707,7 @@
     right: 18px !important;
   }
 
-  /* 移动端底部半屏鸿蒙岛 (Bottom Sheet) - 优雅毛玻璃圆角抽屉 */
+  /* 移动端底部半屏抽屉 (iOS Bottom Sheet) - 优雅高透毛玻璃圆角抽屉 */
   .side-nav.floating-island {
     display: flex !important;
     position: fixed;
@@ -3633,14 +3720,14 @@
     height: auto;
     max-height: 72vh;
     border-radius: 26px 26px 0 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.45);
+    border-top: 1px solid rgba(255, 255, 255, 0.75);
     border-left: none;
     border-right: none;
     border-bottom: none;
-    background: rgba(255, 255, 255, 0.88);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.2), 0 -2px 10px rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.72) !important;
+    -webkit-backdrop-filter: blur(32px) saturate(190%) !important;
+    backdrop-filter: blur(32px) saturate(190%) !important;
+    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.16), 0 -2px 10px rgba(0, 0, 0, 0.06);
     padding: 8px 14px calc(14px + env(safe-area-inset-bottom, 12px)) 14px;
     z-index: 1080;
     transform: translate3d(0, 0, 0);
@@ -3649,9 +3736,9 @@
   }
 
   [data-theme="dark"] .side-nav.floating-island {
-    background: rgba(26, 31, 38, 0.88);
-    border-top-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.5), 0 -2px 12px rgba(0, 0, 0, 0.25);
+    background: rgba(22, 26, 36, 0.75) !important;
+    border-top-color: rgba(255, 255, 255, 0.16) !important;
+    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.5) !important;
   }
 
   .side-nav.floating-island.collapsed {
@@ -3662,63 +3749,40 @@
     transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease-out, visibility 0.22s;
   }
 
-  /* 顶部拖拽胶囊指示条与关闭按钮布局修复（指示条居中，关闭按钮右上角独立定位，彻底解决排版错位） */
+  /* 移动端 隐藏独立 x 按钮，彻底告别突兀违和；全幅聚焦 iOS 居中拖拽胶囊指示条 */
+  .side-nav.floating-island #sideNavToggle,
+  .side-nav.floating-island .island-close-pill {
+    display: none !important;
+  }
   .side-nav.floating-island .island-head {
-    display: block !important;
-    position: relative !important;
-    padding: 6px 0 10px 0 !important;
-    min-height: 28px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 8px 0 12px 0 !important;
+    min-height: 24px !important;
     border-bottom: 1px solid var(--line-subtle);
     margin-bottom: 8px;
     width: 100%;
-    box-sizing: border-box;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
   }
   .side-nav.floating-island .island-head::before {
     content: "";
     display: block;
-    width: 44px;
+    width: 42px;
     height: 5px;
     border-radius: 3px;
-    background: var(--line, rgba(0, 0, 0, 0.22));
-    margin: 4px auto 0 auto;
+    background: rgba(120, 120, 128, 0.32);
+    margin: 0 auto;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .side-nav.floating-island .island-head:active::before {
+    transform: scale(0.92);
+    background: rgba(120, 120, 128, 0.5);
   }
   [data-theme="dark"] .side-nav.floating-island .island-head::before {
-    background: rgba(255, 255, 255, 0.28);
-  }
-
-  .side-nav.floating-island .island-close-pill,
-  .side-nav.floating-island button#sideNavToggle {
-    position: absolute !important;
-    right: 4px !important;
-    top: 2px !important;
-    width: 28px !important;
-    height: 28px !important;
-    min-height: 28px !important;
-    max-height: 28px !important;
-    border-radius: 50% !important;
-    background: var(--panel2) !important;
-    border: 1px solid var(--line) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    color: var(--text-secondary) !important;
-    cursor: pointer;
-    padding: 0 !important;
-    margin: 0 !important;
-    box-shadow: var(--shadow-xs);
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    transform: none !important;
-  }
-  .side-nav.floating-island .island-close-pill:hover,
-  .side-nav.floating-island button#sideNavToggle:hover {
-    background: var(--accSoft2) !important;
-    color: var(--acc) !important;
-    border-color: var(--accBorder) !important;
-    transform: scale(1.05) !important;
-  }
-  .side-nav.floating-island .island-close-pill:active,
-  .side-nav.floating-island button#sideNavToggle:active {
-    transform: scale(0.92) !important;
+    background: rgba(255, 255, 255, 0.25);
   }
 
   /* 移动端 2 列磁贴网格排版，大拇指单手秒触达 */
