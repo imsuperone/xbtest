@@ -233,10 +233,10 @@ def format_all_report(all_results, total_passed, total_cases):
     all_ok = (total_passed == total_cases and total_cases > 0)
     sections = [
         f"📊 小白测试版全系统自测报告 (xbtest all)\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
+        f"━━━━━━━━━━━━━━\n"
         f"总项数: {total_cases} | 通过: {total_passed} | 失败: {total_cases - total_passed}\n"
         f"整体结论: {'✅ 全链路 100% 通过' if all_ok else '❌ 部分系统存在异常'}\n"
-        f"━━━━━━━━━━━━━━━━━━"
+        f"━━━━━━━━━━━━━━"
     ]
     for sys_name, res in all_results.items():
         sections.append(format_system_report(sys_name, res))
@@ -247,7 +247,7 @@ def build_test_menu_text():
     """测试总入口导航说明"""
     return (
         "🧪 小白测试版自动化自测系统 (xbtest)\n"
-        "━━━━━━━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━━━\n"
         "可用测试指令：\n"
         "▶ 测试xbtest all  (或 测试testxb all / xbtest all)\n"
         "  全系统 8 大模块自动化端到端探针自检\n\n"
@@ -258,7 +258,7 @@ def build_test_menu_text():
         "  单系统针对性自动化自检\n\n"
         "▶ 测试xbtest 菜单\n"
         "  合并转发查看 8 大系统完整菜单视图\n"
-        "━━━━━━━━━━━━━━━━━━\n"
+        "━━━━━━━━━━━━━━\n"
         "⚠️ 仅限机器人管理员触发，测试走沙盒隔离环境，零污染群数据"
     )
 
