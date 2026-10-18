@@ -5019,4 +5019,136 @@
   font-family: var(--font-mono);
   margin-left: auto;
 }
+
+.ride-thumb-wrap img,
+.weapon-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.thumb-loading-ph {
+  font-size: 26px;
+  color: var(--muted);
+  opacity: 0.6;
+  animation: pulseThumb 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes pulseThumb {
+  from { opacity: 0.35; transform: scale(0.92); }
+  to { opacity: 0.85; transform: scale(1.04); }
+}
+
+/* 手机端深度适配 */
+@media (max-width: 640px) {
+  .shop-subtab-bar {
+    padding: 4px;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .shop-subtab-bar .seg-item {
+    padding: 6px 12px;
+    font-size: 12px;
+    gap: 5px;
+  }
+  .shop-section-card {
+    padding: 12px 10px;
+    margin-top: 8px;
+    border-radius: 14px;
+  }
+  .shop-section-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+  }
+  .shop-section-title {
+    font-size: 15px;
+  }
+  .shop-section-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+  .shop-section-actions input[type="text"],
+  .shop-section-actions #rideSearchInput,
+  .shop-section-actions #poolSearchInput {
+    grid-column: span 2;
+    width: 100% !important;
+  }
+  .shop-section-actions .btn,
+  .shop-section-actions .ghost {
+    padding: 6px 8px;
+    font-size: 12px;
+    justify-content: center;
+    white-space: nowrap;
+  }
+  .shop-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .ride-item-card,
+  .weapon-item-card {
+    padding: 10px 10px;
+    border-radius: 12px;
+    gap: 8px;
+  }
+  .ride-thumb-wrap {
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    border-radius: 10px;
+  }
+  .weapon-thumb-wrap {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 10px;
+  }
+  .ride-card-top,
+  .weapon-card-top {
+    gap: 8px;
+  }
+  .ride-name-input {
+    font-size: 13.5px !important;
+    padding: 4px 8px;
+  }
+  .input-with-label {
+    flex: 1;
+    min-width: 0;
+  }
+  .input-with-label input {
+    width: 100% !important;
+    min-width: 0;
+  }
+  .ride-card-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .ride-card-actions .ghost {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+  .weapon-name-display {
+    max-width: 95px;
+    font-size: 13px;
+  }
+  .weapon-item-card [style*="border-top:1px dashed"] {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .weapon-item-card [style*="border-top:1px dashed"] .ghost {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+  .weapon-file-hint {
+    margin-left: 0;
+    width: 100%;
+    text-align: right;
+  }
+}
+
 

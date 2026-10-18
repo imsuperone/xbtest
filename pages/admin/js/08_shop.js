@@ -202,6 +202,46 @@ let SHOP_DIRTY = false;
 let SHOP_RIDE_CUSTOM = true;   // false=当前展示的是内置默认（未自定义），保存后即转为自定义
 let POOL_WEAPONS = { SSR: [], SR: [], R: [] };   // 抽奖武器池文件（可编辑：改名/改稀有度/删除/上传）
 
+// 缩略图内存缓存与并发受控队列（避免并发大量拉取阻塞界面）
+const _SHOP_THUMB_CACHE = new Map();
+const _SHOP_THUMB_QUEUE = [];
+let _SHOP_THUMB_FETCHING = 0;
+const _MAX_CONCURRENT_THUMBS = 4;
+
+function _processShopThumbQueue() {
+  while (_SHOP_THUMB_FETCHING < _MAX_CONCURRENT_THUMBS && _SHOP_THUMB_QUEUE.length > 0) {
+    const task = _SHOP_THUMB_QUEUE.shift();
+    if (!task) break;
+    const { key, isPath, callback } = task;
+    if (_SHOP_THUMB_CACHE.has(key)) {
+      try { callback(_SHOP_THUMB_CACHE.get(key)); } catch (e) {}
+      continue;
+    }
+    _SHOP_THUMB_FETCHING++;
+    const param = isPath ? { path: key } : { name: key };
+    getBridge().apiPost("images/preview", param).then((r) => {
+      const thumb = r && (r.thumb || (r.data && r.data.thumb));
+      if (thumb) {
+        _SHOP_THUMB_CACHE.set(key, thumb);
+        try { callback(thumb); } catch (e) {}
+      }
+    }).catch(() => {}).finally(() => {
+      _SHOP_THUMB_FETCHING--;
+      _processShopThumbQueue();
+    });
+  }
+}
+
+function requestShopThumb(key, isPath, callback) {
+  if (!key) return;
+  if (_SHOP_THUMB_CACHE.has(key)) {
+    try { callback(_SHOP_THUMB_CACHE.get(key)); } catch (e) {}
+    return;
+  }
+  _SHOP_THUMB_QUEUE.push({ key, isPath, callback });
+  _processShopThumbQueue();
+}
+
 function _parseShopInput(raw, normalize) {
   // 统一入口：raw 可为 dict（生产内存归一形态）/ JSON 串 / 空。
   // 返回 {data, blank}：blank=true 从未配置；空对象+非blank=用户显式清空；corrupt 按清空处理并告警。
@@ -362,13 +402,14 @@ function renderPoolBox(forceOpen = false) {
       const pa = (POOL_ATTRS && POOL_ATTRS[name]) || { atk: 0, desc: "" };
       const _paAtk = Math.max(0, Number(pa.atk) || 0);
       const _paDesc = String(pa.desc || "");
-      const thumb = it.thumb;
+      const thumb = it.thumb || _SHOP_THUMB_CACHE.get(name) || "";
+      if (thumb) it.thumb = thumb;
 
       html += `
         <div class="weapon-item-card rarity-${rar.toLowerCase()}" data-pool-item="${esc(rar)}|${esc(name)}">
           <div class="weapon-card-top">
-            <div class="weapon-thumb-wrap" data-pool-thumb="${esc(name)}" title="点击放大预览">
-              ${thumb ? `<img loading="lazy" decoding="async" src="${esc(thumb)}" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'rarity-chip rarity-chip-${rar.toLowerCase()}\\'>${esc(rar)}</span>'">` : `<span class="rarity-chip rarity-chip-${rar.toLowerCase()}">${esc(rar)}</span>`}
+            <div class="weapon-thumb-wrap" data-pool-thumb-wrap="${esc(name)}" data-pool-thumb="${esc(name)}" title="点击放大预览">
+              ${thumb ? `<img src="${esc(thumb)}" alt="${esc(name)}">` : `<span class="rarity-chip rarity-chip-${rar.toLowerCase()}">${esc(rar)}</span>`}
             </div>
             <div class="weapon-card-main">
               <div class="ride-row-split">
@@ -411,22 +452,18 @@ function renderPoolBox(forceOpen = false) {
   html += `</div>`;
   box.innerHTML = html;
 
-  // 懒加载图片预览
+  // 受控队列懒加载武器缩略图（并发限流 4，防卡顿与阻塞）
   displayRars.forEach((rar) => {
     ((POOL_WEAPONS && POOL_WEAPONS[rar]) || []).forEach((it) => {
-      if (it.thumb) return;
-      getBridge().apiPost("images/preview", { name: it.name }).then((r) => {
-        const thumb = r && (r.thumb || (r.data && r.data.thumb));
-        if (!thumb || (r && r.error)) return;
+      const nm = it.name;
+      if (kw && !nm.toLowerCase().includes(kw)) return;
+      if (it.thumb || _SHOP_THUMB_CACHE.has(nm)) return;
+      requestShopThumb(nm, false, (thumb) => {
         it.thumb = thumb;
-        const _key = rar + "|" + it.name;
-        box.querySelectorAll("[data-pool-item]").forEach((host) => {
-          if (host.dataset && host.dataset.poolItem === _key) {
-            const slot = host.querySelector("[data-pool-thumb]");
-            if (slot) slot.innerHTML = `<img loading="lazy" decoding="async" src="${esc(thumb)}" onerror="this.style.display='none'">`;
-          }
+        box.querySelectorAll(`[data-pool-thumb-wrap="${CSS.escape ? CSS.escape(nm) : nm}"]`).forEach((slot) => {
+          slot.innerHTML = `<img src="${esc(thumb)}" alt="${esc(nm)}">`;
         });
-      }).catch(() => {});
+      });
     });
   });
 
@@ -457,14 +494,25 @@ function renderPoolBox(forceOpen = false) {
       const wrap = t.closest("[data-pool-item]");
       const nm = wrap ? wrap.dataset.poolItem.split("|").slice(1).join("|") : t.dataset.poolThumb;
       if (!nm) return;
-      const cached = (() => { try { for (const r of ["SSR", "SR", "R"]) { const f = ((POOL_WEAPONS && POOL_WEAPONS[r]) || []).find((x) => x.name === nm); if (f && f.thumb) return f.thumb; } } catch (err) {} return ""; })();
+      const cached = (() => {
+        try {
+          if (_SHOP_THUMB_CACHE.has(nm)) return _SHOP_THUMB_CACHE.get(nm);
+          for (const r of ["SSR", "SR", "R"]) {
+            const f = ((POOL_WEAPONS && POOL_WEAPONS[r]) || []).find((x) => x.name === nm);
+            if (f && f.thumb) return f.thumb;
+          }
+        } catch (err) {}
+        return "";
+      })();
       if (cached) { showLightbox(cached, nm); return; }
       try {
         const r = await getBridge().apiPost("images/preview", { name: nm });
         const thumb = r && (r.thumb || (r.data && r.data.thumb));
         if (r && r.error) throw new Error(r.error);
-        if (thumb) showLightbox(thumb, nm);
-        else toast("无预览", "bad");
+        if (thumb) {
+          _SHOP_THUMB_CACHE.set(nm, thumb);
+          showLightbox(thumb, nm);
+        } else toast("无预览", "bad");
       } catch (err) { toast("预览失败:" + (err.message || err), "bad"); }
     });
   }
@@ -854,11 +902,13 @@ function renderShopRideBox(forceOpen = false) {
       };
       const curBuff = (buff !== undefined && buff !== "" && !isNaN(Number(buff))) ? Number(buff) : calcDefaultBuff(price);
 
+      const cachedRideThumb = showImg ? _SHOP_THUMB_CACHE.get(showImg) : "";
+
       html += `
         <div class="ride-item-card" data-ride-item="${esc(name)}">
           <div class="ride-card-top">
-            <div class="ride-thumb-wrap" ${showImg ? `data-ride-view="${esc(showImg)}" title="点击放大图片"` : `title="暂无图片"`}>
-              ${showImg ? `<img loading="lazy" decoding="async" src="${esc(showImg)}" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'ride-thumb-empty\\'>🐎</div>'">` : `<div class="ride-thumb-empty">🐎</div>`}
+            <div class="ride-thumb-wrap" data-ride-thumb-wrap="${esc(name)}" ${showImg ? `data-ride-view="${esc(showImg)}" title="点击放大图片"` : `title="暂无图片"`}>
+              ${cachedRideThumb ? `<img src="${esc(cachedRideThumb)}" alt="${esc(name)}">` : (showImg ? `<div class="thumb-loading-ph">🐎</div>` : `<div class="ride-thumb-empty">🐎</div>`)}
               ${showImg ? `<span class="thumb-zoom-icon">🔍</span>` : ``}
             </div>
             <div class="ride-card-info">
@@ -904,6 +954,22 @@ function renderShopRideBox(forceOpen = false) {
   }
   html += `</div>`;
   box.innerHTML = html;
+
+  // 批量受控队列加载坐骑缩略图（并发限流 4，带内存缓存）
+  entries.forEach(([name, val]) => {
+    let img = (val && typeof val === "object" && !Array.isArray(val)) ? (val.img ?? "") : "";
+    let autoImg = "";
+    if (!img) { try { autoImg = `data/img/rides/${name}.jpg`; } catch (e) { autoImg = ""; } }
+    const showImg = img || autoImg;
+    if (!showImg || _SHOP_THUMB_CACHE.has(showImg)) return;
+    requestShopThumb(showImg, true, (thumb) => {
+      const card = box.querySelector(`[data-ride-item="${esc(name)}"]`);
+      const slot = card ? card.querySelector(".ride-thumb-wrap") : null;
+      if (slot) {
+        slot.innerHTML = `<img src="${esc(thumb)}" alt="${esc(name)}"><span class="thumb-zoom-icon">🔍</span>`;
+      }
+    });
+  });
 
   // 搜索框事件
   const sInp = document.getElementById("rideSearchInput");
@@ -1018,12 +1084,18 @@ function renderShopRideBox(forceOpen = false) {
   box.querySelectorAll("[data-ride-view]").forEach((b) => b.addEventListener("click", async () => {
     const p = b.dataset.rideView;
     if (!p) return;
+    if (_SHOP_THUMB_CACHE.has(p)) {
+      showLightbox(_SHOP_THUMB_CACHE.get(p), p.split("/").pop());
+      return;
+    }
     try {
       const r = await getBridge().apiPost("images/preview", { path: p });
       const thumb = r && (r.thumb || (r.data && r.data.thumb));
       if (r && r.error) throw new Error(r.error);
-      if (thumb) showLightbox(thumb, p.split("/").pop());
-      else toast("无预览", "bad");
+      if (thumb) {
+        _SHOP_THUMB_CACHE.set(p, thumb);
+        showLightbox(thumb, p.split("/").pop());
+      } else toast("无预览", "bad");
     } catch (err) { toast("预览失败:" + (err.message || err), "bad"); }
   }));
 

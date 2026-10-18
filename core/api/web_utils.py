@@ -266,8 +266,28 @@ def read_thumb_uri(fp, max_bytes=200 * 1024):
         return "error", str(e)
     if not sz:
         return "empty", ""
+    # 若大图超过阈值，优先使用 PIL 生成高质量轻量缩略图（180x180），避免前端大图堵塞或报错
     if sz > max_bytes:
-        return "too large", ""
+        try:
+            from PIL import Image
+            import io
+            import base64
+            with Image.open(fp) as im:
+                im.thumbnail((180, 180))
+                buf = io.BytesIO()
+                im_format = "PNG" if (im.mode in ("RGBA", "LA") or (im.format and im.format.upper() == "PNG")) else "JPEG"
+                if im_format == "JPEG" and im.mode in ("RGBA", "P"):
+                    im = im.convert("RGB")
+                im.save(buf, format=im_format, quality=85)
+                raw = buf.getvalue()
+                if raw:
+                    mime = "png" if im_format == "PNG" else "jpeg"
+                    return "ok", "data:image/%s;base64,%s" % (mime, base64.b64encode(raw).decode("ascii"))
+        except Exception:
+            pass
+        # PIL 未安装或处理失败时的兜底（提高上限至 3MB，防死板截断）
+        if sz > 3 * 1024 * 1024:
+            return "too large", ""
     try:
         with open(fp, "rb") as f:
             raw = f.read()
