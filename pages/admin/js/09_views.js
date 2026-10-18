@@ -100,11 +100,11 @@ async function loadBackups(dir="") {
     if (!d || d.error) throw new Error((d && (d.error || d.msg)) || "备份列表接口异常");
     BACKUP_CACHE = d;
     const crumbs = (d.dir || "").split("/").filter(Boolean);
-    let crumb = `<a data-bkcrumb="" class="crumb-link" title="返回根目录">🏠 备份根目录</a>`;
+    let crumb = `<a data-bkcrumb="" class="crumb-link" title="返回根目录">📁 备份根目录</a>`;
     let acc = "";
     crumbs.forEach((s) => {
       acc += (acc ? "/" : "") + s;
-      crumb += ` <span class="crumb-sep">/</span> <a data-bkcrumb="${esc(acc)}" class="crumb-link" title="进入目录 ${esc(s)}">📅 ${esc(s)}</a>`;
+      crumb += ` <span class="crumb-sep">/</span> <a data-bkcrumb="${esc(acc)}" class="crumb-link" title="进入目录 ${esc(s)}">📁 ${esc(s)}</a>`;
     });
     document.getElementById("backupCrumbs").innerHTML = `<span class="crumbs">${crumb}</span>`;
     document.querySelectorAll("#backupCrumbs a[data-bkcrumb]").forEach((a) => a.addEventListener("click", () => loadBackups(a.dataset.bkcrumb)));
@@ -120,11 +120,10 @@ function renderBackups(d, _q) {
     if (q && !x.name.toLowerCase().includes(q)) return;
     const selCls = window.BACKUP_SELECTED === x.path ? ' selected' : '';
     html += `<div class="bk-item${selCls}" data-bkdir="${esc(x.path)}" data-bksel="${esc(x.path)}">
-      <div class="bk-icon" style="font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center">📅</div>
+      <div class="bk-icon" style="font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center">📁</div>
       <div class="bk-info">
-        <div class="bk-name" style="display:flex;align-items:center;gap:6px">
+        <div class="bk-name">
           <span>${esc(x.name)}</span>
-          <span class="badge" style="font-size:10.5px">📁 日期归档</span>
         </div>
         <div class="bk-meta"><span>双击进入查看快照</span><span>${esc(x.mtime || "")}</span></div>
       </div>
@@ -140,28 +139,19 @@ function renderBackups(d, _q) {
     const isZip = ["zip", "gz", "tar"].includes(ext);
 
     let icon = "📄";
-    let badgeText = "文件快照";
-    let badgeCls = "badge";
     if (isDb) {
       icon = "🗄️";
-      badgeText = "SQLite 主库快照";
-      badgeCls = "badge ok";
     } else if (isJson) {
       icon = "📋";
-      badgeText = "JSON 数据快照";
-      badgeCls = "badge";
     } else if (isZip) {
       icon = "📦";
-      badgeText = "ZIP 归档包";
-      badgeCls = "badge";
     }
 
     html += `<div class="bk-item${selCls}" data-bkfile="${esc(x.path)}" data-bksel="${esc(x.path)}">
       <div class="bk-icon" style="font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center">${icon}</div>
       <div class="bk-info">
-        <div class="bk-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <div class="bk-name">
           <span>${esc(x.name)}</span>
-          <span class="${badgeCls}" style="font-size:10.5px;font-weight:600">${badgeText}</span>
         </div>
         <div class="bk-meta"><span>大小: ${esc(x.size || "0KB")}</span><span>备份时间: ${esc(x.mtime || "")}</span></div>
       </div>

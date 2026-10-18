@@ -60,29 +60,21 @@ async function loadRemoteWebDAVFiles(fromCache) {
       const isZip = ["zip", "gz", "tar"].includes(ext);
       const shDate = formatShanghaiDate(f.mtime, f.name);
 
-      let badgeIcon = "📄";
-      let badgeLabel = "FILE";
-      let badgeCls = "";
+      let icon = "📄";
       if (isDb) {
-        badgeIcon = "🗄️";
-        badgeLabel = "SQLite";
-        badgeCls = "ok";
+        icon = "🗄️";
       } else if (isJson) {
-        badgeIcon = "📋";
-        badgeLabel = "JSON";
-        badgeCls = "";
+        icon = "📋";
       } else if (isZip) {
-        badgeIcon = "📦";
-        badgeLabel = "ZIP";
-        badgeCls = "";
+        icon = "📦";
       }
 
       html += `
         <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel);padding:10px 14px;border-radius:10px;border:1px solid var(--line);flex-wrap:wrap;gap:8px">
           <div style="display:flex;align-items:center;gap:10px;min-width:200px">
-            <span class="ov-kpi-badge ${badgeCls}" style="font-size:11px;display:inline-flex;align-items:center;gap:3px"><span>${badgeIcon}</span> ${badgeLabel}</span>
+            <span style="font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center">${icon}</span>
             <div>
-              <div style="font-weight:600;font-size:13px;word-break:break-all;display:flex;align-items:center;gap:4px"><span>☁️</span> <span>${esc(f.name)}</span></div>
+              <div style="font-weight:600;font-size:13px;word-break:break-all;display:flex;align-items:center;gap:4px"><span>${esc(f.name)}</span></div>
               <div class="hint" style="font-size:11.5px;margin-top:2px">大小: ${esc(f.size || "-")} · 修改时间: ${esc(shDate)}</div>
             </div>
           </div>
