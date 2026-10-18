@@ -56,10 +56,7 @@ def get_note_name(gid, qq, fallback_global=False):
 
 
 def display_name(gid, qq, default=None):
-    """分群优先的只读昵称链（无写副作用）：分群昵称 → 本群卡片 → 本群档案 → default（缺省为 qq 本身）。
-
-    gid 为空时直接回 default，绝不跨群取全局。散落各引擎的
-    `get_note_name(gid,x) or fetch_card(gid,x) or str(x)` 一律收口至此。"""
+    """分群优先的只读昵称链：分群昵称 → 本群卡片 → 本群档案 → accounts 表 → 全局/索引 → 适配器实时获取 → default（缺省为 qq 本身）。"""
     try:
         q = str(qq)
     except Exception:
@@ -69,13 +66,13 @@ def display_name(gid, qq, default=None):
         if g:
             try:
                 n = get_note_name(g, q)
-                if n:
+                if n and n != q:
                     return n
             except Exception:
                 pass
             try:
                 n = fetch_card(g, q)
-                if n:
+                if n and n != q:
                     return n
             except Exception:
                 pass
@@ -88,6 +85,64 @@ def display_name(gid, qq, default=None):
                         return n
             except Exception:
                 pass
+            try:
+                if hasattr(store, "acct"):
+                    a = store.acct(g, q)
+                    if a is not None:
+                        n = str(a.get("name", "")).strip()
+                        if n and n != q and _re.sub(r"[\u3000\u3164\u200b\ufeff\u2800-\u28ff\s]", "", n):
+                            return n
+            except Exception:
+                pass
+            try:
+                if getattr(store, "_DB", None) is not None:
+                    with store._LOCK:
+                        row = store._DB.execute(
+                            "SELECT json_extract(data, '$.name'), json_extract(data, '$.card') FROM accounts WHERE gid=? AND qq=?",
+                            (int(g), int(q))
+                        ).fetchone()
+                    if row:
+                        n = str(row[0] or row[1] or "").strip()
+                        if n and n != q and _re.sub(r"[\u3000\u3164\u200b\ufeff\u2800-\u28ff\s]", "", n):
+                            return n
+            except Exception:
+                pass
+            # 尝试从适配器安全拉取本群名片
+            try:
+                try:
+                    from ...core import messaging as _msg
+                except ImportError:
+                    from core import messaging as _msg
+                card = _msg.sync_fetch_member_name(g, q)
+                if card and card != q and _re.sub(r"[\u3000\u3164\u200b\ufeff\u2800-\u28ff\s]", "", card):
+                    set_note_name(g, q, card)
+                    return card
+            except Exception:
+                pass
+        # 全局最新与反向索引兜底
+        try:
+            n = _S.NOTE_NAMES.get(q, "")
+            if n and n != q and _re.sub(r"[\u3000\u3164\u200b\ufeff\u2800-\u28ff\s]", "", n):
+                return n
+        except Exception:
+            pass
+        try:
+            n = getattr(store, "_AT_QQ_TO_NAME", {}).get(q, "")
+            if n and n != q and _re.sub(r"[\u3000\u3164\u200b\ufeff\u2800-\u28ff\s]", "", n):
+                return n
+        except Exception:
+            pass
+        try:
+            if getattr(store, "_DB", None) is not None:
+                with store._LOCK:
+                    row = store._DB.execute(
+                        "SELECT json_extract(data, '$.name') FROM accounts WHERE qq=? AND json_extract(data, '$.name') IS NOT NULL AND json_extract(data, '$.name') != '' LIMIT 1",
+                        (int(q),)
+                    ).fetchone()
+                if row and str(row[0] or "").strip() and str(row[0]).strip() != q:
+                    return str(row[0]).strip()
+        except Exception:
+            pass
     except Exception:
         pass
     return default if default is not None else q

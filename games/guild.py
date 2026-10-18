@@ -81,6 +81,25 @@ def _gname(gid, qq):
                     return n
         except Exception:
             pass
+        try:
+            a = ST.acct(gid, qq)
+            if a is not None:
+                n = str(a.get("name", "")).strip()
+                if n and n != str(qq):
+                    return n
+        except Exception:
+            pass
+        try:
+            try:
+                from ..core import messaging as _msg
+            except ImportError:
+                from core import messaging as _msg
+            card = _msg.sync_fetch_member_name(gid, str(qq))
+            if card and card != str(qq):
+                SL.set_note_name(gid, qq, card)
+                return card
+        except Exception:
+            pass
         return disp or str(qq)
     except Exception:
         return str(qq)
@@ -108,6 +127,13 @@ def _members(gid, gname):
             continue
         if g.get("name"):
             all_members.append((str(qqdb), g))
+            try:
+                nm = str(raw.get("name") or raw.get("card") or "").strip()
+                if nm and nm != str(qqdb):
+                    from . import slave as SL
+                    SL.set_note_name(gid, str(qqdb), nm)
+            except Exception:
+                pass
     # 写入缓存
     _GUILD_MEMBERS_CACHE[gid_s] = all_members
     _GUILD_MEMBERS_TS[gid_s] = now
@@ -754,6 +780,13 @@ def cmd_gong_rank(gid):
                 continue
             if g.get("name"):
                 all_members.append((str(qqdb), g))
+                try:
+                    nm = str(raw.get("name") or raw.get("card") or "").strip()
+                    if nm and nm != str(qqdb):
+                        from . import slave as SL
+                        SL.set_note_name(gid, str(qqdb), nm)
+                except Exception:
+                    pass
         _GUILD_MEMBERS_CACHE[gid_s] = all_members
         _GUILD_MEMBERS_TS[gid_s] = now
 

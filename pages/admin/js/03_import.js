@@ -45,9 +45,10 @@ function showImportInspectModal(filename, parsedData) {
         <div class="hub-mod-card${m.checked ? " picked" : ""}" style="padding:12px 14px">
           <label class="hub-checkbox-label" style="display:flex;align-items:flex-start;gap:10px">
             <input type="checkbox" data-import-key="${esc(m.key)}" ${m.checked ? "checked" : ""}>
+            <span class="hub-checkbox-indicator" style="margin-top:2px"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
             <div>
               <div class="hub-mod-title" style="font-size:13px">${esc(m.title)}</div>
-              <div class="hub-mod-desc" style="font-size:11.5px">${esc(m.desc)}</div>
+              <div class="hub-mod-desc" style="font-size:11.5px;padding-left:0">${esc(m.desc)}</div>
             </div>
           </label>
         </div>

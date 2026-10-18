@@ -411,11 +411,118 @@ async def _do_platform(marker, event, slave_mod=None):
 
 
 _LATEST_BOT = None
+_MAIN_LOOP = None
+_MEMBER_CARDS_CACHE = {}  # (gid, qq) -> (name, ts)
+_MEMBER_CARDS_TTL = 300.0
+
+
+def set_main_loop(loop):
+    global _MAIN_LOOP
+    if loop is not None:
+        _MAIN_LOOP = loop
+
 
 def set_latest_bot(bot):
-    global _LATEST_BOT
+    global _LATEST_BOT, _MAIN_LOOP
     if bot is not None:
         _LATEST_BOT = bot
+    try:
+        import asyncio
+        loop = asyncio.get_running_loop()
+        if loop is not None:
+            _MAIN_LOOP = loop
+    except Exception:
+        pass
+
+
+async def fetch_group_member_card(gid, qq, bot=None, context=None):
+    """通过 OneBot / AstrBot 适配器拉取指定群成员的群名片/昵称（带 5 分钟缓存）。"""
+    import time
+    g_s = str(gid or "").strip()
+    q_s = str(qq or "").strip()
+    if not g_s.isdigit() or not q_s.isdigit():
+        return ""
+    cached = _MEMBER_CARDS_CACHE.get((g_s, q_s))
+    if cached and (time.time() - cached[1]) < _MEMBER_CARDS_TTL:
+        return cached[0]
+
+    b = bot or _LATEST_BOT
+    if b is None and context is not None:
+        for attr in ("platform_adapters", "_platform_adapters", "get_platform_adapters", "get_bots", "bots"):
+            try:
+                val = getattr(context, attr, None)
+                if callable(val):
+                    val = val()
+                if isinstance(val, (list, tuple, set)) and len(val) > 0:
+                    for cand in val:
+                        if cand is not None:
+                            b = cand
+                            break
+            except Exception:
+                pass
+
+    if b is None:
+        return ""
+
+    actions = ["get_group_member_info", "getGroupMemberInfo"]
+    cands = [b]
+    for sub in ("bot", "client", "api", "_bot", "_client"):
+        sub_obj = getattr(b, sub, None)
+        if sub_obj is not None and sub_obj not in cands:
+            cands.append(sub_obj)
+
+    for cand in cands:
+        for act in actions:
+            try:
+                info = None
+                if hasattr(cand, "call_action") and callable(cand.call_action):
+                    info = await cand.call_action(act, group_id=int(g_s), user_id=int(q_s), no_cache=False)
+                elif hasattr(cand, "call_api") and callable(cand.call_api):
+                    info = await cand.call_api(act, group_id=int(g_s), user_id=int(q_s), no_cache=False)
+                elif hasattr(cand, act) and callable(getattr(cand, act)):
+                    fn = getattr(cand, act)
+                    info = await fn(group_id=int(g_s), user_id=int(q_s), no_cache=False)
+
+                if info is not None:
+                    data = (info.get("data") if isinstance(info, dict) else None) or info
+                    if isinstance(data, dict):
+                        card = str(data.get("card") or data.get("nickname") or "").strip()
+                        if card and card != q_s:
+                            _MEMBER_CARDS_CACHE[(g_s, q_s)] = (card, time.time())
+                            return card
+            except Exception:
+                pass
+    return ""
+
+
+def sync_fetch_member_name(gid, qq):
+    """在同步代码中安全尝试从适配器拉取群名片（带 600ms 超时）。"""
+    import time
+    g_s = str(gid or "").strip()
+    q_s = str(qq or "").strip()
+    if not g_s.isdigit() or not q_s.isdigit():
+        return ""
+    cached = _MEMBER_CARDS_CACHE.get((g_s, q_s))
+    if cached and (time.time() - cached[1]) < _MEMBER_CARDS_TTL:
+        return cached[0]
+
+    loop = _MAIN_LOOP
+    if loop is None:
+        try:
+            import asyncio
+            loop = asyncio.get_running_loop()
+        except Exception:
+            loop = None
+    if loop is not None and loop.is_running():
+        try:
+            import asyncio
+            fut = asyncio.run_coroutine_threadsafe(fetch_group_member_card(g_s, q_s), loop)
+            res = fut.result(timeout=0.6)
+            if res:
+                return res
+        except Exception:
+            pass
+    return ""
 
 
 async def send_proactive_group_msg(gid, text):

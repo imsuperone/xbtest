@@ -2190,100 +2190,107 @@
     .bk-name { font-size: 12.5px; font-weight: 650; color: var(--text); }
     .bk-meta { font-size: 11px; color: var(--muted); }
 
-    /* Hub & Export Modal - 尊享 iOS / VisionOS 高透磨砂玻璃美学 */
-    #exportHubModal .m3-modal-box {
-      border-radius: 26px !important;
-      background: rgba(255, 255, 255, 0.82) !important;
-      -webkit-backdrop-filter: blur(32px) saturate(200%) !important;
-      backdrop-filter: blur(32px) saturate(200%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.65) !important;
-      box-shadow: 0 28px 64px rgba(0, 0, 0, 0.18), inset 0 1px 1.5px rgba(255, 255, 255, 0.8) !important;
+    /* Hub & Export Modal - Android 16 / Material 3 Expressive 干净清爽容器与高帧率卡片 */
+    #exportHubModal .m3-modal-box,
+    #importHubModal .m3-modal-box {
+      border-radius: 24px !important;
+      background: var(--panel, #FFFFFF) !important;
+      border: 1px solid var(--line) !important;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.16) !important;
+      max-height: 88vh !important;
     }
-    [data-theme="dark"] #exportHubModal .m3-modal-box {
-      background: rgba(26, 32, 44, 0.82) !important;
-      border-color: rgba(255, 255, 255, 0.14) !important;
-      box-shadow: 0 32px 72px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+    [data-theme="dark"] #exportHubModal .m3-modal-box,
+    [data-theme="dark"] #importHubModal .m3-modal-box {
+      background: #1E232A !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 24px 56px rgba(0, 0, 0, 0.45) !important;
     }
-    #exportHubModal .m3-modal-header {
-      padding: 16px 24px;
+    #exportHubModal .m3-modal-header,
+    #importHubModal .m3-modal-header {
+      padding: 16px 22px;
       border-bottom: 1px solid var(--line-subtle);
     }
     #exportHubClose,
     #importHubClose {
-      width: 30px !important;
-      height: 30px !important;
+      width: 32px !important;
+      height: 32px !important;
       border-radius: 50% !important;
-      background: rgba(120, 120, 128, 0.14) !important;
+      background: rgba(120, 120, 128, 0.12) !important;
       border: none !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      font-size: 13px !important;
+      font-size: 14px !important;
       color: var(--muted) !important;
       cursor: pointer !important;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      transition: background 0.15s ease, color 0.15s ease !important;
     }
     #exportHubClose:hover,
     #importHubClose:hover {
-      background: rgba(120, 120, 128, 0.26) !important;
+      background: rgba(120, 120, 128, 0.22) !important;
       color: var(--text) !important;
-      transform: scale(1.06) !important;
     }
     #exportHubDoExport {
-      background: linear-gradient(135deg, var(--acc), var(--acc-active)) !important;
+      background: var(--acc) !important;
       color: #ffffff !important;
       border: none !important;
       border-radius: 999px !important;
       font-weight: 700 !important;
       padding: 9px 24px !important;
-      box-shadow: 0 4px 16px var(--accSoft2) !important;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      box-shadow: 0 2px 8px var(--accSoft2) !important;
+      transition: background-color 0.15s ease, opacity 0.15s ease !important;
     }
     #exportHubDoExport:hover {
-      transform: translateY(-1px) scale(1.02) !important;
-      box-shadow: 0 6px 20px var(--accSoft2) !important;
+      background: var(--acc-hover, #3B7EC2) !important;
+      box-shadow: 0 4px 14px var(--accSoft2) !important;
     }
     .preset-pill {
-      background: rgba(0, 0, 0, 0.04);
+      background: var(--bg, #F4F7FB);
       border: 1px solid var(--line);
       color: var(--text-secondary);
       border-radius: var(--radius-full);
-      padding: 6px 14px;
+      padding: 5px 13px;
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
     }
     [data-theme="dark"] .preset-pill {
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
     }
     .preset-pill:hover {
-      background: var(--accSoft);
-      border-color: var(--accBorder);
+      background: var(--primary-container, #EEF4FD);
+      border-color: var(--acc);
       color: var(--acc);
-      transform: translateY(-1px);
+    }
+    [data-theme="dark"] .preset-pill:hover {
+      background: rgba(74, 144, 217, 0.16);
+      color: #8AB8F0;
     }
     .hub-mod-card {
-      background: rgba(255, 255, 255, 0.65);
-      border: 1px solid var(--line);
-      border-radius: 16px;
+      background: var(--bg, #F8FAFD);
+      border: 1.5px solid var(--line);
+      border-radius: 14px;
       padding: 12px 16px;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 6px;
       position: relative;
       cursor: pointer;
-      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+      box-shadow: none;
     }
     [data-theme="dark"] .hub-mod-card {
-      background: rgba(255, 255, 255, 0.04);
-      border-color: rgba(255, 255, 255, 0.09);
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.08);
     }
     .hub-mod-card:hover {
-      border-color: var(--accBorder);
-      transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+      border-color: var(--acc);
+      background: var(--panel-hover, #F0F4F9);
+    }
+    [data-theme="dark"] .hub-mod-card:hover {
+      background: rgba(255, 255, 255, 0.06);
     }
     .hub-mod-header {
       display: flex;
@@ -2307,50 +2314,94 @@
       width: 0;
       height: 0;
     }
-    /* 选中态：圆润晶莹高亮卡片 */
+    /* 专属 M3 自定义复选框指示器 */
+    .hub-checkbox-indicator {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      border: 2px solid var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+      background: transparent;
+      color: transparent;
+    }
+    .hub-checkbox-indicator svg {
+      width: 12px;
+      height: 12px;
+      stroke: currentColor;
+      stroke-width: 2.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+    /* 选中态：清爽现代 M3 Primary Container 配色 */
     .hub-mod-card.picked {
+      border-color: var(--acc) !important;
+      background: var(--primary-container, #EEF4FD) !important;
+    }
+    [data-theme="dark"] .hub-mod-card.picked {
+      background: rgba(74, 144, 217, 0.14) !important;
+      border-color: var(--acc) !important;
+    }
+    .hub-mod-card.picked .hub-checkbox-indicator {
       border-color: var(--acc);
-      background: var(--accSoft);
-      box-shadow: 0 4px 18px var(--accSoft2);
+      background: var(--acc);
+      color: #FFFFFF;
     }
     .hub-mod-card.picked .hub-mod-title {
-      color: var(--acc);
+      color: var(--on-primary-container, #0F2B46);
+      font-weight: 700;
+    }
+    [data-theme="dark"] .hub-mod-card.picked .hub-mod-title {
+      color: #D6E8FA;
     }
     .hub-mod-card:not(.picked) .hub-mod-title {
-      color: var(--text-secondary);
-      opacity: 0.85;
+      color: var(--text);
+      font-weight: 600;
     }
     .hub-mod-desc {
       font-size: 12px;
       color: var(--muted);
       line-height: 1.5;
-      padding-left: 2px;
+      padding-left: 28px;
     }
     .hub-solo-btn {
-      background: transparent;
+      background: var(--panel, #FFFFFF);
       border: 1px solid var(--line);
-      color: var(--muted);
+      color: var(--text-secondary);
       border-radius: var(--radius-full);
-      padding: 3px 10px;
+      padding: 3px 11px;
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.15s ease;
       flex-shrink: 0;
     }
+    [data-theme="dark"] .hub-solo-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.12);
+      color: var(--text-secondary);
+    }
     .hub-solo-btn:hover {
-      background: var(--accSoft2);
+      background: var(--panel-hover);
       border-color: var(--accBorder);
       color: var(--acc);
-      transform: scale(1.02);
     }
     .m3-summary-banner {
-      background: var(--accSoft);
+      background: var(--primary-container, #EEF4FD);
       border: 1px solid var(--accBorder);
       border-radius: 14px;
       padding: 10px 14px;
       margin-top: 10px;
-      color: var(--text);
+      color: var(--on-primary-container, #0F2B46);
+    }
+    [data-theme="dark"] .m3-summary-banner {
+      background: rgba(74, 144, 217, 0.12);
+      border-color: rgba(74, 144, 217, 0.3);
+      color: #D6E8FA;
     }
 
     /* Toast 入场动画（由 .m3-toast 使用） */

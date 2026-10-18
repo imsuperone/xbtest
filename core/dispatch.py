@@ -22,14 +22,23 @@ def _bg_update_user_name(g, q, c, o, slave, ST):
             ST._register_single(q, c)
         except Exception:
             pass
-    if o and g:
+    if g and c:
         try:
             st = slave.state(g)
-            if st.has_section(q):
+            if st is not None:
+                if not st.has_section(q):
+                    st.add_section(q)
                 u = st[q]
                 if u.get("name", "") != c:
                     u["name"] = c
                     slave.save(g)
+        except Exception:
+            pass
+        try:
+            a = ST.acct(g, q)
+            if a is not None and a.get("name") != c:
+                a.set("name", c)
+                ST.acct_save(g, q)
         except Exception:
             pass
 
@@ -249,6 +258,11 @@ def _run_handle_and_welcome(gid, qq, raw, is_admin, handle_fn, ride):
 
 async def run_business(gid, qq, raw, is_admin, executor, handle_fn, ride):
     loop = _asyncio.get_running_loop()
+    try:
+        from . import messaging
+        messaging.set_main_loop(loop)
+    except Exception:
+        pass
     if executor is not None:
         return await loop.run_in_executor(
             executor, _run_handle_and_welcome, gid, qq, raw, is_admin,
