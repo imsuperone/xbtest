@@ -85,6 +85,8 @@ _XB_API_ROUTES = [
     ("version/channel", "GET,POST", "page_version_channel", "更新通道查询与切换", ("core.api.version_check", "handle_version_channel", "version channel", {"mode": "req"})),
     ("logs", "GET,POST", "page_logs_get", "获取插件运行日志", ("core.api.logs", "handle_logs_get", "logs get", {"mode": "req"})),
     ("logs/clear", "POST", "page_logs_clear", "清空插件运行日志", ("core.api.logs", "handle_logs_clear", "logs clear", {"mode": "req"})),
+    ("questions/list", "GET", "page_questions_list", "读取题库列表", ("core.api.questions", "handle_questions_list", "questions list", {})),
+    ("questions/save", "POST", "page_questions_save", "保存题库", ("core.api.questions", "handle_questions_save", "questions save", {})),
 ]
 
 # WebDAV 双前缀别名表（backup/ 与 backups/ 同义，由循环展开注册）

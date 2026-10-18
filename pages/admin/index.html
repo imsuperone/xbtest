@@ -100,8 +100,9 @@
         </div>
         <div class="side-group">
           <div class="side-group-title">玩法</div>
-          <button data-tab="config">基础数值</button>
-          <button data-tab="cmds">玩法开关</button>
+          <button data-tab="config">总开关</button>
+          <button data-tab="cmds">玩法设置</button>
+          <button data-tab="questions">题库设置</button>
         </div>
         <div class="side-group">
           <div class="side-group-title">商城</div>
@@ -111,7 +112,7 @@
         <div class="side-group">
           <div class="side-group-title">运维</div>
           <button data-tab="backups">备份管理</button>
-          <button data-tab="imgs">素材文件</button>
+          <button data-tab="imgs">根目录</button>
           <button data-tab="logs">运行日志</button>
           <button data-tab="about">系统关于</button>
         </div>
@@ -172,16 +173,6 @@
             <div class="ov-kpi-sub">活跃打卡统计</div>
           </div>
         </div>
-      </div>
-
-      <div class="panel" style="margin-bottom:0">
-        <div class="m3-page-header">
-          <div class="m3-page-header-info">
-            <h2>必要核心配置（快捷编辑）</h2>
-            <div class="m3-subtitle">仅展示运行必需的配置项，更多细节见「基础数值」Tab</div>
-          </div>
-        </div>
-        <div id="ovReq" class="ov-req"></div>
       </div>
     </div>
 
@@ -430,21 +421,32 @@
     </div>
 
 
-    <!-- 7. 必要核心配置 Tab -->
+    <!-- 7. 总开关 Tab -->
     <div class="tab" id="tab-config">
+      <!-- 快捷核心参数配置 -->
+      <div class="panel" style="margin-bottom:14px">
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>必要核心配置（快捷编辑）</h2>
+            <div class="m3-subtitle">货币名称等基础全局显示参数（全局通用）</div>
+          </div>
+        </div>
+        <div id="ovReq" class="ov-req"></div>
+      </div>
+
       <div class="panel">
         <div class="m3-page-header">
           <div class="m3-page-header-info">
-            <h2>必要核心配置</h2>
-            <div class="m3-subtitle">展示网络、私聊、维护与备份等核心配置项，玩法数值请在「指令与玩法」Tab 调整</div>
+            <h2>总开关与核心参数</h2>
+            <div class="m3-subtitle">展示网络、私聊、维护与备份等核心配置项，玩法数值请在「玩法设置」Tab 调整</div>
           </div>
           <div class="m3-action-bar">
             <button id="btnSave" class="btn sm">保存配置</button>
             <button id="btnAutoBalance2" class="ghost sm tonal">数值平衡预设</button>
-            <span id="activeBalanceBadge1" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
             <button id="btnReset" class="ghost sm">恢复默认值</button>
             <button id="btnResetAll" class="ghost sm del">全部设置恢复默认</button>
             <button id="btnClearAll" class="ghost sm del" title="清空所有数据需三重确认">清空所有数据</button>
+            <span id="activeBalanceBadge1" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
             <span class="msg" id="saveMsg" style="font-size:12px;color:var(--ok)"></span>
           </div>
         </div>
@@ -461,20 +463,20 @@
     </div>
 
 
-    <!-- 8. 指令与玩法设置 Tab -->
+    <!-- 8. 玩法设置 Tab -->
     <div class="tab" id="tab-cmds">
       <div class="panel">
         <div class="m3-page-header">
           <div class="m3-page-header-info">
-            <h2>指令与玩法设置</h2>
+            <h2>玩法设置</h2>
             <div class="m3-subtitle">统一管理 28 大系统的触发词、冷却限制、收益系数与自定义指令</div>
           </div>
           <div class="m3-action-bar">
             <button class="ghost sm" id="btnCmdExpandAll" type="button">全部展开</button>
             <button class="ghost sm" id="btnCmdCollapseAll" type="button">全部收起</button>
             <button class="sm tonal" id="btnAutoBalance" type="button">数值平衡预设</button>
-            <span id="activeBalanceBadge2" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
             <button class="btn sm" id="btnCmdAddCustomTop" type="button">＋ 自定义指令</button>
+            <span id="activeBalanceBadge2" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600;background:var(--panel);color:var(--muted);border:1px solid var(--line);cursor:pointer" title="点击切换数值平衡模式">模式: 默认</span>
           </div>
         </div>
 
@@ -486,6 +488,40 @@
         </div>
 
         <div id="cmdList"></div>
+      </div>
+    </div>
+
+
+    <!-- 8.5 题库设置 Tab -->
+    <div class="tab" id="tab-questions">
+      <div class="panel">
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>题库设置</h2>
+            <div class="m3-subtitle">自由查看、添加、编辑与删除娱乐系统的题库与词库数据（急转弯、猜字谜、答题、成语接龙）</div>
+          </div>
+          <div class="m3-action-bar">
+            <button class="btn sm" id="btnQAdd" type="button">＋ 添加词条</button>
+            <button class="ghost sm" id="btnQRefresh" type="button">刷新题库</button>
+            <button class="ghost sm del" id="btnQReset" type="button">重载题库</button>
+            <button class="btn sm tonal" id="btnQSave" type="button">💾 保存当前题库</button>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:12px 0">
+          <div class="atlas-seg-tabs" id="qBankTabs">
+            <button type="button" class="atlas-seg-btn active" data-bank="trick">🤔 急转弯 (<span id="qCount-trick">0</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-bank="miri">🔤 猜字谜 (<span id="qCount-miri">0</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-bank="quiz">❓ 知识问答 (<span id="qCount-quiz">0</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-bank="chain">🧩 成语接龙 (<span id="qCount-chain">0</span>)</button>
+          </div>
+          <div class="m3-filter-search" style="min-width:240px;margin:0">
+            <span class="m3-search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></span>
+            <input id="qSearch" placeholder="搜索题目或答案…" />
+          </div>
+        </div>
+
+        <div id="qListBox" style="margin-top:12px"></div>
       </div>
     </div>
 
@@ -583,6 +619,10 @@
           <div style="display:inline-flex;align-items:center;gap:10px">
             <span style="font-size:13px;font-weight:600">WebDAV备份开关</span>
             <label class="switch"><input type="checkbox" id="wdSwitch"><span class="slider-toggle"></span></label>
+          </div>
+          <div style="display:inline-flex;align-items:center;gap:10px" title="开启后严格验证 SSL/TLS 证书有效性；使用自签名证书或私有 NAS 请保持关闭">
+            <span style="font-size:13px;font-weight:600">WebDAV严格校验</span>
+            <label class="switch"><input type="checkbox" id="wdStrictSwitch"><span class="slider-toggle"></span></label>
           </div>
           <div style="display:inline-flex;align-items:center;gap:10px">
             <span style="font-size:13px;font-weight:600">自动备份开关</span>
@@ -1043,5 +1083,6 @@
   <script defer src="./js/08_shop.js?v=26w1017z"></script>
   <script defer src="./js/09_views.js?v=26w1017z"></script>
   <script defer src="./js/10_ops.js?v=26w1017z"></script>
+  <script defer src="./js/11_questions.js?v=26w1017z"></script>
 </body>
 </html>

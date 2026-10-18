@@ -334,7 +334,48 @@ async function renderAtlas(curCfg){
     const _effTags = (n) => { try { return _effRowsOf(n).map((r) => _effBadge(r.type, r.value)).filter(Boolean); } catch (e) { return []; } };
     // 内置表挂 window，供编辑弹窗回填当前生效值（未定制宝物打开✎不再空白）
     if (ATLAS_CUR === "treasure") {
-      let h = `<div class="tre-panel"><div class="tre-header"><div class="tre-header-title"><span>奴隶系统 · 宝物效果库</span><span class="badge badge-primary">${Treas.length} 种</span></div><div class="tre-header-actions"><button type="button" class="btn sm" id="btnAtlasSaveTreasure">保存宝物</button><button type="button" class="ghost sm" id="btnAtlasResetTreasure">恢复默认</button><button type="button" class="ghost sm" id="btnAtlasAddTreasure">添加宝物</button></div></div><div class="tre-grid">`;
+      const setSec = (typeof CFG !== "undefined" && CFG && CFG.cur && CFG.cur["设置"]) ? CFG.cur["设置"] : {};
+      const tierNums = [
+        { name: "一阶", cost: setSec["一阶宝物花费"] ?? 20000, rate: setSec["一阶宝物概率"] ?? 100, exp: setSec["一阶宝物经验"] ?? 300 },
+        { name: "二阶", cost: setSec["二阶宝物花费"] ?? 80000, rate: setSec["二阶宝物概率"] ?? 100, exp: setSec["二阶宝物经验"] ?? 800 },
+        { name: "三阶", cost: setSec["三阶宝物花费"] ?? 250000, rate: setSec["三阶宝物概率"] ?? 70, exp: setSec["三阶宝物经验"] ?? 2000 },
+        { name: "四阶", cost: setSec["四阶宝物花费"] ?? 600000, rate: setSec["四阶宝物概率"] ?? 45, exp: setSec["四阶宝物经验"] ?? 4000 },
+        { name: "五阶", cost: setSec["五阶宝物花费"] ?? 1500000, rate: setSec["五阶宝物概率"] ?? 25, exp: setSec["五阶宝物经验"] ?? 8000 },
+      ];
+
+      let upgradeCardHtml = `
+        <details class="sys-num-panel" style="margin-bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px" open>
+          <summary style="font-weight:700;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span>💎 宝物升阶规则与数值调控（一阶至五阶花费、概率与经验）</span>
+              <span class="badge badge-primary" style="font-size:10.5px">即时生效</span>
+            </div>
+            <span style="font-size:12px;color:var(--muted);font-weight:normal">点击展开/收起 ▾</span>
+          </summary>
+          <div style="margin-top:12px">
+            <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:12px;font-size:11.5px;font-weight:700;color:var(--muted);padding-bottom:6px;border-bottom:1px solid var(--line)">
+              <span>阶位</span>
+              <span>升阶花费 (金币金额)</span>
+              <span>成功概率 (%)</span>
+              <span>提供升阶经验</span>
+            </div>
+            ${tierNums.map((t) => `
+              <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-subtle)">
+                <div style="font-weight:700;font-size:13px;color:var(--acc)">${t.name}宝物</div>
+                <div><input type="number" data-tre-cost="${t.name}" value="${esc(t.cost)}" style="width:100%;font-size:12.5px;padding:5px 8px;border-radius:8px"></div>
+                <div><input type="number" data-tre-rate="${t.name}" value="${esc(t.rate)}" min="1" max="100" style="width:100%;font-size:12.5px;padding:5px 8px;border-radius:8px"></div>
+                <div><input type="number" data-tre-exp="${t.name}" value="${esc(t.exp)}" style="width:100%;font-size:12.5px;padding:5px 8px;border-radius:8px"></div>
+              </div>
+            `).join("")}
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
+              <span class="hint" style="font-size:11.5px">升阶金额与概率修改后点击右侧按钮保存，机器人将即时应用新规则。</span>
+              <button type="button" class="btn sm" id="btnSaveTreasureUpgrades">💾 保存升阶数值</button>
+            </div>
+          </div>
+        </details>
+      `;
+
+      let h = upgradeCardHtml + `<div class="tre-panel"><div class="tre-header"><div class="tre-header-title"><span>宝物系统 · 宝物效果库</span><span class="badge badge-primary">${Treas.length} 种</span></div><div class="tre-header-actions"><button type="button" class="btn sm" id="btnAtlasSaveTreasure">保存宝物</button><button type="button" class="ghost sm" id="btnAtlasResetTreasure">恢复默认</button><button type="button" class="ghost sm" id="btnAtlasAddTreasure">添加宝物</button></div></div><div class="tre-grid">`;
       const _ft = Treas.filter((n) => !_ql || String(n).toLowerCase().includes(_ql) || _effOf(n).toLowerCase().includes(_ql));
       if (!_ft.length) h += `<div class="atlas-empty-hint">${_q ? "无匹配宝物" : "暂无宝物数据"}</div>`;
       else h += _ft.map(n => {
@@ -512,6 +553,35 @@ async function renderAtlas(curCfg){
       try { await persistTreasure(); toast("宝物已保存", "ok"); }
       catch (e) { toast("保存失败: " + e.message, "bad"); }
       renderAtlas();
+    });
+    document.getElementById("btnSaveTreasureUpgrades")?.addEventListener("click", async () => {
+      const btn = document.getElementById("btnSaveTreasureUpgrades");
+      if (btn && btn.disabled) return;
+      const origTxt = btn ? btn.textContent : "保存升阶数值";
+      if (btn) { btn.disabled = true; btn.textContent = "保存中..."; }
+      try {
+        const payload = { "设置": {} };
+        const tierNames = ["一阶", "二阶", "三阶", "四阶", "五阶"];
+        tierNames.forEach((t) => {
+          const costInp = document.querySelector(`input[data-tre-cost="${t}"]`);
+          const rateInp = document.querySelector(`input[data-tre-rate="${t}"]`);
+          const expInp = document.querySelector(`input[data-tre-exp="${t}"]`);
+          if (costInp && costInp.value !== "") payload["设置"][`${t}宝物花费`] = Number(costInp.value);
+          if (rateInp && rateInp.value !== "") payload["设置"][`${t}宝物概率`] = Number(rateInp.value);
+          if (expInp && expInp.value !== "") payload["设置"][`${t}宝物经验`] = Number(expInp.value);
+        });
+        const res = await getBridge().apiPost("config/save", payload);
+        if (res && res.error) throw new Error(res.error);
+        if (typeof CFG !== "undefined" && CFG && CFG.cur) {
+          CFG.cur["设置"] = CFG.cur["设置"] || {};
+          Object.assign(CFG.cur["设置"], payload["设置"]);
+        }
+        toast("宝物升阶金额与概率数值已保存（即时生效）", "ok");
+      } catch (err) {
+        toast("保存升阶数值失败: " + err.message, "bad");
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = origTxt; }
+      }
     });
     document.getElementById("btnAtlasResetTreasure")?.addEventListener("click", async () => {
       if (!(await uiConfirm("直接恢复宝物为内置6件（酒神葫芦|四象护符|金蟾|玉如意|雷公锤|夜明珠）并清空自定义效果？旧数据不保留。", "恢复默认"))) return;

@@ -297,14 +297,18 @@ let KNOWN_CMDS = new Set(); // 引擎指令白名单，供映射校验
 let CMD_ENG = {};           // 指令->所属引擎键，供数值映射与权限显示
 // 引擎->数值节：指令编辑器与各系统折叠块按所属系统自动列出全部可调数值（奖励/惩罚/概率/价格/间隔）
 const ENG_NUM_SECTIONS = {
-  slave: ["设置", "费用配置", "间隔配置", "概率配置", "祈福配置"],
+  basic: ["设置"],
+  slave: ["费用配置", "间隔配置", "概率配置", "祈福配置"],
+  weapon: ["设置"],
+  treasure: ["设置"],
   sign: ["签到配置", "打卡配置", "抽奖配置", "新手配置", "点赞配置"],
   bank: ["银行配置"], ent: ["娱乐配置"], spirit: ["精灵配置"],
   ride: ["坐骑配置"], guild: ["帮派配置"], adventure: ["冒险配置"],
   superadmin: ["超管配置"],
 };
 const SYS_WAKE = {
-  slave: "奴隶系统", sign: "签到系统", bank: "银行系统", ent: "娱乐系统",
+  basic: "基础指令", slave: "奴隶系统", weapon: "武器系统", treasure: "宝物系统",
+  sign: "签到系统", bank: "银行系统", ent: "娱乐系统",
   spirit: "精灵系统", ride: "坐骑系统",
   superadmin: "超管系统", guild: "帮派系统", adventure: "冒险系统",
 };
@@ -479,6 +483,15 @@ function _getSystemNumericItems(eng) {
       }
     });
   });
+  if (eng === "weapon") {
+    return out.filter(it => it.key.includes("武器") || it.key.includes("星") || it.key.includes("抽"));
+  }
+  if (eng === "treasure") {
+    return out.filter(it => it.key.includes("宝物") || it.key.includes("奇遇"));
+  }
+  if (eng === "basic") {
+    return out.filter(it => !it.key.includes("武器") && !it.key.includes("星") && !it.key.includes("抽") && !it.key.includes("宝物") && !it.key.includes("奇遇"));
+  }
   return out;
 }
 
@@ -640,23 +653,62 @@ async function loadCommands() {
     } catch (e) { _openSys = new Set(); _openNumEng = new Set(); }
     KNOWN_CMDS = new Set();
     CMD_ENG = {};
-    Object.entries(cmds).forEach(([eng, arr]) => (arr || []).forEach((c) => {
+
+    const slaveArr = cmds["slave"] || [];
+    const basicCmds = [];
+    const weaponCmds = [];
+    const treasureCmds = [];
+    const pureSlaveCmds = [];
+
+    const BASIC_SET = new Set([
+      "我的信息", "查询", "排行榜", "身价排行", "身价排行榜", "签到排行", "签到排行榜"
+    ]);
+    const WEAPON_SET = new Set([
+      "抽武器", "十连抽", "三十连抽", "30连抽", "五十连抽", "50连抽",
+      "武器升星", "升星", "武器菜单",
+      "炎宿朱雀", "祝融", "神使沧溟", "老八脑!", "钻石剑", "雷鸣剑", "鬼泪村正",
+      "【炎宿朱雀】", "【祝融】", "【神使沧溟】", "【老八脑!】", "【钻石剑】", "【雷鸣剑】", "【鬼泪村正】"
+    ]);
+    const TREASURE_SET = new Set([
+      "宝物菜单", "宝物升阶", "升阶",
+      "酒神葫芦", "四象护符", "金蟾", "玉如意", "雷公锤", "夜明珠",
+      "【酒神葫芦】", "【四象护符】", "【金蟾】", "【玉如意】", "【雷公锤】", "【夜明珠】"
+    ]);
+
+    slaveArr.forEach((c) => {
+      if (BASIC_SET.has(c)) basicCmds.push(c);
+      else if (WEAPON_SET.has(c)) weaponCmds.push(c);
+      else if (TREASURE_SET.has(c)) treasureCmds.push(c);
+      else pureSlaveCmds.push(c);
+    });
+
+    const displayCmds = {};
+    if (basicCmds.length) displayCmds["basic"] = basicCmds;
+    displayCmds["slave"] = pureSlaveCmds;
+    if (weaponCmds.length) displayCmds["weapon"] = weaponCmds;
+    if (treasureCmds.length) displayCmds["treasure"] = treasureCmds;
+
+    Object.keys(cmds).forEach((k) => {
+      if (k !== "slave" && k !== "chat") displayCmds[k] = cmds[k] || [];
+    });
+
+    Object.entries(displayCmds).forEach(([eng, arr]) => (arr || []).forEach((c) => {
       KNOWN_CMDS.add(c);
-      if (!(c in CMD_ENG)) CMD_ENG[c] = eng;
+      if (!(c in CMD_ENG)) CMD_ENG[c] = (eng === "basic" || eng === "weapon" || eng === "treasure") ? "slave" : eng;
     }));
-    const blockHtml = Object.keys(cmds).filter(k => k !== "chat")
+    const blockHtml = Object.keys(displayCmds)
       .map((k) => {
         const sys = map2sys[k] || k;
-        const wake = (wakeSec[sys] ?? sys);
+        const wake = (wakeSec[sys] ?? (k === "basic" ? "我的信息" : (k === "weapon" ? "抽武器" : (k === "treasure" ? "宝物菜单" : sys))));
         const wakeList = wake.split(/[|，,]/).map((s) => s.trim()).filter(Boolean);
         const seen = {};
         // 去掉「系统唤醒词」本身作为假指令的重复项(唤醒词已在块头部单独编辑)
-        const items = (cmds[k] || []).filter((c) => {
+        const items = (displayCmds[k] || []).filter((c) => {
           if (seen[c]) return false;
           seen[c] = 1;
           return wakeList.indexOf(c) < 0;
         });
-        const sysChecked = isOn(onSec[sys]) ? "checked" : "";
+        const sysChecked = isOn(onSec[sys] ?? (k === "basic" || k === "weapon" || k === "treasure" ? onSec["奴隶系统"] : undefined)) ? "checked" : "";
         const tags = items.map((c) => {
           const cOn = isOn(disSec[c]);
           const onBg = cOn ? "" : "off";

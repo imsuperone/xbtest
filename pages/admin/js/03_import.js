@@ -487,13 +487,14 @@ document.getElementById("btnGroupsRefresh")?.addEventListener("click", () => loa
 
 // 各页签加载器(零延迟即时响应)
 const TAB_LOADERS = {
-  overview: async () => { await loadOverviewReq(); try { await loadAnalytics(); } catch(e){} },
+  overview: async () => { try { await loadAnalytics(); } catch(e){} },
   users: async () => { return loadUsers(); },
   slave: async () => { return typeof loadSlaveUsers === "function" ? loadSlaveUsers() : Promise.resolve(); },
   spirit_users: async () => { return typeof loadSpiritUsers === "function" ? loadSpiritUsers() : Promise.resolve(); },
-  config: async () => { return loadConfig(); },
+  config: async () => { await loadOverviewReq(); return loadConfig(); },
   rank: async () => { const t = (document.getElementById("rankType") || {}).value || "money"; return loadRank(t); },
   cmds: async () => { return loadCommands(); },
+  questions: async () => { return typeof loadQuestions === "function" ? loadQuestions() : Promise.resolve(); },
   spirits: async () => { let r; try { r = await loadSpirits(); } catch(e) { try { err("tab spirits: " + e.message); } catch(_e){} } try { await loadShops(true); try { if (typeof refreshSpiritViews === "function") refreshSpiritViews(); } catch(_e){} } catch(e){} return r; },
   shops: async () => { return loadShops(); },
   backups: async () => {

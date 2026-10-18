@@ -435,7 +435,6 @@ function bindTabs() {
       if (tab === "overview") {
         if (!TAB_DONE.overview) {
           TAB_DONE.overview = true;
-          Promise.resolve(loadOverviewReq()).catch((e) => err("tab overview: " + e.message));
           Promise.resolve(loadStats()).catch(() => {});
         }
         return;

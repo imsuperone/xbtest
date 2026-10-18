@@ -2011,26 +2011,26 @@
     #cmdModal, #appModal, .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.45);
+      background: rgba(0, 0, 0, 0.55);
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 80;
+      z-index: 1200 !important;
       padding: 16px;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
     #cmdModal.show, #appModal.show { display: flex; }
     .cmd-modal-box, .m3-modal-box {
-      background: var(--m3-sys-color-surface-container-high);
-      border: 1px solid var(--m3-sys-color-divider);
-      border-radius: 28px !important;
+      background: var(--m3-sys-color-surface-container-high, var(--panel));
+      border: 1px solid var(--m3-sys-color-divider, var(--line));
+      border-radius: 24px !important;
       padding: 0;
       width: min(820px, 94vw);
       max-height: 85vh;
       display: flex;
       flex-direction: column;
-      box-shadow: var(--m3-shadow-card);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
       overflow: hidden;
       animation: m3DialogPop 0.25s cubic-bezier(0.2, 0, 0, 1);
       transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), max-height 0.2s cubic-bezier(0.2, 0, 0, 1);
@@ -2044,29 +2044,30 @@
       to { opacity: 1; transform: scale(1); }
     }
     .cmd-modal-header, .m3-modal-header {
-      padding: 14px 20px 10px;
+      padding: 16px 22px 14px;
       border-bottom: 1px solid var(--line-subtle);
       display: flex;
       align-items: center;
       justify-content: space-between;
+      background: var(--m3-sys-color-surface-container, var(--panel));
     }
-    .cmd-modal-header h3, .m3-modal-header h2 { margin: 0; font-size: 15.5px; font-weight: 750; color: var(--text); }
+    .cmd-modal-header h3, .m3-modal-header h2 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text); }
     .cmd-modal-body, .m3-modal-body {
-      padding: 16px 20px;
+      padding: 18px 22px;
       overflow-y: auto;
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
     }
     .cmd-modal-footer, .m3-modal-footer {
-      padding: 10px 20px;
+      padding: 12px 22px;
       border-top: 1px solid var(--line-subtle);
-      background: var(--panel);
+      background: var(--m3-sys-color-surface-container, var(--panel));
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      gap: 8px;
+      gap: 10px;
     }
     .m3-icon-circle {
       width: auto !important;
@@ -2093,6 +2094,22 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .apple-card input, .apple-card textarea {
+      background: var(--m3-sys-color-surface, #ffffff) !important;
+      border: 1px solid var(--line) !important;
+      color: var(--text) !important;
+      border-radius: 10px !important;
+      padding: 9px 12px !important;
+      font-size: 13px !important;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02) inset;
+    }
+    .apple-card input:read-only {
+      background: var(--m3-sys-color-surface-container, rgba(0,0,0,0.03)) !important;
+      color: var(--muted) !important;
+      border-color: var(--line-subtle) !important;
+      cursor: not-allowed;
     }
     .apple-card-row {
       display: flex;
@@ -2105,12 +2122,12 @@
     .apple-card-field > label { font-size: 11.5px; color: var(--text-secondary); font-weight: 650; }
     .cmd-reply-preview {
       margin-top: 4px;
-      padding: 8px 10px;
-      background: var(--panel);
+      padding: 10px 12px;
+      background: var(--m3-sys-color-surface-container-low, var(--panel));
       border: 1px solid var(--accBorder);
       border-radius: var(--radius-md);
-      font-size: 11.5px;
-      line-height: 1.45;
+      font-size: 12px;
+      line-height: 1.5;
     }
     .cmd-reply-preview-label { font-weight: 700; font-size: 11px; color: var(--acc); margin-bottom: 2px; }
     .cmd-reply-preview-content { color: var(--text-secondary); white-space: pre-wrap; word-break: break-all; }

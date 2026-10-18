@@ -112,12 +112,12 @@ def _make_ssl_context():
             ctx = ssl.create_default_context()
         else:
             ctx = ssl.create_default_context()
-            # 兼容私有 NAS 或自签名证书（默认；生产环境请打开 WebDAV严格校验）
+            # 兼容私有 NAS 或自签名证书（默认；生产环境可在备份配置中打开 WebDAV严格校验）
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
             try:
                 if _logger is not None:
-                    _logger.warning("WebDAV TLS 校验已关闭（自签兼容模式）；生产环境请在备份配置中打开 WebDAV严格校验")
+                    _logger.info("WebDAV TLS 校验已设为自签兼容模式；如需校验证书可在备份配置中开启「WebDAV严格校验」")
             except Exception:
                 pass
         _SSL_CTX_CACHE[mode] = ctx

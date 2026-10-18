@@ -247,6 +247,7 @@ async function loadBackupCfg() {
     const cur = await getBridge().apiGet("config/get");
     const b = (cur || {})["备份配置"] || {};
     _setChk("wdSwitch", b["WebDAV备份开关"] ?? "假");
+    _setChk("wdStrictSwitch", b["WebDAV严格校验"] ?? "假");
     _setVal("wdUrl", b["WebDAV服务器地址"] ?? "");
     _setVal("wdUser", b["WebDAV用户名"] ?? "");
     _setVal("wdPwd", b["WebDAV应用密码"] ?? "");
@@ -271,6 +272,7 @@ async function saveBackupCfg() {
     const g = (id) => (document.getElementById(id) || {}).value ?? "";
     const payload = {"备份配置": {
       "WebDAV备份开关": document.getElementById("wdSwitch")?.checked ? "真" : "假",
+      "WebDAV严格校验": document.getElementById("wdStrictSwitch")?.checked ? "真" : "假",
       "WebDAV服务器地址": g("wdUrl").trim(),
       "WebDAV用户名": g("wdUser").trim(),
       "WebDAV应用密码": g("wdPwd"),
@@ -439,7 +441,7 @@ async function loadAnalytics() {
     if (el("anaBankDeposit")) el("anaBankDeposit").textContent = fmt(sum.total_bank_deposit);
     if (el("anaBankUsers")) el("anaBankUsers").textContent = `储蓄玩家: ${fmt(sum.total_bank_users)} 人`;
     if (el("anaSlaveWorth")) el("anaSlaveWorth").textContent = fmt(sum.total_slave_worth);
-    if (el("anaSlaveCount")) el("anaSlaveCount").textContent = `奴隶: ${sum.total_slaves_count || 0} 人 / 奴隶主: ${sum.total_masters_count || 0} 人`;
+    if (el("anaSlaveCount")) el("anaSlaveCount").textContent = `奴隶: ${fmt(sum.total_slaves_count || 0)} 人`;
     if (el("anaSignCount")) el("anaSignCount").textContent = `${fmt(sum.total_sign_count)} 次`;
   } catch(e) {
     console.error("loadAnalytics error:", e);
