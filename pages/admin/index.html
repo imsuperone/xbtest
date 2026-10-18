@@ -423,17 +423,6 @@
 
     <!-- 7. 总开关 Tab -->
     <div class="tab" id="tab-config">
-      <!-- 快捷核心参数配置 -->
-      <div class="panel" style="margin-bottom:14px">
-        <div class="m3-page-header">
-          <div class="m3-page-header-info">
-            <h2>必要核心配置（快捷编辑）</h2>
-            <div class="m3-subtitle">货币名称等基础全局显示参数（全局通用）</div>
-          </div>
-        </div>
-        <div id="ovReq" class="ov-req"></div>
-      </div>
-
       <div class="panel">
         <div class="m3-page-header">
           <div class="m3-page-header-info">
@@ -459,6 +448,17 @@
         </div>
 
         <div id="cfgForm"></div>
+      </div>
+
+      <!-- 快捷核心参数配置（放置于页面下方） -->
+      <div class="panel" style="margin-top:14px">
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>必要核心配置（快捷编辑）</h2>
+            <div class="m3-subtitle">货币名称等基础全局显示参数（全局通用）</div>
+          </div>
+        </div>
+        <div id="ovReq" class="ov-req"></div>
       </div>
     </div>
 
@@ -620,13 +620,13 @@
             <span style="font-size:13px;font-weight:600">WebDAV备份开关</span>
             <label class="switch"><input type="checkbox" id="wdSwitch"><span class="slider-toggle"></span></label>
           </div>
-          <div style="display:inline-flex;align-items:center;gap:10px" title="开启后严格验证 SSL/TLS 证书有效性；使用自签名证书或私有 NAS 请保持关闭">
-            <span style="font-size:13px;font-weight:600">WebDAV严格校验</span>
-            <label class="switch"><input type="checkbox" id="wdStrictSwitch"><span class="slider-toggle"></span></label>
-          </div>
           <div style="display:inline-flex;align-items:center;gap:10px">
             <span style="font-size:13px;font-weight:600">自动备份开关</span>
             <label class="switch"><input type="checkbox" id="autoSwitch"><span class="slider-toggle"></span></label>
+          </div>
+          <div style="display:inline-flex;align-items:center;gap:10px;margin-left:auto" title="开启后严格验证 SSL/TLS 证书有效性；使用自签名证书或私有 NAS 请保持关闭">
+            <span style="font-size:13px;font-weight:600">WebDAV严格校验</span>
+            <label class="switch"><input type="checkbox" id="wdStrictSwitch"><span class="slider-toggle"></span></label>
           </div>
         </div>
 

@@ -358,6 +358,40 @@ def handle(gid, qq, raw, is_admin=False):
 
 
 
+def _match_answer(user_input: str, standard_answer: str) -> bool:
+    """宽松比对玩家输入与题目答案：支持 /、|、\、，、,、；、;、以及中文顿号 、 分隔的多个备选有效答案"""
+    if not user_input or not standard_answer:
+        return False
+    u = user_input.strip()
+    if not u:
+        return False
+    # 拆分可能的多备选答案
+    candidates = [
+        c.strip()
+        for c in re.split(r"[/|\\，,；;、\n]", standard_answer)
+        if c.strip()
+    ]
+    if not candidates:
+        candidates = [standard_answer.strip()]
+
+    # 清理标点符号用于宽松归一化比对
+    norm_u = re.sub(r"[\s\.,!?:;，。！？；：“”‘’\"\'\(\)（）《》、~～\-——]", "", u).lower()
+    for cand in candidates:
+        # 1. 严格或大小写一致
+        if u.lower() == cand.lower():
+            return True
+        # 2. 忽略标点符号后的比对
+        norm_c = re.sub(r"[\s\.,!?:;，。！？；：“”‘’\"\'\(\)（）《》、~～\-——]", "", cand).lower()
+        if norm_u and norm_u == norm_c:
+            return True
+        # 3. 常见数字与单位容错（如 "0度" vs "0" vs "0℃", "2008年" vs "2008"）
+        strip_u = norm_u.rstrip("度年月日岁米kmcm个人")
+        strip_c = norm_c.rstrip("度年月日岁米kmcm个人")
+        if strip_u and strip_u == strip_c:
+            return True
+    return False
+
+
 def _play(gid, qq, text):
     try:
         from ...core import storage as S
@@ -428,7 +462,7 @@ def _play(gid, qq, text):
                 continue
             if _is_cmd(text):
                 continue
-            if text.strip() == ans:
+            if _match_answer(text, ans):
                 _cancel_timeout_task(gid, kind)
                 S.recall_set(f"{kind}_{gid}_{owner}", "")
                 S.recall_set(f"{kind}_owner_{gid}", "")

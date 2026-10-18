@@ -140,8 +140,14 @@ async function openQuestionEditor(idx = -1) {
 
   const titleEl = document.getElementById("appModalTitle");
   const contentEl = document.getElementById("appModalContent");
-  const actBtn = document.getElementById("appModalAction");
+  const iconEl = document.getElementById("appModalIcon");
+  const inputWrap = document.getElementById("appModalInputWrap");
+  const okBtn = document.getElementById("appModalOk");
+  const cancelBtn = document.getElementById("appModalCancel");
+  const closeBtn = document.getElementById("appModalClose");
 
+  if (iconEl) iconEl.textContent = "✏️";
+  if (inputWrap) inputWrap.style.display = "none";
   if (titleEl) titleEl.textContent = isNew ? "添加新题目" : `编辑题目 #${idx + 1}`;
   if (contentEl) {
     contentEl.innerHTML = `
@@ -151,16 +157,25 @@ async function openQuestionEditor(idx = -1) {
           <textarea id="popQText" rows="3" style="width:100%;font-size:13.5px;padding:8px 10px;border-radius:10px" placeholder="输入题目内容…">${esc(curItem.q || "")}</textarea>
         </div>
         <div>
-          <label style="font-size:12.5px;font-weight:600;color:var(--text);display:block;margin-bottom:4px">标准答案 / 谜底：</label>
-          <input id="popQAns" type="text" style="width:100%;font-size:13.5px;padding:8px 10px;border-radius:10px" placeholder="输入参考答案…" value="${esc(curItem.a || "")}">
+          <label style="font-size:12.5px;font-weight:600;color:var(--text);display:block;margin-bottom:4px">标准答案 / 多个备选答案：</label>
+          <input id="popQAns" type="text" style="width:100%;font-size:13.5px;padding:8px 10px;border-radius:10px" placeholder="如：番茄 / 西红柿（支持用 / 或 | 填入多个答案）" value="${esc(curItem.a || "")}">
         </div>
-        <div class="hint" style="font-size:11.5px">修改确认后将更新到编辑列表，需点击「保存当前题库」持久化落盘。</div>
+        <div class="hint" style="font-size:11.5px;line-height:1.5">
+          💡 <b>多答案支持</b>：支持使用 <code>/</code> 或 <code>|</code> 录入多个备选答案（例如：<code>自行车 / 单车</code>、<code>李白 | 青莲居士</code>），玩家答中任意一个均判定正确！<br>
+          修改确认后将更新到编辑列表，需点击右上角「保存当前题库」落盘生效。
+        </div>
       </div>
     `;
   }
 
-  modal.classList.add("show");
-  modal.classList.add("open");
+  const closeModal = () => {
+    modal.classList.remove("show", "open");
+    if (inputWrap) inputWrap.style.display = "none";
+    if (okBtn) okBtn.onclick = null;
+    if (cancelBtn) cancelBtn.onclick = null;
+    if (closeBtn) closeBtn.onclick = null;
+    modal.onclick = null;
+  };
 
   const saveHandler = () => {
     const qText = (document.getElementById("popQText")?.value || "").trim();
@@ -180,15 +195,28 @@ async function openQuestionEditor(idx = -1) {
       _Q_DATA[_Q_BANK][idx] = { q: qText, a: aText };
       toast("已更新题目内容，请点击右上角「保存当前题库」生效", "ok");
     }
-    modal.classList.remove("show", "open");
+    closeModal();
     renderQuestions();
-    if (actBtn) actBtn.removeEventListener("click", saveHandler);
   };
 
-  if (actBtn) {
-    actBtn.textContent = isNew ? "确认添加" : "保存修改";
-    actBtn.onclick = saveHandler;
+  if (okBtn) {
+    okBtn.textContent = isNew ? "确认添加" : "保存修改";
+    okBtn.style.background = "var(--acc)";
+    okBtn.style.borderColor = "transparent";
+    okBtn.onclick = saveHandler;
   }
+  if (cancelBtn) {
+    cancelBtn.textContent = "取消";
+    cancelBtn.onclick = closeModal;
+  }
+  if (closeBtn) {
+    closeBtn.onclick = closeModal;
+  }
+  modal.onclick = (e) => {
+    if (e.target === modal) closeModal();
+  };
+
+  modal.classList.add("show", "open");
 }
 
 async function saveCurrentQuestions() {

@@ -220,18 +220,25 @@ def _treasure_trigger_prob(u, ttype, default_base=25, fallbacks=()):
             stage = 0
         stage = max(0, min(5, stage))
 
-        if stage == 0:
-            prob = base_p
-        elif stage == 1:
-            prob = base_p + 15
-        elif stage == 2:
-            prob = base_p + 30
-        elif stage == 3:
-            prob = base_p + 45
-        elif stage == 4:
-            prob = base_p + 60
+        stage_cfg_p = cfgi("设置", f"{t_str}_{stage}阶触发率", -1)
+        if stage_cfg_p >= 0:
+            prob = stage_cfg_p
         else:
-            prob = 98
+            base_override = cfgi("设置", f"{t_str}_基础触发率", -1)
+            if base_override >= 0:
+                base_p = base_override
+            if stage == 0:
+                prob = base_p
+            elif stage == 1:
+                prob = base_p + 15
+            elif stage == 2:
+                prob = base_p + 30
+            elif stage == 3:
+                prob = base_p + 45
+            elif stage == 4:
+                prob = base_p + 60
+            else:
+                prob = 98
 
         prob = max(1, min(98, prob))
         if prob > best_prob:

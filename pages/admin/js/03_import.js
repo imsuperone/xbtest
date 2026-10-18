@@ -355,6 +355,7 @@ function uiPrompt(msg, dflt = "", rawTitle = "请输入") {
 
     const clean = () => {
       modal.classList.remove("show");
+      inpWrap.style.display = "none";
       if (okBtn) okBtn.onclick = null;
       if (cancelBtn) cancelBtn.onclick = null;
       if (closeBtn) closeBtn.onclick = null;

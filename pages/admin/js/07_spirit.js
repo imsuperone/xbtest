@@ -337,7 +337,7 @@ async function renderAtlas(curCfg){
       const setSec = (typeof CFG !== "undefined" && CFG && CFG.cur && CFG.cur["设置"]) ? CFG.cur["设置"] : {};
       const tierNums = [
         { name: "一阶", cost: setSec["一阶宝物花费"] ?? 20000, rate: setSec["一阶宝物概率"] ?? 100, exp: setSec["一阶宝物经验"] ?? 300 },
-        { name: "二阶", cost: setSec["二阶宝物花费"] ?? 80000, rate: setSec["二阶宝物概率"] ?? 100, exp: setSec["二阶宝物经验"] ?? 800 },
+        { name: "二阶", cost: setSec["二阶宝物花费"] ?? 80000, rate: setSec["二阶宝物概率"] ?? 85, exp: setSec["二阶宝物经验"] ?? 800 },
         { name: "三阶", cost: setSec["三阶宝物花费"] ?? 250000, rate: setSec["三阶宝物概率"] ?? 70, exp: setSec["三阶宝物经验"] ?? 2000 },
         { name: "四阶", cost: setSec["四阶宝物花费"] ?? 600000, rate: setSec["四阶宝物概率"] ?? 45, exp: setSec["四阶宝物经验"] ?? 4000 },
         { name: "五阶", cost: setSec["五阶宝物花费"] ?? 1500000, rate: setSec["五阶宝物概率"] ?? 25, exp: setSec["五阶宝物经验"] ?? 8000 },
@@ -645,6 +645,14 @@ function openTreasureEditModal(name, isNew) {
   if (icon) icon.textContent = "";
   if (title) title.textContent = (isNew ? "添加宝物「" : "编辑宝物「") + name + "」";
   if (inputWrap) inputWrap.style.display = "none";
+
+  const cfgSet = (typeof CFG !== "undefined" && CFG && CFG.cur && CFG.cur["设置"]) ? CFG.cur["设置"] : {};
+  const tProbs = ["一", "二", "三", "四", "五"].map(t => {
+    const val = cfgSet[`${name}_${t}阶宝物概率`];
+    return { tier: t, val: (val !== undefined && val !== null) ? val : "" };
+  });
+  const tBaseProb = cfgSet[`${name}_基础触发率`] !== undefined ? cfgSet[`${name}_基础触发率`] : "";
+
   content.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:10px">
       <div><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">效果文案（留空用内置/通用）：</label>
@@ -653,6 +661,24 @@ function openTreasureEditModal(name, isNew) {
         <div id="treEffRows" style="display:flex;flex-direction:column;gap:8px">${(curRows.length ? curRows : [null]).map((r) => _treEffRowHTML(r ? r.type : "", r ? r.value : 0)).join("")}</div>
         <div style="margin-top:8px"><button type="button" class="ghost sm" id="treEffAdd">＋ 添加效果</button></div></div>
       <div class="hint">攻击计入主人战力；护盾/免罪拥有即生效（显示是否）；打工加成主人全队工资；身价加成战斗力身价部分。多条同类型自动累加。保存后即时生效。</div>
+
+      <!-- 该宝物专属升阶概率与触发率微调 -->
+      <div style="border-top:1px solid var(--line);padding-top:10px;margin-top:4px">
+        <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:6px">💎 该宝物专属升阶数值调控（留空继承全局）：</label>
+        <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:8px">
+          ${tProbs.map(t => `
+            <div>
+              <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:2px">${t.tier}阶率(%)</span>
+              <input id="treProb_${t.tier}" type="number" min="1" max="100" placeholder="全局" value="${esc(t.val)}" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
+            </div>
+          `).join("")}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+          <span style="font-size:11.5px;color:var(--muted);white-space:nowrap">免罪/圣盾初始触发率(%):</span>
+          <input id="treBaseProb" type="number" min="1" max="100" placeholder="默认25" value="${esc(tBaseProb)}" style="width:90px;padding:5px 8px;font-size:12px;border-radius:8px">
+          <span class="hint" style="font-size:11px">酒神葫芦/四象护符等0阶默认25%</span>
+        </div>
+      </div>
     </div>`;
   try {
     content.querySelector("#treEffAdd")?.addEventListener("click", () => {
@@ -696,6 +722,27 @@ function openTreasureEditModal(name, isNew) {
         });
       } catch (e) {}
       window._TREAS_EFF = window._TREAS_EFF || {};
+
+      // 提取专属升阶数值
+      const payloadSetting = {};
+      ["一", "二", "三", "四", "五"].forEach(t => {
+        const inp = document.getElementById(`treProb_${t}`);
+        const v = inp ? inp.value.trim() : "";
+        if (v !== "") payloadSetting[`${name}_${t}阶宝物概率`] = Number(v);
+        else payloadSetting[`${name}_${t}阶宝物概率`] = null;
+      });
+      const baseInp = document.getElementById("treBaseProb");
+      const bv = baseInp ? baseInp.value.trim() : "";
+      if (bv !== "") payloadSetting[`${name}_基础触发率`] = Number(bv);
+      else payloadSetting[`${name}_基础触发率`] = null;
+
+      try {
+        await getBridge().apiPost("config/save", { "设置": payloadSetting });
+        if (typeof CFG !== "undefined" && CFG && CFG.cur && CFG.cur["设置"]) {
+          Object.assign(CFG.cur["设置"], payloadSetting);
+        }
+      } catch (e) {}
+
       // 清空即删键：显式 null 穿透 merge（缺键≠删除，不传即复活）
       if (!desc && !rows.length) { delete window._TREAS_EFF[name]; try { await persistTreasure([name]); toast("已保存", "ok"); } catch (e) { toast("保存失败: " + e.message, "bad"); } }
       else {
