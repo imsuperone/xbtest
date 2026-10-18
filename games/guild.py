@@ -448,17 +448,19 @@ def cmd_contribute(gid, qq, amt):
     if amt <= 0:
         return "亲，帮派贡献格式为：【帮派贡献 金额】！"
     min_amt = _cfgi("贡献下限", 100)
+    c_div = max(1, _cfgi("贡献兑换比例", CONTRIBUTE_DIV))
     if amt < min_amt:
-        return f"亲，单次帮派贡献至少需要{min_amt}{ST.coin_name()}（每100{ST.coin_name()}加1帮贡）！"
+        return f"亲，单次帮派贡献至少需要{min_amt}{ST.coin_name()}（每{c_div}{ST.coin_name()}加1帮贡）！"
     if ST.coins_get(gid, qq) < amt:
         return f"笑~你没有那么多{ST.coin_name()}！"
-    g["gong"] = int(g.get("gong", 0)) + amt // CONTRIBUTE_DIV
+    add_gong = amt // c_div
+    g["gong"] = int(g.get("gong", 0)) + add_gong
     if ST.txn_coins_acct(
         gid, qq, -amt, {"guild": json.dumps(g, ensure_ascii=False)}, require_funds=True
     ) is None:
         return "帮派系统繁忙，贡献未成功，请稍后重试！"
     _invalidate_guild_cache(gid)
-    return f"贡献成功！帮派帮贡 +{amt // CONTRIBUTE_DIV}，你的贡献 {g['gong']}"
+    return f"贡献成功！帮派帮贡 +{add_gong}，你的贡献 {g['gong']}"
 
 
 def cmd_mine(gid, qq):
@@ -510,8 +512,9 @@ def cmd_welfare(gid, qq):
     my_build = int(g.get("build", 0) or 0)
     base = _cfgi("福利基数", 4000)
     bonus_cap = _cfgi("福利加成上限", 20000)
+    w_rate = max(0, _cfgi("每帮贡福利金币", WELFARE_PER_GONG))
     lv_wall_bonus = max(0, lv - 1) * 800 + my_build * 150 + total_build * 30
-    gong_bonus = int(g.get("gong", 0) or 0) * WELFARE_PER_GONG + lv_wall_bonus
+    gong_bonus = int(g.get("gong", 0) or 0) * w_rate + lv_wall_bonus
     if bonus_cap > 0:
         gong_bonus = min(bonus_cap, gong_bonus)
     got = base + gong_bonus

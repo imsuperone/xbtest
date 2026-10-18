@@ -94,7 +94,16 @@ def cmd_myinfo(gid, qq, st):
             except ImportError:
                 from games.ride import active_ride_info  # type: ignore
             r_name, r_pct = active_ride_info(gid, qq)
-            ride_txt = f"{r_name}(+{r_pct}%)" if r_name else "木有坐骑"
+            if r_name:
+                try:
+                    from ..ride import _ride_buff_type
+                except ImportError:
+                    from games.ride import _ride_buff_type  # type: ignore
+                _bmap = {"all": "综合", "atk": "战力", "work": "打工", "travel": "旅行"}
+                _bt = _bmap.get(_ride_buff_type(r_name), "综合")
+                ride_txt = f"{r_name}({_bt}+{r_pct}%)"
+            else:
+                ride_txt = "木有坐骑"
         except Exception:
             ride_txt = "木有坐骑"
         try:

@@ -413,7 +413,7 @@ def battle_power(st, qq):
                 from ..ride import active_ride_info
             except ImportError:
                 from games.ride import active_ride_info  # type: ignore
-            _, r_pct = active_ride_info(gid, qq)
+            _, r_pct = active_ride_info(gid, qq, aspect="atk")
             if r_pct > 0:
                 base_bp += base_bp * r_pct // 100
     except Exception:

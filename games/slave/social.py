@@ -412,7 +412,7 @@ def cmd_self_work(gid, qq, st):
             from ..ride import active_ride_info
         except ImportError:
             from games.ride import active_ride_info  # type: ignore
-        _, _r_pct = active_ride_info(gid, qq)
+        _, _r_pct = active_ride_info(gid, qq, aspect="work")
         _wb += int(_r_pct or 0)
     except Exception:
         pass

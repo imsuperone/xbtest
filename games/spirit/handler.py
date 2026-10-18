@@ -1110,7 +1110,7 @@ def cmd_expedition(gid, qq, arg=""):
                 from ..ride import active_ride_info
             except ImportError:
                 from games.ride import active_ride_info  # type: ignore
-            _, _r_pct2 = active_ride_info(gid, qq)
+            _, _r_pct2 = active_ride_info(gid, qq, aspect="travel")
             if _r_pct2 > 0:
                 gold_gain += gold_gain * int(_r_pct2) // 100
         except Exception:

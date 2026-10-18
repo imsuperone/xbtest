@@ -32,14 +32,15 @@ RIDE_PRICES = {
 }
 # 坐骑内置商城 {名: {price, img, buff, buff_type}}：未自定义（商城图鉴.ride_shop 为空）时回退此表
 RIDE_SHOP = {
-    "企鹅": {"price": 213250, "img": "data/img/rides/企鹅.jpg", "buff": 6, "buff_type": "all"},
-    "伞兵": {"price": 500000, "img": "data/img/rides/伞兵.jpg", "buff": 10, "buff_type": "all"},
-    "宝驴": {"price": 1000000, "img": "data/img/rides/宝驴.jpg", "buff": 10, "buff_type": "all"},
-    "保时捷": {"price": 1500000, "img": "data/img/rides/保时捷.jpg", "buff": 10, "buff_type": "all"},
-    "法拉利": {"price": 1500000, "img": "data/img/rides/法拉利.jpg", "buff": 10, "buff_type": "all"},
-    "玛莎拉蒂": {"price": 1500000, "img": "data/img/rides/玛莎拉蒂.jpg", "buff": 10, "buff_type": "all"},
-    "劳斯莱斯": {"price": 1500000, "img": "data/img/rides/劳斯莱斯.jpg", "buff": 10, "buff_type": "all"},
-    "布加迪威龙": {"price": 1500000, "img": "data/img/rides/布加迪威龙.jpg", "buff": 10, "buff_type": "all"},
+    "企鹅": {"price": 213250, "img": "data/img/rides/企鹅.jpg", "buff": 6, "buff_type": "work"},
+    "伞兵": {"price": 500000, "img": "data/img/rides/伞兵.jpg", "buff": 10, "buff_type": "atk"},
+    "宝驴": {"price": 1000000, "img": "data/img/rides/宝驴.jpg", "buff": 10, "buff_type": "work"},
+    "保时捷": {"price": 1500000, "img": "data/img/rides/保时捷.jpg", "buff": 10, "buff_type": "travel"},
+    "法拉利": {"price": 1500000, "img": "data/img/rides/法拉利.jpg", "buff": 10, "buff_type": "travel"},
+    "玛莎拉蒂": {"price": 1500000, "img": "data/img/rides/玛莎拉蒂.jpg", "buff": 10, "buff_type": "travel"},
+    "劳斯莱斯": {"price": 1500000, "img": "data/img/rides/劳斯莱斯.jpg", "buff": 10, "buff_type": "work"},
+    "布加迪威龙": {"price": 1500000, "img": "data/img/rides/布加迪威龙.jpg", "buff": 10, "buff_type": "atk"},
     "私人航空": {"price": 5000000, "img": "data/img/rides/私人航空.jpg", "buff": 15, "buff_type": "all"},
-    "老八": {"price": 500000, "img": "data/img/rides/老八.jpg", "buff": 10, "buff_type": "all"},
+    "老八": {"price": 500000, "img": "data/img/rides/老八.jpg", "buff": 10, "buff_type": "atk"},
 }
+

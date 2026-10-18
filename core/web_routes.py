@@ -81,6 +81,7 @@ _XB_API_ROUTES = [
     ("groups/toggle", "POST", "page_groups_toggle", "切换群聊/总开关", ("core.api.groups", "handle_groups_toggle", "groups toggle", {})),
     ("groups/delete", "POST", "page_groups_delete", "删除群聊配置", ("core.api.groups", "handle_groups_delete", "groups delete", {})),
     ("admin/clear", "POST", "page_clear_all", "清空所有数据（三重确认）", ("core.api.backup", "handle_clear_all", "clear", {"with_base": True})),
+    ("version", "GET", "page_version_get", "获取插件版本号(单源于metadata.yaml)", ("core.api.version_check", "handle_version_get", "version get", {})),
     ("version/check", "GET,POST", "page_version_check", "在线检查版本更新", ("core.api.version_check", "handle_version_check", "version check", {"mode": "req", "with_base": True})),
     ("version/channel", "GET,POST", "page_version_channel", "更新通道查询与切换", ("core.api.version_check", "handle_version_channel", "version channel", {"mode": "req"})),
     ("logs", "GET,POST", "page_logs_get", "获取插件运行日志", ("core.api.logs", "handle_logs_get", "logs get", {"mode": "req"})),

@@ -431,8 +431,9 @@ def _ride_buff_type(name):
     return "all"
 
 
-def active_ride_info(gid, qq):
-    """返回 (当前坐骑名, 加成百分比)；未乘坐返回 ('', 0)"""
+def active_ride_info(gid, qq, aspect=None):
+    """返回 (当前坐骑名, 加成百分比)；未乘坐返回 ('', 0)。
+    若指定 aspect (atk/work/travel)，则仅当坐骑类型匹配或为 all(综合全能) 时生效加成，否则返回 0。"""
     try:
         r = _rides(gid, qq)
         lst = r.get("list") or []
@@ -445,16 +446,24 @@ def active_ride_info(gid, qq):
             return "", 0
         shop = _ride_shop()
         price = int(shop.get(act, 0) or _mount_price(act) or 0)
-        return act, _ride_bonus(act, price)
+        pct = _ride_bonus(act, price)
+        if aspect:
+            b_type = _ride_buff_type(act)
+            if b_type != "all" and b_type != str(aspect):
+                return act, 0
+        return act, pct
     except Exception:
         return "", 0
 
 
 def cmd_shop():
     lines = ["欢迎来到坐骑商城！", "━━━━━━━━━━━━━━"]
+    _TYPE_NAMES = {"all": "综合", "atk": "战力", "work": "打工", "travel": "旅行"}
     for name, price in _ride_shop().items():
         pct = _ride_bonus(name, price)
-        lines.append(f"{name}　{price}{ST.coin_name()}（加成+{pct}%）")
+        b_type = _ride_buff_type(name)
+        type_str = f"·{_TYPE_NAMES.get(b_type, '综合')}"
+        lines.append(f"{name}　{price}{ST.coin_name()}（{type_str}+{pct}%）")
     lines.append("发送【购买坐骑 名称】购买炫酷坐骑！\r\n发送【查看坐骑 名称】查看坐骑信息！")
     return "\r\n".join(lines)
 
@@ -483,7 +492,10 @@ def cmd_buy(gid, qq, name):
     else:
         _save(gid, qq, r)
     pct = _ride_bonus(name, price)
-    return (f"购买到炫酷的坐骑「{name}」（已自动乘坐，收益/战力+{pct}%）！\r\n发送【我的坐骑】查看你拥有的坐骑！", _ride_img_path(name))
+    b_type = _ride_buff_type(name)
+    _TYPE_NAMES = {"all": "收益/战力", "atk": "战斗力", "work": "打工收益", "travel": "远征收益"}
+    type_short = _TYPE_NAMES.get(b_type, "收益/战力")
+    return (f"购买到炫酷的坐骑「{name}」（已自动乘坐，{type_short}+{pct}%）！\r\n发送【我的坐骑】查看你拥有的坐骑！", _ride_img_path(name))
 
 
 def cmd_view(gid, qq, name):
@@ -496,9 +508,13 @@ def cmd_view(gid, qq, name):
     price = int(shop[name] or 0)
     pct = _ride_bonus(name, price)
     refund = price * 5 // 100
-    return (f"〈{name}〉\r\n属性：{RIDE_TYPE}（乘坐加成：搬砖/远征/战力+{pct}%）\r\n"
+    _TYPE_NAMES = {"all": "综合全能（搬砖/远征/战力）", "atk": "战力专属（主人与决斗战力）", "work": "打工专属（搬砖与奴隶打工）", "travel": "旅行专属（精灵远征与漫游）"}
+    b_type = _ride_buff_type(name)
+    type_desc = _TYPE_NAMES.get(b_type, "综合全能")
+    return (f"〈{name}〉\r\n属性：{RIDE_TYPE}（加成定位：{type_desc}+{pct}%）\r\n"
             f"价格：{price}{ST.coin_name()}（丢弃回收返5%：{refund}{ST.coin_name()}）\r\n"
             f"状态：{'已拥有' if owned else '未拥有（发送【购买坐骑 %s】购买）' % name}", _ride_img_path(name))
+
 
 
 def cmd_discard(gid, qq, name):

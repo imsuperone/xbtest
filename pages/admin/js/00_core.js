@@ -268,3 +268,32 @@ const SYSTEM_MAP = {
 };
 let CUR_SYSTEM = "全部";
 
+let CURRENT_VERSION = FRONTEND_VER;
+
+async function fetchAndApplyVersion() {
+  try {
+    const res = await getBridge().apiGet("version");
+    const v = res && (res.version || (res.data && res.data.version));
+    if (v) {
+      CURRENT_VERSION = v;
+      window.CURRENT_VERSION = v;
+      document.querySelectorAll(".version-tag").forEach((el) => {
+        el.textContent = "v" + v;
+        el.dataset.ver = v;
+      });
+      const abVer = document.getElementById("aboutVersion");
+      if (abVer) abVer.textContent = "v" + v;
+      const abFront = document.getElementById("aboutFrontendVer");
+      if (abFront) abFront.textContent = "v" + v;
+    }
+  } catch (e) {}
+}
+
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", fetchAndApplyVersion);
+  } else {
+    setTimeout(fetchAndApplyVersion, 0);
+  }
+}
+

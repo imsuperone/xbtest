@@ -186,16 +186,16 @@ document.getElementById("btnSpiritImport")?.addEventListener("click", importSpir
 
 // 商城图鉴 (每商城独立栏 自由增删重命名+图片绑定)
 const DEFAULT_RIDE_SHOP = {
-  "企鹅": { price: 213250, img: "data/img/rides/企鹅.jpg", buff: 6, buff_type: "all" },
-  "伞兵": { price: 500000, img: "data/img/rides/伞兵.jpg", buff: 10, buff_type: "all" },
-  "宝驴": { price: 1000000, img: "data/img/rides/宝驴.jpg", buff: 10, buff_type: "all" },
-  "保时捷": { price: 1500000, img: "data/img/rides/保时捷.jpg", buff: 10, buff_type: "all" },
-  "法拉利": { price: 1500000, img: "data/img/rides/法拉利.jpg", buff: 10, buff_type: "all" },
-  "玛莎拉蒂": { price: 1500000, img: "data/img/rides/玛莎拉蒂.jpg", buff: 10, buff_type: "all" },
-  "劳斯莱斯": { price: 1500000, img: "data/img/rides/劳斯莱斯.jpg", buff: 10, buff_type: "all" },
-  "布加迪威龙": { price: 1500000, img: "data/img/rides/布加迪威龙.jpg", buff: 10, buff_type: "all" },
+  "企鹅": { price: 213250, img: "data/img/rides/企鹅.jpg", buff: 6, buff_type: "work" },
+  "伞兵": { price: 500000, img: "data/img/rides/伞兵.jpg", buff: 10, buff_type: "atk" },
+  "宝驴": { price: 1000000, img: "data/img/rides/宝驴.jpg", buff: 10, buff_type: "work" },
+  "保时捷": { price: 1500000, img: "data/img/rides/保时捷.jpg", buff: 10, buff_type: "travel" },
+  "法拉利": { price: 1500000, img: "data/img/rides/法拉利.jpg", buff: 10, buff_type: "travel" },
+  "玛莎拉蒂": { price: 1500000, img: "data/img/rides/玛莎拉蒂.jpg", buff: 10, buff_type: "travel" },
+  "劳斯莱斯": { price: 1500000, img: "data/img/rides/劳斯莱斯.jpg", buff: 10, buff_type: "work" },
+  "布加迪威龙": { price: 1500000, img: "data/img/rides/布加迪威龙.jpg", buff: 10, buff_type: "atk" },
   "私人航空": { price: 5000000, img: "data/img/rides/私人航空.jpg", buff: 15, buff_type: "all" },
-  "老八": { price: 500000, img: "data/img/rides/老八.jpg", buff: 10, buff_type: "all" },
+  "老八": { price: 500000, img: "data/img/rides/老八.jpg", buff: 10, buff_type: "atk" },
 };
 let SHOP_RIDE = {};
 let SHOP_DIRTY = false;
@@ -407,33 +407,36 @@ function renderPoolBox(forceOpen = false) {
 
       html += `
         <div class="weapon-item-card rarity-${rar.toLowerCase()}" data-pool-item="${esc(rar)}|${esc(name)}">
+          <div class="weapon-card-header">
+            <div class="weapon-title-area">
+              <span class="rarity-chip rarity-chip-${rar.toLowerCase()}">${esc(rar)}</span>
+              <span class="weapon-name-display" data-pool-rename title="点击改名">✦ ${esc(name)}</span>
+            </div>
+            <div class="weapon-quick-actions">
+              <select class="m3-select weapon-rar-select" data-pool-rar title="切换稀有度" style="padding:2px 6px;font-size:12px;font-weight:700">
+                ${rarList.map(r => `<option value="${r}"${r === rar ? ' selected' : ''}>${r}</option>`).join('')}
+              </select>
+              <button class="m3-sort-btn" data-pool-up title="上移排序">▲</button>
+              <button class="m3-sort-btn" data-pool-down title="下移排序">▼</button>
+              <button class="m3-icon-btn m3-btn-danger" data-pool-del title="删除此武器">🗑️</button>
+            </div>
+          </div>
           <div class="weapon-card-top">
             <div class="weapon-thumb-wrap" data-pool-thumb-wrap="${esc(name)}" data-pool-thumb="${esc(name)}" title="点击放大预览">
               ${thumb ? `<img src="${esc(thumb)}" alt="${esc(name)}">` : `<span class="rarity-chip rarity-chip-${rar.toLowerCase()}">${esc(rar)}</span>`}
             </div>
             <div class="weapon-card-main">
-              <div class="ride-row-split">
-                <span class="weapon-name-display" data-pool-rename title="点击改名">✦ ${esc(name)}</span>
-                <div style="display:flex;align-items:center;gap:4px">
-                  <select class="m3-select" data-pool-rar style="padding:2px 6px;font-size:12px;font-weight:700">
-                    ${rarList.map(r => `<option value="${r}"${r === rar ? ' selected' : ''}>${r}</option>`).join('')}
-                  </select>
-                  <button class="m3-sort-btn" data-pool-up title="上移排序">▲</button>
-                  <button class="m3-sort-btn" data-pool-down title="下移排序">▼</button>
-                  <button class="m3-icon-btn m3-btn-danger" data-pool-del title="删除此武器">🗑️</button>
-                </div>
-              </div>
-              <div class="ride-row-split" style="margin-top:2px">
-                <div class="input-with-label" title="攻击加成数值">
+              <div class="ride-row-split" style="gap:6px">
+                <div class="input-with-label" title="攻击加成数值" style="flex:0 0 115px">
                   <span class="input-label">⚔️ 攻击</span>
-                  <input class="m3-input" type="number" data-pool-atk value="${esc(_paAtk)}" style="width:75px">
+                  <input class="m3-input" type="number" data-pool-atk value="${esc(_paAtk)}" style="flex:1;min-width:0;width:100%">
                 </div>
-                <input class="m3-input weapon-desc-input" data-pool-desc value="${esc(_paDesc)}" placeholder="背景/特性描述..." style="flex:1" title="武器特性与背景描述">
+                <input class="m3-input weapon-desc-input" data-pool-desc value="${esc(_paDesc)}" placeholder="背景/特性描述..." style="flex:1;min-width:0" title="武器特性与背景描述">
               </div>
             </div>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding-top:4px;border-top:1px dashed var(--line)">
-            <div style="display:flex;gap:6px">
+          <div class="weapon-card-footer" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding-top:6px;border-top:1px dashed var(--line)">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
               <button class="ghost sm" data-pool-rename>✏️ 改名</button>
               <button class="ghost sm" data-pool-pick-builtin>📂 内置换图</button>
               <button class="ghost sm" data-pool-pick-upload>⬆️ 本地换图</button>
@@ -820,16 +823,16 @@ function bindShopSubnavOnce() {
 }
 
 function setShopSubtab(tab) {
-  CURRENT_SHOP_SUBTAB = tab;
+  CURRENT_SHOP_SUBTAB = tab || "ride";
   document.querySelectorAll("#shopSubnavBar .seg-item").forEach((b) => {
-    b.classList.toggle("active", b.dataset.shopSubtab === tab);
+    b.classList.toggle("active", b.dataset.shopSubtab === CURRENT_SHOP_SUBTAB);
   });
   const rBox = document.getElementById("shopRideBox");
   const pBox = document.getElementById("poolWeaponBox");
   const sBox = document.getElementById("shopSpiritBox");
-  if (rBox) rBox.style.display = (tab === "ride" || tab === "all") ? "" : "none";
-  if (pBox) pBox.style.display = (tab === "pool" || tab === "all") ? "" : "none";
-  if (sBox) sBox.style.display = (tab === "spirit" || tab === "all") ? "" : "none";
+  if (rBox) rBox.style.display = (CURRENT_SHOP_SUBTAB === "ride" || CURRENT_SHOP_SUBTAB === "all") ? "" : "none";
+  if (pBox) pBox.style.display = (CURRENT_SHOP_SUBTAB === "pool" || CURRENT_SHOP_SUBTAB === "all") ? "" : "none";
+  if (sBox) sBox.style.display = (CURRENT_SHOP_SUBTAB === "spirit" || CURRENT_SHOP_SUBTAB === "all") ? "" : "none";
   updateShopBadges();
 }
 
@@ -916,14 +919,14 @@ function renderShopRideBox(forceOpen = false) {
                 <input class="m3-input ride-name-input" data-ride-name value="${esc(name)}" placeholder="坐骑名称" title="坐骑名称">
                 <button class="m3-icon-btn m3-btn-danger" data-ride-del="${esc(name)}" title="删除此坐骑">🗑️</button>
               </div>
-              <div class="ride-row-split">
-                <div class="input-with-label" title="购买所需金币">
+              <div class="ride-row-split" style="gap:6px">
+                <div class="input-with-label" title="购买所需金币" style="flex:1;min-width:0">
                   <span class="input-label">💰 价格</span>
-                  <input class="m3-input" type="number" data-ride-price value="${esc(price)}" style="width:105px">
+                  <input class="m3-input" type="number" data-ride-price value="${esc(price)}" style="flex:1;min-width:40px;width:100%">
                 </div>
-                <div class="input-with-label" title="乘坐加成百分比（直接影响战力、搬砖工钱、远征金币）">
+                <div class="input-with-label" title="乘坐加成百分比（直接影响战力、搬砖工钱、远征金币）" style="flex:0 0 95px">
                   <span class="input-label">⚡ 加成</span>
-                  <input class="m3-input" type="number" data-ride-buff value="${esc(curBuff)}" style="width:65px">
+                  <input class="m3-input" type="number" data-ride-buff value="${esc(curBuff)}" style="width:38px;padding:2px 2px;text-align:center">
                   <span class="input-unit">%</span>
                 </div>
               </div>
@@ -1344,6 +1347,7 @@ async function loadShops(skipAtlas = false) {
     try { await loadPool(true); } catch (e) {}
     if (!skipAtlas) { try { renderAtlas(cur); } catch (e) {} }
     try { applyShopOrder(); } catch (e) {}
+    try { setShopSubtab(CURRENT_SHOP_SUBTAB || "ride"); } catch (e) {}
     if (msg) { msg.textContent = ""; msg.classList.remove("ok", "bad"); }
   } catch (e) {
     if (msg) { msg.textContent = "加载失败: " + e.message; msg.classList.add("bad"); }
