@@ -11,7 +11,16 @@ except ImportError:
     store = ST
 from . import slave_state as _S
 from .base import U, _cmd_lock, cfg, load_events, log, save, star_of, state, uget, weapons_of
-from .combat import _treasure_effect, _treasure_names, _weapon_atk_bonus, _weapon_desc, cmd_fight
+from .combat import (
+    _treasure_effect,
+    _treasure_names,
+    _treasure_stage_mult,
+    _treasure_trigger_prob,
+    _weapon_atk_bonus,
+    _weapon_desc,
+    cmd_fight,
+)
+from ..config.slave import SHIELD_TREASURE, TREASURE_GOURD_NAME
 from .gacha import _gacha_pool, _img_path, _weapon_img_path, cmd_gacha, cmd_starup, cmd_treasure_menu, cmd_treasure_up, cmd_weapon_menu
 from .nick import clear_note_name, mark_known
 from .profile import cmd_menu, cmd_myinfo, cmd_query, cmd_rank, cmd_rank_price, cmd_rank_sign
@@ -263,12 +272,24 @@ def _route_locked(gid, qq, raw):
             return cmd_treasure_up(gid, qq, _raw_t, st)
         return None
     if q in treas:
-        stage = int(uget(U(st, qq), q + "升阶", "0"))
-        have = int(uget(U(st, qq), q, "0"))
+        u = U(st, qq)
+        stage = int(uget(u, q + "升阶", "0"))
+        have = int(uget(u, q, "0"))
         eff = _treasure_effect(q)
-        return (_S.T.T_NAME.format(name=q) + "\r\n" + _S.T.T_STAGE.format(n=stage)
+        res = (_S.T.T_NAME.format(name=q) + "\r\n" + _S.T.T_STAGE.format(n=stage)
                 + "\r\n" + _S.T.T_EFFECT.format(effect=eff)
                 + f"\r\n持有数量: {have}")
+        if q == "酒神葫芦":
+            prob = _treasure_trigger_prob(u, "pardon", default_base=25, fallbacks=(TREASURE_GOURD_NAME,))
+            res += f"\r\n当前免罪触发率: {prob}%（升阶持续提升，★5阶达98%）"
+        elif q == "四象护符":
+            prob = _treasure_trigger_prob(u, "shield", default_base=25, fallbacks=(SHIELD_TREASURE,))
+            res += f"\r\n当前圣盾触发率: {prob}%（升阶持续提升，★5阶达98%）"
+        else:
+            mult = _treasure_stage_mult(stage)
+            if mult > 1.0:
+                res += f"\r\n当前升阶倍率: {mult:.2f}倍"
+        return res
     if q in all_w:
         u = U(st, qq)
         lv = star_of(u, q)

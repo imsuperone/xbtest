@@ -179,6 +179,67 @@ def _treasure_stage_mult(stage):
         return 1.0
 
 
+def _treasure_trigger_prob(u, ttype, default_base=25, fallbacks=()):
+    """计算某功能宝物在当前玩家身上的实际触发概率（百分比 0..98）。
+    默认初始概率下压（0阶约 25%），随着升阶（★1~★5）逐步大幅提升触发率：
+    ★0阶: base (25%)
+    ★1阶: base + 15 (40%)
+    ★2阶: base + 30 (55%)
+    ★3阶: base + 45 (70%)
+    ★4阶: base + 60 (85%)
+    ★5阶: 98% (极道至尊)
+    """
+    if u is None:
+        return 0
+    owned = treasures_of(u)
+    if not owned:
+        return 0
+
+    best_prob = 0
+    for t in owned:
+        t_str = str(t)
+        matched = False
+        val = 0
+        if t_str in (fallbacks or ()):
+            matched = True
+        for tt, vv in _treasure_effect_list(t_str):
+            if tt == str(ttype or ""):
+                matched = True
+                try:
+                    val = max(val, int(vv or 0))
+                except Exception:
+                    pass
+        if not matched:
+            continue
+
+        base_p = val if val > 0 else default_base
+        stage = 0
+        try:
+            stage = _safe_int(uget(u, t_str + "升阶", "0"), 0)
+        except Exception:
+            stage = 0
+        stage = max(0, min(5, stage))
+
+        if stage == 0:
+            prob = base_p
+        elif stage == 1:
+            prob = base_p + 15
+        elif stage == 2:
+            prob = base_p + 30
+        elif stage == 3:
+            prob = base_p + 45
+        elif stage == 4:
+            prob = base_p + 60
+        else:
+            prob = 98
+
+        prob = max(1, min(98, prob))
+        if prob > best_prob:
+            best_prob = prob
+
+    return best_prob
+
+
 def _treasure_pct_total(owned, ttype, cap=100, u=None):
     """持有宝物某百分比型加成之和（支持按星阶倍率放大，钳位 0..cap；多效果宝物按行累加）"""
     s = 0
@@ -428,7 +489,10 @@ def cmd_fight(gid, qq, target, st):
     win = _random.random() < pwin
 
     def _shield(owner_q):
-        return _has_treasure_type(treasures_of(U(st, owner_q)), "shield", (SHIELD_TREASURE,))
+        prob = _treasure_trigger_prob(U(st, owner_q), "shield", default_base=25, fallbacks=(SHIELD_TREASURE,))
+        if prob <= 0:
+            return False, 0
+        return (_random.randint(1, 100) <= prob), prob
 
     now_ts = _time.time()
     if win:
@@ -436,10 +500,11 @@ def cmd_fight(gid, qq, target, st):
         free_slot = len(slaves_of(st, qq)) < user_slave_slots(U(st, qq))
         stealable = [s for s in d_slaves if now_ts >= protected_until(U(st, s))]
         if stealable and free_slot:
-            if _shield(tid):
+            shield_on, shield_prob = _shield(tid)
+            if shield_on:
                 victim = _random.choice(stealable)
                 lines.append(_S.T.FIGHT_TA_TREASURE)
-                lines.append("[" + uname(st, victim) + "]" + _S.T.FIGHT_TA_SHIELD)
+                lines.append(f"[{uname(st, victim)}]{_S.T.FIGHT_TA_SHIELD}（【四象护符】{shield_prob}%概率触发圣盾）")
             else:
                 victim = _random.choice(stealable)
                 uset(U(st, victim), "owner", qq)
@@ -459,10 +524,10 @@ def cmd_fight(gid, qq, target, st):
             lines.append(_S.T.FIGHT_SLOT_FULL.format(money=ransom))
     else:
         lines.append(_S.T.FIGHT_LOSE)
-        shield = _shield(qq)
+        shield_on, shield_prob = _shield(qq)
         stealable = [s for s in a_slaves if now_ts >= protected_until(U(st, s))]
         free_t = len(slaves_of(st, tid)) < user_slave_slots(U(st, tid))
-        if stealable and not shield and free_t:
+        if stealable and not shield_on and free_t:
             victim = _random.choice(stealable)
             uset(U(st, victim), "owner", tid)
             uset(U(st, victim), "purchase_price", str(int(uget(U(st, victim), "price") or 0)))
@@ -473,10 +538,10 @@ def cmd_fight(gid, qq, target, st):
             newp = min(_S.MAX_PRICE, int(int(uget(U(st, victim), "price") or 0) * cfgf("费用配置", "买入身价上涨", _S.PRICE_UP)))
             uset(U(st, victim), "price", str(newp))
             lines.append(_S.T.FIGHT_LOSE_SLAVE.format(slave="[" + uname(st, victim) + "]"))
-        elif shield and stealable:
+        elif shield_on and stealable:
             victim = _random.choice(stealable)
             lines.append(_S.T.FIGHT_MY_TREASURE)
-            lines.append("[" + uname(st, victim) + "]" + _S.T.FIGHT_MY_SHIELD)
+            lines.append(f"[{uname(st, victim)}]{_S.T.FIGHT_MY_SHIELD}（【四象护符】{shield_prob}%概率触发圣盾）")
         else:
             ransom = transfer_cash_or_deposit(gid, qq, tid, stake)
             if ransom is None:

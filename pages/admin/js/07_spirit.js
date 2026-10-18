@@ -277,8 +277,14 @@ async function renderAtlas(curCfg){
         window._TREAS_DIRTY = false;
       }
     } catch(e) { Treas = ["酒神葫芦", "四象护符", "金蟾", "玉如意", "雷公锤", "夜明珠"]; }
-    const _spiritMaps = (() => { try { return Object.keys((SPIRIT && SPIRIT.maps) || {}); } catch (e) { return []; } })();
-    const _tabs = [["treasure", "宝物", Treas.length], ["spirit", "精灵", _spiritMaps.length]];
+    const _spiritMaps = (() => {
+      try {
+        if (SPIRIT && SPIRIT.maps && Object.keys(SPIRIT.maps).length) return Object.keys(SPIRIT.maps).length;
+        if (SPIRIT && SPIRIT._builtin && SPIRIT._builtin.maps && Object.keys(SPIRIT._builtin.maps).length) return Object.keys(SPIRIT._builtin.maps).length;
+        return 14;
+      } catch (e) { return 14; }
+    })();
+    const _tabs = [["treasure", "宝物", Treas.length], ["spirit", "精灵", _spiritMaps]];
     const _q = String((typeof window._ATLAS_Q !== "undefined" && window._ATLAS_Q) || "").trim();
     const _ql = _q.toLowerCase();
     let html = `<div class="atlas-top-bar">`
@@ -289,11 +295,11 @@ async function renderAtlas(curCfg){
       + `</div><div class="atlas-body-flow">`;
     // 内置回退与后端 games/config/shop.py TREASURES 同构（含真实 type/value，改后端表时此处同改）
     const _TREAS_BUILTIN = {
-      "酒神葫芦": { effect: "造反免罪：持有时造反直接成功，恢复自由并劫掠主人", type: "pardon", value: 1 },
-      "四象护符": { effect: "打架护盾：己方被打败/打赢时免被偷走奴隶", type: "shield", value: 1 },
-      "金蟾": { effect: "打工工资 +20%", type: "work", value: 20 },
-      "玉如意": { effect: "身价加成 +10%（计入战斗力）", type: "worth", value: 10 },
-      "雷公锤": { effect: "主人战力 +500", type: "atk", value: 500 },
+      "酒神葫芦": { effect: "造反免罪：造反有概率免罪成功并劫掠主人（初始25%，升阶大幅提升触发率）", type: "pardon", value: 25 },
+      "四象护符": { effect: "打架护盾：打架有概率抵挡掠夺护住奴隶（初始25%，升阶大幅提升触发率）", type: "shield", value: 25 },
+      "金蟾": { effect: "打工工资 +10%（升阶提升加成倍率）", type: "work", value: 10 },
+      "玉如意": { effect: "身价加成 +6%（计入战斗力，升阶提升加成倍率）", type: "worth", value: 6 },
+      "雷公锤": { effect: "主人战力 +250（升阶大幅强化战力加成）", type: "atk", value: 250 },
       "夜明珠": { effect: "纯收藏，无实战效果", type: "", value: 0 }
     };
     try { window._TREAS_BUILTIN = _TREAS_BUILTIN; } catch (e) {}
@@ -314,12 +320,12 @@ async function renderAtlas(curCfg){
         return [];
       } catch (e) { return []; }
     };
-    // 效果徽章：数值型显示数值，二进制型（盾/免）显示是否（不暴露 1/0）
+    // 效果徽章：数值型显示数值，概率型（盾/免）显示触发率%
     const _effBadge = (t, v) => {
       try {
         if (t === "atk") return v > 0 ? "攻+" + v : "攻";
-        if (t === "shield") return "盾·是";
-        if (t === "pardon") return "免·是";
+        if (t === "shield") return v > 0 ? "盾·" + v + "%" : "盾";
+        if (t === "pardon") return v > 0 ? "免·" + v + "%" : "免";
         if (t === "work") return v > 0 ? "工+" + v + "%" : "工";
         if (t === "worth") return v > 0 ? "价+" + v + "%" : "价";
         return "";
@@ -635,8 +641,8 @@ function openTreasureEditModal(name, isNew) {
 }
 
 function refreshSpiritViews() {
-  // 上方地图编辑区已并入总览精灵页签，此处只刷总览与道具商城
-  try { if (typeof ATLAS_CUR !== "undefined" && ATLAS_CUR === "spirit") renderAtlas(); } catch (e) {}
+  // 刷新总览（无论当前在宝物还是精灵页，都要重新绘制以同步顶部页签数量统计与最新数据）
+  try { if (typeof renderAtlas === "function") renderAtlas(); } catch (e) {}
   try { if (typeof renderShop === "function") renderShop(); } catch (e) {}
 }
 

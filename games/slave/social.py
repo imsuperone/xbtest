@@ -27,7 +27,7 @@ except ImportError:
                                     TREASURE_GOURD_NAME,
                                     CHARM_PROB_STEP, CHARM_PROB_BONUS, CHARM_PROB_CAP)
 from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgi, cn_fmt, cn_parse, coins_add, coins_get, deduct_cash_or_deposit, slaves_of, total_assets, transfer_cash_or_deposit, treasures_of, uget, uset
-from .combat import _has_treasure_type, _treasure_names, _treasure_pct_total, battle_power
+from .combat import _has_treasure_type, _treasure_names, _treasure_pct_total, _treasure_trigger_prob, battle_power
 from .nick import uname
 from .profile import coin_name
 def _charm_bonus(gid, qq):
@@ -481,8 +481,11 @@ def cmd_revolt(gid, qq, st):
     sn = uget(u, "name") or (str(qq))
     loot_want = _random.randint(loot_lo, loot_hi)
 
-    i_have_gourd = _has_treasure_type(treasures_of(u), "pardon", (TREASURE_GOURD_NAME,))
-    master_has_gourd = _has_treasure_type(treasures_of(U(st, owner)), "pardon", (TREASURE_GOURD_NAME,))
+    i_gourd_prob = _treasure_trigger_prob(u, "pardon", default_base=25, fallbacks=(TREASURE_GOURD_NAME,))
+    master_gourd_prob = _treasure_trigger_prob(U(st, owner), "pardon", default_base=25, fallbacks=(TREASURE_GOURD_NAME,))
+
+    i_have_gourd = (i_gourd_prob > 0) and (_random.randint(1, 100) <= i_gourd_prob)
+    master_has_gourd = (master_gourd_prob > 0) and (_random.randint(1, 100) <= master_gourd_prob)
 
     if i_have_gourd:
         loot = transfer_cash_or_deposit(gid, owner, qq, loot_want)
@@ -493,7 +496,8 @@ def cmd_revolt(gid, qq, st):
         uset(u, "protect_until", "")
         uset(u, "protector", "")
         uset(u, "_work_wage", "")
-        return (_S.T.RV_GOURD_WIN + "\r\n" + _S.T.RV_LOOT.format(loot=loot, coin=coin_name())
+        return (_S.T.RV_GOURD_WIN + f"（【酒神葫芦】{i_gourd_prob}%概率触发免罪显灵）\r\n"
+                + _S.T.RV_LOOT.format(loot=loot, coin=coin_name())
                 + "\r\n" + _S.T.REVOLT_FREE.replace("，", "")
                 + _charm_note(_charge_charm(gid, qq, charm_cost)))
     if master_has_gourd:
@@ -501,7 +505,8 @@ def cmd_revolt(gid, qq, st):
         if pay is None:
             return "数据库繁忙，造反结算未成功，请稍后重试。"
         pay = max(0, int(pay or 0))
-        return (_S.T.RV_GOURD_LOSE + f"({pay}{coin_name()})\r\n" + _S.T.REVOLT_FAIL_STAY
+        return (_S.T.RV_GOURD_LOSE + f"（主人【酒神葫芦】{master_gourd_prob}%概率触发镇压）({pay}{coin_name()})\r\n"
+                + _S.T.REVOLT_FAIL_STAY
                 + _charm_note(_charge_charm(gid, qq, charm_cost)))
     _revolt_p = cfgi("概率配置", "造反概率", 20)
     try:
