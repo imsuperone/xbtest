@@ -290,6 +290,22 @@ function initQuestionsView() {
     saveCurrentQuestions();
   });
 
+  // 清空当前词库
+  document.getElementById("btnQClear")?.addEventListener("click", async () => {
+    const bankNames = { trick: "急转弯", miri: "猜字谜", quiz: "知识问答", chain: "成语接龙" };
+    const curName = bankNames[_Q_BANK] || "当前题库";
+    const curCount = (_Q_DATA[_Q_BANK] || []).length;
+    if (curCount === 0) {
+      toast(`【${curName}】当前已是空白词库，无需清空`, "info");
+      return;
+    }
+    const tip = `确定要清空【${curName}】的全部 ${curCount} 条词库数据吗？\n清空后你可以自由添加自己的专属词条或保持空白，需点击「保存当前题库」落盘生效。`;
+    if (!(await uiConfirm(tip, `清空${curName}词库`))) return;
+    _Q_DATA[_Q_BANK] = [];
+    renderQuestions();
+    toast(`已清空【${curName}】全部词条，请点击「保存当前题库」落盘生效`, "ok", 4500);
+  });
+
   // 恢复重载题库
   document.getElementById("btnQReset")?.addEventListener("click", async () => {
     if (!(await uiConfirm(`确认放弃当前未保存的修改，重新从文件加载当前题库吗？`, "重载题库"))) return;

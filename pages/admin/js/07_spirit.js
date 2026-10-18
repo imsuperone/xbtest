@@ -347,7 +347,7 @@ async function renderAtlas(curCfg){
         <details class="sys-num-panel" style="margin-bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px" open>
           <summary style="font-weight:700;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
             <div style="display:flex;align-items:center;gap:8px">
-              <span>💎 宝物升阶规则与数值调控（一阶至五阶花费、概率与经验）</span>
+              <span>💎 宝物通用基准规则（所有宝物的默认花费、默认概率与经验）</span>
               <span class="badge badge-primary" style="font-size:10.5px">即时生效</span>
             </div>
             <span style="font-size:12px;color:var(--muted);font-weight:normal">点击展开/收起 ▾</span>
@@ -355,8 +355,8 @@ async function renderAtlas(curCfg){
           <div style="margin-top:12px">
             <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:12px;font-size:11.5px;font-weight:700;color:var(--muted);padding-bottom:6px;border-bottom:1px solid var(--line)">
               <span>阶位</span>
-              <span>升阶花费 (金币金额)</span>
-              <span>成功概率 (%)</span>
+              <span>默认升阶花费 (金币金额)</span>
+              <span>默认成功概率 (%)</span>
               <span>提供升阶经验</span>
             </div>
             ${tierNums.map((t) => `
@@ -368,8 +368,8 @@ async function renderAtlas(curCfg){
               </div>
             `).join("")}
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
-              <span class="hint" style="font-size:11.5px">升阶金额与概率修改后点击右侧按钮保存，机器人将即时应用新规则。</span>
-              <button type="button" class="btn sm" id="btnSaveTreasureUpgrades">💾 保存升阶数值</button>
+              <span class="hint" style="font-size:11.5px">💡 此处为所有宝物的<b>通用默认底模</b>。若某个宝物（如酒神葫芦、四象护符）需要不同的概率，可在下方列表中点击该宝物的「编辑」单独定制专属概率。</span>
+              <button type="button" class="btn sm" id="btnSaveTreasureUpgrades">💾 保存基准数值</button>
             </div>
           </div>
         </details>
@@ -664,19 +664,19 @@ function openTreasureEditModal(name, isNew) {
 
       <!-- 该宝物专属升阶概率与触发率微调 -->
       <div style="border-top:1px solid var(--line);padding-top:10px;margin-top:4px">
-        <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:6px">💎 该宝物专属升阶数值调控（留空继承全局）：</label>
+        <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:6px">💎 该宝物专属升阶概率（留空自动使用通用基准概率）：</label>
         <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:8px">
           ${tProbs.map(t => `
             <div>
               <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:2px">${t.tier}阶率(%)</span>
-              <input id="treProb_${t.tier}" type="number" min="1" max="100" placeholder="全局" value="${esc(t.val)}" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
+              <input id="treProb_${t.tier}" type="number" min="1" max="100" placeholder="通用默认" value="${esc(t.val)}" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
             </div>
           `).join("")}
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
           <span style="font-size:11.5px;color:var(--muted);white-space:nowrap">免罪/圣盾初始触发率(%):</span>
           <input id="treBaseProb" type="number" min="1" max="100" placeholder="默认25" value="${esc(tBaseProb)}" style="width:90px;padding:5px 8px;font-size:12px;border-radius:8px">
-          <span class="hint" style="font-size:11px">酒神葫芦/四象护符等0阶默认25%</span>
+          <span class="hint" style="font-size:11px">酒神葫芦/四象护符等0阶默认25%，升阶可提升触发率</span>
         </div>
       </div>
     </div>`;

@@ -468,17 +468,6 @@ function initSideNavCollapse() {
   });
 
   let isOpen = false;
-  let activeAnimCancel = null;
-
-  const cancelActiveAnim = () => {
-    if (activeAnimCancel) {
-      try { activeAnimCancel(); } catch (e) {}
-      activeAnimCancel = null;
-    }
-    document.querySelectorAll(".harmony-powder-canvas").forEach((c) => {
-      try { c.parentNode.removeChild(c); } catch (e) {}
-    });
-  };
 
   const setControlsState = (open, instant = false) => {
     if (instant) {
@@ -507,43 +496,23 @@ function initSideNavCollapse() {
   isOpen = false;
   setControlsState(false, true);
 
-  const getVisibleTrigger = () => {
-    return triggers.find((t) => window.getComputedStyle(t).display !== "none") || triggers[0];
-  };
-
-  const closeIsland = (withAnim = true) => {
+  const closeIsland = () => {
     if (!isOpen) return;
     isOpen = false;
-    cancelActiveAnim();
     setControlsState(false);
-
-    if (!withAnim) return;
-
-    activeAnimCancel = triggerHarmonyDisintegrate(nav, () => {
-      setControlsState(false, true);
-      activeAnimCancel = null;
-    });
   };
 
-  const openIsland = (withAnim = true) => {
+  const openIsland = () => {
     if (isOpen) return;
     isOpen = true;
-    cancelActiveAnim();
     setControlsState(true);
-
-    if (!withAnim) return;
-
-    activeAnimCancel = triggerHarmonyAssemble(nav, getVisibleTrigger(), () => {
-      setControlsState(true);
-      activeAnimCancel = null;
-    });
   };
 
   // 触发入口统一绑定（PC 顶栏导航按钮 + 移动端右下角 FAB，一套逻辑全平台复用）
   triggers.forEach((t) => {
     t.addEventListener("click", (e) => {
       e.stopPropagation();
-      isOpen ? closeIsland(true) : openIsland(true);
+      isOpen ? closeIsland() : openIsland();
     });
   });
 
@@ -551,7 +520,7 @@ function initSideNavCollapse() {
   [toggle, islandHead, backdrop].filter(Boolean).forEach((el) => {
     el.addEventListener("click", (e) => {
       e.stopPropagation();
-      closeIsland(true);
+      closeIsland();
     });
   });
 
@@ -560,303 +529,32 @@ function initSideNavCollapse() {
     if (!isOpen) return;
     if (nav.contains(e.target)) return;
     if (triggers.some((t) => t.contains(e.target))) return;
-    closeIsland(true);
+    closeIsland();
   });
 
-  // 点击导航选项触发粒子粉末崩解收起
+  // 点击导航选项触发平滑弹出收回
   nav.querySelectorAll("button[data-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      closeIsland(true);
+      closeIsland();
     });
   });
 
   // ESC 键收起
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && isOpen) closeIsland(true);
+    if (e.key === "Escape" && isOpen) closeIsland();
   });
 }
 
-// ---------- 鸿蒙组件粉末化消散特效 (HarmonyOS 1:1 Physical Powder Disintegration - 120 FPS 满帧引擎) ----------
+// 移除画布粒子代码，提供轻量空兜底防止旧调用异常
 function triggerHarmonyDisintegrate(el, onComplete) {
-  if (!el) {
-    if (onComplete) onComplete();
-    return () => {};
-  }
-  const rect = el.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) {
-    if (onComplete) onComplete();
-    return () => {};
-  }
-
-  const canvas = document.createElement("canvas");
-  canvas.className = "harmony-powder-canvas";
-  canvas.style.position = "fixed";
-  canvas.style.left = "0px";
-  canvas.style.top = "0px";
-  canvas.style.width = "100vw";
-  canvas.style.height = "100vh";
-  canvas.style.pointerEvents = "none";
-  canvas.style.zIndex = "9999";
-  document.body.appendChild(canvas);
-
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const ctx = canvas.getContext("2d");
-
-  const isDark = document.documentElement.dataset.theme === "dark";
-  const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9";
-  const colors = isDark
-    ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF", "#CBD5E1"]
-    : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#2196F3"];
-
-  // 1:1 组件级表面网格微尘采样 (自适应几何尺寸，整屏呈现 2,000+ 物理紧密细沙)
-  const cols = Math.max(16, Math.min(24, Math.round(rect.width / 14)));
-  const rows = Math.max(20, Math.min(32, Math.round(rect.height / 20)));
-  const stepX = rect.width / cols;
-  const stepY = rect.height / rows;
-  const particles = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const px = rect.left + (c + Math.random()) * stepX;
-      const py = rect.top + (r + Math.random()) * stepY;
-      const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 2.8 + 0.4;
-      particles.push({
-        x: px,
-        y: py,
-        vx: Math.cos(angle) * speed * 0.7 + (Math.random() - 0.5) * 1.4,
-        vy: Math.sin(angle) * speed * 0.45 - Math.random() * 2.0 - 0.7,
-        size: Math.random() * 1.8 + 0.8,
-        alpha: Math.random() * 0.3 + 0.7,
-        decay: Math.random() * 0.019 + 0.015,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        ox1: ((Math.random() - 0.5) * 10) | 0,
-        oy1: ((Math.random() - 0.5) * 10) | 0,
-        ox2: ((Math.random() - 0.5) * 18) | 0,
-        oy2: ((Math.random() - 0.5) * 18) | 0,
-        ox3: ((Math.random() - 0.5) * 26) | 0,
-        oy3: ((Math.random() - 0.5) * 26) | 0,
-      });
-    }
-  }
-
-  // 元素本体瞬间微缩并消失，粉末即刻接管视觉呈现，彻底释放毛玻璃 GPU 资源
-  el.style.transition = "transform 0.08s ease-out, opacity 0.06s ease-out";
-  el.style.transform = "scale(0.975) translate3d(0, 6px, 0)";
-  el.style.opacity = "0";
-
-  let animId;
-  const startTime = performance.now();
-
-  function render(now) {
-    const elapsed = now - startTime;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    let aliveCount = 0;
-    for (let i = 0; i < particles.length; i++) {
-      const p = particles[i];
-      if (p.alpha <= 0.01) continue;
-      aliveCount++;
-
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vx *= 0.962;
-      p.vy *= 0.962;
-      p.vy -= 0.035;
-      p.alpha -= p.decay;
-      p.size = Math.max(0.4, p.size * 0.985);
-
-      ctx.globalAlpha = Math.max(0, p.alpha);
-      ctx.fillStyle = p.color;
-      const sz = p.size | 0 || 1;
-      const rx = (p.x - sz / 2) | 0;
-      const ry = (p.y - sz / 2) | 0;
-
-      // 1. 主微粒核
-      ctx.fillRect(rx, ry, sz, sz);
-
-      // 2. 1:1 伴生高密微尘 (4x 假渲染，实显 2,000+ 物理细沙)
-      ctx.fillRect(rx + p.ox1, ry + p.oy1, 1, 1);
-      ctx.fillRect(rx + p.ox2, ry + p.oy2, 1, 1);
-      if (p.alpha > 0.14) {
-        ctx.fillRect(rx + p.ox3, ry + p.oy3, 1, 1);
-      }
-    }
-
-    if (aliveCount > 0 && elapsed < 520) {
-      animId = requestAnimationFrame(render);
-    } else {
-      cancelAnimationFrame(animId);
-      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
-      el.style.opacity = "";
-      el.style.transform = "";
-      el.style.transition = "";
-      if (onComplete) onComplete();
-    }
-  }
-
-  animId = requestAnimationFrame(render);
-
-  return () => {
-    cancelAnimationFrame(animId);
-    if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
-    el.style.opacity = "";
-    el.style.transform = "";
-    el.style.transition = "";
-  };
+  if (onComplete) onComplete();
+  return () => {};
 }
 window.triggerHarmonyDisintegrate = triggerHarmonyDisintegrate;
 
-// ---------- 鸿蒙粒子汇聚进入特效 (HarmonyOS 1:1 Physical Assembly - 120 FPS 满帧引擎) ----------
 function triggerHarmonyAssemble(el, triggerEl, onComplete) {
-  if (!el) {
-    if (onComplete) onComplete();
-    return () => {};
-  }
-
-  // 预先显示以便抓取真实物理尺寸
-  el.style.transition = "none";
-  el.classList.remove("collapsed");
-  el.style.opacity = "0";
-  el.style.transform = "scale(0.97) translate3d(0, 8px, 0)";
-  const rect = el.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) {
-    el.style.opacity = "";
-    el.style.transform = "";
-    el.style.transition = "";
-    if (onComplete) onComplete();
-    return () => {};
-  }
-
-  // 发射源头坐标（PC 顶栏按钮 / 手机端 FAB 纯几何坐标自适应）
-  const trigRect = triggerEl ? triggerEl.getBoundingClientRect() : {
-    left: rect.left,
-    top: rect.top - 40,
-    width: 44,
-    height: 36
-  };
-  const originX = trigRect.left + trigRect.width / 2;
-  const originY = trigRect.top + trigRect.height / 2;
-
-  const canvas = document.createElement("canvas");
-  canvas.className = "harmony-powder-canvas";
-  canvas.style.position = "fixed";
-  canvas.style.left = "0px";
-  canvas.style.top = "0px";
-  canvas.style.width = "100vw";
-  canvas.style.height = "100vh";
-  canvas.style.pointerEvents = "none";
-  canvas.style.zIndex = "9999";
-  document.body.appendChild(canvas);
-
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const ctx = canvas.getContext("2d");
-
-  const isDark = document.documentElement.dataset.theme === "dark";
-  const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--m3-sys-color-primary").trim() || "#4A90D9";
-  const colors = isDark
-    ? [primaryColor, "#8AB8F0", "#D6E8FA", "#384556", "#A9C9F5", "#FFFFFF", "#CBD5E1"]
-    : [primaryColor, "#64B5F6", "#D9E8F7", "#DFE6EF", "#FFFFFF", "#90CAF9", "#2196F3"];
-
-  const cols = Math.max(16, Math.min(24, Math.round(rect.width / 14)));
-  const rows = Math.max(20, Math.min(32, Math.round(rect.height / 20)));
-  const stepX = rect.width / cols;
-  const stepY = rect.height / rows;
-  const particles = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const destX = rect.left + (c + Math.random()) * stepX;
-      const destY = rect.top + (r + Math.random()) * stepY;
-      const isFromTrigger = Math.random() < 0.72;
-      const startX = isFromTrigger ? (originX + (Math.random() - 0.5) * 36) : (destX + (Math.random() - 0.5) * 90);
-      const startY = isFromTrigger ? (originY + (Math.random() - 0.5) * 28) : (destY + (Math.random() - 0.5) * 70 + 20);
-
-      particles.push({
-        startX,
-        startY,
-        destX,
-        destY,
-        delay: Math.random() * 80,
-        duration: 220 + Math.random() * 110,
-        size: Math.random() * 1.8 + 0.8,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        swirl: (Math.random() - 0.5) * 16,
-        ox1: ((Math.random() - 0.5) * 10) | 0,
-        oy1: ((Math.random() - 0.5) * 10) | 0,
-        ox2: ((Math.random() - 0.5) * 18) | 0,
-        oy2: ((Math.random() - 0.5) * 18) | 0,
-      });
-    }
-  }
-
-  let animId;
-  const startTime = performance.now();
-  let cardRevealed = false;
-
-  function render(now) {
-    const elapsed = now - startTime;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    let activeCount = 0;
-    for (let i = 0; i < particles.length; i++) {
-      const p = particles[i];
-      const t = (elapsed - p.delay) / p.duration;
-      if (t < 0) {
-        activeCount++;
-        continue;
-      }
-      if (t > 1) continue;
-      activeCount++;
-
-      // 三次方平滑缓动吸附
-      const ease = 1 - Math.pow(1 - t, 3);
-      const curX = p.startX + (p.destX - p.startX) * ease + Math.sin(t * Math.PI) * p.swirl;
-      const curY = p.startY + (p.destY - p.startY) * ease;
-      const alpha = t < 0.25 ? (t / 0.25) : (1 - (t - 0.25) * 0.45);
-
-      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-      ctx.fillStyle = p.color;
-      const sz = p.size | 0 || 1;
-      const rx = (curX - sz / 2) | 0;
-      const ry = (curY - sz / 2) | 0;
-
-      // 1. 主星尘微粒核
-      ctx.fillRect(rx, ry, sz, sz);
-
-      // 2. 伴生星尘微粒
-      ctx.fillRect(rx + p.ox1, ry + p.oy1, 1, 1);
-      ctx.fillRect(rx + p.ox2, ry + p.oy2, 1, 1);
-    }
-
-    if (!cardRevealed && elapsed >= 180) {
-      cardRevealed = true;
-      el.style.transition = "transform 0.22s cubic-bezier(0.18, 0.95, 0.25, 1.15), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1)";
-      el.style.opacity = "1";
-      el.style.transform = "scale(1) translate3d(0, 0, 0)";
-    }
-
-    if (activeCount > 0 && elapsed < 450) {
-      animId = requestAnimationFrame(render);
-    } else {
-      cancelAnimationFrame(animId);
-      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
-      el.style.opacity = "";
-      el.style.transform = "";
-      el.style.transition = "";
-      if (onComplete) onComplete();
-    }
-  }
-
-  animId = requestAnimationFrame(render);
-
-  return () => {
-    cancelAnimationFrame(animId);
-    if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
-    el.style.opacity = "";
-    el.style.transform = "";
-    el.style.transition = "";
-  };
+  if (onComplete) onComplete();
+  return () => {};
 }
 window.triggerHarmonyAssemble = triggerHarmonyAssemble;
 function err(m) {
