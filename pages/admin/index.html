@@ -547,16 +547,16 @@
       <div class="panel">
         <div class="m3-page-header">
           <div class="m3-page-header-info">
-            <h2>数据库备份与容灾</h2>
+            <h2>💾 数据库备份与容灾</h2>
             <div class="m3-subtitle">本地增量快照、历史备份版本归档与快捷恢复</div>
           </div>
           <div class="m3-action-bar">
-            <button id="btnBackupNow" class="btn sm">立即备份</button>
-            <button id="btnDbDoctor" class="ghost sm" style="color:var(--ok);border-color:var(--okSoft);font-weight:600">数据库体检与整理</button>
-            <button id="btnBackupRefresh" class="ghost sm">刷新</button>
-            <button id="btnBackupRestore" class="ghost sm">恢复选中</button>
-            <button id="btnBackupExportSel" class="ghost sm">导出</button>
-            <button id="btnBackupDelete" class="ghost sm del">删除选中</button>
+            <button id="btnBackupNow" class="btn sm">💾 立即备份</button>
+            <button id="btnDbDoctor" class="ghost sm" style="color:var(--ok);border-color:var(--okSoft);font-weight:600">🩺 数据库体检</button>
+            <button id="btnBackupRefresh" class="ghost sm">🔄 刷新</button>
+            <button id="btnBackupRestore" class="ghost sm">⚡ 恢复选中</button>
+            <button id="btnBackupExportSel" class="ghost sm">📦 导出</button>
+            <button id="btnBackupDelete" class="ghost sm del">🗑️ 删除选中</button>
           </div>
         </div>
 
@@ -573,7 +573,7 @@
       <div class="panel">
         <div class="m3-page-header">
           <div class="m3-page-header-info">
-            <h2>WebDAV 与自动备份配置</h2>
+            <h2>☁️ WebDAV 与自动备份配置</h2>
             <div class="m3-subtitle">支持坚果云、Alist、NAS 等协议，自动云归档与异地容灾</div>
           </div>
         </div>
@@ -600,9 +600,9 @@
         </div>
 
         <div style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap">
-          <button id="btnBackupCfgSave" class="btn sm">保存备份配置</button>
-          <button id="btnWebDAVTest" class="ghost sm" style="color:var(--acc);border-color:var(--accSoft);font-weight:600">测试 WebDAV 连接</button>
-          <button id="btnWebDAVBackupNow" class="ghost sm">立即上传云端</button>
+          <button id="btnBackupCfgSave" class="btn sm">💾 保存备份配置</button>
+          <button id="btnWebDAVTest" class="ghost sm" style="color:var(--acc);border-color:var(--accSoft);font-weight:600">🔌 测试 WebDAV 连接</button>
+          <button id="btnWebDAVBackupNow" class="ghost sm">☁️ 立即上传云端</button>
           <span class="msg" id="backupCfgMsg" style="font-size:12px"></span>
         </div>
       </div>
@@ -610,11 +610,11 @@
       <div class="panel" id="panelWebDAVFiles">
         <div class="m3-page-header">
           <div class="m3-page-header-info">
-            <h2>WebDAV 云端备份归档与快捷恢复</h2>
+            <h2>☁️ WebDAV 云端备份归档与快捷恢复</h2>
             <div class="m3-subtitle">查看云端归档的历史备份，可下载或直接恢复</div>
           </div>
           <div class="m3-action-bar">
-            <button id="btnWebDAVRefreshFiles" class="ghost sm">刷新远端列表</button>
+            <button id="btnWebDAVRefreshFiles" class="ghost sm">🔄 刷新远端列表</button>
           </div>
         </div>
         <div class="hint">点击文件项可快速恢复或单独导出。</div>
@@ -626,11 +626,11 @@
       <div class="panel">
         <div class="m3-page-header">
           <div class="m3-page-header-info">
-            <h2>旧库数据导入（合并式，兼容新旧格式）</h2>
+            <h2>📦 旧库数据导入（合并式，兼容新旧格式）</h2>
             <div class="m3-subtitle">从旧版数据库文件迁移数据；<strong>合并</strong>仅新增缺失记录，不覆盖现有数据（红包与记忆不迁移）。整库回滚请用备份列表的“恢复”（<strong>替换式</strong>）。</div>
           </div>
           <div class="m3-action-bar">
-            <button id="btnLegacyPick" class="ghost sm">导入旧库文件</button>
+            <button id="btnLegacyPick" class="ghost sm">📥 导入旧库文件</button>
             <span class="hint" id="legacyMsg" style="margin-bottom:0;padding:4px 10px"></span>
           </div>
         </div>
@@ -643,19 +643,19 @@
       <div class="panel">
         <div class="m3-page-header">
           <div class="m3-page-header-info">
-            <h2>根目录文件浏览器</h2>
+            <h2>📁 根目录文件浏览器</h2>
             <div class="m3-subtitle">查看与管理插件数据目录中的资源、图片与素材</div>
           </div>
           <div class="m3-action-bar">
-            <button id="btnImgUp" class="btn sm">上传文件</button>
-            <button id="btnImgBack" class="ghost sm">返回上级</button>
-            <button id="btnImgNewFolder" class="ghost sm">新建文件夹</button>
-            <button id="btnImgExport" class="ghost sm">导出</button>
-            <button id="btnImgImport" class="ghost sm">导入</button>
-            <button id="btnImgCopy" class="ghost sm">复制</button>
-            <button id="btnImgPaste" class="ghost sm">粘贴</button>
-            <button id="btnImgRename" class="ghost sm">重命名</button>
-            <button id="btnImgDelete" class="ghost sm del" title="删除当前选中的文件或文件夹">删除选中</button>
+            <button id="btnImgUp" class="btn sm">📤 上传文件</button>
+            <button id="btnImgBack" class="ghost sm">⬆️ 返回上级</button>
+            <button id="btnImgNewFolder" class="ghost sm">📁 新建文件夹</button>
+            <button id="btnImgExport" class="ghost sm">📦 导出</button>
+            <button id="btnImgImport" class="ghost sm">📥 导入</button>
+            <button id="btnImgCopy" class="ghost sm">📋 复制</button>
+            <button id="btnImgPaste" class="ghost sm">📌 粘贴</button>
+            <button id="btnImgRename" class="ghost sm">✏️ 重命名</button>
+            <button id="btnImgDelete" class="ghost sm del" title="删除当前选中的文件或文件夹">🗑️ 删除选中</button>
           </div>
         </div>
 
@@ -668,7 +668,7 @@
         </div>
         <div id="imgBrowser"></div>
         <div style="margin-top:16px; text-align:center; padding-top:12px">
-          <button id="btnOpenPersistent" class="ghost sm" title="打开 AstrBot 持久化数据目录（与插件 data/ 分离时可见）">打开持久化目录</button>
+          <button id="btnOpenPersistent" class="ghost sm" title="打开 AstrBot 持久化数据目录（与插件 data/ 分离时可见）">📂 打开持久化目录</button>
         </div>
       </div>
     </div>

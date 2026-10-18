@@ -5,17 +5,64 @@ let IMG_CLIP = "";    // 复制的路径
 let IMG_SELECTED = ""; // 选中的文件/文件夹路径（用于复制/导出）
 
 
+function _getDirEmoji(name) {
+  const n = (name || "").toLowerCase();
+  if (n.includes("data") || n.includes("db") || n.includes("database")) return "🗄️";
+  if (n.includes("img") || n.includes("pic") || n.includes("avatar") || n.includes("image")) return "🖼️";
+  if (n.includes("backup")) return "💾";
+  if (n.includes("log")) return "📜";
+  if (n.includes("question") || n.includes("quiz") || n.includes("tiku")) return "❓";
+  if (n.includes("sound") || n.includes("audio") || n.includes("music") || n.includes("voice")) return "🎵";
+  if (n.includes("font")) return "🔤";
+  return "📁";
+}
+
+function _getFileMeta(name, ext) {
+  ext = (ext || "").toLowerCase();
+  if (["png","jpg","jpeg","gif","webp","bmp","ico","svg"].includes(ext)) {
+    return { emoji: "🖼️", label: "图片", cls: "ok" };
+  }
+  if (["db","sqlite","sqlite3"].includes(ext)) {
+    return { emoji: "🗄️", label: "SQLite", cls: "ok" };
+  }
+  if (["json"].includes(ext)) {
+    return { emoji: "📋", label: "JSON", cls: "acc" };
+  }
+  if (["yaml","yml","toml","ini","cfg","conf"].includes(ext)) {
+    return { emoji: "⚙️", label: "配置", cls: "muted" };
+  }
+  if (["txt","text","md","markdown"].includes(ext)) {
+    return { emoji: "📝", label: "文档", cls: "muted" };
+  }
+  if (["log"].includes(ext)) {
+    return { emoji: "📜", label: "日志", cls: "warn" };
+  }
+  if (["zip","tar","gz","7z","rar"].includes(ext)) {
+    return { emoji: "📦", label: "压缩包", cls: "acc" };
+  }
+  if (["py"].includes(ext)) {
+    return { emoji: "🐍", label: "Python", cls: "ok" };
+  }
+  if (["js","ts","css","html"].includes(ext)) {
+    return { emoji: "🌐", label: "代码", cls: "acc" };
+  }
+  if (["mp3","wav","ogg","flac","m4a"].includes(ext)) {
+    return { emoji: "🎵", label: "音频", cls: "ok" };
+  }
+  return { emoji: "📄", label: (ext || "文件").toUpperCase(), cls: "muted" };
+}
+
 function _updateImgSelectedDisplay() {
   const btnDel = document.getElementById("btnImgDelete");
   const btnRename = document.getElementById("btnImgRename");
   if (!btnDel) return;
   if (IMG_SELECTED) {
     const fn = IMG_SELECTED.split("/").pop() || IMG_SELECTED;
-    btnDel.innerHTML = `删除选中 <span style="font-size:11px;opacity:0.85;font-weight:400">(${esc(fn)})</span>`;
+    btnDel.innerHTML = `🗑️ 删除选中 <span style="font-size:11px;opacity:0.85;font-weight:400">(${esc(fn)})</span>`;
     btnDel.title = `删除当前选中的文件或文件夹: ${IMG_SELECTED}`;
     if (btnRename) btnRename.title = `重命名当前选中的文件或文件夹: ${IMG_SELECTED}`;
   } else {
-    btnDel.innerHTML = `删除选中`;
+    btnDel.innerHTML = `🗑️ 删除选中`;
     btnDel.title = "请先单击选中要删除的文件或文件夹";
     if (btnRename) btnRename.title = "请先单击选中要重命名的文件或文件夹";
   }
@@ -33,11 +80,11 @@ async function loadImages(dir) {
     IMG_CACHE = d;
     // 面包屑
     const segs = (d.dir || "").split("/").filter(Boolean);
-    let crumb = `<a data-imgcrumb="" class="crumb-link" title="返回根目录">根目录</a>`;
+    let crumb = `<a data-imgcrumb="" class="crumb-link" title="返回根目录">🏠 根目录</a>`;
     let acc = "";
     segs.forEach((s, i) => {
       acc += (acc ? "/" : "") + s;
-      crumb += ` <span class="crumb-sep">/</span> <a data-imgcrumb="${esc(acc)}" class="crumb-link" title="进入目录 ${esc(s)}">${esc(s)}</a>`;
+      crumb += ` <span class="crumb-sep">/</span> <a data-imgcrumb="${esc(acc)}" class="crumb-link" title="进入目录 ${esc(s)}">${_getDirEmoji(s)} ${esc(s)}</a>`;
     });
     document.getElementById("imgCrumbs").innerHTML = `<span class="crumbs">${crumb}</span>`;
     document.querySelectorAll("#imgCrumbs a[data-imgcrumb]").forEach((a) =>
@@ -59,8 +106,9 @@ function renderImages(d) {
   (d.dirs || []).forEach((x) => {
     if (q && !x.name.toLowerCase().includes(q)) return;
     const selCls = IMG_SELECTED === x.path ? ' selected' : '';
+    const dirEmoji = _getDirEmoji(x.name);
     html += `<div class="fcard${selCls}" data-imgdir="${esc(x.path)}" title="${esc(x.name)} (双击进入)">
-      <div class="fi"><svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></div>
+      <div class="fi" style="display:flex;align-items:center;justify-content:center;font-size:32px;line-height:1;margin-bottom:2px">${dirEmoji}</div>
       <div class="fn">${esc(x.name)}</div>
     </div>`;
   });
@@ -71,11 +119,15 @@ function renderImages(d) {
     const isImg = ["png","jpg","jpeg","gif","webp","bmp","ico"].includes(ext);
     if (isShopPick && !isImg) return;
     const selCls = IMG_SELECTED === x.path ? ' selected' : '';
+    const meta = _getFileMeta(x.name, ext);
 
     html += `<div class="icard${selCls}" data-imgsrc="${esc(x.img || "")}" data-imgname="${esc(x.name)}" data-selpath="${esc(x.path)}" title="${esc(x.name)} (双击看大图/单击选中)">
       ${isImg ? `<button type="button" class="img-preview-badge" data-action="preview" title="查看大图" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg></button>` : ""}
-      ${!isImg ? `<div class="fi"><span class="badge" style="font-size:11px;font-weight:700">${esc((ext || "FILE").toUpperCase())}</span></div>` : `<img class="icard-img" loading="lazy" decoding="async" src="${esc(_safeImgSrc(x.img))}" alt="" style="height:88px;width:100%;object-fit:cover;border-radius:var(--radius-md);display:block">`}
-      <div class="nm">${esc(x.name)}</div>
+      ${!isImg ? `<div class="fi" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:88px;gap:6px">
+        <span style="font-size:32px;line-height:1">${meta.emoji}</span>
+        <span class="badge ${meta.cls || ''}" style="font-size:10.5px;font-weight:700">${esc(meta.label)}</span>
+      </div>` : `<img class="icard-img" loading="lazy" decoding="async" src="${esc(_safeImgSrc(x.img))}" alt="" style="height:88px;width:100%;object-fit:cover;border-radius:var(--radius-md);display:block">`}
+      <div class="nm" style="display:flex;align-items:center;justify-content:center;gap:4px"><span>${isImg ? '🖼️' : meta.emoji}</span> <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}</span></div>
     </div>`;
   });
 

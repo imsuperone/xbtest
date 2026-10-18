@@ -54,20 +54,41 @@ async function loadRemoteWebDAVFiles(fromCache) {
     let html = `<div class="hint" style="font-size:11.5px;margin-bottom:6px">共 ${files.length} 份云端归档 · 第 ${_WD_PAGE}/${totalPages} 页（每页 ${_WD_PAGE_SIZE} 份）</div>`;
     html += `<div style="display:flex;flex-direction:column;gap:6px">`;
     pageFiles.forEach((f) => {
-      const isDb = f.name.endsWith(".db");
+      const ext = (f.name.split(".").pop() || "").toLowerCase();
+      const isDb = ["db", "sqlite", "sqlite3"].includes(ext);
+      const isJson = ext === "json";
+      const isZip = ["zip", "gz", "tar"].includes(ext);
       const shDate = formatShanghaiDate(f.mtime, f.name);
+
+      let badgeIcon = "📄";
+      let badgeLabel = "FILE";
+      let badgeCls = "";
+      if (isDb) {
+        badgeIcon = "🗄️";
+        badgeLabel = "SQLite";
+        badgeCls = "ok";
+      } else if (isJson) {
+        badgeIcon = "📋";
+        badgeLabel = "JSON";
+        badgeCls = "";
+      } else if (isZip) {
+        badgeIcon = "📦";
+        badgeLabel = "ZIP";
+        badgeCls = "";
+      }
+
       html += `
         <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel);padding:10px 14px;border-radius:10px;border:1px solid var(--line);flex-wrap:wrap;gap:8px">
           <div style="display:flex;align-items:center;gap:10px;min-width:200px">
-            <span class="ov-kpi-badge ${isDb ? 'ok' : ''}">${isDb ? 'DB' : 'FILE'}</span>
+            <span class="ov-kpi-badge ${badgeCls}" style="font-size:11px;display:inline-flex;align-items:center;gap:3px"><span>${badgeIcon}</span> ${badgeLabel}</span>
             <div>
-              <div style="font-weight:600;font-size:13px;word-break:break-all">${esc(f.name)}</div>
+              <div style="font-weight:600;font-size:13px;word-break:break-all;display:flex;align-items:center;gap:4px"><span>☁️</span> <span>${esc(f.name)}</span></div>
               <div class="hint" style="font-size:11.5px;margin-top:2px">大小: ${esc(f.size || "-")} · 修改时间: ${esc(shDate)}</div>
             </div>
           </div>
           <div style="display:flex;gap:6px;align-items:center">
-            ${isDb ? `<button class="ghost" data-wdrestore="${esc(f.name)}" style="color:var(--acc);border-color:var(--accBorder);font-size:12px;padding:4px 10px">快捷恢复</button>` : ""}
-            <button class="ghost" data-wddelete="${esc(f.name)}" style="color:var(--bad);border-color:rgba(239,68,68,0.3);font-size:12px;padding:4px 10px" title="从 WebDAV 云端删除此备份文件">删除</button>
+            ${isDb ? `<button class="ghost" data-wdrestore="${esc(f.name)}" style="color:var(--acc);border-color:var(--accBorder);font-size:12px;padding:4px 10px">⚡ 快捷恢复</button>` : ""}
+            <button class="ghost" data-wddelete="${esc(f.name)}" style="color:var(--bad);border-color:rgba(239,68,68,0.3);font-size:12px;padding:4px 10px" title="从 WebDAV 云端删除此备份文件">🗑️ 删除</button>
           </div>
         </div>
       `;

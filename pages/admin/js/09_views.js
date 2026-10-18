@@ -100,11 +100,11 @@ async function loadBackups(dir="") {
     if (!d || d.error) throw new Error((d && (d.error || d.msg)) || "备份列表接口异常");
     BACKUP_CACHE = d;
     const crumbs = (d.dir || "").split("/").filter(Boolean);
-    let crumb = `<a data-bkcrumb="" class="crumb-link" title="返回根目录">根目录</a>`;
+    let crumb = `<a data-bkcrumb="" class="crumb-link" title="返回根目录">🏠 备份根目录</a>`;
     let acc = "";
     crumbs.forEach((s) => {
       acc += (acc ? "/" : "") + s;
-      crumb += ` <span class="crumb-sep">/</span> <a data-bkcrumb="${esc(acc)}" class="crumb-link" title="进入目录 ${esc(s)}">${esc(s)}</a>`;
+      crumb += ` <span class="crumb-sep">/</span> <a data-bkcrumb="${esc(acc)}" class="crumb-link" title="进入目录 ${esc(s)}">📅 ${esc(s)}</a>`;
     });
     document.getElementById("backupCrumbs").innerHTML = `<span class="crumbs">${crumb}</span>`;
     document.querySelectorAll("#backupCrumbs a[data-bkcrumb]").forEach((a) => a.addEventListener("click", () => loadBackups(a.dataset.bkcrumb)));
@@ -120,10 +120,13 @@ function renderBackups(d, _q) {
     if (q && !x.name.toLowerCase().includes(q)) return;
     const selCls = window.BACKUP_SELECTED === x.path ? ' selected' : '';
     html += `<div class="bk-item${selCls}" data-bkdir="${esc(x.path)}" data-bksel="${esc(x.path)}">
-      <div class="bk-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></div>
+      <div class="bk-icon" style="font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center">📅</div>
       <div class="bk-info">
-        <div class="bk-name">${esc(x.name)}</div>
-        <div class="bk-meta"><span>日期目录 (双击进入)</span><span>${esc(x.mtime || "")}</span></div>
+        <div class="bk-name" style="display:flex;align-items:center;gap:6px">
+          <span>${esc(x.name)}</span>
+          <span class="badge" style="font-size:10.5px">📁 日期归档</span>
+        </div>
+        <div class="bk-meta"><span>双击进入查看快照</span><span>${esc(x.mtime || "")}</span></div>
       </div>
       <button class="ghost sm" style="pointer-events:none">进入 ➔</button>
     </div>`;
@@ -131,13 +134,38 @@ function renderBackups(d, _q) {
   (d.files || []).forEach((x) => {
     if (q && !x.name.toLowerCase().includes(q)) return;
     const selCls = window.BACKUP_SELECTED === x.path ? ' selected' : '';
+    const ext = (x.name.split(".").pop() || "").toLowerCase();
+    const isDb = ["db", "sqlite", "sqlite3"].includes(ext);
+    const isJson = ext === "json";
+    const isZip = ["zip", "gz", "tar"].includes(ext);
+
+    let icon = "📄";
+    let badgeText = "文件快照";
+    let badgeCls = "badge";
+    if (isDb) {
+      icon = "🗄️";
+      badgeText = "SQLite 主库快照";
+      badgeCls = "badge ok";
+    } else if (isJson) {
+      icon = "📋";
+      badgeText = "JSON 数据快照";
+      badgeCls = "badge";
+    } else if (isZip) {
+      icon = "📦";
+      badgeText = "ZIP 归档包";
+      badgeCls = "badge";
+    }
+
     html += `<div class="bk-item${selCls}" data-bkfile="${esc(x.path)}" data-bksel="${esc(x.path)}">
-      <div class="bk-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 12v7H5v-7h14m0-2H5c-1.11 0-2 .9-2 2v7c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7c0-1.1-.9-2-2-2zm-1-7v2H6V3h12m0-2H6c-1.1 0-2 .9-2 2v4h16V3c0-1.1-.9-2-2-2z"/></svg></div>
+      <div class="bk-icon" style="font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center">${icon}</div>
       <div class="bk-info">
-        <div class="bk-name">${esc(x.name)}</div>
+        <div class="bk-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span>${esc(x.name)}</span>
+          <span class="${badgeCls}" style="font-size:10.5px;font-weight:600">${badgeText}</span>
+        </div>
         <div class="bk-meta"><span>大小: ${esc(x.size || "0KB")}</span><span>备份时间: ${esc(x.mtime || "")}</span></div>
       </div>
-      <span style="font-size:12px;color:var(--muted)">${selCls ? '已选中' : '单击选中'}</span>
+      <span style="font-size:12px;color:var(--muted)">${selCls ? '✅ 已选中' : '⚪ 单击选中'}</span>
     </div>`;
   });
   html += `</div>`;
