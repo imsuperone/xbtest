@@ -4634,4 +4634,389 @@
 [data-theme="dark"] .ov-kpi-sub {
   background: rgba(255, 255, 255, 0.08);
   color: #C4C7D0;
-}
+}
+
+/* ========================================================
+   综合商业广场 / 坐骑 / 武器池 / 精灵商城 现代化视觉规范 (M3 Expressive)
+   ======================================================== */
+.shop-subtab-bar {
+  display: flex;
+  gap: 6px;
+  background: var(--panel2);
+  padding: 6px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-xs);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.shop-subtab-bar .seg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  white-space: nowrap;
+}
+.shop-subtab-bar .seg-item:hover {
+  background: var(--panel-hover);
+  color: var(--text);
+}
+.shop-subtab-bar .seg-item.active {
+  background: var(--acc);
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 10px var(--accSoft2);
+}
+.shop-subtab-bar .seg-item .m3-badge-counter {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+}
+.shop-subtab-bar .seg-item.active .m3-badge-counter {
+  background: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+}
+
+.shop-section-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--m3-radius-medium);
+  padding: 20px;
+  margin-top: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease;
+}
+.shop-section-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.shop-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.shop-section-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.shop-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.shop-section-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+}
+.shop-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shop-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+/* 坐骑卡片 */
+.ride-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.ride-item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accBorder);
+}
+.ride-card-top {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.ride-thumb-wrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-in;
+}
+.ride-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+.ride-thumb-wrap:hover img {
+  transform: scale(1.08);
+}
+.ride-thumb-empty {
+  font-size: 28px;
+  color: var(--muted);
+  cursor: default;
+}
+.thumb-zoom-icon {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #FFFFFF;
+  border-radius: 4px;
+  padding: 1px 3px;
+  font-size: 9px;
+  line-height: 1;
+}
+.ride-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.ride-row-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ride-name-input {
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  flex: 1;
+  padding: 6px 10px;
+}
+.input-with-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.input-label {
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 11.5px;
+}
+.input-unit {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--acc);
+}
+.ride-buff-type-row select {
+  width: 100%;
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 8px;
+}
+.ride-img-input {
+  font-size: 11.5px !important;
+  font-family: var(--font-mono) !important;
+  padding: 5px 8px;
+  color: var(--text-secondary);
+}
+.ride-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* 武器池卡片 */
+.weapon-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.weapon-item-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+}
+.weapon-item-card.rarity-ssr::before {
+  background: linear-gradient(180deg, #FFB300 0%, #FF6F00 100%);
+}
+.weapon-item-card.rarity-sr::before {
+  background: linear-gradient(180deg, #AB47BC 0%, #7B1FA2 100%);
+}
+.weapon-item-card.rarity-r::before {
+  background: linear-gradient(180deg, #26C6DA 0%, #00838F 100%);
+}
+.weapon-item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.weapon-card-top {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.weapon-thumb-wrap {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  min-width: 58px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-in;
+}
+.weapon-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.weapon-card-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.weapon-name-display {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weapon-name-display:hover {
+  color: var(--acc);
+  text-decoration: underline;
+}
+.rarity-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+.rarity-chip-ssr {
+  background: #FFF8E1;
+  color: #B26A00;
+  border: 1px solid rgba(255, 179, 0, 0.4);
+}
+.rarity-chip-sr {
+  background: #F3E5F5;
+  color: #6A1B9A;
+  border: 1px solid rgba(171, 71, 188, 0.4);
+}
+.rarity-chip-r {
+  background: #E0F7FA;
+  color: #00838F;
+  border: 1px solid rgba(38, 198, 218, 0.4);
+}
+[data-theme="dark"] .rarity-chip-ssr {
+  background: rgba(255, 179, 0, 0.18);
+  color: #FFD54F;
+  border-color: rgba(255, 213, 79, 0.4);
+}
+[data-theme="dark"] .rarity-chip-sr {
+  background: rgba(171, 71, 188, 0.2);
+  color: #E1BEE7;
+  border-color: rgba(225, 190, 231, 0.4);
+}
+[data-theme="dark"] .rarity-chip-r {
+  background: rgba(38, 198, 218, 0.2);
+  color: #80DEEA;
+  border-color: rgba(128, 222, 234, 0.4);
+}
+
+.m3-sort-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.m3-sort-btn:hover {
+  background: var(--accSoft);
+  color: var(--acc);
+  border-color: var(--accBorder);
+}
+
+.m3-icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.m3-btn-danger:hover {
+  background: var(--badSoft);
+  border-color: var(--bad);
+}
+.weapon-desc-input {
+  font-size: 12px !important;
+  padding: 5px 8px;
+}
+.weapon-file-hint {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  margin-left: auto;
+}
+

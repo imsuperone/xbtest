@@ -207,12 +207,13 @@ def _ensure_target_qq(target, gid=None):
     if target is None:
         return None
     s = str(target).strip()
+    s = re.sub(r"(?:金币|金|币|元|点)$", "", s).strip()
     if re.fullmatch(r"\d{5,12}", s):
         return s
     m = (
         re.search(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])", s)
         or re.search(r"@\s*(\d{5,12})", s)
-        or re.search(r"\b(\d{5,12})\b", s)
+        or re.search(r"(\d{5,12})", s)
     )
     if m:
         return m.group(1) or m.group(2)

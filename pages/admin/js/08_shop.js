@@ -186,16 +186,16 @@ document.getElementById("btnSpiritImport")?.addEventListener("click", importSpir
 
 // 商城图鉴 (每商城独立栏 自由增删重命名+图片绑定)
 const DEFAULT_RIDE_SHOP = {
-  "企鹅": { price: 213250, img: "data/img/rides/企鹅.jpg" },
-  "伞兵": { price: 500000, img: "data/img/rides/伞兵.jpg" },
-  "宝驴": { price: 1000000, img: "data/img/rides/宝驴.jpg" },
-  "保时捷": { price: 1500000, img: "data/img/rides/保时捷.jpg" },
-  "法拉利": { price: 1500000, img: "data/img/rides/法拉利.jpg" },
-  "玛莎拉蒂": { price: 1500000, img: "data/img/rides/玛莎拉蒂.jpg" },
-  "劳斯莱斯": { price: 1500000, img: "data/img/rides/劳斯莱斯.jpg" },
-  "布加迪威龙": { price: 1500000, img: "data/img/rides/布加迪威龙.jpg" },
-  "私人航空": { price: 5000000, img: "data/img/rides/私人航空.jpg" },
-  "老八": { price: 500000, img: "data/img/rides/老八.jpg" },
+  "企鹅": { price: 213250, img: "data/img/rides/企鹅.jpg", buff: 6, buff_type: "all" },
+  "伞兵": { price: 500000, img: "data/img/rides/伞兵.jpg", buff: 10, buff_type: "all" },
+  "宝驴": { price: 1000000, img: "data/img/rides/宝驴.jpg", buff: 10, buff_type: "all" },
+  "保时捷": { price: 1500000, img: "data/img/rides/保时捷.jpg", buff: 10, buff_type: "all" },
+  "法拉利": { price: 1500000, img: "data/img/rides/法拉利.jpg", buff: 10, buff_type: "all" },
+  "玛莎拉蒂": { price: 1500000, img: "data/img/rides/玛莎拉蒂.jpg", buff: 10, buff_type: "all" },
+  "劳斯莱斯": { price: 1500000, img: "data/img/rides/劳斯莱斯.jpg", buff: 10, buff_type: "all" },
+  "布加迪威龙": { price: 1500000, img: "data/img/rides/布加迪威龙.jpg", buff: 10, buff_type: "all" },
+  "私人航空": { price: 5000000, img: "data/img/rides/私人航空.jpg", buff: 15, buff_type: "all" },
+  "老八": { price: 500000, img: "data/img/rides/老八.jpg", buff: 10, buff_type: "all" },
 };
 let SHOP_RIDE = {};
 let SHOP_DIRTY = false;
@@ -228,8 +228,16 @@ function _normRideObj(d) {
   const out = {};
   Object.keys(d).forEach((k) => {
     const v = d[k];
-    if (v && typeof v === "object" && !Array.isArray(v)) out[k] = { price: Number(v.price) || 0, img: String(v.img || "") };
-    else out[k] = { price: Number(v) || 0, img: "" };
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      out[k] = {
+        price: Number(v.price) || 0,
+        img: String(v.img || ""),
+        buff: (v.buff !== undefined && v.buff !== "" && !isNaN(Number(v.buff))) ? Number(v.buff) : undefined,
+        buff_type: String(v.buff_type || "all")
+      };
+    } else {
+      out[k] = { price: Number(v) || 0, img: "", buff: undefined, buff_type: "all" };
+    }
   });
   return out;
 }
@@ -293,67 +301,154 @@ async function _persistPoolOrder() {
   if (r && r.error) throw new Error(r.error);
   try { if (CFG && CFG.cur && CFG.cur["商城图鉴"]) CFG.cur["商城图鉴"]["weapon_order"] = (typeof o === "string" ? o : JSON.stringify(o)); } catch (e) {}
 }
-function renderPoolBox(forceOpen=false){
-  const box=document.getElementById("poolWeaponBox");
-  if(!box) return;
-  const curDetails=box.querySelector("details");
-  const wasOpen=curDetails?curDetails.open:forceOpen;
-  const openGroups = {};
-  try { box.querySelectorAll("details[data-pool-group]").forEach((d) => { openGroups[d.dataset.poolGroup] = d.open; }); } catch (e) {}
-  let html=`<details class="panel" style="margin:0"${wasOpen?" open":""}><summary style="cursor:pointer;font-weight:600">🎰 抽奖武器池 — ${poolCount()} 件</summary>`;
-  html+=`<div class="hint" style="margin-top:8px">武器=图片文件本身：改名改文件名，稀有度改所在目录；攻击加成参战、描述进详情，改完点保存武器属性；↑↓ 排序即时保存</div>`;
-  html+=`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="ghost sm" id="btnPoolUploadTop">＋ 添加武器</button><button class="ghost sm" id="btnPoolAttrsSave">💾 保存武器属性</button><button class="ghost sm" id="btnPoolAttrsReset">↩️ 恢复默认</button><button class="ghost sm" data-shopsec-up="pool" title="上移">↑</button><button class="ghost sm" data-shopsec-down="pool" title="下移">↓</button></div>`;
-  ["SSR","SR","R"].forEach((rar)=>{
-    const items=(POOL_WEAPONS&&POOL_WEAPONS[rar])||[];
-    const open = openGroups[rar] !== undefined ? openGroups[rar] : false;
-    html+=`<details data-pool-group="${rar}" style="margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:6px 10px"${open?" open":""}><summary style="cursor:pointer;font-weight:600">${esc(rar)} (${items.length})</summary>`;
-    if(!items.length){ html+=`<div class="hint">空</div>`; }
-    items.forEach((it)=>{
-      const name=it.name;
-      const _ext=((it.file||"").split(".").pop()||"").toLowerCase();
-      const _kb=(it.size!=null)?Math.max(1,Math.round(it.size/1024))+"KB":"";
-      const pv = it.thumb
-        ? `<img loading="lazy" decoding="async" src="${esc(it.thumb)}" data-pool-thumb="${esc(name)}" style="width:36px;height:36px;object-fit:cover;border:1px solid var(--line);border-radius:6px;cursor:zoom-in" title="点击放大" onerror="this.style.display='none'">`
-        : `<span data-pool-thumb="${esc(name)}" style="display:inline-flex;align-items:center;cursor:zoom-in" title="点击放大"><span class="badge" style="font-size:11px" title="${esc(it.file||name)}">${esc(_ext||"?")}${_kb?" · "+_kb:""}</span></span>`;
+let POOL_FILTER_RAR = "ALL";
+let POOL_SEARCH_KW = "";
+function renderPoolBox(forceOpen = false) {
+  const box = document.getElementById("poolWeaponBox");
+  if (!box) return;
+  if (typeof bindShopSubnavOnce === "function") bindShopSubnavOnce();
+  if (typeof updateShopBadges === "function") updateShopBadges();
+
+  const total = poolCount();
+  const rarList = ["SSR", "SR", "R"];
+  const kw = (POOL_SEARCH_KW || "").toLowerCase().trim();
+
+  let html = `<div class="shop-section-card">`;
+  html += `
+    <div class="shop-section-head">
+      <div class="shop-section-title-wrap">
+        <div class="shop-section-title">
+          <span>🎰 抽奖武器池</span>
+          <span class="m3-badge-counter">${total} 件</span>
+        </div>
+        <div class="shop-section-subtitle">武器即图片文件本身；改名改文件名，稀有度改所在目录；攻击加成参战、描述进详情</div>
+      </div>
+      <div class="shop-section-actions">
+        <input class="m3-input sm" id="poolSearchInput" placeholder="🔍 搜索武器名..." value="${esc(POOL_SEARCH_KW)}" style="width:140px">
+        <button class="btn sm" id="btnPoolUploadTop">＋ 添加武器</button>
+        <button class="ghost sm" id="btnPoolAttrsSave">💾 保存武器属性</button>
+        <button class="ghost sm" id="btnPoolAttrsReset">↩️ 恢复默认</button>
+      </div>
+    </div>
+  `;
+
+  // 稀有度筛选分段条
+  html += `
+    <div class="m3-segmented-control" style="margin-bottom:14px;max-width:520px">
+      <button class="seg-item ${POOL_FILTER_RAR === 'ALL' ? 'active' : ''}" data-pool-filter="ALL">
+        <span>✨ 全部 (${total})</span>
+      </button>
+      ${rarList.map(r => {
+        const count = ((POOL_WEAPONS && POOL_WEAPONS[r]) || []).length;
+        return `<button class="seg-item ${POOL_FILTER_RAR === r ? 'active' : ''}" data-pool-filter="${r}">
+          <span>${r === 'SSR' ? '👑 SSR' : (r === 'SR' ? '💎 SR' : '🗡️ R')} (${count})</span>
+        </button>`;
+      }).join('')}
+    </div>
+  `;
+
+  const displayRars = POOL_FILTER_RAR === "ALL" ? rarList : [POOL_FILTER_RAR];
+  let renderedCount = 0;
+
+  html += `<div class="shop-cards-grid weapon-pool-grid">`;
+  displayRars.forEach((rar) => {
+    const items = (POOL_WEAPONS && POOL_WEAPONS[rar]) || [];
+    items.forEach((it) => {
+      const name = it.name;
+      if (kw && !name.toLowerCase().includes(kw)) return;
+      renderedCount++;
+      const _ext = ((it.file || "").split(".").pop() || "").toLowerCase();
+      const _kb = (it.size != null) ? Math.max(1, Math.round(it.size / 1024)) + "KB" : "";
       const pa = (POOL_ATTRS && POOL_ATTRS[name]) || { atk: 0, desc: "" };
       const _paAtk = Math.max(0, Number(pa.atk) || 0);
       const _paDesc = String(pa.desc || "");
-      html+=`<div data-pool-item="${esc(rar)}|${esc(name)}" style="margin-top:6px">`+
-        `<div style="font-size:11px;color:var(--muted);margin:0 2px 2px">默认：攻击加成 +${esc(_paAtk)}${_paDesc ? " · " + esc(_paDesc.slice(0, 20)) : " · 无描述"} · 星级基础另计（★0+100→★5+1600）</div>`+
-        `<div class="s-fields">`+
-        `<div class="s-row" style="font-weight:600;min-width:90px"><div style="padding-top:4px">✦ ${esc(name)}</div></div>`+
-        `<div class="s-row"><small>稀有度</small><select data-pool-rar>${["SSR","SR","R"].map((r)=>`<option value="${r}"${r===rar?" selected":""}>${r}</option>`).join("")}</select></div>`+
-        `<div class="s-row"><small>攻击加成</small><input type="number" data-pool-atk value="${esc(pa.atk ?? 0)}" style="width:70px"></div>`+
-        `<div class="s-row" style="flex:1"><small>描述</small><input data-pool-desc value="${esc(pa.desc ?? "")}" placeholder="详情页展示"></div>`+
-        `<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">${pv}<button class="ghost sm" data-pool-pick-upload>外置选图</button><button class="ghost sm" data-pool-pick-builtin>内置选图</button><button class="ghost sm" data-pool-rename>改名</button><button class="ghost sm" data-pool-up title="上移">↑</button><button class="ghost sm" data-pool-down title="下移">↓</button><button class="s-del" data-pool-del>删除</button></div>`+
-        `</div></div>`;
+      const thumb = it.thumb;
+
+      html += `
+        <div class="weapon-item-card rarity-${rar.toLowerCase()}" data-pool-item="${esc(rar)}|${esc(name)}">
+          <div class="weapon-card-top">
+            <div class="weapon-thumb-wrap" data-pool-thumb="${esc(name)}" title="点击放大预览">
+              ${thumb ? `<img loading="lazy" decoding="async" src="${esc(thumb)}" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'rarity-chip rarity-chip-${rar.toLowerCase()}\\'>${esc(rar)}</span>'">` : `<span class="rarity-chip rarity-chip-${rar.toLowerCase()}">${esc(rar)}</span>`}
+            </div>
+            <div class="weapon-card-main">
+              <div class="ride-row-split">
+                <span class="weapon-name-display" data-pool-rename title="点击改名">✦ ${esc(name)}</span>
+                <div style="display:flex;align-items:center;gap:4px">
+                  <select class="m3-select" data-pool-rar style="padding:2px 6px;font-size:12px;font-weight:700">
+                    ${rarList.map(r => `<option value="${r}"${r === rar ? ' selected' : ''}>${r}</option>`).join('')}
+                  </select>
+                  <button class="m3-sort-btn" data-pool-up title="上移排序">▲</button>
+                  <button class="m3-sort-btn" data-pool-down title="下移排序">▼</button>
+                  <button class="m3-icon-btn m3-btn-danger" data-pool-del title="删除此武器">🗑️</button>
+                </div>
+              </div>
+              <div class="ride-row-split" style="margin-top:2px">
+                <div class="input-with-label" title="攻击加成数值">
+                  <span class="input-label">⚔️ 攻击</span>
+                  <input class="m3-input" type="number" data-pool-atk value="${esc(_paAtk)}" style="width:75px">
+                </div>
+                <input class="m3-input weapon-desc-input" data-pool-desc value="${esc(_paDesc)}" placeholder="背景/特性描述..." style="flex:1" title="武器特性与背景描述">
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding-top:4px;border-top:1px dashed var(--line)">
+            <div style="display:flex;gap:6px">
+              <button class="ghost sm" data-pool-rename>✏️ 改名</button>
+              <button class="ghost sm" data-pool-pick-builtin>📂 内置换图</button>
+              <button class="ghost sm" data-pool-pick-upload>⬆️ 本地换图</button>
+            </div>
+            <span class="weapon-file-hint">${esc(_ext)} · ${_kb}</span>
+          </div>
+        </div>
+      `;
     });
-    html+=`</details>`;
   });
-  html += `</details>`;
-  box.innerHTML=html;
-  // 分区展开时懒加载图片预览（自动匹配，展开才取，不卡首屏）
-  box.querySelectorAll("details[data-pool-group]").forEach((d) => {
-    d.addEventListener("toggle", () => {
-      if (!d.open || d.dataset.thumbsLoaded) return;
-      d.dataset.thumbsLoaded = "1";
-      const rar = d.dataset.poolGroup;
-      ((POOL_WEAPONS && POOL_WEAPONS[rar]) || []).forEach((it) => {
-        if (it.thumb) return;
-        getBridge().apiPost("images/preview", { name: it.name }).then((r) => {
-          const thumb = r && (r.thumb || (r.data && r.data.thumb));
-          if (!thumb || (r && r.error)) return;
-          it.thumb = thumb;
-          const _key = rar + "|" + it.name;
-          let slot = null;
-          box.querySelectorAll("[data-pool-item]").forEach((host) => {
-            if (!slot && host.dataset && host.dataset.poolItem === _key) slot = host.querySelector("[data-pool-thumb]");
-          });
-          if (slot) slot.outerHTML = `<img loading="lazy" decoding="async" src="${esc(thumb)}" data-pool-thumb="${esc(it.name)}" style="width:36px;height:36px;object-fit:cover;border:1px solid var(--line);border-radius:6px;cursor:zoom-in" title="点击放大" onerror="this.style.display='none'">`;
-        }).catch(() => {});
-      });
+  html += `</div>`;
+
+  if (renderedCount === 0) {
+    html += `<div class="hint" style="text-align:center;padding:24px 0">当前稀有度分类或搜索条件下无武器</div>`;
+  }
+  html += `</div>`;
+  box.innerHTML = html;
+
+  // 懒加载图片预览
+  displayRars.forEach((rar) => {
+    ((POOL_WEAPONS && POOL_WEAPONS[rar]) || []).forEach((it) => {
+      if (it.thumb) return;
+      getBridge().apiPost("images/preview", { name: it.name }).then((r) => {
+        const thumb = r && (r.thumb || (r.data && r.data.thumb));
+        if (!thumb || (r && r.error)) return;
+        it.thumb = thumb;
+        const _key = rar + "|" + it.name;
+        box.querySelectorAll("[data-pool-item]").forEach((host) => {
+          if (host.dataset && host.dataset.poolItem === _key) {
+            const slot = host.querySelector("[data-pool-thumb]");
+            if (slot) slot.innerHTML = `<img loading="lazy" decoding="async" src="${esc(thumb)}" onerror="this.style.display='none'">`;
+          }
+        });
+      }).catch(() => {});
     });
   });
+
+  // 搜索框事件
+  const sInp = document.getElementById("poolSearchInput");
+  if (sInp) {
+    sInp.addEventListener("input", (e) => {
+      POOL_SEARCH_KW = e.target.value;
+      renderPoolBox(true);
+      const reInp = document.getElementById("poolSearchInput");
+      if (reInp) { reInp.focus(); reInp.selectionStart = reInp.selectionEnd = reInp.value.length; }
+    });
+  }
+
+  // 稀有度筛选按钮
+  box.querySelectorAll("[data-pool-filter]").forEach((b) => {
+    b.addEventListener("click", () => {
+      POOL_FILTER_RAR = b.dataset.poolFilter;
+      renderPoolBox(true);
+    });
+  });
+
   if (!box.dataset.thumbBound) {
     box.dataset.thumbBound = "1";
     box.addEventListener("click", async (e) => {
@@ -373,6 +468,7 @@ function renderPoolBox(forceOpen=false){
       } catch (err) { toast("预览失败:" + (err.message || err), "bad"); }
     });
   }
+
   // 池内排序委托（一次）：同稀有度内上移/下移，顺序即时保存
   if (!box.dataset.poolSortBound) {
     box.dataset.poolSortBound = "1";
@@ -398,12 +494,14 @@ function renderPoolBox(forceOpen=false){
       try { renderPoolBox(true); } catch (err2) {}
     });
   }
+
   const _poolKey = (el) => {
     const wrap = el.closest("[data-pool-item]");
     if (!wrap) return [null, null];
     const parts = String(wrap.dataset.poolItem || "").split("|");
     return [parts[0] || null, parts.slice(1).join("|") || null];
   };
+
   box.querySelectorAll("[data-pool-rename]").forEach(b=>b.addEventListener("click", async()=>{
     const [, old] = _poolKey(b);
     if (!old) return;
@@ -417,6 +515,7 @@ function renderPoolBox(forceOpen=false){
       toast("已改名", "ok"); await loadPool();
     } catch (e) { toast("改名失败: " + e.message, "bad"); }
   }));
+
   box.querySelectorAll("[data-pool-rar]").forEach(sel=>sel.addEventListener("change", async(e)=>{
     const [rar, name] = _poolKey(e.target);
     const to = e.target.value;
@@ -427,6 +526,7 @@ function renderPoolBox(forceOpen=false){
       toast(`已移入 ${to}`, "ok"); await loadPool();
     } catch (err) { toast("移动失败: " + err.message, "bad"); e.target.value = rar; }
   }));
+
   box.querySelectorAll("[data-pool-del]").forEach(b=>b.addEventListener("click", async()=>{
     const [, name] = _poolKey(b);
     if (!name) return;
@@ -437,6 +537,7 @@ function renderPoolBox(forceOpen=false){
       toast("已删除", "ok"); await loadPool();
     } catch (e) { toast("删除失败: " + e.message, "bad"); }
   }));
+
   box.querySelectorAll("[data-pool-atk]").forEach(inp=>inp.addEventListener("input", ()=>{
     const [, name] = _poolKey(inp);
     if (!name) return;
@@ -444,6 +545,7 @@ function renderPoolBox(forceOpen=false){
     POOL_ATTRS[name].atk = Math.max(0, Number(inp.value) || 0);
     POOL_ATTRS_DIRTY = true;
   }));
+
   box.querySelectorAll("[data-pool-desc]").forEach(inp=>inp.addEventListener("input", ()=>{
     const [, name] = _poolKey(inp);
     if (!name) return;
@@ -451,6 +553,7 @@ function renderPoolBox(forceOpen=false){
     POOL_ATTRS[name].desc = inp.value;
     POOL_ATTRS_DIRTY = true;
   }));
+
   box.querySelectorAll("[data-pool-pick-upload]").forEach(b=>b.addEventListener("click", ()=>{
     const [rar, name] = _poolKey(b);
     if (!name) return;
@@ -465,6 +568,7 @@ function renderPoolBox(forceOpen=false){
     };
     inp.click();
   }));
+
   box.querySelectorAll("[data-pool-pick-builtin]").forEach(b=>b.addEventListener("click", async ()=>{
     const [rar, name] = _poolKey(b);
     if (!name) return;
@@ -500,6 +604,7 @@ function renderPoolBox(forceOpen=false){
     });
     document.getElementById("btnShopPickCancel")?.addEventListener("click", ()=>{ tip.remove(); window.SHOP_PICK_TARGET=null; window.SHOP_PICK_KIND=null; backToShops(); });
   }));
+
   document.getElementById("btnPoolAttrsSave")?.addEventListener("click", () => savePoolAttrs());
   document.getElementById("btnPoolAttrsReset")?.addEventListener("click", () => resetPoolAttrs());
   document.getElementById("btnPoolUploadTop")?.addEventListener("click", ()=>openPoolAddModal("SSR"));
@@ -651,58 +756,207 @@ function syncShopRaw() {
     }
   } catch (e) {}
 }
+let RIDE_SEARCH_KW = "";
+let CURRENT_SHOP_SUBTAB = "ride";
+
+function bindShopSubnavOnce() {
+  const bar = document.getElementById("shopSubnavBar");
+  if (!bar || bar.dataset.bound) return;
+  bar.dataset.bound = "1";
+  bar.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-shop-subtab]");
+    if (!btn) return;
+    const tab = btn.dataset.shopSubtab;
+    setShopSubtab(tab);
+  });
+}
+
+function setShopSubtab(tab) {
+  CURRENT_SHOP_SUBTAB = tab;
+  document.querySelectorAll("#shopSubnavBar .seg-item").forEach((b) => {
+    b.classList.toggle("active", b.dataset.shopSubtab === tab);
+  });
+  const rBox = document.getElementById("shopRideBox");
+  const pBox = document.getElementById("poolWeaponBox");
+  const sBox = document.getElementById("shopSpiritBox");
+  if (rBox) rBox.style.display = (tab === "ride" || tab === "all") ? "" : "none";
+  if (pBox) pBox.style.display = (tab === "pool" || tab === "all") ? "" : "none";
+  if (sBox) sBox.style.display = (tab === "spirit" || tab === "all") ? "" : "none";
+  updateShopBadges();
+}
+
+function updateShopBadges() {
+  const rB = document.getElementById("shopRideBadge");
+  if (rB) rB.textContent = Object.keys(SHOP_RIDE || {}).length;
+  const pB = document.getElementById("shopPoolBadge");
+  if (pB) pB.textContent = poolCount();
+  const sB = document.getElementById("shopSpiritBadge");
+  if (sB) sB.textContent = Object.keys((window.SPIRIT && window.SPIRIT.shop) || {}).length;
+}
+
 function renderShopRideBox(forceOpen = false) {
   const box = document.getElementById("shopRideBox");
   if (!box) return;
-  const entries = Object.entries(SHOP_RIDE);
-  // 默认收起；若用户已手动展开或发生增删改，则保持展开
-  const curDetails = box.querySelector("details");
-  const wasOpen = curDetails ? curDetails.open : forceOpen;
-  let html = `<details class="panel" style="margin:0"${wasOpen ? " open" : ""}><summary style="cursor:pointer;font-weight:600">🐴 坐骑商城 — ${entries.length} 件</summary>`;
-  html += `<div class="hint" style="margin-top:8px">每行一个坐骑，支持改名、改价、删、绑图（图片路径如 data/img/rides/企鹅.jpg，留空自动匹配）</div>`;
-  html += `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="ghost sm" id="btnRideAddTop">＋ 添加坐骑</button><button class="ghost sm" id="btnRideSaveTop">💾 保存坐骑</button><button class="ghost sm" id="btnRideReset">↩️ 恢复默认</button><button class="ghost sm" data-shopsec-up="ride" title="上移">↑</button><button class="ghost sm" data-shopsec-down="ride" title="下移">↓</button></div>`;
+  bindShopSubnavOnce();
+  updateShopBadges();
+
+  const allEntries = Object.entries(SHOP_RIDE);
+  const kw = (RIDE_SEARCH_KW || "").toLowerCase().trim();
+  const entries = kw ? allEntries.filter(([k]) => k.toLowerCase().includes(kw)) : allEntries;
+
+  let html = `<div class="shop-section-card">`;
+  html += `
+    <div class="shop-section-head">
+      <div class="shop-section-title-wrap">
+        <div class="shop-section-title">
+          <span>🐎 坐骑商城</span>
+          <span class="m3-badge-counter">${allEntries.length} 件</span>
+        </div>
+        <div class="shop-section-subtitle">自定义坐骑售价、加成属性（战力/打工/旅行）、图片路径与新增坐骑</div>
+      </div>
+      <div class="shop-section-actions">
+        <input class="m3-input sm" id="rideSearchInput" placeholder="🔍 搜索坐骑名..." value="${esc(RIDE_SEARCH_KW)}" style="width:140px">
+        <button class="btn sm" id="btnRideAddTop">＋ 添加坐骑</button>
+        <button class="ghost sm" id="btnRideSaveTop">💾 保存坐骑</button>
+        <button class="ghost sm" id="btnRideReset">↩️ 恢复默认</button>
+      </div>
+    </div>
+  `;
+
   if (!entries.length) {
-    html += `<div class="hint" style="margin:8px 0">当前为空，运行时使用内置坐骑（${Object.keys(DEFAULT_RIDE_SHOP).length} 种）；可添加或恢复默认</div>`;
+    if (kw) {
+      html += `<div class="hint" style="text-align:center;padding:24px 0">无匹配坐骑，可清空搜索词</div>`;
+    } else {
+      html += `<div class="hint" style="text-align:center;padding:24px 0">当前为空，运行时使用内置坐骑（${Object.keys(DEFAULT_RIDE_SHOP).length} 种）；可点击上方「＋ 添加坐骑」或「恢复默认」</div>`;
+    }
+  } else {
+    html += `<div class="shop-cards-grid">`;
+    entries.forEach(([name, val]) => {
+      let price = 0, img = "", buff = undefined, buff_type = "all";
+      if (val && typeof val === "object" && !Array.isArray(val)) {
+        price = val.price ?? 0;
+        img = val.img ?? "";
+        buff = val.buff;
+        buff_type = val.buff_type || "all";
+      } else {
+        price = Number(val) || 0;
+      }
+      let autoImg = "";
+      if (!img) { try { autoImg = `data/img/rides/${name}.jpg`; } catch (e) { autoImg = ""; } }
+      const showImg = img || autoImg;
+      const calcDefaultBuff = (p) => {
+        p = Number(p) || 0;
+        if (p >= 2000000) return 15;
+        if (p >= 500000) return 10;
+        if (p >= 100000) return 6;
+        if (p > 0) return 3;
+        return 0;
+      };
+      const curBuff = (buff !== undefined && buff !== "" && !isNaN(Number(buff))) ? Number(buff) : calcDefaultBuff(price);
+
+      html += `
+        <div class="ride-item-card" data-ride-item="${esc(name)}">
+          <div class="ride-card-top">
+            <div class="ride-thumb-wrap" ${showImg ? `data-ride-view="${esc(showImg)}" title="点击放大图片"` : `title="暂无图片"`}>
+              ${showImg ? `<img loading="lazy" decoding="async" src="${esc(showImg)}" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'ride-thumb-empty\\'>🐎</div>'">` : `<div class="ride-thumb-empty">🐎</div>`}
+              ${showImg ? `<span class="thumb-zoom-icon">🔍</span>` : ``}
+            </div>
+            <div class="ride-card-info">
+              <div class="ride-row-split">
+                <input class="m3-input ride-name-input" data-ride-name value="${esc(name)}" placeholder="坐骑名称" title="坐骑名称">
+                <button class="m3-icon-btn m3-btn-danger" data-ride-del="${esc(name)}" title="删除此坐骑">🗑️</button>
+              </div>
+              <div class="ride-row-split">
+                <div class="input-with-label" title="购买所需金币">
+                  <span class="input-label">💰 价格</span>
+                  <input class="m3-input" type="number" data-ride-price value="${esc(price)}" style="width:105px">
+                </div>
+                <div class="input-with-label" title="乘坐加成百分比（直接影响战力、搬砖工钱、远征金币）">
+                  <span class="input-label">⚡ 加成</span>
+                  <input class="m3-input" type="number" data-ride-buff value="${esc(curBuff)}" style="width:65px">
+                  <span class="input-unit">%</span>
+                </div>
+              </div>
+              <div class="ride-buff-type-row">
+                <select class="m3-select" data-ride-buff-type title="加成类型选择">
+                  <option value="all"${buff_type === "all" ? " selected" : ""}>⭐ 综合全能 (战力+打工+旅行)</option>
+                  <option value="atk"${buff_type === "atk" ? " selected" : ""}>⚔️ 战力加成</option>
+                  <option value="work"${buff_type === "work" ? " selected" : ""}>💼 打工收益</option>
+                  <option value="travel"${buff_type === "travel" ? " selected" : ""}>🌍 旅行金币</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <input class="m3-input ride-img-input" data-ride-img value="${esc(img)}" placeholder="图片相对路径（留空自动匹配 data/img/rides/${esc(name)}.jpg）">
+            <div class="ride-card-actions">
+              <div style="display:flex;gap:6px">
+                <button class="ghost sm" data-ride-pick-builtin="${esc(name)}">📂 内置选图</button>
+                <button class="ghost sm" data-ride-pick="${esc(name)}">⬆️ 上传绑图</button>
+              </div>
+              <span style="font-size:11.5px;color:var(--acc);font-weight:600">加成 +${esc(curBuff)}%</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
   }
-  entries.forEach(([name, val]) => {
-    let price = 0, img = "";
-    if (val && typeof val === "object" && !Array.isArray(val)) { price = val.price ?? 0; img = val.img ?? ""; }
-    else price = Number(val) || 0;
-    // 自动匹配坐骑图片：自定义优先，否则按名称匹配 rides 目录
-    let autoImg = "";
-    if (!img) { try { autoImg = `data/img/rides/${name}.jpg`; } catch (e) { autoImg = ""; } }
-    const showImg = img || autoImg;
-    html += `<div class="s-fields" data-ride-item="${esc(name)}" style="margin-top:8px">` +
-      `<div class="s-row"><small>坐骑名</small><input data-ride-name value="${esc(name)}"></div>` +
-      `<div class="s-row"><small>价格</small><input type="number" data-ride-price value="${esc(price)}" style="width:90px"></div>` +
-      `<div class="s-row" style="flex:1"><small>图片路径</small><input data-ride-img value="${esc(img)}" placeholder="data/img/..."></div>` +
-      `<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">${showImg ? `<button class="ghost sm" data-ride-view="${esc(showImg)}">浏览图片</button>` : `<span style="color:var(--muted);font-size:11px">无图</span>`}<button class="ghost sm" data-ride-pick="${esc(name)}">外置选图</button><button class="ghost sm" data-ride-pick-builtin="${esc(name)}">内置选图</button><button class="s-del" data-ride-del="${esc(name)}">删除</button></div>` +
-      `</div>`;
-  });
-  html += `</details>`;
+  html += `</div>`;
   box.innerHTML = html;
+
+  // 搜索框事件
+  const sInp = document.getElementById("rideSearchInput");
+  if (sInp) {
+    sInp.addEventListener("input", (e) => {
+      RIDE_SEARCH_KW = e.target.value;
+      renderShopRideBox(true);
+      const reInp = document.getElementById("rideSearchInput");
+      if (reInp) { reInp.focus(); reInp.selectionStart = reInp.selectionEnd = reInp.value.length; }
+    });
+  }
+
   box.querySelectorAll("[data-ride-name]").forEach(inp => inp.addEventListener("change", (e) => {
     const old = e.target.closest("[data-ride-item]").dataset.rideItem;
     const nn = e.target.value.trim();
     if (!nn || nn === old) { e.target.value = old; return; }
-    if (SHOP_RIDE[nn] !== undefined) { toast("已存在同名", "bad"); e.target.value = old; return; }
+    if (SHOP_RIDE[nn] !== undefined) { toast("已存在同名坐骑", "bad"); e.target.value = old; return; }
     SHOP_RIDE[nn] = SHOP_RIDE[old]; delete SHOP_RIDE[old]; SHOP_DIRTY=true; syncShopRaw(); renderShopRideBox(true);
   }));
+
   box.querySelectorAll("[data-ride-price]").forEach(inp => inp.addEventListener("change", (e) => {
     const k = e.target.closest("[data-ride-item]").dataset.rideItem;
     const v = SHOP_RIDE[k];
     const p = Number(e.target.value) || 0;
-    if (v && typeof v === "object") SHOP_RIDE[k].price = p; else SHOP_RIDE[k] = p;
+    if (v && typeof v === "object") SHOP_RIDE[k].price = p; else SHOP_RIDE[k] = { price: p };
     SHOP_DIRTY=true; syncShopRaw();
   }));
+
+  box.querySelectorAll("[data-ride-buff]").forEach(inp => inp.addEventListener("change", (e) => {
+    const k = e.target.closest("[data-ride-item]").dataset.rideItem;
+    const v = SHOP_RIDE[k];
+    const b = Number(e.target.value) || 0;
+    if (v && typeof v === "object") SHOP_RIDE[k].buff = b; else SHOP_RIDE[k] = { price: Number(v)||0, buff: b };
+    SHOP_DIRTY=true; syncShopRaw(); renderShopRideBox(true);
+  }));
+
+  box.querySelectorAll("[data-ride-buff-type]").forEach(sel => sel.addEventListener("change", (e) => {
+    const k = e.target.closest("[data-ride-item]").dataset.rideItem;
+    const v = SHOP_RIDE[k];
+    const bt = sel.value;
+    if (v && typeof v === "object") SHOP_RIDE[k].buff_type = bt; else SHOP_RIDE[k] = { price: Number(v)||0, buff_type: bt };
+    SHOP_DIRTY=true; syncShopRaw();
+  }));
+
   box.querySelectorAll("[data-ride-img]").forEach(inp => inp.addEventListener("change", (e) => {
     const k = e.target.closest("[data-ride-item]").dataset.rideItem;
     const v = SHOP_RIDE[k];
     const img = e.target.value.trim();
-    if (v && typeof v === "object") { if (img) v.img = img; else { const p = v.price; SHOP_RIDE[k] = p; } }
-    else { if (img) SHOP_RIDE[k] = { price: Number(v)||0, img }; }
+    if (v && typeof v === "object") { v.img = img; }
+    else { SHOP_RIDE[k] = { price: Number(v)||0, img }; }
     SHOP_DIRTY=true; syncShopRaw(); renderShopRideBox(true);
   }));
+
   box.querySelectorAll("[data-ride-del]").forEach(b => b.addEventListener("click", async () => {
     const k = b.dataset.rideDel;
     const _last = Object.keys(SHOP_RIDE).length <= 1;
@@ -713,34 +967,30 @@ function renderShopRideBox(forceOpen = false) {
     renderShopRideBox(true);
     toast("已删除坐骑，请点击「保存坐骑」持久化", "ok");
   }));
+
   box.querySelectorAll("[data-ride-pick-builtin]").forEach(b=> b.addEventListener("click", async ()=>{
     const k=b.dataset.ridePickBuiltin;
-    // 跳转到坐骑目录让用户选择后点确定绑定（仅图片）
     window.SHOP_PICK_TARGET = k;
     toast("已进入坐骑图片目录，请单击选中后点“确定绑定”","ok");
-    // 切换到根目录页并加载坐骑目录
     document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("on"));
     const rb=document.querySelector("[data-tab=\"imgs\"]"); if(rb) rb.classList.add("on");
     document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
     const tab=document.getElementById("tab-imgs"); if(tab) tab.classList.add("on");
     await loadImages("data/img/rides");
-    // 在根目录顶部显示绑定提示（仅图片可选）
     const _oldTip = document.getElementById("shopPickTip"); if (_oldTip) _oldTip.remove();
     const tip=document.createElement("div"); tip.id="shopPickTip"; tip.style="background:var(--accSoft);border:1px solid var(--acc);padding:8px 12px;border-radius:8px;margin-bottom:10px";
-    tip.innerHTML=`<b>为坐骑 "${esc(k)}" 选择内置图：</b> 坐骑目录 data/img/rides（png/jpg/gif等），然后 <button class="ghost sm" id="btnShopPickConfirm">确定绑定</button> <button class="ghost sm" id="btnShopPickCancel">取消</button>`;
+    tip.innerHTML=`<b>为坐骑 "${esc(k)}" 选择内置图：</b> 坐骑目录 data/img/rides，然后 <button class="ghost sm" id="btnShopPickConfirm">确定绑定</button> <button class="ghost sm" id="btnShopPickCancel">取消</button>`;
     const panel=document.querySelector("#tab-imgs .panel"); if(panel) panel.prepend(tip);
     document.getElementById("btnShopPickConfirm")?.addEventListener("click", ()=>{
       const sel=IMG_SELECTED;
       if(!sel){ toast("请先选中图片文件","bad"); return; }
       const ext=(sel.split(".").pop()||"").toLowerCase();
-      if(!["png","jpg","jpeg","gif","webp","bmp","ico"].includes(ext)){ toast("请选择图片文件（png/jpg/jpeg/gif/webp/bmp/ico），当前选择非图片","bad"); return; }
-      // 校验是否为文件夹（无扩展名或在 dirs 中）
-      if(window._imgIsDir && window._imgIsDir(sel)){ toast("请选择图片文件，不能选择文件夹","bad"); return; }
+      if(!["png","jpg","jpeg","gif","webp","bmp","ico"].includes(ext)){ toast("请选择图片文件","bad"); return; }
+      if(window._imgIsDir && window._imgIsDir(sel)){ toast("不能选择文件夹","bad"); return; }
       const v=SHOP_RIDE[k];
       if(v && typeof v==="object") SHOP_RIDE[k].img=sel; else SHOP_RIDE[k]={price:Number(v)||0, img:sel};
       SHOP_DIRTY=true; syncShopRaw(); renderShopRideBox(true); toast("已绑定 "+sel+"，需保存","ok");
       tip.remove(); window.SHOP_PICK_TARGET=null;
-      // 切回商城页
       document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("on"));
       const cb=document.querySelector("[data-tab=\"shops\"]"); if(cb) cb.classList.add("on");
       document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
@@ -748,6 +998,7 @@ function renderShopRideBox(forceOpen = false) {
     });
     document.getElementById("btnShopPickCancel")?.addEventListener("click", ()=>{ tip.remove(); window.SHOP_PICK_TARGET=null; });
   }));
+
   box.querySelectorAll("[data-ride-pick]").forEach(b => b.addEventListener("click", async () => {
     const k = b.dataset.ridePick;
     const inp = document.createElement("input"); inp.type="file"; inp.accept="image/*";
@@ -757,11 +1008,13 @@ function renderShopRideBox(forceOpen = false) {
         const r = await postFile("images/upload?dir=" + encodeURIComponent("data/img/rides"), {}, file);
         if (r && r.error) throw new Error(r.error);
         const path = (r && (r.path || (r.data && r.data.path))) || ("data/img/rides/" + file.name);
-        SHOP_RIDE[k] = (typeof SHOP_RIDE[k]==="object"? {...SHOP_RIDE[k], img: path} : {price: Number(SHOP_RIDE[k])||0, img: path}); SHOP_DIRTY=true; syncShopRaw(); renderShopRideBox(true); toast("图片已上传并绑定，需保存","ok");
+        SHOP_RIDE[k] = (typeof SHOP_RIDE[k]==="object"? {...SHOP_RIDE[k], img: path} : {price: Number(SHOP_RIDE[k])||0, img: path});
+        SHOP_DIRTY=true; syncShopRaw(); renderShopRideBox(true); toast("图片已上传并绑定，需保存","ok");
       } catch(err){ toast("上传失败:"+(err.message||err),"bad");}
     };
     inp.click();
   }));
+
   box.querySelectorAll("[data-ride-view]").forEach((b) => b.addEventListener("click", async () => {
     const p = b.dataset.rideView;
     if (!p) return;
@@ -773,6 +1026,7 @@ function renderShopRideBox(forceOpen = false) {
       else toast("无预览", "bad");
     } catch (err) { toast("预览失败:" + (err.message || err), "bad"); }
   }));
+
   const addBtn = document.getElementById("btnRideAddTop");
   if (addBtn) addBtn.addEventListener("click", () => openRideAddModal());
   const rideSaveBtn = document.getElementById("btnRideSaveTop");
@@ -785,20 +1039,22 @@ function renderShopRideBox(forceOpen = false) {
       const cleanRide = {};
       Object.entries(SHOP_RIDE).forEach(([k, v]) => {
         if (v && typeof v === "object" && !Array.isArray(v)) {
-          if (!v.img) cleanRide[k] = v.price;
-          else cleanRide[k] = v;
-        } else cleanRide[k] = v;
+          const item = { price: Number(v.price) || 0 };
+          if (v.img) item.img = v.img;
+          if (v.buff !== undefined && v.buff !== "") item.buff = Number(v.buff);
+          if (v.buff_type && v.buff_type !== "all") item.buff_type = v.buff_type;
+          cleanRide[k] = item;
+        } else cleanRide[k] = Number(v) || 0;
       });
-    await getBridge().apiPost("config/save", { "商城图鉴": { "ride_shop": JSON.stringify(cleanRide) } }).then((r) => {
-      if (r && r.error) throw new Error(r.error);
-    });
+      await getBridge().apiPost("config/save", { "商城图鉴": { "ride_shop": JSON.stringify(cleanRide) } });
       SHOP_DIRTY = false; SHOP_RIDE_CUSTOM = true;
       syncShopRaw(); renderShopRideBox(true);
       toast("已恢复默认", "ok");
     } catch (e) { toast("恢复失败: " + e.message, "bad"); }
   });
 }
-// 添加坐骑表单窗：名称 + 价格 + 图片路径一次填完
+
+// 添加坐骑表单窗：名称 + 价格 + 加成 + 图片路径一次填完
 function openRideAddModal() {
   const modal = document.getElementById("appModal");
   if (!modal) return;
@@ -812,15 +1068,41 @@ function openRideAddModal() {
   if (title) title.textContent = "添加坐骑";
   if (inputWrap) inputWrap.style.display = "none";
   content.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">坐骑名称：</label>
-        <input id="rideAddName" style="width:100%;padding:6px 10px;border-radius:8px" placeholder="如：汗血宝马"></div>
-      <div><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">价格：</label>
-        <input id="rideAddPrice" type="number" value="500000" style="width:100%;padding:6px 10px;border-radius:8px"></div>
-      <div><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">图片（坐骑目录 data/img/rides，可选，留空自动匹配）：</label>
-        <input id="rideAddImg" style="width:100%;padding:6px 10px;border-radius:8px" placeholder="data/img/rides/xxx.jpg">
-        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button class="ghost sm" id="rideAddPickUpload">外置选图（本地上传）</button><button class="ghost sm" id="rideAddPickBuiltin">内置选图（坐骑目录）</button><button class="ghost sm" id="rideAddPreview">浏览图片</button><span id="rideAddImgTip" style="font-size:11.5px;color:var(--muted)">未选择</span></div></div>
-      <div class="hint">保存后记得点「保存坐骑」持久化；图片也可在列表中用“外置选图/内置选图”绑定</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:4px">坐骑名称：</label>
+        <input class="m3-input" id="rideAddName" style="width:100%" placeholder="如：赤兔马">
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:4px">售价（金币）：</label>
+          <input class="m3-input" id="rideAddPrice" type="number" value="500000" style="width:100%">
+        </div>
+        <div style="width:110px">
+          <label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:4px">加成 (%)：</label>
+          <input class="m3-input" id="rideAddBuff" type="number" value="10" style="width:100%">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:4px">加成类型：</label>
+        <select class="m3-select" id="rideAddBuffType" style="width:100%">
+          <option value="all">⭐ 综合全能 (战力+打工+旅行)</option>
+          <option value="atk">⚔️ 战力加成</option>
+          <option value="work">💼 打工收益</option>
+          <option value="travel">🌍 旅行金币</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:4px">图片（相对路径，留空自动匹配）：</label>
+        <input class="m3-input" id="rideAddImg" style="width:100%" placeholder="data/img/rides/xxx.jpg">
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="ghost sm" id="rideAddPickUpload">⬆️ 本地上传</button>
+          <button class="ghost sm" id="rideAddPickBuiltin">📂 内置选图</button>
+          <button class="ghost sm" id="rideAddPreview">🔍 预览图片</button>
+          <span id="rideAddImgTip" style="font-size:11.5px;color:var(--muted);align-self:center">未选择</span>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:2px">添加后记得点「保存坐骑」持久化落盘</div>
     </div>`;
   let _RIDE_ADD_FILE = null;
   const _rideSetTip = (t) => { const el = document.getElementById("rideAddImgTip"); if (el) el.textContent = t; };
@@ -891,16 +1173,20 @@ function openRideAddModal() {
     okBtn.onclick = () => {
       const n = (document.getElementById("rideAddName")?.value || "").trim();
       const p = Number(document.getElementById("rideAddPrice")?.value) || 0;
+      const bEl = document.getElementById("rideAddBuff");
+      const buff = bEl ? (Number(bEl.value) || 0) : 10;
+      const btEl = document.getElementById("rideAddBuffType");
+      const buff_type = btEl ? btEl.value : "all";
       const img = (document.getElementById("rideAddImg")?.value || "").trim();
       if (!n) { toast("请填写坐骑名称", "bad"); return; }
       if (SHOP_RIDE[n] !== undefined) { toast("已存在同名坐骑", "bad"); return; }
-      SHOP_RIDE[n] = { price: p, img };
+      SHOP_RIDE[n] = { price: p, img, buff, buff_type };
       SHOP_DIRTY = true;
       syncShopRaw();
       try { renderShopRideBox(true); } catch (e) {}
       try { renderAtlas(); } catch (e) {}
       modal.className = "";
-      toast("已添加坐骑，需保存", "ok");
+      toast("已添加坐骑，请点击「保存坐骑」持久化", "ok");
     };
   }
   modal.className = "show";
@@ -1049,9 +1335,14 @@ async function saveRideOnly(silent = false) {
     const cleanRide = {};
     Object.entries(SHOP_RIDE).forEach(([k, v]) => {
       if (v && typeof v === "object" && !Array.isArray(v)) {
-        if (!v.img) cleanRide[k] = v.price;
-        else cleanRide[k] = v;
-      } else cleanRide[k] = v;
+        const item = { price: Number(v.price) || 0 };
+        if (v.img) item.img = String(v.img).trim();
+        if (v.buff !== undefined && v.buff !== "" && !isNaN(Number(v.buff))) item.buff = Number(v.buff);
+        if (v.buff_type && v.buff_type !== "all") item.buff_type = String(v.buff_type).trim();
+        cleanRide[k] = item;
+      } else {
+        cleanRide[k] = { price: Number(v) || 0 };
+      }
     });
     await getBridge().apiPost("config/save", { "商城图鉴": { "ride_shop": JSON.stringify(cleanRide) } });
     SHOP_DIRTY = false;

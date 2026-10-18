@@ -129,9 +129,9 @@ def cmd_daily_checkin(gid, qq):
                 luck = 0
             delta = daily_luck_delta_pp(luck)
             sign = "+" if delta >= 0 else ""
-            return (f"📅 你今天已经打卡过了！\n"
-                    f"🍀 今日幸运值：{luck}\n"
-                    f"📈 今日概率加成：{sign}{delta:.2f}%（大部分概率玩法生效，明天再来）")
+            return (f"📅 今日已打卡\n"
+                    f"幸运值：{luck}\n"
+                    f"概率加成：{sign}{delta:.2f}%")
         l_lo = max(1, min(100, cfgi("打卡配置", "每日幸运下限", 1)))
         l_hi = max(l_lo, min(100, cfgi("打卡配置", "每日幸运上限", 100)))
         luck = random.randint(l_lo, l_hi)
@@ -141,10 +141,9 @@ def cmd_daily_checkin(gid, qq):
         if not ST.acct_save(gid, qq):
             return "打卡系统繁忙，本次未记录，请稍后重试！"
     sign = "+" if delta >= 0 else ""
-    tip = "鸿运当头" if luck >= 90 else ("好运在线" if luck >= 70 else ("平稳一天" if luck >= 40 else "稳住能赢"))
-    return (f"📅 每日打卡成功！\n"
-            f"🍀 今日幸运值：{luck}（{tip}）\n"
-            f"📈 今日概率加成：{sign}{delta:.2f}%（大部分概率玩法生效）")
+    return (f"📅 每日打卡成功\n"
+            f"幸运值：{luck}\n"
+            f"概率加成：{sign}{delta:.2f}%")
 
 
 def _ymd(d):

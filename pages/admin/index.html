@@ -544,7 +544,26 @@
           </div>
         </div>
 
-        <div class="hint">坐骑商城（改价、增删、绑图后点「保存坐骑」）；抽奖武器池（改名、稀有度、删除、上传即时生效，属性点需保存）；精灵道具（点「保存道具」）。三栏各自独立保存，顶部「全部保存」可同时保存三栏。</div>
+        <div class="hint">坐骑商城（改价、增删、加成、绑图后点「保存坐骑」）；抽奖武器池（改名、稀有度、删除、上传即时生效，属性点需保存）；精灵道具（点「保存道具」）。顶部选项卡可自由快速切换。</div>
+
+        <!-- 分段导航选项卡 -->
+        <div class="shop-subtab-bar" id="shopSubnavBar" style="margin: 14px 0 16px 0;">
+          <button class="seg-item active" data-shop-subtab="ride">
+            <span>🐎 坐骑商城</span>
+            <span class="m3-badge-counter" id="shopRideBadge">0</span>
+          </button>
+          <button class="seg-item" data-shop-subtab="pool">
+            <span>🎰 抽奖武器池</span>
+            <span class="m3-badge-counter" id="shopPoolBadge">0</span>
+          </button>
+          <button class="seg-item" data-shop-subtab="spirit">
+            <span>🎒 精灵道具</span>
+            <span class="m3-badge-counter" id="shopSpiritBadge">0</span>
+          </button>
+          <button class="seg-item" data-shop-subtab="all">
+            <span>📑 全部展开</span>
+          </button>
+        </div>
 
         <div class="responsive-shop-grid">
           <div>

@@ -1149,30 +1149,71 @@ function renderShop(q = "", forceOpen = false) {
   const shop = (SPIRIT && SPIRIT.shop) ? SPIRIT.shop : {};
   const names = Object.keys(shop).filter((k) => !q || k.toLowerCase().includes(q));
   const curDetails = body.querySelector("details");
-  const wasOpen = curDetails ? curDetails.open : forceOpen;
-  let html = `<details class="panel" style="margin:0"${wasOpen ? " open" : ""}><summary style="cursor:pointer;font-weight:600">🎒 精灵道具商城 — ${names.length} 件</summary>`;
-  html += `<div class="hint" style="margin-top:8px">类型决定效果：精灵球=收服率% / 等级=奇异甜食+Lv / HP·攻击·防御·特攻·特防=+对应点数 / 进化=进化液。改完点保存道具，只写精灵道具。</div>`;
-  html += `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button id="shopAddItemTop" class="ghost sm">＋ 添加精灵道具</button><button id="btnShopSpiritSave" class="ghost sm">💾 保存道具</button><button id="btnShopSpiritReset" class="ghost sm">↩️ 恢复默认</button><button class="ghost sm" data-shopsec-up="shop" title="上移">↑</button><button class="ghost sm" data-shopsec-down="shop" title="下移">↓</button></div>`;
+  if (typeof bindShopSubnavOnce === "function") bindShopSubnavOnce();
+  if (typeof updateShopBadges === "function") updateShopBadges();
+
+  let html = `<div class="shop-section-card">`;
+  html += `
+    <div class="shop-section-head">
+      <div class="shop-section-title-wrap">
+        <div class="shop-section-title">
+          <span>🎒 精灵道具商城</span>
+          <span class="m3-badge-counter">${Object.keys(shop).length} 件</span>
+        </div>
+        <div class="shop-section-subtitle">类型决定实战效果：精灵球=收服率% / 等级=奇异甜食+Lv / HP·攻击·防御·特攻·特防=+属性点 / 进化=进化液</div>
+      </div>
+      <div class="shop-section-actions">
+        <button id="shopAddItemTop" class="btn sm">＋ 添加精灵道具</button>
+        <button id="btnShopSpiritSave" class="ghost sm">💾 保存道具</button>
+        <button id="btnShopSpiritReset" class="ghost sm">↩️ 恢复默认</button>
+      </div>
+    </div>
+  `;
+
   if (!Object.keys(shop).length && !q) {
-    html += `<div class="hint" style="margin:8px 0">当前无自定义道具，运行中使用内置 ${_spiritBuiltinCount("shop")} 件`
+    html += `<div class="hint" style="margin:8px 0;text-align:center;padding:16px 0">当前无自定义道具，运行中使用内置 ${_spiritBuiltinCount("shop")} 件`
       + ` <button class="ghost sm" id="btnSpiritUseBuiltinShop">载入内置为起点</button></div>`;
   }
-  if (!names.length) {
-    html += `<div class="hint" style="margin:10px 0">无匹配物品</div>`;
-  } else {
+  if (!names.length && q) {
+    html += `<div class="hint" style="text-align:center;padding:20px 0">无匹配物品</div>`;
+  } else if (names.length) {
+    html += `<div class="shop-cards-grid">`;
     names.forEach((key) => {
       const it = shop[key] || {};
       const _attr = String(it.attr || "");
       const _help = SHOP_ATTR_HELP[_attr] || "选类型后看说明";
-      const attrCell = `<div class="s-row"><small>类型</small><select data-s-field="attr" style="width:96px">${SHOP_ATTR_OPTS.map((o) => `<option value="${esc(o)}"${o === _attr ? " selected" : ""}>${esc(o)}</option>`).join("")}${_attr && !SHOP_ATTR_OPTS.includes(_attr) ? `<option value="${esc(_attr)}" selected>${esc(_attr)}</option>` : ""}</select></div>`;
-      const cells = `<div class="s-row"><small>价格</small><input data-s-field="price" type="number" value="${esc(it.price ?? 0)}" style="width:80px"></div>` + attrCell + `<div class="s-row"><small>效果(${esc(_help)})</small><input data-s-field="effect" type="number" value="${esc(it.effect ?? 0)}" style="width:70px"></div>`;
-      html += `<div class="s-fields" data-s-item="${esc(key)}" style="margin-top:8px">` +
-        `<div class="s-row" style="font-weight:600;min-width:90px"><small>道具名</small><div style="padding-top:4px">${esc(key)}</div></div>` +
-        cells +
-        `<button class="s-del" data-del-key="${esc(key)}" style="margin-left:auto">删除</button></div>`;
+      html += `
+        <div class="ride-item-card" data-s-item="${esc(key)}">
+          <div class="ride-row-split">
+            <span style="font-weight:700;font-size:14px;color:var(--text)">🎒 ${esc(key)}</span>
+            <button class="m3-icon-btn m3-btn-danger" data-del-key="${esc(key)}" title="删除此道具">🗑️</button>
+          </div>
+          <div class="ride-row-split">
+            <div class="input-with-label" title="购买道具售价">
+              <span class="input-label">💰 价格</span>
+              <input class="m3-input" data-s-field="price" type="number" value="${esc(it.price ?? 0)}" style="width:90px">
+            </div>
+            <div class="input-with-label" title="生效数值">
+              <span class="input-label">⚡ 效果</span>
+              <input class="m3-input" data-s-field="effect" type="number" value="${esc(it.effect ?? 0)}" style="width:75px">
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div class="input-with-label" style="width:100%">
+              <span class="input-label">🏷️ 类型</span>
+              <select class="m3-select" data-s-field="attr" style="flex:1">
+                ${SHOP_ATTR_OPTS.map((o) => `<option value="${esc(o)}"${o === _attr ? " selected" : ""}>${esc(o)}</option>`).join("")}
+                ${_attr && !SHOP_ATTR_OPTS.includes(_attr) ? `<option value="${esc(_attr)}" selected>${esc(_attr)}</option>` : ""}
+              </select>
+            </div>
+            <span style="font-size:11px;color:var(--muted)">提示：${esc(_help)}</span>
+          </div>
+        </div>
+      `;
     });
+    html += `</div>`;
   }
-  html += `</details>`;
+  html += `</div>`;
   body.innerHTML = html;
   document.getElementById("btnSpiritUseBuiltinShop")?.addEventListener("click", () => {
     if (_spiritLoadBuiltin("shop")) { renderShop(q, true); toast("已载入内置道具，点保存道具生效", "ok"); }

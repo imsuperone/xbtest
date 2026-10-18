@@ -293,7 +293,7 @@ def cmd_my(gid, qq):
 
 
 def _parse_ride_shop(v):
-    """ride_shop 配置体解析（dict/JSON串）→ {名: {price, img}} 规范形；非法/空回 {}。
+    """ride_shop 配置体解析（dict/JSON串）→ {名: {price, img, buff, buff_type}} 规范形；非法/空回 {}。
     _ride_shop_raw 与 _ride_shop 唯一解析口（原两处内联逐行等价并入）"""
     out = {}
     try:
@@ -303,8 +303,18 @@ def _parse_ride_shop(v):
         if isinstance(d, dict):
             for k, val in d.items():
                 if isinstance(val, dict):
-                    out[str(k)] = {"price": int(float(val.get("price", 0) or 0)),
-                                   "img": str(val.get("img", "") or "")}
+                    item = {
+                        "price": int(float(val.get("price", 0) or 0)),
+                        "img": str(val.get("img", "") or "")
+                    }
+                    if "buff" in val and val["buff"] is not None and str(val["buff"]).strip() != "":
+                        try:
+                            item["buff"] = int(float(val["buff"]))
+                        except Exception:
+                            pass
+                    if "buff_type" in val and val["buff_type"]:
+                        item["buff_type"] = str(val["buff_type"]).strip()
+                    out[str(k)] = item
                 elif val is not None and str(val).strip() != "":
                     out[str(k)] = {"price": int(float(val)), "img": ""}
     except Exception:
@@ -313,7 +323,7 @@ def _parse_ride_shop(v):
 
 
 def _ride_shop_raw():
-    """返回原始 ride_shop 配置对象(可能含 {price,img} 结构)，供取图用"""
+    """返回原始 ride_shop 配置对象(可能含 {price,img,buff} 结构)，供取图与属性用"""
     v = ST.cfg("商城图鉴", "ride_shop", "")
     if isinstance(v, dict) and v:
         return v
@@ -392,6 +402,35 @@ def _ride_bonus_by_price(price):
     return 0
 
 
+def _ride_bonus(name, price=0):
+    """取坐骑加成百分比：优先读取配置中的自定义加成 buff，否则回退按价格区间计算"""
+    try:
+        raw = _ride_shop_raw()
+        if isinstance(raw, dict):
+            info = raw.get(name)
+            if isinstance(info, dict) and "buff" in info and info["buff"] is not None:
+                try:
+                    return int(float(info["buff"]))
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return _ride_bonus_by_price(price)
+
+
+def _ride_buff_type(name):
+    """取坐骑加成类型：all(综合全能) / atk(战力) / work(打工) / travel(旅行)"""
+    try:
+        raw = _ride_shop_raw()
+        if isinstance(raw, dict):
+            info = raw.get(name)
+            if isinstance(info, dict) and info.get("buff_type"):
+                return str(info.get("buff_type")).strip()
+    except Exception:
+        pass
+    return "all"
+
+
 def active_ride_info(gid, qq):
     """返回 (当前坐骑名, 加成百分比)；未乘坐返回 ('', 0)"""
     try:
@@ -406,7 +445,7 @@ def active_ride_info(gid, qq):
             return "", 0
         shop = _ride_shop()
         price = int(shop.get(act, 0) or _mount_price(act) or 0)
-        return act, _ride_bonus_by_price(price)
+        return act, _ride_bonus(act, price)
     except Exception:
         return "", 0
 
@@ -414,7 +453,7 @@ def active_ride_info(gid, qq):
 def cmd_shop():
     lines = ["欢迎来到坐骑商城！", "━━━━━━━━━━━━━━"]
     for name, price in _ride_shop().items():
-        pct = _ride_bonus_by_price(price)
+        pct = _ride_bonus(name, price)
         lines.append(f"{name}　{price}{ST.coin_name()}（加成+{pct}%）")
     lines.append("发送【购买坐骑 名称】购买炫酷坐骑！\r\n发送【查看坐骑 名称】查看坐骑信息！")
     return "\r\n".join(lines)
@@ -443,7 +482,7 @@ def cmd_buy(gid, qq, name):
             _welcome_add(gid)
     else:
         _save(gid, qq, r)
-    pct = _ride_bonus_by_price(price)
+    pct = _ride_bonus(name, price)
     return (f"购买到炫酷的坐骑「{name}」（已自动乘坐，收益/战力+{pct}%）！\r\n发送【我的坐骑】查看你拥有的坐骑！", _ride_img_path(name))
 
 
@@ -455,7 +494,7 @@ def cmd_view(gid, qq, name):
         return "亲，商城中不存在该坐骑！\r\n请发送【坐骑商城】查看商城正在售卖的坐骑吧！"
     owned = name in _rides(gid, qq).get("list", [])
     price = int(shop[name] or 0)
-    pct = _ride_bonus_by_price(price)
+    pct = _ride_bonus(name, price)
     refund = price * 5 // 100
     return (f"〈{name}〉\r\n属性：{RIDE_TYPE}（乘坐加成：搬砖/远征/战力+{pct}%）\r\n"
             f"价格：{price}{ST.coin_name()}（丢弃回收返5%：{refund}{ST.coin_name()}）\r\n"

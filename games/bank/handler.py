@@ -11,7 +11,7 @@ from .redpack import *  # noqa
 from .transactions import *  # noqa
 
 # 预编译高频正则模式
-_RE_QQ_DIGITS = re.compile(r"\b(\d{5,12})\b")
+_RE_QQ_DIGITS = re.compile(r"(?:@)?(\d{5,12})")
 _RE_AT_NAME = re.compile(r"@\s*(\S+)")
 _RE_AT_CLEAN = re.compile(r"@\s*\S+")
 _RE_MULTI_SPACE = re.compile(r"\s+")
@@ -21,6 +21,107 @@ _RE_DEPOSIT_CMD = re.compile(r"存款\s*(-?\d+)\s*(?:金币|元|点)?")
 _RE_WITHDRAW_CMD = re.compile(r"取款\s*(-?\d+)\s*(?:金币|元|点)?")
 _RE_GAMBLE_CMD = re.compile(r"赌博\s*(\d+)")
 _RE_RECV_RED_PREFIX = re.compile(r"^抢红包\s*")
+_RE_CQ_AT = re.compile(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])")
+_RE_COIN_SUFFIX = r"(?:金币|金|币|元|点)"
+
+
+def _parse_transfer_cmd(text, raw, gid):
+    """
+    全面兼容用户转账指令语法：
+    1. 转账QQ号 金额 / 转账 QQ号 金额（指令与QQ号之间可无空格）
+    2. 转账QQ号金 金额 / 转账 QQ号金 金额（QQ号后带金/币后缀）
+    3. 转账@QQ 金额 / 转账 @QQ 金额（指令与@之间可无空格）
+    4. 转账 金额 @QQ / 转账 金额 QQ号（金额在前、目标在后）
+    5. 金额后可带金/币后缀（如 100金、100金币、100元）
+    6. 支持群内 @昵称 反查
+    返回 (target_qq, amount, error_msg_or_None)
+    """
+    s = (raw or text or "").strip()
+    if not s.startswith("转账"):
+        return None, None, None
+    tail = s[2:].strip()
+    if not tail or tail in ("?", "？", "帮助", "help"):
+        return None, 0, "提示：转账格式为【转账 @目标 金额】或【转账 QQ号 金额】，例如：转账 123456789 100"
+
+    target = None
+    amt = None
+
+    # 1. 尝试匹配 CQ 码 / [At:QQ]
+    m_cq = _RE_CQ_AT.search(tail)
+    if m_cq:
+        target = m_cq.group(1) or m_cq.group(2)
+        tail = _RE_CQ_AT.sub(" ", tail).strip()
+
+    # 2. 尝试匹配 @QQ 或 @昵称
+    if not target and "@" in tail:
+        m_at_qq = re.search(r"@\s*(\d{5,12})(?:" + _RE_COIN_SUFFIX + r")?", tail)
+        if m_at_qq:
+            target = m_at_qq.group(1)
+            tail = re.sub(r"@\s*\d{5,12}(?:" + _RE_COIN_SUFFIX + r")?", " ", tail, count=1).strip()
+        else:
+            m_at_nick = re.search(r"@\s*(\S+)", tail)
+            if m_at_nick:
+                cand = m_at_nick.group(1).strip()
+                t_cand = _find_qq_by_name(gid, cand)
+                if t_cand:
+                    target = t_cand
+                    tail = re.sub(r"@\s*\S+", " ", tail, count=1).strip()
+
+    # 如果此时已提取 target，tail 剩余部分提取金额
+    if target:
+        tail = re.sub(r"\s+", " ", tail).strip()
+        m_amt = re.search(r"(-?\d+)", tail)
+        if m_amt:
+            try:
+                amt = int(m_amt.group(1))
+            except Exception:
+                amt = 0
+            return target, amt, None
+        return target, 0, f"提示：请输入转账金额，例如：转账 {target} 100"
+
+    # 3. 纯文本模式：目标在前，金额在后
+    # 例如："123456789 100", "123456789金 100", "123456789 100金", "123456789金100"
+    m_front = re.match(r"^(\d{5,12})(?:" + _RE_COIN_SUFFIX + r")?\s*(-?\d+)(?:" + _RE_COIN_SUFFIX + r")?$", tail)
+    if m_front:
+        target = m_front.group(1)
+        try:
+            amt = int(m_front.group(2))
+        except Exception:
+            amt = 0
+        return target, amt, None
+
+    # 模式B: 金额在前，目标在后
+    # 例如："100 123456789", "100金 123456789", "100 123456789金"
+    m_back = re.match(r"^(-?\d+)(?:" + _RE_COIN_SUFFIX + r")?\s+(\d{5,12})(?:" + _RE_COIN_SUFFIX + r")?$", tail)
+    if m_back:
+        try:
+            amt = int(m_back.group(1))
+        except Exception:
+            amt = 0
+        target = m_back.group(2)
+        return target, amt, None
+
+    # 模式C: 两个数字或群昵称
+    parts = re.split(r"\s+", tail)
+    if len(parts) >= 2:
+        p0_clean = re.sub(r"^@|(?:" + _RE_COIN_SUFFIX + r")$", "", parts[0]).strip()
+        p1_clean = re.sub(r"^@|(?:" + _RE_COIN_SUFFIX + r")$", "", parts[-1]).strip()
+        if re.fullmatch(r"\d{5,12}", p0_clean) and re.fullmatch(r"-?\d+", p1_clean):
+            return p0_clean, int(p1_clean), None
+        if re.fullmatch(r"-?\d+", p0_clean) and re.fullmatch(r"\d{5,12}", p1_clean):
+            return p1_clean, int(p0_clean), None
+        t_cand = _find_qq_by_name(gid, parts[0])
+        if t_cand and re.fullmatch(r"-?\d+", p1_clean):
+            return t_cand, int(p1_clean), None
+
+    nums = re.findall(r"(\d+)", tail)
+    if len(nums) == 1:
+        val = nums[0]
+        if len(val) >= 5:
+            return val, 0, f"提示：请输入转账金额，例如：转账 {val} 100"
+        return None, int(val), f"提示：请指定转账目标QQ，例如：转账 123456789 {val}"
+
+    return None, 0, "提示：转账格式为【转账 @目标 金额】或【转账 QQ号 金额】，例如：转账 123456789 100"
 
 
 def handle(gid, qq, raw):
@@ -29,7 +130,26 @@ def handle(gid, qq, raw):
         return None
     if text in ST.wake("银行系统", "银行系统"):
         return _MENU
-    # QQ/Nickname 转账目标解析: CQ -> @QQ数字 -> @昵称 -> 纯QQ
+
+    # 优先精确解析跨群转账与普通转账，全面兼容有无空格、@前缀、金/币后缀
+    if text.startswith("跨群转账"):
+        _raw_ct = text[4:]
+        if not _raw_ct or _raw_ct[:1].isspace() or _raw_ct[:1].isdigit():
+            nums = _RE_DIGITS.findall(text)
+            if len(nums) < 2:
+                return "亲，跨群转账格式为：【跨群转账 群号 金额】！"
+            return cmd_cross_transfer(gid, qq, nums[0], int(nums[-1]))
+        return None
+
+    if text.startswith("转账"):
+        target_t, amt_t, err_t = _parse_transfer_cmd(text, raw, gid)
+        if err_t:
+            return err_t
+        if not target_t:
+            return "提示：转账格式为【转账 @目标 金额】或【转账 QQ号 金额】，例如：转账 123456789 100"
+        return cmd_transfer(gid, qq, target_t, amt_t)
+
+    # QQ/Nickname 目标解析: CQ -> @QQ数字 -> @昵称 -> 纯QQ (供存款/取款/打劫/劫狱/保释使用)
     target = None
     t1, r1 = _extract_transfer_target(text, gid)
     if t1:
@@ -37,7 +157,7 @@ def handle(gid, qq, raw):
         text = r1
     else:
         # 纯QQ/纯昵称字符串兜底 (仅对需要目标的指令)
-        if any(text.startswith(p) for p in ("转账", "打劫", "劫狱", "保释")):
+        if any(text.startswith(p) for p in ("打劫", "劫狱", "保释")):
             m = _RE_QQ_DIGITS.search(text)
             if m:
                 target = m.group(1)
@@ -55,7 +175,6 @@ def handle(gid, qq, raw):
         text = _RE_AT_CLEAN.sub("", text).strip()
         text = _RE_MULTI_SPACE.sub(" ", text).strip()
 
-    # 若目标已提取但 text 仍包含“转账”前缀，保留以便后续命令判断
     n = 0
     mms = _RE_NUMS.findall(text)
     if mms:
@@ -76,18 +195,6 @@ def handle(gid, qq, raw):
         if text == "取款" or _RE_WITHDRAW_CMD.fullmatch(text):
             return cmd_withdraw(gid, qq, n)
         return "提示：取款指令格式为【取款 金额】，例如：取款 1000"
-    if text.startswith("跨群转账"):
-        _raw_ct = text[4:]
-        if not _raw_ct or _raw_ct[:1].isspace() or _raw_ct[:1].isdigit():
-            nums = _RE_DIGITS.findall(text)
-            if len(nums) < 2:
-                return "亲，跨群转账格式为：【跨群转账 群号 金额】！"
-            return cmd_cross_transfer(gid, qq, nums[0], int(nums[-1]))
-        return None
-    if text.startswith("转账"):
-        if not target:
-            return "提示：转账格式为【转账 @目标 金额】，例如：转账 @某某 100"
-        return cmd_transfer(gid, qq, target, n)
 
     if text.startswith("赌博"):
         if text == "赌博" or _RE_GAMBLE_CMD.fullmatch(text):
