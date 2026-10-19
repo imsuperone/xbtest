@@ -255,7 +255,7 @@ def _treasure_trigger_prob(u, ttype, default_base=25, fallbacks=()):
 
 
 def _treasure_pct_total(owned, ttype, cap=100, u=None):
-    """持有宝物某百分比型加成之和（支持按星阶倍率放大，钳位 0..cap；多效果宝物按行累加）"""
+    """持有宝物某百分比型加成之和（支持按星阶倍率放大或配置每阶固定数值，钳位 0..cap；多效果宝物按行累加）"""
     s = 0
     try:
         for t in (owned or []):
@@ -265,12 +265,20 @@ def _treasure_pct_total(owned, ttype, cap=100, u=None):
                     stg = _safe_int(uget(u, str(t) + "升阶", "0"), 0)
                 except Exception:
                     stg = 0
+            stg = max(0, min(5, stg))
             mult = _treasure_stage_mult(stg)
             for tt, vv in _treasure_effect_list(str(t)):
                 if tt == str(ttype or ""):
                     try:
                         base_v = max(0, int(vv or 0))
-                        s += int(round(base_v * mult))
+                        cfg_v = cfgi("设置", f"{t}_{stg}阶数值", -1)
+                        if cfg_v < 0:
+                            _CH = {0: "零", 1: "一", 2: "二", 3: "三", 4: "四", 5: "五"}
+                            cfg_v = cfgi("设置", f"{t}_{_CH.get(stg, '')}阶数值", -1)
+                        if cfg_v >= 0:
+                            s += cfg_v
+                        else:
+                            s += int(round(base_v * mult))
                     except Exception:
                         pass
     except Exception:
@@ -283,7 +291,7 @@ def _treasure_pct_total(owned, ttype, cap=100, u=None):
 
 
 def _treasure_atk_total(owned, u=None):
-    """持有宝物攻击加成之和（战斗力外挂项，支持按星阶倍率放大，不钳位；多效果宝物按行累加）"""
+    """持有宝物攻击加成之和（战斗力外挂项，支持按星阶倍率放大或配置每阶固定数值，不钳位；多效果宝物按行累加）"""
     s = 0
     try:
         for t in (owned or []):
@@ -293,12 +301,20 @@ def _treasure_atk_total(owned, u=None):
                     stg = _safe_int(uget(u, str(t) + "升阶", "0"), 0)
                 except Exception:
                     stg = 0
+            stg = max(0, min(5, stg))
             mult = _treasure_stage_mult(stg)
             for tt, vv in _treasure_effect_list(str(t)):
                 if tt == "atk":
                     try:
                         base_v = max(0, int(vv or 0))
-                        s += int(round(base_v * mult))
+                        cfg_v = cfgi("设置", f"{t}_{stg}阶数值", -1)
+                        if cfg_v < 0:
+                            _CH = {0: "零", 1: "一", 2: "二", 3: "三", 4: "四", 5: "五"}
+                            cfg_v = cfgi("设置", f"{t}_{_CH.get(stg, '')}阶数值", -1)
+                        if cfg_v >= 0:
+                            s += cfg_v
+                        else:
+                            s += int(round(base_v * mult))
                     except Exception:
                         pass
     except Exception:

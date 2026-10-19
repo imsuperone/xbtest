@@ -464,6 +464,8 @@ function renderPoolBox(forceOpen = false) {
       if (kw && !name.toLowerCase().includes(kw)) return;
       renderedCount++;
       const _ext = ((it.file || "").split(".").pop() || "").toLowerCase();
+      const _sz = Number(it.size) || 0;
+      const _kb = _sz ? (_sz >= 1024 * 1024 ? (_sz / 1024 / 1024).toFixed(1) + "MB" : Math.max(1, Math.round(_sz / 1024)) + "KB") : "";
       const defA = (DEFAULT_WEAPON_ATTRS && DEFAULT_WEAPON_ATTRS[name]) || {};
       const defAtk = defA.atk || (RARITY_DEFAULT_ATK[rar] || 50);
       const pa = (POOL_ATTRS && POOL_ATTRS[name]) || {};
@@ -508,7 +510,7 @@ function renderPoolBox(forceOpen = false) {
               <button class="ghost sm" data-pool-pick-builtin>📂 内置换图</button>
               <button class="ghost sm" data-pool-pick-upload>⬆️ 本地换图</button>
             </div>
-            <span class="weapon-file-hint">${esc(_ext)} · ${_kb}</span>
+            <span class="weapon-file-hint">${esc(_ext)}${_kb ? " · " + esc(_kb) : ""}</span>
           </div>
         </div>
       `;

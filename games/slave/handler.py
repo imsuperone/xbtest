@@ -279,16 +279,26 @@ def _route_locked(gid, qq, raw):
         res = (_S.T.T_NAME.format(name=q) + "\r\n" + _S.T.T_STAGE.format(n=stage)
                 + "\r\n" + _S.T.T_EFFECT.format(effect=eff)
                 + f"\r\n持有数量: {have}")
-        if q == "酒神葫芦":
+        eff_list = _treasure_effect_list(q)
+        has_pardon = (q == "酒神葫芦") or any(tt == "pardon" for tt, _ in eff_list)
+        has_shield = (q == "四象护符") or any(tt == "shield" for tt, _ in eff_list)
+        if has_pardon:
             prob = _treasure_trigger_prob(u, "pardon", default_base=25, fallbacks=(TREASURE_GOURD_NAME,))
             res += f"\r\n当前免罪触发率: {prob}%（升阶持续提升，★5阶达98%）"
-        elif q == "四象护符":
+        if has_shield:
             prob = _treasure_trigger_prob(u, "shield", default_base=25, fallbacks=(SHIELD_TREASURE,))
             res += f"\r\n当前圣盾触发率: {prob}%（升阶持续提升，★5阶达98%）"
-        else:
-            mult = _treasure_stage_mult(stage)
-            if mult > 1.0:
-                res += f"\r\n当前升阶倍率: {mult:.2f}倍"
+        mult = _treasure_stage_mult(stage)
+        for tt, vv in eff_list:
+            if tt in ("work", "atk", "worth"):
+                base_v = max(0, int(vv or 0))
+                cfg_v = cfgi("设置", f"{q}_{stage}阶数值", -1)
+                cur_v = cfg_v if cfg_v >= 0 else int(round(base_v * mult))
+                tt_name = {"work": "打工工资加成", "atk": "攻击加成", "worth": "身价加成"}.get(tt, tt)
+                suffix = "%" if tt in ("work", "worth") else "点"
+                res += f"\r\n当前{tt_name}: +{cur_v}{suffix} (★{stage}阶实效)"
+        if mult > 1.0 and not (has_pardon or has_shield):
+            res += f"\r\n当前升阶倍率: {mult:.2f}倍"
         return res
     if q in all_w:
         u = U(st, qq)

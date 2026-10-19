@@ -660,22 +660,8 @@ function openTreasureEditModal(name, isNew) {
 
   const cfgSet = (typeof CFG !== "undefined" && CFG && CFG.cur && CFG.cur["设置"]) ? CFG.cur["设置"] : {};
   const defaultCurve = { 0: 25, 1: 40, 2: 55, 3: 70, 4: 85, 5: 98 };
+  const stageMultipliers = [1.0, 1.35, 1.75, 2.25, 2.85, 3.60];
   const chMap = ["零", "一", "二", "三", "四", "五"];
-  const tProbs = [0, 1, 2, 3, 4, 5].map(s => {
-    let val = cfgSet[`${name}_${s}阶触发率`];
-    if (val === undefined || val === null || val === "") {
-      val = cfgSet[`${name}_${chMap[s]}阶触发率`];
-    }
-    if ((val === undefined || val === null || val === "") && s === 0) {
-      val = cfgSet[`${name}_基础触发率`];
-    }
-    return {
-      stage: s,
-      tierLabel: s === 0 ? "0阶(基础)" : `${s}阶`,
-      val: (val !== undefined && val !== null) ? val : "",
-      defaultRate: defaultCurve[s]
-    };
-  });
 
   content.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:10px">
@@ -686,34 +672,133 @@ function openTreasureEditModal(name, isNew) {
         <div style="margin-top:8px"><button type="button" class="ghost sm" id="treEffAdd">＋ 添加效果</button></div></div>
       <div class="hint">攻击计入主人战力；护盾/免罪拥有即生效（显示是否）；打工加成主人全队工资；身价加成战斗力身价部分。多条同类型自动累加。保存后即时生效。</div>
 
-      <!-- 该宝物各阶实战触发概率 -->
-      <div style="border-top:1px solid var(--line);padding-top:10px;margin-top:4px">
-        <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:6px">💎 该宝物各阶实战触发概率（留空自动使用默认递增曲线）：</label>
-        <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:8px">
-          ${tProbs.map(t => `
-            <div>
-              <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:2px">
-                ${t.tierLabel} <b style="color:var(--acc);font-weight:600">(${t.defaultRate}%)</b>
-              </span>
-              <input id="treProb_${t.stage}" type="number" min="1" max="98" placeholder="默认 ${t.defaultRate}%" value="${esc(t.val)}" title="默认曲线：${t.defaultRate}%" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
-            </div>
-          `).join("")}
-        </div>
-        <div class="hint" style="margin-top:6px;font-size:11px">如酒神葫芦免罪、四象圣盾等触发类宝物在战斗中的各阶生效几率（0~5阶，最高98%）。未配置阶段自动按升阶递增曲线计算。</div>
-      </div>
+      <!-- 动态阶位配置区：按所选实效类型自动呈现【各阶进阶加成数值】或【实战触发几率】 -->
+      <div id="treStageConfigArea" style="border-top:1px solid var(--line);padding-top:10px;margin-top:4px"></div>
     </div>`;
+
+  const renderStageConfig = () => {
+    const area = content.querySelector("#treStageConfigArea");
+    if (!area) return;
+
+    // 解析当前行类型与数值
+    const rows = [];
+    content.querySelectorAll("#treEffRows .treEffRow").forEach((row) => {
+      const t = (row.querySelector(".treEffType")?.value || "").trim();
+      if (!_treasureTypeOk(t)) return;
+      if (_treasureTypeBinary(t)) {
+        if ((row.querySelector(".treEffBool")?.value || "1") === "1") rows.push({ type: t, value: 1 });
+      } else {
+        rows.push({ type: t, value: Math.max(0, Number(row.querySelector(".treEffVal")?.value) || 0) });
+      }
+    });
+
+    const isGourdOrCharm = name.includes("酒神") || name.includes("四象");
+    const hasTrigger = isGourdOrCharm || rows.some(r => r.type === "shield" || r.type === "pardon");
+    const numRows = rows.filter(r => ["work", "atk", "worth"].includes(r.type));
+    const hasNumeric = numRows.length > 0;
+
+    let html = "";
+
+    // 1. 数值进阶成长配置（打工工资 / 攻击力 / 身价）
+    if (hasNumeric) {
+      const primary = numRows[0];
+      const baseV = primary.value || 0;
+      const typeLabel = {"work": "打工工资加成", "atk": "攻击力加成", "worth": "身价加成"}[primary.type] || "加成";
+      const unit = primary.type === "atk" ? "点" : "%";
+
+      html += `
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:6px">
+            📈 该宝物各阶进阶加成数值（${typeLabel}，按系统阶梯倍率 1.0x / 1.35x / 1.75x / 2.25x / 2.85x / 3.60x 逐阶递增成长）：
+          </label>
+          <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:8px">
+            ${[0, 1, 2, 3, 4, 5].map(s => {
+              const mult = stageMultipliers[s];
+              const defVal = s === 0 ? baseV : Math.round(baseV * mult);
+              let curVal = cfgSet[`${name}_${s}阶数值`];
+              if (curVal === undefined || curVal === null || curVal === "") {
+                curVal = cfgSet[`${name}_${chMap[s]}阶数值`];
+              }
+              return `
+                <div>
+                  <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:2px">
+                    ${s === 0 ? "0阶(基础)" : s + "阶"} <b style="color:var(--acc);font-weight:600">(+${defVal}${unit})</b>
+                  </span>
+                  <input id="treVal_${s}" type="number" min="0" placeholder="默认 +${defVal}" value="${esc((curVal !== undefined && curVal !== null) ? curVal : '')}" title="系统倍率预估：+${defVal}${unit}" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
+                </div>
+              `;
+            }).join("")}
+          </div>
+          <div class="hint" style="margin-top:6px;font-size:11px">
+            💡 <b>进阶递增机制</b>：基础值为 +${baseV}${unit}。玩家升阶该宝物时其实效将按系统阶梯倍率逐阶提升（★1阶 +${Math.round(baseV * 1.35)}${unit}，最高★5阶 +${Math.round(baseV * 3.6)}${unit}）。留空自动按倍率放大；若需自定义某一阶的指定数值，直接填入即可。
+          </div>
+        </div>
+      `;
+    }
+
+    // 2. 实战触发几率配置（免罪 / 圣盾类）
+    if (hasTrigger) {
+      html += `
+        <div style="margin-bottom:8px">
+          <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:6px">
+            🎲 该宝物各阶实战触发几率（免罪/圣盾类，留空自动使用默认递增曲线）：
+          </label>
+          <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:8px">
+            ${[0, 1, 2, 3, 4, 5].map(s => {
+              const defRate = defaultCurve[s];
+              let val = cfgSet[`${name}_${s}阶触发率`];
+              if (val === undefined || val === null || val === "") {
+                val = cfgSet[`${name}_${chMap[s]}阶触发率`];
+              }
+              if ((val === undefined || val === null || val === "") && s === 0) {
+                val = cfgSet[`${name}_基础触发率`];
+              }
+              return `
+                <div>
+                  <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:2px">
+                    ${s === 0 ? "0阶(基础)" : s + "阶"} <b style="color:var(--acc);font-weight:600">(${defRate}%)</b>
+                  </span>
+                  <input id="treProb_${s}" type="number" min="1" max="98" placeholder="默认 ${defRate}%" value="${esc((val !== undefined && val !== null) ? val : '')}" title="默认曲线：${defRate}%" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
+                </div>
+              `;
+            }).join("")}
+          </div>
+          <div class="hint" style="margin-top:6px;font-size:11px">
+            💡 <b>战斗生效几率</b>：免罪（免死免罚）、圣盾（抵挡偷窃/攻击）等触发类宝物在战斗中按几率触发，升阶将逐级提升触发几率（★1阶 40%，最高98%）。
+          </div>
+        </div>
+      `;
+    }
+
+    if (!hasNumeric && !hasTrigger) {
+      html = `<div class="hint" style="font-size:11.5px;color:var(--muted)">💡 当前为纯收藏宝物或未选择实效。在上方添加“打工加成/攻击加成”或“护盾/免罪”后，此处将自动展示对应的进阶数值成长曲线或触发几率调控面板。</div>`;
+    }
+
+    area.innerHTML = html;
+  };
+
+  renderStageConfig();
+
   try {
     content.querySelector("#treEffAdd")?.addEventListener("click", () => {
       const box = content.querySelector("#treEffRows");
       if (!box) return;
       box.insertAdjacentHTML("beforeend", _treEffRowHTML("", 0));
+      renderStageConfig();
     });
     content.querySelector("#treEffRows")?.addEventListener("change", (ev) => {
       const sel = ev.target && ev.target.closest ? ev.target.closest(".treEffType") : null;
-      if (!sel) return;
-      const row = sel.closest(".treEffRow");
-      const wrap = row ? row.querySelector(".treEffValWrap") : null;
-      if (wrap) wrap.innerHTML = _treEffValWrapHTML(sel.value || "", 0);
+      if (sel) {
+        const row = sel.closest(".treEffRow");
+        const wrap = row ? row.querySelector(".treEffValWrap") : null;
+        if (wrap) wrap.innerHTML = _treEffValWrapHTML(sel.value || "", 0);
+      }
+      renderStageConfig();
+    });
+    content.querySelector("#treEffRows")?.addEventListener("input", (ev) => {
+      if (ev.target && ev.target.classList.contains("treEffVal")) {
+        renderStageConfig();
+      }
     });
     content.querySelector("#treEffRows")?.addEventListener("click", (ev) => {
       const del = ev.target && ev.target.closest ? ev.target.closest(".treEffDel") : null;
@@ -722,6 +807,7 @@ function openTreasureEditModal(name, isNew) {
       const box = content.querySelector("#treEffRows");
       if (row && box && box.querySelectorAll(".treEffRow").length > 1) row.remove();
       else if (row) { const s = row.querySelector(".treEffType"); if (s) { s.value = ""; s.dispatchEvent(new Event("change", { bubbles: true })); } }
+      renderStageConfig();
     });
   } catch (e) {}
   if (cancelBtn) { cancelBtn.style.display = ""; cancelBtn.textContent = "取消"; cancelBtn.onclick = () => { modal.className = ""; }; }
@@ -745,20 +831,21 @@ function openTreasureEditModal(name, isNew) {
       } catch (e) {}
       window._TREAS_EFF = window._TREAS_EFF || {};
 
-      // 提取各阶实战触发概率（0~5阶）
+      // 提取专属数值与各阶触发概率（0~5阶）
       const payloadSetting = {};
       [0, 1, 2, 3, 4, 5].forEach(s => {
-        const inp = document.getElementById(`treProb_${s}`);
-        const v = inp ? inp.value.trim() : "";
-        const key = `${name}_${s}阶触发率`;
-        if (v !== "") payloadSetting[key] = Number(v);
-        else payloadSetting[key] = null;
-
-        // 清理旧格式汉字键，避免残留漂移
-        const ch = chMap[s];
-        payloadSetting[`${name}_${ch}阶触发率`] = null;
-        if (s === 0) {
-          payloadSetting[`${name}_基础触发率`] = (v !== "") ? Number(v) : null;
+        const valInp = document.getElementById(`treVal_${s}`);
+        if (valInp) {
+          const v = valInp.value.trim();
+          payloadSetting[`${name}_${s}阶数值`] = v !== "" ? Number(v) : null;
+          payloadSetting[`${name}_${chMap[s]}阶数值`] = null;
+        }
+        const probInp = document.getElementById(`treProb_${s}`);
+        if (probInp) {
+          const v = probInp.value.trim();
+          payloadSetting[`${name}_${s}阶触发率`] = v !== "" ? Number(v) : null;
+          payloadSetting[`${name}_${chMap[s]}阶触发率`] = null;
+          if (s === 0) payloadSetting[`${name}_基础触发率`] = v !== "" ? Number(v) : null;
         }
       });
 
