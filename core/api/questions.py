@@ -99,6 +99,8 @@ async def handle_questions_save(request=None):
         else:
             os.rename(tmp_path, fpath)
 
+        _clear_runtime_cache()
+
         return json_response({
             "ok": True,
             "msg": f"已成功保存「{meta['name']}」题库，共 {len(cleaned)} 条",
@@ -107,3 +109,75 @@ async def handle_questions_save(request=None):
         })
     except Exception as e:
         return _err(f"保存题库失败: {e}")
+
+
+def _clear_runtime_cache():
+    """清除娱乐系统运行时的题库缓存，使其即时热重载"""
+    try:
+        try:
+            from ...games.ent import content as _ent_content
+        except (ImportError, ValueError):
+            from games.ent import content as _ent_content  # type: ignore
+        if hasattr(_ent_content, "_FILE_BANKS_CACHE") and isinstance(_ent_content._FILE_BANKS_CACHE, dict):
+            _ent_content._FILE_BANKS_CACHE.clear()
+    except Exception:
+        pass
+
+
+async def handle_questions_reset(request=None):
+    """恢复题库为系统默认种子（支持指定单独题库或全部恢复）"""
+    try:
+        data = await get_req_json(request) if request else {}
+        if not isinstance(data, dict):
+            data = {}
+        bank = str(data.get("bank", "")).strip().lower()
+
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        seed_dir = os.path.join(base_dir, "data", "seeds", "questions")
+        q_dir = _get_q_dir()
+
+        targets = [bank] if bank in _BANK_MAP else list(_BANK_MAP.keys())
+        restored = {}
+
+        for b in targets:
+            meta = _BANK_MAP[b]
+            seed_file = os.path.join(seed_dir, meta["file"])
+            target_file = os.path.join(q_dir, meta["file"])
+            if not os.path.isfile(seed_file):
+                continue
+            with open(seed_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            tmp_path = target_file + ".tmp"
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            if os.path.isfile(target_file):
+                os.replace(tmp_path, target_file)
+            else:
+                os.rename(tmp_path, target_file)
+
+            try:
+                items = json.loads(content)
+            except Exception:
+                items = []
+            restored[b] = len(items) if isinstance(items, list) else 0
+
+        _clear_runtime_cache()
+
+        if bank in _BANK_MAP:
+            name = _BANK_MAP[bank]["name"]
+            count = restored.get(bank, 0)
+            return json_response({
+                "ok": True,
+                "msg": f"已成功恢复「{name}」默认题库，共 {count} 条数据",
+                "bank": bank,
+                "total": count
+            })
+        else:
+            return json_response({
+                "ok": True,
+                "msg": "已成功恢复全部默认题库（急转弯、猜字谜、知识问答、成语接龙）",
+                "restored": restored
+            })
+    except Exception as e:
+        return _err(f"恢复默认题库失败: {e}")
+

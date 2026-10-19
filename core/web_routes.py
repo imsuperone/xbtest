@@ -88,6 +88,7 @@ _XB_API_ROUTES = [
     ("logs/clear", "POST", "page_logs_clear", "清空插件运行日志", ("core.api.logs", "handle_logs_clear", "logs clear", {"mode": "req"})),
     ("questions/list", "GET", "page_questions_list", "读取题库列表", ("core.api.questions", "handle_questions_list", "questions list", {})),
     ("questions/save", "POST", "page_questions_save", "保存题库", ("core.api.questions", "handle_questions_save", "questions save", {})),
+    ("questions/reset", "POST", "page_questions_reset", "恢复默认题库", ("core.api.questions", "handle_questions_reset", "questions reset", {})),
 ]
 
 # WebDAV 双前缀别名表（backup/ 与 backups/ 同义，由循环展开注册）
@@ -118,6 +119,7 @@ _XB_MUTATING_HANDLERS = frozenset({
     "handle_logs_clear",
     "handle_webdav_backup_now", "handle_webdav_restore", "handle_webdav_delete",
     "handle_slave_calibrate",
+    "handle_questions_save", "handle_questions_reset",
 })
 
 

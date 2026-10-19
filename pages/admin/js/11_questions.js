@@ -285,6 +285,32 @@ function initQuestionsView() {
     loadQuestions();
   });
 
+  // 恢复默认题库（从只读种子文件重置当前分类或全部）
+  document.getElementById("btnQRestoreDefault")?.addEventListener("click", async () => {
+    const bankNames = { trick: "急转弯", miri: "猜字谜", quiz: "知识问答", chain: "成语接龙" };
+    const curName = bankNames[_Q_BANK] || "当前题库";
+    const tip = `确认将【${curName}】恢复为系统内置默认题库吗？\n恢复后将自动写入系统内置的丰富种子题库并即时生效（当前分类的未保存修改或自定义题目将被覆盖）。`;
+    if (!(await uiConfirm(tip, `恢复${curName}默认题库`))) return;
+
+    const btn = document.getElementById("btnQRestoreDefault");
+    if (btn && btn.disabled) return;
+    const origTxt = btn ? btn.textContent : "↩️ 恢复默认题库";
+    if (btn) { btn.disabled = true; btn.textContent = "正在恢复..."; }
+    try {
+      const res = await getBridge().apiPost("questions/reset", { bank: _Q_BANK });
+      if (res && res.ok) {
+        toast(res.msg || `已恢复【${curName}】为系统默认题库！`, "ok", 4000);
+        await loadQuestions();
+      } else {
+        toast("恢复失败: " + ((res && res.error) || "未知错误"), "bad", 5000);
+      }
+    } catch (e) {
+      toast("恢复异常: " + e.message, "bad", 5000);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = origTxt; }
+    }
+  });
+
   // 保存当前题库
   document.getElementById("btnQSave")?.addEventListener("click", () => {
     saveCurrentQuestions();

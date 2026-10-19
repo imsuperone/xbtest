@@ -22,8 +22,11 @@ async def handle_gacha_weapons(request):
         try:
             try:
                 from ...games import slave as _sl
-            except ImportError:
-                import slave as _sl  # type: ignore
+            except (ImportError, ValueError):
+                try:
+                    from games import slave as _sl
+                except (ImportError, ValueError):
+                    import slave as _sl  # type: ignore
             try:
                 _base = _pool_base()
             except Exception:
@@ -62,7 +65,7 @@ try:
         DEFAULT_WEAPON_ATTRS as _DEFAULT_WEAPON_ATTRS,
         RARITY_DEFAULT_ATK as _RARITY_DEFAULT_ATK,
     )
-except ImportError:
+except (ImportError, ValueError):
     from games.config.shop import (  # type: ignore
         POOL_RARS as _POOL_RARS,
         POOL_IMG_EXTS as _POOL_IMG_EXTS,
@@ -78,9 +81,13 @@ def _pool_slave():
     try:
         from ...games import slave as _sl
         return _sl
-    except ImportError:
-        import slave as _sl  # type: ignore
-        return _sl
+    except (ImportError, ValueError):
+        try:
+            from games import slave as _sl
+            return _sl
+        except (ImportError, ValueError):
+            import slave as _sl  # type: ignore
+            return _sl
 
 
 

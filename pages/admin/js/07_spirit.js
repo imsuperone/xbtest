@@ -659,18 +659,23 @@ function openTreasureEditModal(name, isNew) {
   if (inputWrap) inputWrap.style.display = "none";
 
   const cfgSet = (typeof CFG !== "undefined" && CFG && CFG.cur && CFG.cur["设置"]) ? CFG.cur["设置"] : {};
-  const baseRates = {
-    "一": cfgSet["一阶宝物概率"] ?? 85,
-    "二": cfgSet["二阶宝物概率"] ?? 60,
-    "三": cfgSet["三阶宝物概率"] ?? 35,
-    "四": cfgSet["四阶宝物概率"] ?? 45,
-    "五": cfgSet["五阶宝物概率"] ?? 25,
-  };
-  const tProbs = ["一", "二", "三", "四", "五"].map(t => {
-    const val = cfgSet[`${name}_${t}阶宝物概率`];
-    return { tier: t, val: (val !== undefined && val !== null) ? val : "", baseRate: baseRates[t] };
+  const defaultCurve = { 0: 25, 1: 40, 2: 55, 3: 70, 4: 85, 5: 98 };
+  const chMap = ["零", "一", "二", "三", "四", "五"];
+  const tProbs = [0, 1, 2, 3, 4, 5].map(s => {
+    let val = cfgSet[`${name}_${s}阶触发率`];
+    if (val === undefined || val === null || val === "") {
+      val = cfgSet[`${name}_${chMap[s]}阶触发率`];
+    }
+    if ((val === undefined || val === null || val === "") && s === 0) {
+      val = cfgSet[`${name}_基础触发率`];
+    }
+    return {
+      stage: s,
+      tierLabel: s === 0 ? "0阶(基础)" : `${s}阶`,
+      val: (val !== undefined && val !== null) ? val : "",
+      defaultRate: defaultCurve[s]
+    };
   });
-  const tBaseProb = cfgSet[`${name}_基础触发率`] !== undefined ? cfgSet[`${name}_基础触发率`] : "";
 
   content.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:10px">
@@ -681,24 +686,20 @@ function openTreasureEditModal(name, isNew) {
         <div style="margin-top:8px"><button type="button" class="ghost sm" id="treEffAdd">＋ 添加效果</button></div></div>
       <div class="hint">攻击计入主人战力；护盾/免罪拥有即生效（显示是否）；打工加成主人全队工资；身价加成战斗力身价部分。多条同类型自动累加。保存后即时生效。</div>
 
-      <!-- 该宝物专属升阶概率与触发率微调 -->
+      <!-- 该宝物各阶实战触发概率 -->
       <div style="border-top:1px solid var(--line);padding-top:10px;margin-top:4px">
-        <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:6px">💎 该宝物专属升阶概率（留空自动使用通用基准概率）：</label>
-        <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:8px">
+        <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:6px">💎 该宝物各阶实战触发概率（留空自动使用默认递增曲线）：</label>
+        <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:8px">
           ${tProbs.map(t => `
             <div>
               <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:2px">
-                ${t.tier}阶率(%) <b style="color:var(--acc);font-weight:600">(${t.baseRate}%)</b>
+                ${t.tierLabel} <b style="color:var(--acc);font-weight:600">(${t.defaultRate}%)</b>
               </span>
-              <input id="treProb_${t.tier}" type="number" min="1" max="100" placeholder="默认 ${t.baseRate}%" value="${esc(t.val)}" title="通用基准默认：${t.baseRate}%" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
+              <input id="treProb_${t.stage}" type="number" min="1" max="98" placeholder="默认 ${t.defaultRate}%" value="${esc(t.val)}" title="默认曲线：${t.defaultRate}%" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
             </div>
           `).join("")}
         </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
-          <span style="font-size:11.5px;color:var(--muted);white-space:nowrap">免罪/圣盾初始触发率(%):</span>
-          <input id="treBaseProb" type="number" min="1" max="100" placeholder="默认 25%" value="${esc(tBaseProb)}" title="默认 25%" style="width:95px;padding:5px 8px;font-size:12px;border-radius:8px">
-          <span class="hint" style="font-size:11px">酒神葫芦/四象护符等0阶默认 25%，升阶可提升触发率</span>
-        </div>
+        <div class="hint" style="margin-top:6px;font-size:11px">如酒神葫芦免罪、四象圣盾等触发类宝物在战斗中的各阶生效几率（0~5阶，最高98%）。未配置阶段自动按升阶递增曲线计算。</div>
       </div>
     </div>`;
   try {
@@ -744,18 +745,22 @@ function openTreasureEditModal(name, isNew) {
       } catch (e) {}
       window._TREAS_EFF = window._TREAS_EFF || {};
 
-      // 提取专属升阶数值
+      // 提取各阶实战触发概率（0~5阶）
       const payloadSetting = {};
-      ["一", "二", "三", "四", "五"].forEach(t => {
-        const inp = document.getElementById(`treProb_${t}`);
+      [0, 1, 2, 3, 4, 5].forEach(s => {
+        const inp = document.getElementById(`treProb_${s}`);
         const v = inp ? inp.value.trim() : "";
-        if (v !== "") payloadSetting[`${name}_${t}阶宝物概率`] = Number(v);
-        else payloadSetting[`${name}_${t}阶宝物概率`] = null;
+        const key = `${name}_${s}阶触发率`;
+        if (v !== "") payloadSetting[key] = Number(v);
+        else payloadSetting[key] = null;
+
+        // 清理旧格式汉字键，避免残留漂移
+        const ch = chMap[s];
+        payloadSetting[`${name}_${ch}阶触发率`] = null;
+        if (s === 0) {
+          payloadSetting[`${name}_基础触发率`] = (v !== "") ? Number(v) : null;
+        }
       });
-      const baseInp = document.getElementById("treBaseProb");
-      const bv = baseInp ? baseInp.value.trim() : "";
-      if (bv !== "") payloadSetting[`${name}_基础触发率`] = Number(bv);
-      else payloadSetting[`${name}_基础触发率`] = null;
 
       try {
         await getBridge().apiPost("config/save", { "设置": payloadSetting });

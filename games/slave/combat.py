@@ -221,10 +221,17 @@ def _treasure_trigger_prob(u, ttype, default_base=25, fallbacks=()):
         stage = max(0, min(5, stage))
 
         stage_cfg_p = cfgi("设置", f"{t_str}_{stage}阶触发率", -1)
+        if stage_cfg_p < 0:
+            _CH = {0: "零", 1: "一", 2: "二", 3: "三", 4: "四", 5: "五"}
+            stage_cfg_p = cfgi("设置", f"{t_str}_{_CH.get(stage, '')}阶触发率", -1)
         if stage_cfg_p >= 0:
             prob = stage_cfg_p
         else:
-            base_override = cfgi("设置", f"{t_str}_基础触发率", -1)
+            base_override = cfgi("设置", f"{t_str}_0阶触发率", -1)
+            if base_override < 0:
+                base_override = cfgi("设置", f"{t_str}_零阶触发率", -1)
+            if base_override < 0:
+                base_override = cfgi("设置", f"{t_str}_基础触发率", -1)
             if base_override >= 0:
                 base_p = base_override
             if stage == 0:

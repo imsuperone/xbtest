@@ -203,6 +203,28 @@ def _load_bank_file(filename, fallback_list=None):
     def _def_fall():
         if fallback_list:
             return list(fallback_list)
+        try:
+            seed_path = os.path.join(base_dir, "data", "seeds", "questions", filename)
+            if os.path.isfile(seed_path):
+                import json as _js_seed
+                with open(seed_path, "r", encoding="utf-8") as sf:
+                    s_data = _js_seed.load(sf)
+                if isinstance(s_data, list) and s_data:
+                    if filename == "chain.json":
+                        return [str(x).strip() for x in s_data if str(x).strip()]
+                    _s_qa = []
+                    for it in s_data:
+                        if isinstance(it, dict):
+                            sq = it.get("q") or it.get("question") or it.get("题干") or ""
+                            sa = it.get("a") or it.get("answer") or it.get("答案") or ""
+                            if sq and sa:
+                                _s_qa.append((str(sq).strip(), str(sa).strip()))
+                        elif isinstance(it, (list, tuple)) and len(it) >= 2:
+                            _s_qa.append((str(it[0]).strip(), str(it[1]).strip()))
+                    if _s_qa:
+                        return _s_qa
+        except Exception:
+            pass
         if filename == "chain.json":
             return ["一帆风顺", "顺水推舟", "舟车劳顿", "顿开茅塞"]
         return [("请回答1+1等于几？", "2")]
