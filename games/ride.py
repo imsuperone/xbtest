@@ -20,6 +20,7 @@ try:
 except ImportError:
     from games.config.shop import RIDE_PRICES as RIDES, RIDE_SHOP as DEFAULT_RIDE_SHOP_EXT  # type: ignore
 RIDE_TYPE = "坐骑"
+RIDE_SHOP = DEFAULT_RIDE_SHOP_EXT
 
 _PLUGIN_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _IMG_BASE = os.path.join(_PLUGIN_BASE, "data", "img", "rides")           # 新包内布局（图片归 img 目录）
@@ -424,10 +425,16 @@ def _ride_buff_type(name):
         raw = _ride_shop_raw()
         if isinstance(raw, dict):
             info = raw.get(name)
-            if isinstance(info, dict) and info.get("buff_type"):
-                return str(info.get("buff_type")).strip()
+            if isinstance(info, dict):
+                bt = str(info.get("buff_type") or "").strip()
+                if bt and bt != "all":
+                    return bt
+                if (not bt or bt == "all") and name in RIDE_SHOP:
+                    return RIDE_SHOP[name].get("buff_type", "all")
     except Exception:
         pass
+    if name in RIDE_SHOP:
+        return RIDE_SHOP[name].get("buff_type", "all")
     return "all"
 
 

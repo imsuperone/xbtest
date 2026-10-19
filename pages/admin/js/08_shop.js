@@ -197,6 +197,63 @@ const DEFAULT_RIDE_SHOP = {
   "私人航空": { price: 5000000, img: "data/img/rides/私人航空.jpg", buff: 15, buff_type: "all" },
   "老八": { price: 500000, img: "data/img/rides/老八.jpg", buff: 10, buff_type: "atk" },
 };
+
+const RARITY_DEFAULT_ATK = {
+  "SSR": 300,
+  "SR": 150,
+  "R": 50,
+};
+
+const DEFAULT_WEAPON_ATTRS = {
+  // SSR (7)
+  "鬼泪村正": { atk: 500, desc: "东瀛妖刀，斩风断水，嗜血封喉" },
+  "雷鸣剑": { atk: 450, desc: "引九天神雷，剑气如龙" },
+  "神使沧溟": { atk: 420, desc: "海神圣物，碧波万顷化为护体剑罡" },
+  "炎宿朱雀": { atk: 400, desc: "四象朱雀精魂铸造，烈焰焚尽万物" },
+  "祝融": { atk: 380, desc: "火神本命神兵，炽热流金" },
+  "老八脑!": { atk: 350, desc: "奥利给战神之力，秘制能量震撼全场" },
+  "钻石剑": { atk: 320, desc: "璀璨夺目，坚不可摧的绝世名锋" },
+
+  // SR (20)
+  "双弦寒冰弓": { atk: 200, desc: "极北万年玄冰雕琢，矢出霜华凝滞" },
+  "绝地光剑": { atk: 195, desc: "原力凝聚的高能离子刃，斩断一切" },
+  "西斯光剑": { atk: 195, desc: "暗黑原力猩红光刃，狂暴而凌厉" },
+  "村正": { atk: 190, desc: "千锤百炼的锋刃，隐隐散发血色微光" },
+  "烈炎": { atk: 185, desc: "纯阳烈焰凝聚的长刃，触之焦灼" },
+  "追雷弓": { atk: 185, desc: "伴雷而鸣，箭矢引落电光石火" },
+  "寒晶苦无": { atk: 180, desc: "幽暗阴影中的致命杀招，彻骨冰冷" },
+  "绝寒弓": { atk: 180, desc: "冻结生机的霜雪之矢，穿云贯日" },
+  "雷元剑": { atk: 180, desc: "雷元淬炼而成，出鞘隐带电闪雷鸣" },
+  "烈焰刀": { atk: 175, desc: "炽焰缠绕之刀，劈砍伴随烈焰轰鸣" },
+  "苍雪剑": { atk: 175, desc: "剑身宛若白雪皑皑，剑出寒气逼人" },
+  "永恒之晶": { atk: 170, desc: "封印古老秘术的棱晶，魔力流转不休" },
+  "疾风弓": { atk: 170, desc: "轻巧迅捷，箭出如长风呼啸疾驰" },
+  "爆炎辣锅": { atk: 165, desc: "香辣爆裂，特级厨艺化为刚猛爆发" },
+  "龙鳞扇": { atk: 165, desc: "真龙之鳞编织，扇风如龙威浩荡" },
+  "火漩团扇": { atk: 160, desc: "挥舞激荡烈火狂岚，扇卷火舌席卷敌阵" },
+  "琅君玉箫": { atk: 155, desc: "温润青玉所铸，箫声激荡暗藏杀机" },
+  "爱疯20": { atk: 150, desc: "超前黑科技武装，量子信号全频压制" },
+  "秘制豪串": { atk: 140, desc: "江湖豪杰最爱，饱腹之余豪气干云" },
+  "铁剑": { atk: 120, desc: "百炼精铁锻造，朴实沉稳的防身利器" },
+
+  // R (15)
+  "光剑强化型": { atk: 80, desc: "强化能量回路的光剑，嗡鸣作响" },
+  "尚方宝剑": { atk: 80, desc: "官府佩剑，颇有几分威严与锋芒" },
+  "冰阵剑": { atk: 75, desc: "附带基础冰阵刻印，稍显凌厉" },
+  "大太刀": { atk: 70, desc: "沉重大太刀，力道刚猛沉实" },
+  "火焰刀": { atk: 70, desc: "粗铁涂覆火油之刀，灼灼生烟" },
+  "大锤": { atk: 65, desc: "粗重铁锤，砸下势大力沉" },
+  "破魔矢": { atk: 65, desc: "巫祝祈福之箭矢，微破邪气" },
+  "雷弓": { atk: 65, desc: "弓臂缠绕铜丝，引微弱电光" },
+  "上上签": { atk: 60, desc: "大吉大利，福星高照逢凶化吉" },
+  "寒冰弓": { atk: 60, desc: "简朴寒木弓，射程与韧性兼备" },
+  "旋风扇": { atk: 55, desc: "轻巧羽扇，挥起微弱旋风" },
+  "火之扇": { atk: 55, desc: "微热小扇，带着淡淡火星" },
+  "豪肉叉": { atk: 50, desc: "野外狩猎叉具，结实耐用" },
+  "青箫": { atk: 45, desc: "寻常竹箫，清幽悦耳" },
+  "木剑": { atk: 30, desc: "新手练习用木剑，安全实用" },
+};
+
 let SHOP_RIDE = {};
 let SHOP_DIRTY = false;
 let SHOP_RIDE_CUSTOM = true;   // false=当前展示的是内置默认（未自定义），保存后即转为自定义
@@ -268,15 +325,20 @@ function _normRideObj(d) {
   const out = {};
   Object.keys(d).forEach((k) => {
     const v = d[k];
+    const defType = (DEFAULT_RIDE_SHOP[k] && DEFAULT_RIDE_SHOP[k].buff_type) || "all";
     if (v && typeof v === "object" && !Array.isArray(v)) {
+      let bt = v.buff_type;
+      if (!bt || (bt === "all" && defType !== "all")) {
+        bt = defType;
+      }
       out[k] = {
         price: Number(v.price) || 0,
         img: String(v.img || ""),
         buff: (v.buff !== undefined && v.buff !== "" && !isNaN(Number(v.buff))) ? Number(v.buff) : undefined,
-        buff_type: String(v.buff_type || "all")
+        buff_type: String(bt || "all")
       };
     } else {
-      out[k] = { price: Number(v) || 0, img: "", buff: undefined, buff_type: "all" };
+      out[k] = { price: Number(v) || 0, img: "", buff: undefined, buff_type: defType };
     }
   });
   return out;
@@ -292,7 +354,11 @@ async function loadPool(skipAtlas = false) {
     POOL_ATTRS = {};
     ["SSR", "SR", "R"].forEach((r) => ((POOL_WEAPONS && POOL_WEAPONS[r]) || []).forEach((it) => {
       const a = (it && it.attrs) || {};
-      POOL_ATTRS[it.name] = { atk: Number(a.atk) || 0, desc: String(a.desc || "") };
+      const defA = (DEFAULT_WEAPON_ATTRS && DEFAULT_WEAPON_ATTRS[it.name]) || {};
+      const defAtk = defA.atk || (RARITY_DEFAULT_ATK[r] || 50);
+      const curAtk = (a.atk !== undefined && a.atk !== null && a.atk !== 0 && a.atk !== "") ? Number(a.atk) : defAtk;
+      const curDesc = (a.desc !== undefined && a.desc !== null && a.desc !== "") ? String(a.desc) : (defA.desc || "");
+      POOL_ATTRS[it.name] = { atk: curAtk, desc: curDesc };
     }));
     POOL_ATTRS_DIRTY = false;
   } catch (e) {}
@@ -398,10 +464,11 @@ function renderPoolBox(forceOpen = false) {
       if (kw && !name.toLowerCase().includes(kw)) return;
       renderedCount++;
       const _ext = ((it.file || "").split(".").pop() || "").toLowerCase();
-      const _kb = (it.size != null) ? Math.max(1, Math.round(it.size / 1024)) + "KB" : "";
-      const pa = (POOL_ATTRS && POOL_ATTRS[name]) || { atk: 0, desc: "" };
-      const _paAtk = Math.max(0, Number(pa.atk) || 0);
-      const _paDesc = String(pa.desc || "");
+      const defA = (DEFAULT_WEAPON_ATTRS && DEFAULT_WEAPON_ATTRS[name]) || {};
+      const defAtk = defA.atk || (RARITY_DEFAULT_ATK[rar] || 50);
+      const pa = (POOL_ATTRS && POOL_ATTRS[name]) || {};
+      const _paAtk = (pa.atk !== undefined && pa.atk !== null && pa.atk !== 0 && pa.atk !== "") ? Math.max(0, Number(pa.atk) || 0) : defAtk;
+      const _paDesc = (pa.desc !== undefined && pa.desc !== null && pa.desc !== "") ? String(pa.desc) : String(defA.desc || "");
       const thumb = it.thumb || _SHOP_THUMB_CACHE.get(name) || "";
       if (thumb) it.thumb = thumb;
 
@@ -842,7 +909,9 @@ function updateShopBadges() {
   const pB = document.getElementById("shopPoolBadge");
   if (pB) pB.textContent = poolCount();
   const sB = document.getElementById("shopSpiritBadge");
-  if (sB) sB.textContent = Object.keys((window.SPIRIT && window.SPIRIT.shop) || {}).length;
+  const spData = (typeof SPIRIT !== "undefined" && SPIRIT) ? SPIRIT : (window.SPIRIT || {});
+  const spShop = (spData && spData.shop) || {};
+  if (sB) sB.textContent = Object.keys(spShop).length;
 }
 
 function renderShopRideBox(forceOpen = false) {
@@ -1290,9 +1359,14 @@ async function loadShops(skipAtlas = false) {
   try {
     const [cur, spiritData] = await Promise.all([
       apiTimeout(getBridge().apiGet("config/get"), 20000, "config/get"),
-      SPIRIT ? Promise.resolve(SPIRIT) : apiTimeout(getBridge().apiGet("spirits"), 20000, "spirits").catch(() => null)
+      (typeof SPIRIT !== "undefined" && SPIRIT) ? Promise.resolve(SPIRIT) : apiTimeout(getBridge().apiGet("spirits"), 20000, "spirits").catch(() => null)
     ]);
-    if (spiritData) { SPIRIT = spiritData; try { SPIRIT_TS = Date.now(); } catch (e) {} }
+    if (spiritData) {
+      if (typeof SPIRIT !== "undefined") SPIRIT = spiritData;
+      window.SPIRIT = spiritData;
+      try { SPIRIT_TS = Date.now(); } catch (e) {}
+    }
+    updateShopBadges();
     const sec = (cur || {})["商城图鉴"] || {};
     const _rr = _parseShopInput(sec["ride_shop"], _normRideObj);
     if (Object.keys(_rr.data).length) { SHOP_RIDE = _rr.data; SHOP_RIDE_CUSTOM = true; }

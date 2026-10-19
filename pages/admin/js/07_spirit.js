@@ -11,8 +11,19 @@ const SPIRIT_FIELDS = [
   ["evolve", "进化成"], ["img", "形象图"],
 ];
 const SHOP_FIELDS = [["price", "价格"], ["attr", "类型"], ["effect", "效果"]];
-const SHOP_ATTR_OPTS = ["精灵球", "等级", "HP", "攻击", "防御", "特攻", "特防", "进化"];
-const SHOP_ATTR_HELP = { "精灵球": "收服率%", "等级": "奇异甜食+Lv数", "HP": "吐司类+生命", "攻击": "+攻击", "防御": "+防御", "特攻": "+特攻", "特防": "+特防", "进化": "进化液=1" };
+const SHOP_ATTR_OPTS = ["精灵球", "等级", "HP", "攻击", "防御", "特攻", "特防", "进化", "洗练", "闪光"];
+const SHOP_ATTR_HELP = {
+  "精灵球": "收服率%",
+  "等级": "奇异甜食+Lv数",
+  "HP": "吐司类+生命",
+  "攻击": "+攻击点数",
+  "防御": "+防御点数",
+  "特攻": "+特攻点数",
+  "特防": "+特防点数",
+  "进化": "进化液=1",
+  "洗练": "洗练果实：重置精灵性格与努力值",
+  "闪光": "闪光结晶：觉醒变异闪光形态成功率%（全属性+15%）"
+};
 
 let SPIRIT_TS = 0; // 最近成功加载时间戳：Tab 打开 5s 内复用，免重复 GET（loadShops 已顺带拉过时）
 async function loadSpirits(force) {
@@ -32,8 +43,9 @@ async function loadSpirits(force) {
       && typeof SPIRIT_TS === "number" && SPIRIT_TS && (Date.now() - SPIRIT_TS < 5000));
     if (_fresh) res = SPIRIT;
     else res = await apiTimeout(getBridge().apiGet("spirits"), 20000, "spirits");
-    SPIRIT = res || {};
+    window.SPIRIT = SPIRIT = res || {};
     try { SPIRIT_TS = Date.now(); } catch (e) {}
+    try { if (typeof updateShopBadges === "function") updateShopBadges(); } catch (e) {}
     // 编辑区：有自定义用自定义；无则预填内置为起点并标记未自定义（保存后即转自定义）。
     // 用后端 _meta.configured 判定显式清空（_raw 恒含三键，不可用 in 判断）。
     // 兼容旧后端（无 _raw/_meta）：顶层即有效数据，直接沿用。
@@ -344,7 +356,7 @@ async function renderAtlas(curCfg){
       ];
 
       let upgradeCardHtml = `
-        <details class="sys-num-panel" style="margin-bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px" open>
+        <details class="sys-num-panel" style="margin-bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px">
           <summary style="font-weight:700;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
             <div style="display:flex;align-items:center;gap:8px">
               <span>💎 宝物通用基准规则（所有宝物的默认花费、默认概率与经验）</span>
@@ -647,9 +659,16 @@ function openTreasureEditModal(name, isNew) {
   if (inputWrap) inputWrap.style.display = "none";
 
   const cfgSet = (typeof CFG !== "undefined" && CFG && CFG.cur && CFG.cur["设置"]) ? CFG.cur["设置"] : {};
+  const baseRates = {
+    "一": cfgSet["一阶宝物概率"] ?? 85,
+    "二": cfgSet["二阶宝物概率"] ?? 60,
+    "三": cfgSet["三阶宝物概率"] ?? 35,
+    "四": cfgSet["四阶宝物概率"] ?? 45,
+    "五": cfgSet["五阶宝物概率"] ?? 25,
+  };
   const tProbs = ["一", "二", "三", "四", "五"].map(t => {
     const val = cfgSet[`${name}_${t}阶宝物概率`];
-    return { tier: t, val: (val !== undefined && val !== null) ? val : "" };
+    return { tier: t, val: (val !== undefined && val !== null) ? val : "", baseRate: baseRates[t] };
   });
   const tBaseProb = cfgSet[`${name}_基础触发率`] !== undefined ? cfgSet[`${name}_基础触发率`] : "";
 
@@ -668,15 +687,17 @@ function openTreasureEditModal(name, isNew) {
         <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:8px">
           ${tProbs.map(t => `
             <div>
-              <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:2px">${t.tier}阶率(%)</span>
-              <input id="treProb_${t.tier}" type="number" min="1" max="100" placeholder="通用默认" value="${esc(t.val)}" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
+              <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:2px">
+                ${t.tier}阶率(%) <b style="color:var(--acc);font-weight:600">(${t.baseRate}%)</b>
+              </span>
+              <input id="treProb_${t.tier}" type="number" min="1" max="100" placeholder="默认 ${t.baseRate}%" value="${esc(t.val)}" title="通用基准默认：${t.baseRate}%" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
             </div>
           `).join("")}
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
           <span style="font-size:11.5px;color:var(--muted);white-space:nowrap">免罪/圣盾初始触发率(%):</span>
-          <input id="treBaseProb" type="number" min="1" max="100" placeholder="默认25" value="${esc(tBaseProb)}" style="width:90px;padding:5px 8px;font-size:12px;border-radius:8px">
-          <span class="hint" style="font-size:11px">酒神葫芦/四象护符等0阶默认25%，升阶可提升触发率</span>
+          <input id="treBaseProb" type="number" min="1" max="100" placeholder="默认 25%" value="${esc(tBaseProb)}" title="默认 25%" style="width:95px;padding:5px 8px;font-size:12px;border-radius:8px">
+          <span class="hint" style="font-size:11px">酒神葫芦/四象护符等0阶默认 25%，升阶可提升触发率</span>
         </div>
       </div>
     </div>`;
@@ -1160,7 +1181,7 @@ function renderShop(q = "", forceOpen = false) {
           <span>🎒 精灵道具商城</span>
           <span class="m3-badge-counter">${Object.keys(shop).length} 件</span>
         </div>
-        <div class="shop-section-subtitle">类型决定实战效果：精灵球=收服率% / 等级=奇异甜食+Lv / HP·攻击·防御·特攻·特防=+属性点 / 进化=进化液</div>
+        <div class="shop-section-subtitle">类型决定实战效果：精灵球=收服率% / 等级=奇异甜食+Lv / HP·攻击·防御·特攻·特防=+属性点 / 进化=进化液 / 洗练=重置 / 闪光=觉醒%</div>
       </div>
       <div class="shop-section-actions">
         <button id="shopAddItemTop" class="btn sm">＋ 添加精灵道具</button>
@@ -1272,7 +1293,7 @@ function openShopItemAddModal(q) {
         <div style="flex:1"><label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px">效果：</label>
           <input id="shopAddEffect" type="number" value="10" style="width:100%;padding:6px 10px;border-radius:8px"></div>
       </div>
-      <div class="hint" id="shopAddHelp">精灵球=收服率%；等级=+Lv；HP/攻击/防御/特攻/特防=+点数；进化=1</div>
+      <div class="hint" id="shopAddHelp">精灵球=收服率%；等级=+Lv；HP/攻击/防御/特攻/特防=+点数；进化=1；洗练=重置性格/努力值；闪光=变异觉醒%</div>
     </div>`;
   document.getElementById("shopAddAttr")?.addEventListener("change", (e) => {
     const v = e.target.value;

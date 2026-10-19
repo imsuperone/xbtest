@@ -356,6 +356,14 @@ def _weapon_attr(name, field, default=0):
                     return old.get(field)
             except Exception:
                 pass
+            # 回退内置默认属性库
+            try:
+                from ..config.shop import DEFAULT_WEAPON_ATTRS
+                def_w = DEFAULT_WEAPON_ATTRS.get(str(name)) or {}
+                if isinstance(def_w, dict) and def_w.get(field) not in ("", None):
+                    return def_w.get(field)
+            except Exception:
+                pass
             return default
         return v.get(field)
     except Exception:

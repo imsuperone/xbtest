@@ -56,9 +56,19 @@ async def handle_gacha_weapons(request):
 
 
 try:
-    from ...games.config.shop import POOL_RARS as _POOL_RARS, POOL_IMG_EXTS as _POOL_IMG_EXTS
+    from ...games.config.shop import (
+        POOL_RARS as _POOL_RARS,
+        POOL_IMG_EXTS as _POOL_IMG_EXTS,
+        DEFAULT_WEAPON_ATTRS as _DEFAULT_WEAPON_ATTRS,
+        RARITY_DEFAULT_ATK as _RARITY_DEFAULT_ATK,
+    )
 except ImportError:
-    from games.config.shop import POOL_RARS as _POOL_RARS, POOL_IMG_EXTS as _POOL_IMG_EXTS  # type: ignore
+    from games.config.shop import (  # type: ignore
+        POOL_RARS as _POOL_RARS,
+        POOL_IMG_EXTS as _POOL_IMG_EXTS,
+        DEFAULT_WEAPON_ATTRS as _DEFAULT_WEAPON_ATTRS,
+        RARITY_DEFAULT_ATK as _RARITY_DEFAULT_ATK,
+    )
 _POOL_THUMB_MAX = 200 * 1024
 
 
@@ -261,6 +271,16 @@ async def handle_pool_list(request):
                                 atk = _legacy[it["name"]].get("atk", "")
                             if (not desc) and isinstance(_legacy.get(it["name"]), dict):
                                 desc = _legacy[it["name"]].get("desc", "")
+                            # 若仍未配置，回退至内置默认武器属性库，杜绝显示 0
+                            if atk in ("", None, 0):
+                                def_item = _DEFAULT_WEAPON_ATTRS.get(it["name"]) or {}
+                                if def_item.get("atk"):
+                                    atk = def_item["atk"]
+                                else:
+                                    atk = _RARITY_DEFAULT_ATK.get(rar, 50)
+                            if not desc:
+                                def_item = _DEFAULT_WEAPON_ATTRS.get(it["name"]) or {}
+                                desc = def_item.get("desc", "")
                             try:
                                 atk = int(float(atk or 0))
                             except Exception:
