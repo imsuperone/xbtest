@@ -322,6 +322,15 @@ def cmd_work_collect(gid, qq, st):
         _work_bonus = _treasure_pct_total(treasures_of(u), "work", WORK_PCT_CAP, u=u)
     except Exception:
         _work_bonus = 0
+    try:
+        try:
+            from ..ride import active_ride_info
+        except ImportError:
+            from games.ride import active_ride_info  # type: ignore
+        _, _r_pct = active_ride_info(gid, qq, aspect="work")
+        _work_bonus += int(_r_pct or 0)
+    except Exception:
+        pass
     total = _safe_int(uget(u, "work_wage"), 0)
     lines = [_S.T.WORK_COLLECT.format(total=total)]
     wage_paid = 0

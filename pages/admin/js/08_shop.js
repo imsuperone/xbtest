@@ -326,19 +326,21 @@ function _normRideObj(d) {
   Object.keys(d).forEach((k) => {
     const v = d[k];
     const defType = (DEFAULT_RIDE_SHOP[k] && DEFAULT_RIDE_SHOP[k].buff_type) || "all";
+    const defBuff = (DEFAULT_RIDE_SHOP[k] && DEFAULT_RIDE_SHOP[k].buff) ?? undefined;
     if (v && typeof v === "object" && !Array.isArray(v)) {
       let bt = v.buff_type;
-      if (!bt || (bt === "all" && defType !== "all")) {
+      if (bt === undefined || bt === null || bt === "") {
         bt = defType;
       }
+      let bf = (v.buff !== undefined && v.buff !== "" && !isNaN(Number(v.buff))) ? Number(v.buff) : defBuff;
       out[k] = {
         price: Number(v.price) || 0,
         img: String(v.img || ""),
-        buff: (v.buff !== undefined && v.buff !== "" && !isNaN(Number(v.buff))) ? Number(v.buff) : undefined,
+        buff: bf,
         buff_type: String(bt || "all")
       };
     } else {
-      out[k] = { price: Number(v) || 0, img: "", buff: undefined, buff_type: defType };
+      out[k] = { price: Number(v) || 0, img: "", buff: defBuff, buff_type: defType };
     }
   });
   return out;
@@ -975,6 +977,13 @@ function renderShopRideBox(forceOpen = false) {
         return 0;
       };
       const curBuff = (buff !== undefined && buff !== "" && !isNaN(Number(buff))) ? Number(buff) : calcDefaultBuff(price);
+      const _TYPE_TAGS = {
+        "all": "⭐ 综合",
+        "work": "💼 打工",
+        "travel": "🌍 旅行",
+        "atk": "⚔️ 战力"
+      };
+      const curTypeTag = _TYPE_TAGS[buff_type] || "⭐ 综合";
 
       const cachedRideThumb = showImg ? _SHOP_THUMB_CACHE.get(showImg) : "";
 
@@ -995,18 +1004,18 @@ function renderShopRideBox(forceOpen = false) {
                   <span class="input-label">💰 价格</span>
                   <input class="m3-input" type="number" data-ride-price value="${esc(price)}" style="flex:1;min-width:40px;width:100%">
                 </div>
-                <div class="input-with-label" title="乘坐加成百分比（直接影响战力、搬砖工钱、远征金币）" style="flex:0 0 95px">
+                <div class="input-with-label" title="乘坐加成百分比（直接影响打工/旅行金币或战斗力）" style="flex:0 0 105px">
                   <span class="input-label">⚡ 加成</span>
-                  <input class="m3-input" type="number" data-ride-buff value="${esc(curBuff)}" style="width:38px;padding:2px 2px;text-align:center">
+                  <input class="m3-input" type="number" data-ride-buff value="${esc(curBuff)}" style="width:48px;padding:2px 4px;text-align:center" placeholder="10">
                   <span class="input-unit">%</span>
                 </div>
               </div>
-              <div class="ride-buff-type-row">
-                <select class="m3-select" data-ride-buff-type title="加成类型选择">
-                  <option value="all"${buff_type === "all" ? " selected" : ""}>⭐ 综合全能 (战力+打工+旅行)</option>
-                  <option value="atk"${buff_type === "atk" ? " selected" : ""}>⚔️ 战力加成</option>
-                  <option value="work"${buff_type === "work" ? " selected" : ""}>💼 打工收益</option>
-                  <option value="travel"${buff_type === "travel" ? " selected" : ""}>🌍 旅行金币</option>
+              <div class="ride-buff-type-row" style="margin-top:4px">
+                <select class="m3-select" data-ride-buff-type title="加成类型选择" style="width:100%">
+                  <option value="all"${buff_type === "all" ? " selected" : ""}>⭐ 综合全能 (打工+旅行金币+战力)</option>
+                  <option value="work"${buff_type === "work" ? " selected" : ""}>💼 打工收益 (搬砖与奴隶打工金币)</option>
+                  <option value="travel"${buff_type === "travel" ? " selected" : ""}>🌍 旅行金币 (精灵旅行与远征金币)</option>
+                  <option value="atk"${buff_type === "atk" ? " selected" : ""}>⚔️ 战力加成 (决斗与主人战斗力)</option>
                 </select>
               </div>
             </div>
@@ -1018,7 +1027,7 @@ function renderShopRideBox(forceOpen = false) {
                 <button class="ghost sm" data-ride-pick-builtin="${esc(name)}">📂 内置选图</button>
                 <button class="ghost sm" data-ride-pick="${esc(name)}">⬆️ 上传绑图</button>
               </div>
-              <span style="font-size:11.5px;color:var(--acc);font-weight:600">加成 +${esc(curBuff)}%</span>
+              <span style="font-size:11.5px;color:var(--acc);font-weight:600">${curTypeTag}加成 +${esc(curBuff)}%</span>
             </div>
           </div>
         </div>
@@ -1085,7 +1094,7 @@ function renderShopRideBox(forceOpen = false) {
     const v = SHOP_RIDE[k];
     const bt = sel.value;
     if (v && typeof v === "object") SHOP_RIDE[k].buff_type = bt; else SHOP_RIDE[k] = { price: Number(v)||0, buff_type: bt };
-    SHOP_DIRTY=true; syncShopRaw();
+    SHOP_DIRTY=true; syncShopRaw(); renderShopRideBox(true);
   }));
 
   box.querySelectorAll("[data-ride-img]").forEach(inp => inp.addEventListener("change", (e) => {
@@ -1188,7 +1197,7 @@ function renderShopRideBox(forceOpen = false) {
           const item = { price: Number(v.price) || 0 };
           if (v.img) item.img = v.img;
           if (v.buff !== undefined && v.buff !== "") item.buff = Number(v.buff);
-          if (v.buff_type && v.buff_type !== "all") item.buff_type = v.buff_type;
+          if (v.buff_type) item.buff_type = v.buff_type;
           cleanRide[k] = item;
         } else cleanRide[k] = Number(v) || 0;
       });
@@ -1232,10 +1241,10 @@ function openRideAddModal() {
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:4px">加成类型：</label>
         <select class="m3-select" id="rideAddBuffType" style="width:100%">
-          <option value="all">⭐ 综合全能 (战力+打工+旅行)</option>
-          <option value="atk">⚔️ 战力加成</option>
-          <option value="work">💼 打工收益</option>
-          <option value="travel">🌍 旅行金币</option>
+          <option value="all">⭐ 综合全能 (打工+旅行金币+战力)</option>
+          <option value="work">💼 打工收益 (搬砖与奴隶打工金币)</option>
+          <option value="travel">🌍 旅行金币 (精灵旅行与远征金币)</option>
+          <option value="atk">⚔️ 战力加成 (决斗与主人战斗力)</option>
         </select>
       </div>
       <div>
@@ -1490,7 +1499,7 @@ async function saveRideOnly(silent = false) {
         const item = { price: Number(v.price) || 0 };
         if (v.img) item.img = String(v.img).trim();
         if (v.buff !== undefined && v.buff !== "" && !isNaN(Number(v.buff))) item.buff = Number(v.buff);
-        if (v.buff_type && v.buff_type !== "all") item.buff_type = String(v.buff_type).trim();
+        if (v.buff_type) item.buff_type = String(v.buff_type).trim();
         cleanRide[k] = item;
       } else {
         cleanRide[k] = { price: Number(v) || 0 };

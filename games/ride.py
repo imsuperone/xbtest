@@ -416,6 +416,11 @@ def _ride_bonus(name, price=0):
                     pass
     except Exception:
         pass
+    if name in RIDE_SHOP and isinstance(RIDE_SHOP[name], dict) and "buff" in RIDE_SHOP[name]:
+        try:
+            return int(float(RIDE_SHOP[name]["buff"]))
+        except Exception:
+            pass
     return _ride_bonus_by_price(price)
 
 
@@ -427,10 +432,8 @@ def _ride_buff_type(name):
             info = raw.get(name)
             if isinstance(info, dict):
                 bt = str(info.get("buff_type") or "").strip()
-                if bt and bt != "all":
+                if bt:
                     return bt
-                if (not bt or bt == "all") and name in RIDE_SHOP:
-                    return RIDE_SHOP[name].get("buff_type", "all")
     except Exception:
         pass
     if name in RIDE_SHOP:

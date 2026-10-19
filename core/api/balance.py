@@ -1074,6 +1074,20 @@ def _sync_ride_shop_dict(rides_override):
                 existing["price"] = int(rmeta.get("price", 10000))
                 if not existing.get("img"):
                     existing["img"] = rmeta.get("img", f"data/img/rides/{rname}.jpg")
+                if "buff" not in existing:
+                    try:
+                        from games.config.shop import RIDE_SHOP as _DEF_RS
+                        if rname in _DEF_RS and "buff" in _DEF_RS[rname]:
+                            existing["buff"] = _DEF_RS[rname]["buff"]
+                    except Exception:
+                        pass
+                if "buff_type" not in existing:
+                    try:
+                        from games.config.shop import RIDE_SHOP as _DEF_RS
+                        if rname in _DEF_RS and "buff_type" in _DEF_RS[rname]:
+                            existing["buff_type"] = _DEF_RS[rname]["buff_type"]
+                    except Exception:
+                        pass
             else:
                 merged_shop[rname] = dict(rmeta)
         ST.coll_merge("商城图鉴", {"ride_shop": merged_shop})
