@@ -299,6 +299,12 @@ def cmd_bomb(gid, qq, arg):
 
     if str(target) == str(qq):
         return "亲，不能对自己扔炸弹哦！"
+    try:
+        from ..slave.slave_state import is_bot_qq
+        if is_bot_qq(target):
+            return "亲，机器人是游戏裁判与管理员，不可向机器人扔炸弹哦！"
+    except Exception:
+        pass
     if ST.coins_get(gid, qq) < cost:
         return "笑~你没有那么多%s（扔炸弹需%d）" % (ST.coin_name(), cost)
     if a.int("stamina") < tili:
@@ -377,6 +383,12 @@ def _get_players(gid, key_prefix):
 
 
 def _join_game(gid, qq, kind, label):
+    try:
+        from ..slave.slave_state import is_bot_qq
+        if is_bot_qq(qq):
+            return f"机器人是裁判主持，不参与{label}对局哦~"
+    except Exception:
+        pass
     owner = ST.recall_get(f"{kind}_owner_{gid}")
     if not owner:
         return f"当前没有进行中的{label}对局！"

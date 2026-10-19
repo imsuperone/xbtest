@@ -148,6 +148,15 @@ def U(st, qq):
                     st.mark_dirty(qq)
         except Exception:
             u["price"] = str(init_price)
+    # 机器人永远自由，绝对不能成为任何人的奴隶
+    try:
+        if hasattr(_S, "is_bot_qq") and _S.is_bot_qq(qq):
+            if u.get("owner", ""):
+                u["owner"] = ""
+                if hasattr(st, "mark_dirty"):
+                    st.mark_dirty(qq)
+    except Exception:
+        pass
     # 宝物旧键迁移（keymap 补映射前按 uXXXX 存的 4 内置宝物持有数/升阶，读时搬新键）
     try:
         _migrate_treasure_keys(u)
@@ -296,8 +305,21 @@ def transfer_cash_or_deposit(gid, from_qq, to_qq, want_amount, require_full=Fals
 
 
 def slaves_of(st, qq):
-    return [s for s in st.sections()
-            if s.isdigit() and uget(st[s], "owner") == str(qq)]
+    bot_uin = _S.get_bot_uin() if hasattr(_S, "get_bot_uin") else getattr(_S, "BOT_UIN", "")
+    res = []
+    for s in st.sections():
+        if not s.isdigit():
+            continue
+        # 机器人绝对不能是任何人的奴隶！若历史数据中机器人被误设了 owner，自动清除解救
+        if (bot_uin and str(s) == str(bot_uin)) or (hasattr(_S, "is_bot_qq") and _S.is_bot_qq(s)):
+            if uget(st[s], "owner"):
+                uset(st[s], "owner", "")
+                if hasattr(st, "mark_dirty"):
+                    st.mark_dirty(s)
+            continue
+        if uget(st[s], "owner") == str(qq):
+            res.append(s)
+    return res
 
 
 

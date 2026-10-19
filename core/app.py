@@ -698,7 +698,8 @@ class XbBot(Star):
             t_bg_bck.start()
 
     def _extract_bot_uin_sync(self, event):
-        if getattr(slave, "BOT_UIN", ""):
+        cur_bot = slave.get_bot_uin() if hasattr(slave, "get_bot_uin") else getattr(slave, "BOT_UIN", "")
+        if cur_bot:
             return True
         cands = []
         try:
@@ -716,6 +717,15 @@ class XbBot(Star):
                     cands.append(str(v).strip())
             except Exception:
                 pass
+        try:
+            mo = getattr(event, "message_obj", None)
+            if mo is not None:
+                for attr in ("self_id", "bot_id", "to_me"):
+                    v = getattr(mo, attr, None)
+                    if v and str(v).strip().isdigit():
+                        cands.append(str(v).strip())
+        except Exception:
+            pass
         bot = getattr(event, "bot", None)
         if bot is not None:
             for attr in ("self_id", "uin", "bot_uin", "user_id"):
@@ -727,7 +737,10 @@ class XbBot(Star):
                     pass
         for c in cands:
             if c.isdigit() and 5 <= len(c) <= 12:
-                slave.BOT_UIN = c  # 纯内存自动获取，不再写盘
+                if hasattr(slave, "set_bot_uin"):
+                    slave.set_bot_uin(c)
+                else:
+                    slave.BOT_UIN = c
                 return True
         return False
 

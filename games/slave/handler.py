@@ -149,7 +149,7 @@ def _route_locked(gid, qq, raw):
     # 兼容纯 QQ 号（无 @）的写法：文案仅 @QQ，但解析支持 QQ 号
     if not target:
         # 仅对需要目标的指令尝试提取，避免金额被误判
-        _need = ("我的信息", "查询", "买下", "折磨", "保护", "释放", "赎身", "打架")
+        _need = ("我的信息", "查询", "买下", "买入", "购买", "折磨", "安抚", "讨好", "保护", "释放", "赎身", "打架")
         for _pref in _need:
             if text.startswith(_pref):
                 m = _RE_QQ_DIGITS.search(text)
@@ -206,7 +206,11 @@ def _route_locked(gid, qq, raw):
         return None
     for _p, _fn in (
         ("买下", cmd_buy_slave),
+        ("买入", cmd_buy_slave),
+        ("购买", cmd_buy_slave),
         ("折磨", cmd_torture),
+        ("安抚", cmd_protect),
+        ("讨好", cmd_protect),
         ("保护", cmd_protect),
         ("释放", cmd_release),
         ("赎身", cmd_ransom),
@@ -429,7 +433,7 @@ __all__ = ["clear_user_slave", "handle", "init_slave", "COMMANDS", "_treasure_na
 
 # 显式指令注册表（与 handle 分支逐字对应，增删指令两处同改；V8 起为唯一词表来源）
 COMMANDS = (
-    "我的信息", "查询", "买下", "折磨", "保护", "释放", "赎身",
+    "我的信息", "查询", "买下", "买入", "购买", "折磨", "安抚", "保护", "释放", "赎身",
     "买奴隶位", "购买奴隶位", "打架", "五十连抽", "50连抽",
     "三十连抽", "30连抽", "十连抽", "抽武器", "武器升星", "升星",
     "宝物升阶", "升阶", "我要造反", "造反", "讨好主人", "讨好",

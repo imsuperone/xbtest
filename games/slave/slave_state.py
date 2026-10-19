@@ -9,6 +9,49 @@ except ImportError:
     except Exception:
         pass
 BOT_UIN = ""   # engine overwrites at runtime
+
+def set_bot_uin(uin):
+    global BOT_UIN
+    u = str(uin or "").strip()
+    if u and u.isdigit():
+        BOT_UIN = u
+        try:
+            store.recall_set("sys_bot_uin", u)
+        except Exception:
+            pass
+
+def get_bot_uin():
+    global BOT_UIN
+    if BOT_UIN and str(BOT_UIN).strip().isdigit():
+        return str(BOT_UIN).strip()
+    try:
+        saved = str(store.recall_get("sys_bot_uin", "") or "").strip()
+        if saved and saved.isdigit():
+            BOT_UIN = saved
+            return saved
+    except Exception:
+        pass
+    try:
+        from ...core import config as _cc
+        cfg_u = str((_cc.cfgs("设置", "bot_qq", "") or _cc.cfgs("设置", "机器人QQ", "") or "")).strip()
+        if cfg_u and cfg_u.isdigit():
+            BOT_UIN = cfg_u
+            return cfg_u
+    except Exception:
+        pass
+    return ""
+
+def is_bot_qq(qq):
+    if not qq:
+        return False
+    q = str(qq).strip()
+    if not q.isdigit():
+        return False
+    b = get_bot_uin()
+    if b and q == b:
+        return True
+    return False
+
 import os as _os
 import threading as _threading
 STAR_ATK = [100, 200, 400, 600, 800, 1600]  # 0-5星

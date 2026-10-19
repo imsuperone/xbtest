@@ -326,6 +326,11 @@ async def _do_platform(marker, event, slave_mod=None):
                     bot_uin = str(d0.get("user_id") or d0.get("uin") or d0.get("self_id") or "")
                 except Exception:
                     bot_uin = ""
+            if bot_uin and sm and hasattr(sm, "set_bot_uin"):
+                try:
+                    sm.set_bot_uin(bot_uin)
+                except Exception:
+                    pass
             if bot_uin:
                 try:
                     info_bot = await _call("get_group_member_info", group_id=int(gid), user_id=int(bot_uin))
@@ -426,6 +431,15 @@ def set_latest_bot(bot):
     global _LATEST_BOT, _MAIN_LOOP
     if bot is not None:
         _LATEST_BOT = bot
+        try:
+            for attr in ("self_id", "uin", "bot_uin", "user_id"):
+                v = getattr(bot, attr, None)
+                if v and str(v).strip().isdigit() and 5 <= len(str(v).strip()) <= 12:
+                    if _slave and hasattr(_slave, "set_bot_uin"):
+                        _slave.set_bot_uin(str(v).strip())
+                    break
+        except Exception:
+            pass
     try:
         import asyncio
         loop = asyncio.get_running_loop()

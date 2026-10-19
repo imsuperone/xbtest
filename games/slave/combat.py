@@ -460,6 +460,10 @@ def cmd_fight(gid, qq, target, st):
     tid = str(target)
     if tid == str(qq):
         return _S.T.SELF_FIGHT if hasattr(_S.T, "SELF_FIGHT") else "\u4e0d\u80fd\u548c\u81ea\u5df1\u6253\u67b6\u54e6\uff5e"
+    if _S.is_bot_qq(tid):
+        return _S.T.BOT_NO_JOIN
+    if _S.is_bot_qq(qq):
+        return _S.T.BOT_NO_JOIN
     a_slaves = slaves_of(st, qq)
     d_slaves = slaves_of(st, tid)
 

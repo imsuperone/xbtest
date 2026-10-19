@@ -2,6 +2,11 @@
   "设置": {
     "type": "object",
     "items": {
+      "机器人QQ": {
+        "type": "string",
+        "default": "",
+        "description": "机器人自身的QQ账号（系统通常自动识别提取，也可手动在此指定；机器人绝不参与任何游戏和奴隶买卖）"
+      },
       "货币名称": {
         "type": "string",
         "default": "金币"

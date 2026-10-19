@@ -55,7 +55,7 @@ def _build_status_line(gid, qq, u, acct, slaves):
 def cmd_myinfo(gid, qq, st):
     try:
         import json as _j
-        if _S.BOT_UIN and str(qq) == str(_S.BOT_UIN):
+        if _S.is_bot_qq(qq):
             return _S.T.BOT_NO_JOIN
         u = U(st, qq)
         acct = store.acct(gid, qq)
@@ -204,7 +204,7 @@ def _sign_info(gid, qq, st):
 def cmd_query(gid, qq, target, st):
     if not target:
         return _S.T.QUERY_WHO
-    if _S.BOT_UIN and str(target) == str(_S.BOT_UIN):
+    if _S.is_bot_qq(target):
         return _S.T.BOT_NO_JOIN
     # 只要 target 存在即自动建档并展示，不再拦截“还没加入游戏”
     return cmd_myinfo(gid, target, st)
@@ -214,7 +214,7 @@ def cmd_query(gid, qq, target, st):
 def cmd_rank_price(gid, st):
     lst = sorted(((int(uget(st[s], "price") or 0), s)
                   for s in st.sections()
-                  if s.isdigit() and not (_S.BOT_UIN and s == str(_S.BOT_UIN))),
+                  if s.isdigit() and not _S.is_bot_qq(s)),
                  reverse=True)[:10]
     out = ["🏆 身价排行榜"]
     for i, (p, q) in enumerate(lst, 1):
@@ -233,7 +233,7 @@ def cmd_rank_sign(gid, st):
         for q in st.sections():
             if not q.isdigit():
                 continue
-            if _S.BOT_UIN and q == str(_S.BOT_UIN):
+            if _S.is_bot_qq(q):
                 continue
             try:
                 acct = ST.acct(gid, q)

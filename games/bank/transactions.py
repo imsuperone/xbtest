@@ -170,6 +170,12 @@ def cmd_transfer(gid, qq, target, amount):
         return "提示：转账格式为【转账 @目标 金额】，例如：转账 @某某 100"
     if str(target) == str(qq):
         return "提示：无法对自己进行转账。"
+    try:
+        from ..slave.slave_state import is_bot_qq
+        if is_bot_qq(target):
+            return "提示：机器人不参与经济流通，无法接收转账哦~"
+    except Exception:
+        pass
     min_amt = cfgi("银行配置", "转账最小金额", 50)
     if amount < min_amt:
         return f"提示：转账最小金额为 {min_amt} {ST.coin_name()}。"
@@ -532,6 +538,12 @@ def cmd_sell_slave(gid, qq, target):
         return "亲，您的格式有误，打劫格式为：【打劫 @QQ】！"
     if str(target) == str(qq):
         return "亲，无法对自己实施打劫！"
+    try:
+        from ..slave.slave_state import is_bot_qq
+        if is_bot_qq(target):
+            return "亲，机器人是系统执法者与管理员，不可被打劫哦~"
+    except Exception:
+        pass
     a = _acct(gid, qq)
     if _check_jail(a):
         return _show_jail(a)

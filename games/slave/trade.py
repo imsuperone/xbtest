@@ -25,8 +25,10 @@ def cmd_buy_slave(gid, qq, target, st):
     tid = str(target)
     if tid == qq:
         return _S.T.SELF_OP_WEIRD
-    if _S.BOT_UIN and tid == str(_S.BOT_UIN):
+    if _S.is_bot_qq(tid):
         return _S.T.BOT_NO_TRADE
+    if _S.is_bot_qq(qq):
+        return _S.T.BOT_NO_JOIN
     if not exists_user(gid, tid):
         return _S.T.NOT_IN_GROUP
     buyer, tgt = U(st, qq), U(st, tid)
@@ -35,7 +37,7 @@ def cmd_buy_slave(gid, qq, target, st):
     if uget(buyer, "owner") == tid:
         return _S.T.SELF_BUY_SELF
     prev_owner = uget(tgt, "owner")
-    if _S.BOT_UIN and prev_owner == str(_S.BOT_UIN):
+    if _S.is_bot_qq(prev_owner):
         return _S.T.BOT_NO_TRADE
     if _time.time() < protected_until(tgt):
         left = int((protected_until(tgt) - _time.time()) / 60) + 1
@@ -111,6 +113,8 @@ def cmd_torture(gid, qq, target, st):
     tid = str(target)
     if tid == qq:
         return _S.T.TORTURE_SELF
+    if _S.is_bot_qq(tid):
+        return _S.T.BOT_NO_JOIN
     s = U(st, tid)
     if uget(s, "owner") != qq:
         return _S.T.TORTURE_NOT_MINE
@@ -191,7 +195,7 @@ def cmd_protect(gid, qq, target, st):
     tid = str(target)
     if tid == str(qq):
         return _S.T.SELF_OP_WEIRD
-    if _S.BOT_UIN and tid == str(_S.BOT_UIN):
+    if _S.is_bot_qq(tid):
         return _S.T.BOT_NO_TRADE
     u = U(st, tid)
     if uget(u, "owner") != qq:
@@ -225,6 +229,8 @@ def cmd_release(gid, qq, target, st):
     tid = str(target)
     if tid == qq:
         return _S.T.SELF_RELEASE
+    if _S.is_bot_qq(tid):
+        return _S.T.BOT_NO_JOIN
     s = U(st, tid)
     if uget(s, "owner") != qq:
         return "不是你的奴隶，你无法释放Ta！"
@@ -246,6 +252,8 @@ def cmd_ransom(gid, qq, target, st):
     if not target or str(target) == str(qq):
         return cmd_freedom(gid, qq, st)
     tid = str(target)
+    if _S.is_bot_qq(tid):
+        return _S.T.BOT_NO_JOIN
     s = U(st, tid)
     owner = uget(s, "owner")
     if not owner:
@@ -280,6 +288,8 @@ def cmd_ransom(gid, qq, target, st):
 
 
 def cmd_freedom(gid, qq, st):
+    if _S.is_bot_qq(qq):
+        return _S.T.BOT_NO_JOIN
     u = U(st, qq)
     owner = uget(u, "owner")
     if not owner:
