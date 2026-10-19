@@ -269,6 +269,47 @@ async function ensureTreasureEff(force) {
   return window._TREAS_EFF;
 }
 
+// 宝物名+结构效果即时持久化（图鉴页内闭环，不碰商城；单一家 treasures，老 treasure_effects 只读兼容不再写）
+// delNames: 已删宝物名数组，显式 null 清 sidecar（merge 语义缺键≠删除，不传即复活）
+async function persistTreasure(delNames) {
+  const items = {};
+  Object.entries(window._TREAS_EFF || {}).forEach(([k, v]) => {
+    // 落盘：effects 数组为主；顶层 type/value＝首效果，老读者照读不坏
+    const rows = _treasRowsOf(v);
+    const _first = rows.length ? rows[0] : null;
+    const _desc = (v && typeof v === "object") ? String(v.effect || v.desc || "") : String(v || "").trim();
+    if (rows.length) {
+      items[k] = { type: _first.type, value: _first.value, desc: _desc, effects: rows };
+    } else if (_desc) {
+      items[k] = { type: "", value: 0, desc: _desc, effects: [] };
+    } else if (v && typeof v === "object") {
+      items[k] = { type: "", value: 0, desc: "", effects: [] };
+    }
+  });
+  try {
+    (delNames || []).forEach((k) => { if (k) items[String(k)] = null; });
+  } catch (e) {}
+  const curTreas = (() => {
+    if (Array.isArray(window._TREAS_LIST) && window._TREAS_LIST.length) return window._TREAS_LIST;
+    try {
+      const s = (CFG && CFG.cur && CFG.cur["设置"] && CFG.cur["设置"]["宝物"]) || "";
+      const arr = String(s).split("|").map(x => x.trim()).filter(Boolean);
+      return arr.length ? arr : ["酒神葫芦", "四象护符", "金蟾", "玉如意", "雷公锤", "夜明珠"];
+    } catch (e) {
+      return ["酒神葫芦", "四象护符", "金蟾", "玉如意", "雷公锤", "夜明珠"];
+    }
+  })();
+  const r = await getBridge().apiPost("config/save", {
+    "设置": { "宝物": curTreas.filter(Boolean).join("|") },
+    "商城图鉴": { "treasures": items }
+  });
+  if (r && r.error) throw new Error(r.error);
+  window._TREAS_DIRTY = false;
+  try { window._TREAS_LIST_DONE = true; } catch (e) {}
+  try { if (CFG && CFG.cur && CFG.cur["设置"]) CFG.cur["设置"]["宝物"] = curTreas.filter(Boolean).join("|"); } catch (e) {}
+}
+window.persistTreasure = persistTreasure;
+
 // ---------- 图鉴总览（atlasBox：宝物/精灵地图；f11 专属，商城只调不用，独立方便导出导入与自定义） ----------
 let ATLAS_CUR = "treasure";  // 总览分类：treasure | spirit（武器坐骑只在商城管理）
 async function renderAtlas(curCfg){
@@ -490,35 +531,6 @@ async function renderAtlas(curCfg){
       SPIRIT_OPEN = {};
       refreshSpiritViews();
     });
-    const persistTreasure = async (delNames) => {
-      // 宝物名+结构效果即时持久化（图鉴页内闭环，不碰商城；单一家 treasures，老 treasure_effects 只读兼容不再写）
-      // delNames: 已删宝物名数组，显式 null 清 sidecar（merge 语义缺键≠删除，不传即复活）
-      const items = {};
-      Object.entries(window._TREAS_EFF || {}).forEach(([k, v]) => {
-        // 落盘：effects 数组为主；顶层 type/value＝首效果，老读者照读不坏
-        const rows = _treasRowsOf(v);
-        const _first = rows.length ? rows[0] : null;
-        const _desc = (v && typeof v === "object") ? String(v.effect || v.desc || "") : String(v || "").trim();
-        if (rows.length) {
-          items[k] = { type: _first.type, value: _first.value, desc: _desc, effects: rows };
-        } else if (_desc) {
-          items[k] = { type: "", value: 0, desc: _desc, effects: [] };
-        } else if (v && typeof v === "object") {
-          items[k] = { type: "", value: 0, desc: "", effects: [] };
-        }
-      });
-      try {
-        (delNames || []).forEach((k) => { if (k) items[String(k)] = null; });
-      } catch (e) {}
-      const r = await getBridge().apiPost("config/save", {
-        "设置": { "宝物": (window._TREAS_LIST || Treas).filter(Boolean).join("|") },
-        "商城图鉴": { "treasures": items }
-      });
-      if (r && r.error) throw new Error(r.error);
-      window._TREAS_DIRTY = false;
-      try { window._TREAS_LIST_DONE = true; } catch (e) {}
-      try { if (CFG && CFG.cur && CFG.cur["设置"]) CFG.cur["设置"]["宝物"] = (window._TREAS_LIST || Treas).filter(Boolean).join("|"); } catch (e) {}
-    };
     box.querySelectorAll("[data-atlas-del]").forEach(el => el.addEventListener("click", async () => {
       const [sys, name] = el.dataset.atlasDel.split("|");
       if (!(await uiConfirm(`确认删除 ${sys} "${name}"？`, "删除图鉴"))) return;

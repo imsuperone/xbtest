@@ -1,5 +1,11 @@
 # 更新日志 (Changelog)
 
+## v26w1019g
+
+- **宝物保存报错彻底修复（修复 ReferenceError: persistTreasure is not defined）**：
+  - 彻底排查前端宝物弹窗保存报错根因：`persistTreasure` 原先作为局部函数声明在 `renderAtlas` 的内部作用域中，而宝物编辑弹窗 `openTreasureEditModal` 属于顶层函数，当在弹窗中点击【保存宝物】或【添加并保存】时，闭包作用域无法访问到内部变量 `persistTreasure`，导致抛出 `ReferenceError: persistTreasure is not defined` 报错中断；
+  - 将 `persistTreasure` 提取并重构为独立顶层异步函数，并挂载于 `window.persistTreasure`，彻底解决编辑弹窗、卡片删除、恢复默认等全部场景下的宝物配置与加成持久化。
+
 ## v26w1019f
 
 - **宝物编辑弹窗阶位布局彻底重构（杜绝拥挤截断）**：
