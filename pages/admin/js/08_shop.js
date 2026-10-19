@@ -945,6 +945,10 @@ function renderShopRideBox(forceOpen = false) {
         <button class="ghost sm" id="btnRideReset">↩️ 恢复默认</button>
       </div>
     </div>
+    <div style="background:var(--accSoft);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:8px 0 12px 0;font-size:12px;color:var(--text);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>🎉 <b>欢迎坐骑入场奖励：</b> 用户设置欢迎坐骑后，每 3 小时首次入场发消息获赠金币（基础奖励 = 售价 ÷ 5000，享受各坐骑专属 <b>⚡ 加成%</b>）。</span>
+      <span style="color:var(--muted)">可在「常规配置 → 坐骑配置」自由调节除数、冷却与上下限</span>
+    </div>
   `;
 
   if (!entries.length) {

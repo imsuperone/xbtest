@@ -629,7 +629,8 @@ def check_welcome(gid, qq):
             _last_ts = int(last or "0")
         except Exception:
             _last_ts = 0
-        if last and now - _last_ts < 3 * 3600:
+        cooldown_sec = max(60, int(float(_cfg("欢迎冷却小时", 3)) * 3600))
+        if last and now - _last_ts < cooldown_sec:
             return None
         ST.recall_set(key, str(now))
         # 群昵称优先（本群分群昵称，防跨群串扰）
@@ -659,19 +660,36 @@ def check_welcome(gid, qq):
                     disp = SL2.NOTE_NAMES.get(str(qq), str(qq)) or str(qq)
             except Exception:
                 pass
-        # 微量金币奖励：坐骑价值/5000（最低 10，最高 500）
+        # 欢迎金币奖励：默认根据坐骑价值与配置比例计算，并享受坐骑自身加成
         reward = 0
+        bonus_amt = 0
         try:
-            shop = _ride_shop()
-            price = int(shop.get(w, 0) or 0)
-            reward = max(10, min(500, price // 5000)) if price else 20
-            if reward:
-                # 欢迎奖励增发：失败不展示奖励文案（禁冒领成功）
-                if ST.coins_add(str(gid), str(qq), reward) is None:
-                    reward = 0
+            enable_rew = _cfg("欢迎金币开关", "真") == "真"
+            if enable_rew:
+                shop = _ride_shop()
+                price = int(shop.get(w, 0) or _mount_price(w) or 0)
+                div = max(1, int(float(_cfg("欢迎金币除数", 5000))))
+                r_lo = max(0, int(float(_cfg("欢迎金币下限", 10))))
+                r_hi = max(r_lo, int(float(_cfg("欢迎金币上限", 500))))
+                base_rew = max(r_lo, min(r_hi, price // div)) if price else r_lo
+                # 计算坐骑加成百分比（直接享受该坐骑配置的 buff%）
+                pct = _ride_bonus(w, price)
+                if pct > 0:
+                    bonus_amt = base_rew * pct // 100
+                reward = base_rew + bonus_amt
+                if reward > 0:
+                    # 欢迎奖励增发：失败不展示奖励文案（禁冒领成功）
+                    if ST.coins_add(str(gid), str(qq), reward) is None:
+                        reward = 0
+                        bonus_amt = 0
         except Exception:
             reward = 0
-        extra = f" 获得 {reward}{ST.coin_name()}奖励！" if reward else ""
+            bonus_amt = 0
+        if reward > 0:
+            extra_bonus = f"（含坐骑加成 +{bonus_amt}）" if bonus_amt > 0 else ""
+            extra = f" 获得 {reward}{ST.coin_name()}奖励{extra_bonus}！"
+        else:
+            extra = ""
         txt = f"【{disp}】骑着【{w}】来啦！欢迎再次出现！{extra}"
         return txt, _ride_img_path(w)
     except Exception:
