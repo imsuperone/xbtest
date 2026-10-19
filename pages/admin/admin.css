@@ -4852,6 +4852,22 @@
   font-size: 12px;
   color: var(--text-secondary);
 }
+.input-with-label input[type="number"]::-webkit-inner-spin-button,
+.input-with-label input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.35;
+  margin-left: 2px;
+}
+.weapon-card-main .input-with-label {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  padding: 2px 8px;
+}
+.weapon-card-main .input-with-label input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
 .input-label {
   white-space: nowrap;
   font-weight: 600;

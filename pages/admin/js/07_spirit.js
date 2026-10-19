@@ -348,11 +348,11 @@ async function renderAtlas(curCfg){
     if (ATLAS_CUR === "treasure") {
       const setSec = (typeof CFG !== "undefined" && CFG && CFG.cur && CFG.cur["设置"]) ? CFG.cur["设置"] : {};
       const tierNums = [
-        { name: "一阶", cost: setSec["一阶宝物花费"] ?? 20000, rate: setSec["一阶宝物概率"] ?? 100, exp: setSec["一阶宝物经验"] ?? 300 },
-        { name: "二阶", cost: setSec["二阶宝物花费"] ?? 80000, rate: setSec["二阶宝物概率"] ?? 85, exp: setSec["二阶宝物经验"] ?? 800 },
-        { name: "三阶", cost: setSec["三阶宝物花费"] ?? 250000, rate: setSec["三阶宝物概率"] ?? 70, exp: setSec["三阶宝物经验"] ?? 2000 },
-        { name: "四阶", cost: setSec["四阶宝物花费"] ?? 600000, rate: setSec["四阶宝物概率"] ?? 45, exp: setSec["四阶宝物经验"] ?? 4000 },
-        { name: "五阶", cost: setSec["五阶宝物花费"] ?? 1500000, rate: setSec["五阶宝物概率"] ?? 25, exp: setSec["五阶宝物经验"] ?? 8000 },
+        { name: "一阶", cost: setSec["一阶宝物花费"] ?? 100000, rate: setSec["一阶宝物概率"] ?? 100, exp: setSec["一阶宝物经验"] ?? 500 },
+        { name: "二阶", cost: setSec["二阶宝物花费"] ?? 500000, rate: setSec["二阶宝物概率"] ?? 85, exp: setSec["二阶宝物经验"] ?? 1500 },
+        { name: "三阶", cost: setSec["三阶宝物花费"] ?? 2000000, rate: setSec["三阶宝物概率"] ?? 70, exp: setSec["三阶宝物经验"] ?? 4000 },
+        { name: "四阶", cost: setSec["四阶宝物花费"] ?? 8000000, rate: setSec["四阶宝物概率"] ?? 45, exp: setSec["四阶宝物经验"] ?? 12000 },
+        { name: "五阶", cost: setSec["五阶宝物花费"] ?? 25000000, rate: setSec["五阶宝物概率"] ?? 25, exp: setSec["五阶宝物经验"] ?? 30000 },
       ];
 
       let upgradeCardHtml = `
@@ -711,7 +711,7 @@ function openTreasureEditModal(name, isNew) {
           <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:6px">
             📈 该宝物各阶进阶加成数值（${typeLabel}，按系统阶梯倍率 1.0x / 1.35x / 1.75x / 2.25x / 2.85x / 3.60x 逐阶递增成长）：
           </label>
-          <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:8px">
+          <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px 12px">
             ${[0, 1, 2, 3, 4, 5].map(s => {
               const mult = stageMultipliers[s];
               const defVal = s === 0 ? baseV : Math.round(baseV * mult);
@@ -720,11 +720,12 @@ function openTreasureEditModal(name, isNew) {
                 curVal = cfgSet[`${name}_${chMap[s]}阶数值`];
               }
               return `
-                <div>
-                  <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:2px">
-                    ${s === 0 ? "0阶(基础)" : s + "阶"} <b style="color:var(--acc);font-weight:600">(+${defVal}${unit})</b>
-                  </span>
-                  <input id="treVal_${s}" type="number" min="0" placeholder="默认 +${defVal}" value="${esc((curVal !== undefined && curVal !== null) ? curVal : '')}" title="系统倍率预估：+${defVal}${unit}" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
+                <div style="background:var(--panel, rgba(255,255,255,0.04));border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:5px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
+                    <span style="font-size:12px;font-weight:700;color:var(--text)">${s === 0 ? "0阶(基础)" : "★" + s + "阶"}</span>
+                    <span style="font-size:11.5px;color:var(--acc);font-weight:700">(+${defVal}${unit})</span>
+                  </div>
+                  <input id="treVal_${s}" type="number" min="0" placeholder="默认 +${defVal}${unit}" value="${esc((curVal !== undefined && curVal !== null) ? curVal : '')}" title="系统倍率预估：+${defVal}${unit}" style="width:100%;padding:6px 8px;font-size:12.5px;border-radius:8px">
                 </div>
               `;
             }).join("")}
@@ -743,7 +744,7 @@ function openTreasureEditModal(name, isNew) {
           <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:6px">
             🎲 该宝物各阶实战触发几率（免罪/圣盾类，留空自动使用默认递增曲线）：
           </label>
-          <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:8px">
+          <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px 12px">
             ${[0, 1, 2, 3, 4, 5].map(s => {
               const defRate = defaultCurve[s];
               let val = cfgSet[`${name}_${s}阶触发率`];
@@ -754,11 +755,12 @@ function openTreasureEditModal(name, isNew) {
                 val = cfgSet[`${name}_基础触发率`];
               }
               return `
-                <div>
-                  <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:2px">
-                    ${s === 0 ? "0阶(基础)" : s + "阶"} <b style="color:var(--acc);font-weight:600">(${defRate}%)</b>
-                  </span>
-                  <input id="treProb_${s}" type="number" min="1" max="98" placeholder="默认 ${defRate}%" value="${esc((val !== undefined && val !== null) ? val : '')}" title="默认曲线：${defRate}%" style="width:100%;padding:5px 6px;font-size:12px;border-radius:8px">
+                <div style="background:var(--panel, rgba(255,255,255,0.04));border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:5px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
+                    <span style="font-size:12px;font-weight:700;color:var(--text)">${s === 0 ? "0阶(基础)" : "★" + s + "阶"}</span>
+                    <span style="font-size:11.5px;color:var(--acc);font-weight:700">(${defRate}%)</span>
+                  </div>
+                  <input id="treProb_${s}" type="number" min="1" max="98" placeholder="默认 ${defRate}%" value="${esc((val !== undefined && val !== null) ? val : '')}" title="默认曲线：${defRate}%" style="width:100%;padding:6px 8px;font-size:12.5px;border-radius:8px">
                 </div>
               `;
             }).join("")}
