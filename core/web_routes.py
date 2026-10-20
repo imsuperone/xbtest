@@ -88,6 +88,8 @@ _XB_API_ROUTES = [
     ("logs/clear", "POST", "page_logs_clear", "清空插件运行日志", ("core.api.logs", "handle_logs_clear", "logs clear", {"mode": "req"})),
     ("questions/list", "GET", "page_questions_list", "读取题库列表", ("core.api.questions", "handle_questions_list", "questions list", {})),
     ("questions/save", "POST", "page_questions_save", "保存题库", ("core.api.questions", "handle_questions_save", "questions save", {})),
+    ("questions/export", "GET,POST", "page_questions_export", "题库导出", ("core.api.questions", "handle_questions_export", "questions export", {})),
+    ("questions/import", "POST", "page_questions_import", "题库导入", ("core.api.questions", "handle_questions_import", "questions import", {})),
     ("questions/reset", "POST", "page_questions_reset", "恢复默认题库", ("core.api.questions", "handle_questions_reset", "questions reset", {})),
 ]
 
@@ -119,7 +121,7 @@ _XB_MUTATING_HANDLERS = frozenset({
     "handle_logs_clear",
     "handle_webdav_backup_now", "handle_webdav_restore", "handle_webdav_delete",
     "handle_slave_calibrate",
-    "handle_questions_save", "handle_questions_reset",
+    "handle_questions_save", "handle_questions_import", "handle_questions_reset",
 })
 
 
