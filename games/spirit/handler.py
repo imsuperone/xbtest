@@ -17,27 +17,28 @@ try:
     from ..config.spirit import (POWER_DIV, EXP_FLOOR, CATCH_MIN, CATCH_MAX,
                                  CATCH_LV_STEP, CATCH_MASTER_EFF, CATCH_MASTER_RATE,
                                  PVP_STAKE_CAP, PVP_STAKE_DIV, SHINY_RATE, SHINY_MULT,
-                                 SPIRIT_TRAITS, TRAVEL_EVENTS)
+                                 SPIRIT_TRAITS, TRAVEL_EVENTS, STAT_GROWTH_RATES)
 except ImportError:
     from games.config.spirit import (POWER_DIV, EXP_FLOOR, CATCH_MIN, CATCH_MAX,  # type: ignore
                                      CATCH_LV_STEP, CATCH_MASTER_EFF, CATCH_MASTER_RATE,
                                      PVP_STAKE_CAP, PVP_STAKE_DIV, SHINY_RATE, SHINY_MULT,
-                                     SPIRIT_TRAITS, TRAVEL_EVENTS)
+                                     SPIRIT_TRAITS, TRAVEL_EVENTS, STAT_GROWTH_RATES)
 
 MENU = (
     "✨ 精灵系统\r\n"
     "━━━━━━━━━━━━━━\r\n"
-    "🐣 领养精灵　　🎁 领取精灵礼包\r\n"
-    "📋 我的精灵　　🔍 查看精灵 名称\r\n"
-    "🛍️ 精灵商店/商城　🎒 我的背包\r\n"
+    "🐣 领养精灵 [名称]　🎁 领取精灵礼包\r\n"
+    "📋 我的精灵　　🔍 查看精灵 [名称]\r\n"
+    "🛍️ 精灵商城　　🎒 我的背包\r\n"
     "🗺️ 精灵地图　　📍 查看地图 地点\r\n"
-    "⚔️ 精灵冒险 地点　　🔮 使用精灵球 名称\r\n"
+    "⚔️ 精灵冒险 地点　🔮 使用精灵球 名称\r\n"
     "💊 使用物品 名称*数量　💖 羁绊\r\n"
     "✨ 闪光觉醒 名称　🎲 洗练 名称\r\n"
     "🧳 旅行精灵　　🚩 精灵远征\r\n"
     "🎽 出战精灵 名称　🕊️ 回收出战精灵\r\n"
     "💠 携带精灵 名称　🗑️ 丢弃精灵 名称\r\n"
-    "🧬 进化 名称　　⚔️ 精灵对战 @QQ　🏁 挑战 @QQ\r\n"
+    "🧬 进化 [名称]　　🌳 进化路线 [名称/全部]\r\n"
+    "⚔️ 精灵对战 @QQ　🏁 挑战 @QQ\r\n"
     "🏆 精灵排行\r\n"
     "━━━━━━━━━━━━━━\r\n"
     "💡 发送对应指令即可游玩"
@@ -140,6 +141,9 @@ def _spirits(gid, qq):
                             sp["bag"] = v
                     except Exception:
                         pass
+            if isinstance(sp.get("list"), list):
+                for _spr_it in sp["list"]:
+                    _ensure_spirit_stats(_spr_it)
             return sp
         return {}
     except Exception:
@@ -193,7 +197,7 @@ def _trait_desc(trait_name):
 
 
 def _calc_variant_stats(base, shiny=False, trait=""):
-    """基于图鉴底表 + 闪光加成(+15%) + 性格词条修正计算六维"""
+    """基于图鉴底表 + 闪光加成(+15%) + 性格词条修正计算六维基础值"""
     s_mult = SHINY_MULT if shiny else 1.0
     t_mults = (_TRAIT_MAP.get(str(trait or "")) or ({}, ""))[0]
     out = {}
@@ -202,6 +206,55 @@ def _calc_variant_stats(base, shiny=False, trait=""):
         m = s_mult * float(t_mults.get(k, 1.0))
         out[k] = max(1, int(round(raw * m))) if raw > 0 else 0
     return out
+
+
+def _calc_level_growth(base_variant_stats):
+    """根据精灵变异初始属性计算每升 1 级的综合全属性成长增量"""
+    growth = {}
+    growth["hp"] = max(2, int(round(base_variant_stats.get("hp", 40) * STAT_GROWTH_RATES.get("hp", 0.05))))
+    growth["atk"] = max(1, int(round(base_variant_stats.get("atk", 40) * STAT_GROWTH_RATES.get("atk", 0.04))))
+    growth["def"] = max(1, int(round(base_variant_stats.get("def", 40) * STAT_GROWTH_RATES.get("def", 0.04))))
+    growth["spa"] = max(1, int(round(base_variant_stats.get("spa", 40) * STAT_GROWTH_RATES.get("spa", 0.04))))
+    growth["spd"] = max(1, int(round(base_variant_stats.get("spd", 40) * STAT_GROWTH_RATES.get("spd", 0.04))))
+    growth["spe"] = max(1, int(round(base_variant_stats.get("spe", 40) * STAT_GROWTH_RATES.get("spe", 0.025))))
+    return growth
+
+
+def _calc_stats_at_level(base, level=1, shiny=False, trait=""):
+    """计算指定图鉴种族在对应等级下的全套属性（包含闪光/性格加成与等级综合成长）"""
+    base_v = _calc_variant_stats(base, shiny=shiny, trait=trait)
+    lvl = max(1, int(level or 1))
+    if lvl == 1:
+        return base_v
+    growth = _calc_level_growth(base_v)
+    lv_diff = lvl - 1
+    out = {}
+    for k in ("hp", "atk", "def", "spa", "spd", "spe"):
+        out[k] = base_v.get(k, 0) + lv_diff * growth.get(k, 1)
+    return out
+
+
+def _ensure_spirit_stats(it):
+    """校准精灵属性：若已有精灵等级 > 1 但数值仍停留在 1 级基础数值，自动补齐对应的等级综合成长（且保留已吃的药品/美食增益）"""
+    if not isinstance(it, dict):
+        return
+    lvl = int(it.get("level", 1) or 1)
+    if lvl <= 1:
+        return
+    name = it.get("name")
+    base = _SPIRITS().get(name, {}) or {}
+    if not base:
+        return
+    shiny = bool(it.get("shiny"))
+    trait = it.get("trait") or "温顺"
+    base_v = _calc_variant_stats(base, shiny=shiny, trait=trait)
+    growth = _calc_level_growth(base_v)
+    lv_diff = lvl - 1
+    for k in ("hp", "atk", "def", "spa", "spd", "spe"):
+        cur_val = int(it.get(k, 0) or 0)
+        expected_min = base_v.get(k, 0) + lv_diff * growth.get(k, 1)
+        if cur_val < expected_min:
+            it[k] = cur_val + lv_diff * growth.get(k, 1)
 
 
 def _fmt_name(it):
@@ -231,16 +284,17 @@ def _shiny_rate():
 
 
 def _mk_spr(name, level=1, shiny=None, trait=None):
-    """按图鉴生成一只精灵实例(含闪光变异与性格词条)"""
+    """按图鉴生成一只精灵实例(含等级综合属性成长、闪光变异与性格词条)"""
     base = _SPIRITS().get(name, {}) or {}
     if shiny is None:
         shiny = random.randint(1, 100) <= _shiny_rate()
     if not trait:
         trait = _roll_trait(prefer_rare=bool(shiny))
-    stats = _calc_variant_stats(base, shiny=bool(shiny), trait=trait)
+    lvl = max(1, int(level or 1))
+    stats = _calc_stats_at_level(base, level=lvl, shiny=bool(shiny), trait=trait)
     return {
         "name": name,
-        "level": int(level),
+        "level": lvl,
         "exp": 0,
         "type": base.get("type", ""),
         "shiny": 1 if shiny else 0,
@@ -250,13 +304,14 @@ def _mk_spr(name, level=1, shiny=None, trait=None):
 
 
 def _apply_new_species(it, new_name):
-    """进化或重算时保留已吃药培养的额外属性增量，并套用新种族底表+闪光/性格倍率"""
+    """进化或重算时保留已吃药培养的额外属性增量，并套用新种族底表+闪光/性格倍率+等级综合成长"""
     old_base = _SPIRITS().get(it.get("name"), {}) or {}
     new_base = _SPIRITS().get(new_name, {}) or {}
     shiny = bool(it.get("shiny"))
     trait = it.get("trait") or "温顺"
-    old_calc = _calc_variant_stats(old_base, shiny=shiny, trait=trait)
-    new_calc = _calc_variant_stats(new_base, shiny=shiny, trait=trait)
+    lvl = max(1, int(it.get("level", 1) or 1))
+    old_calc = _calc_stats_at_level(old_base, level=lvl, shiny=shiny, trait=trait)
+    new_calc = _calc_stats_at_level(new_base, level=lvl, shiny=shiny, trait=trait)
     it["name"] = new_name
     if new_base:
         it["type"] = new_base.get("type", it.get("type", ""))
@@ -280,17 +335,37 @@ def _starters():
 
 
 def _add_exp(gid, qq, sp, it, amount, save_now=True):
-    """加经验与升级（进化统一需使用【进化液】/【进化 名称】，达到进化等级时给出提示）"""
+    """加经验与升级（升级全方位综合加六维属性与战力，达到进化等级时给出提示）"""
     it["exp"] = int(it.get("exp", 0)) + int(amount)
     evolved = ""
-    while it["exp"] >= _exp_need(it) and it["level"] < _cfgi("最大等级", 100):
+    levels_gained = 0
+    max_lv = _cfgi("最大等级", 150)
+
+    base = _SPIRITS().get(it.get("name"), {}) or {}
+    shiny = bool(it.get("shiny"))
+    trait = it.get("trait") or "温顺"
+    base_v = _calc_variant_stats(base, shiny=shiny, trait=trait)
+    growth = _calc_level_growth(base_v)
+
+    while it["exp"] >= _exp_need(it) and it["level"] < max_lv:
         it["exp"] -= _exp_need(it)
         it["level"] = int(it.get("level", 1)) + 1
+        levels_gained += 1
+
+        # 升级综合加全六维属性！
+        for k in ("hp", "atk", "def", "spa", "spd", "spe"):
+            it[k] = int(it.get(k, 0)) + growth.get(k, 1)
+
         old_name = it.get("name")
-        base = _SPIRITS().get(old_name, {})
         evo = base.get("evolve", "否")
         if evo and evo != "否" and it["level"] >= int(base.get("lv", 0) or 0):
             evolved = f"💡 【{old_name}】已达进化等级 Lv.{base.get('lv', 0)}，可使用【进化液】发送【进化 {old_name}】进化为「{evo}」！\r\n"
+
+    if levels_gained > 0:
+        stat_up_summary = f"生命+{growth['hp']*levels_gained} 攻防各+{growth['atk']*levels_gained} 速度+{growth['spe']*levels_gained}"
+        lvl_msg = f"🎉【等级提升】出战精灵【{_fmt_name(it)}】升至 Lv.{it['level']}（+{levels_gained}级）！综合属性成长（{stat_up_summary}，总战力 {_power(it)}）！\r\n"
+        evolved = lvl_msg + evolved
+
     if save_now:
         _save(gid, qq, sp)
     return evolved
@@ -370,13 +445,20 @@ def cmd_my(gid, qq, target=None):
         except Exception:
             t_name = t_qq
         lines = [f"以下是【{t_name}】拥有的精灵："]
+    all_sp = _SPIRITS()
     for it in sp["list"]:
         if not isinstance(it, dict):
             continue
         mark = "【出战】" if it.get("name") == sp.get("active") else ""
         trait = it.get("trait") or "温顺"
-        lines.append(f"{mark}{_fmt_name(it)} Lv.{it.get('level',1)} [{trait}] 战力:{_power(it)}")
-    lines.append("发送【查看精灵 名称】查看精灵状态")
+        nm = it.get("name")
+        base = all_sp.get(nm, {}) or {}
+        evo = base.get("evolve", "否")
+        evo_lv = int(base.get("lv", 0) or 0)
+        cur_lvl = int(it.get("level", 1) or 1)
+        evo_badge = " ✨[可进化]" if (evo and evo != "否" and cur_lvl >= evo_lv) else ""
+        lines.append(f"{mark}{_fmt_name(it)} Lv.{cur_lvl} [{trait}] 战力:{_power(it)}{evo_badge}")
+    lines.append("发送【查看精灵 名称】查看详细属性；发送【进化路线】查看进化树")
     if sp.get("active"):
         lines.append(f"当前出战精灵：【{sp['active']}】")
     if sp.get("ride"):
@@ -392,9 +474,14 @@ def cmd_my(gid, qq, target=None):
 
 def cmd_view(gid, qq, name):
     sp = _spirits(gid, qq)
+    name = (name or "").strip()
+    if not name:
+        name = sp.get("active") or ""
     it = _wsp(sp, name)
     if not it:
-        return "亲，您没有该精灵，请到野外冒险捕获吧！"
+        if not name:
+            return "亲，您还没有设置出战精灵，发送【出战精灵 名称】或【查看精灵 名称】进行查看！"
+        return f"亲，您没有「{name}」，请到野外冒险捕获吧！"
     _pp = ""
     try:
         _base = _SPIRITS().get(it.get("name"), {}) or {}
@@ -405,11 +492,28 @@ def cmd_view(gid, qq, name):
         _pp = ""
     trait = it.get("trait") or "温顺"
     bond = int(it.get("bond", 0) or 0)
+
+    base = _SPIRITS().get(it.get("name"), {}) or {}
+    evo = base.get("evolve", "否")
+    evo_lv = int(base.get("lv", 0) or 0)
+    cur_lv = int(it.get("level", 1) or 1)
+
+    if evo and evo != "否":
+        bag_evo = int((sp.get("bag") or {}).get("进化液", 0) or 0)
+        if cur_lv >= evo_lv:
+            evo_line = f"🧬 进化状态：✨已达进化等级 Lv.{evo_lv}！可进化为「{evo}」（持有进化液×{bag_evo}，发送【进化 {it.get('name')}】即可突破）"
+        else:
+            diff_lv = evo_lv - cur_lv
+            evo_line = f"🧬 进化路线：Lv.{evo_lv} 可进化为「{evo}」（还差 {diff_lv} 级，需消耗【进化液】）"
+    else:
+        evo_line = "🧬 进化状态：👑已达终极形态（无法再次进化）"
+
     _txt = (f"您的精灵【{_fmt_name(it)}】\r\n"
             f"属性：{it.get('type') or '-'}　性格：【{trait}】（{_trait_desc(trait)}）\r\n"
-            f"等级：Lv.{it.get('level',1)}　经验：{it.get('exp',0)}/{_exp_need(it)}　羁绊：{bond}\r\n"
+            f"等级：Lv.{cur_lv}　经验：{it.get('exp',0)}/{_exp_need(it)}　羁绊：{bond}\r\n"
             f"生命：{it.get('hp',0)}　攻击：{it.get('atk',0)}　防御：{it.get('def',0)}\r\n"
             f"特攻：{it.get('spa',0)}　特防：{it.get('spd',0)}　速度：{it.get('spe',0)}\r\n"
+            f"{evo_line}\r\n"
             f"总战力：{_power(it)}")
     if _pp:
         return _txt, [_pp]
@@ -504,22 +608,35 @@ def cmd_shop():
 
 
 def cmd_buy(gid, qq, name):
+    raw_arg = (name or "").strip()
+    if not raw_arg:
+        return f"亲，请指定要购买的商品名称：【购买 商品名称*数量】（如：购买 奇异甜食*5、购买 起司）！"
+    import re as _re_buy
+    m = _re_buy.match(r"^([^*\s×xX]+)(?:[\s*×xX]+(\d+))?$", raw_arg)
+    if not m:
+        item_name = raw_arg
+        cnt = 1
+    else:
+        item_name = m.group(1).strip()
+        cnt = max(1, min(999, int(m.group(2) or 1)))
+
     shop = _SHOP()
-    if name not in shop:
-        return "亲，商城中不存在该物品，发送【精灵商城】查看商城吧！"
-    d = shop[name]
-    price = int(d.get("price", 0) or 0)
-    if price > 0 and ST.coins_get(gid, qq) < price:
-        return f"笑~你没有那么多{ST.coin_name()}（需要{ST.fmt_coins(price)}）"
+    if item_name not in shop:
+        return f"亲，商城中不存在「{item_name}」，发送【精灵商城】查看在售商品吧！"
+    d = shop[item_name]
+    unit_price = int(d.get("price", 0) or 0)
+    total_price = unit_price * cnt
+    if total_price > 0 and ST.coins_get(gid, qq) < total_price:
+        return f"笑~你没有那么多{ST.coin_name()}（购买 {item_name}×{cnt} 需要 {ST.fmt_coins(total_price)}）"
     sp = _spirits(gid, qq)
     bag = sp.setdefault("bag", {})
-    bag[name] = int(bag.get(name, 0)) + 1
-    if price > 0:
-        if ST.txn_coins_acct(gid, qq, -price, {"spirits": json.dumps(sp, ensure_ascii=False)}, require_funds=True) is None:
+    bag[item_name] = int(bag.get(item_name, 0)) + cnt
+    if total_price > 0:
+        if ST.txn_coins_acct(gid, qq, -total_price, {"spirits": json.dumps(sp, ensure_ascii=False)}, require_funds=True) is None:
             return "精灵商城繁忙，购买未成功，请稍后重试！"
     else:
         _save(gid, qq, sp)
-    return f"购买成功！获得「{name}」，已放入背包。"
+    return f"🛒 购买成功！消耗 {ST.fmt_coins(total_price)} {ST.coin_name()}，获得「{item_name}」×{cnt}（背包现有：{bag[item_name]} 个）。"
 
 
 def _map_indexed():
@@ -655,7 +772,7 @@ def cmd_adventure(gid, qq, place):
     exp = random.randint(max(1, exp_lo), max(exp_lo, exp_hi))
     gold = random.randint(gold_lo, gold_hi)
     evo_hint = ""
-    if act_it.get("level") < _cfgi("最大等级", 100):
+    if act_it.get("level") < _cfgi("最大等级", 150):
         evo_hint = _add_exp(gid, qq, sp, act_it, exp, save_now=False) or ""
     # H: 挑战扣除
     d_lo = _cfgi("挑战扣除_金钱下限", 0)
@@ -743,11 +860,17 @@ def cmd_catch(gid, qq, ball):
 
 def cmd_set_active(gid, qq, name):
     sp = _spirits(gid, qq)
-    if not _wsp(sp, name):
-        return "亲，您没有该精灵，无法出战！"
-    sp["active"] = name
+    clean_name = str(name or "").strip()
+    if not clean_name:
+        act = sp.get("active")
+        if act:
+            return f"当前出战精灵：【{act}】\r\n发送【出战精灵 名称】（如：【出战精灵 叶子】）可更换出战精灵！"
+        return "亲，您还没有设置出战精灵，发送【出战精灵 名称】（如：【出战精灵 叶子】）进行设置！"
+    if not _wsp(sp, clean_name):
+        return f"亲，您没有名为「{clean_name}」的精灵，无法出战！"
+    sp["active"] = clean_name
     _save(gid, qq, sp)
-    return f"已将【{name}】设为出战精灵！"
+    return f"已将【{clean_name}】设为出战精灵！"
 
 
 def cmd_active(gid, qq):
@@ -806,7 +929,7 @@ def cmd_discard(gid, qq, name):
     sp["list"] = _lst
     if same_cnt <= 1:
         if sp.get("active") == name:
-            sp["active"] = ""
+            sp["active"] = _lst[0]["name"] if _lst else ""
         if sp.get("ride") == name:
             sp["ride"] = ""
     red = _cfgi("魅力减少", 10)
@@ -823,24 +946,185 @@ def cmd_discard(gid, qq, name):
     return f"已丢弃精灵【{name}】，魅力 -{red}"
 
 
-def cmd_evolve(gid, qq, name):
+def _get_spirit_chains(name):
+    """查询指定精灵的完整进化链，包含从根基础形态到终极形态的所有路径"""
+    all_sp = _SPIRITS()
+    if name not in all_sp:
+        return None
+    prev_map = {}
+    for k, v in all_sp.items():
+        ev = v.get("evolve")
+        if ev and ev != "否":
+            prev_map.setdefault(ev, []).append((k, int(v.get("lv", 0) or 0)))
+
+    def find_roots(node):
+        if node not in prev_map:
+            return [node]
+        roots = []
+        for parent, _ in prev_map[node]:
+            roots.extend(find_roots(parent))
+        return list(dict.fromkeys(roots))
+
+    roots = find_roots(name)
+    chains = []
+    for r in roots:
+        chain = [r]
+        curr = r
+        while True:
+            info = all_sp.get(curr, {})
+            nxt = info.get("evolve")
+            lv = int(info.get("lv", 0) or 0)
+            if not nxt or nxt == "否" or nxt not in all_sp:
+                break
+            chain.append((lv, nxt))
+            curr = nxt
+        chains.append(chain)
+    return chains
+
+
+def cmd_evolution_route(gid, qq, arg=""):
+    """查看精灵进化路线 / 图谱（支持查询个人精灵、指定精灵家族或全服核心进化图谱）"""
+    arg = (arg or "").strip()
     sp = _spirits(gid, qq)
+    all_sp = _SPIRITS()
+
+    # 1. 查询全服核心进化图谱
+    if arg in ("全部", "图谱", "列表", "全", "all"):
+        return (
+            "🧬【全服核心精灵进化图谱】\r\n"
+            "━━━━━━━━━━━━━━\r\n"
+            "🌿【木系家族】\r\n"
+            "  • 叶子 / 冬冬 ➔ Lv.50 小竹笋 ➔ Lv.90 开阳\r\n"
+            "  • 落樱 / 小瑶 ➔ Lv.50 小翠 ➔ Lv.90 开阳\r\n"
+            "🔥【火系家族】\r\n"
+            "  • 火苗 / 小火猪 / 小火灵 ➔ Lv.50 小火花 ➔ Lv.90 朱雀\r\n"
+            "  • 小火鸟 ➔ Lv.50 朱雀\r\n"
+            "💧【水系家族】\r\n"
+            "  • 水滴 / 库巴 ➔ Lv.50 小泉水 ➔ Lv.90 共工\r\n"
+            "  • 艾斯 / 贝小壳 ➔ Lv.50 咚咚 ➔ Lv.90 共工\r\n"
+            "❄️【冰雪·龙神·暗系】\r\n"
+            "  • 雪仔 ➔ Lv.50 寒王子 ➔ Lv.130 御·星寒\r\n"
+            "  • 冰公主 ➔ Lv.130 霜燚\r\n"
+            "  • 烛 ➔ Lv.130 审判·宿　• 源 ➔ Lv.130 命运·狄\r\n"
+            "  • 小幽 ➔ Lv.90 御·星寒　• 小黑 ➔ Lv.90 阿凯\r\n"
+            "🪽【飞翼·金系·土系】\r\n"
+            "  • 翼仔 ➔ Lv.50 毛绒绒 ➔ Lv.50 天玑\r\n"
+            "  • 风仔 ➔ Lv.50 小空 ➔ Lv.50 紫辰\r\n"
+            "  • 小酷 / 小落 / 小狼 ➔ Lv.50 玉衡\r\n"
+            "  • 石灵 / 亚斯 ➔ Lv.50 玄武　• 岩兵 ➔ Lv.50 天璇\r\n"
+            "🐾【灵幻·智系·圣光】\r\n"
+            "  • 小沫沫 / 小彩 ➔ Lv.90 耀凌　• 梦蝶 ➔ Lv.90 御·星殊\r\n"
+            "  • 文姬 / 小临 ➔ Lv.90 天权　• 药丸子 ➔ Lv.90 天枢\r\n"
+            "  • 阿泠 ➔ Lv.90 御·星痕　• 光明 ➔ Lv.90 阴阳圣护\r\n"
+            "  • 傻狗 ➔ Lv.90 傻狗光明　• 皮皮 ➔ Lv.50 阿雨\r\n"
+            "━━━━━━━━━━━━━━\r\n"
+            "💡 进化消耗：每次进化需消耗 1 个【进化液】（可在精灵商城购买）\r\n"
+            "💡 发送【进化路线 精灵名】即可查询该精灵的专属进化分支！"
+        )
+
+    # 2. 查询指定精灵名字的进化路线
+    if arg and arg not in ("我的", "状态", "自己"):
+        chains = _get_spirit_chains(arg)
+        if not chains:
+            return f"亲，图鉴中未收录名为「{arg}」的精灵，发送【进化路线 全部】可查看图谱！"
+        sp_info = all_sp.get(arg, {})
+        sp_type = sp_info.get("type") or "普"
+        lines = [f"🧬【精灵进化图鉴】·「{arg}」家族", "━━━━━━━━━━━━━━"]
+
+        # 独立无法进化的精灵
+        if len(chains) == 1 and len(chains[0]) == 1:
+            lines.append(f"✨【{arg}】（属性：{sp_type}系）")
+            lines.append("👑 形态：独有原生形态（无法进化）")
+            lines.append("💡 说明：该精灵天生战力强悍，可通过升级综合成长、使用起司/美食、洗练极品性格与闪光觉醒培养至超高战力！")
+            lines.append("━━━━━━━━━━━━━━")
+            return "\r\n".join(lines)
+
+        lines.append(f"属性归属：【{sp_type}系】　相关进化分支：")
+        for idx, ch in enumerate(chains, 1):
+            branch_str = []
+            for item in ch:
+                if isinstance(item, str):
+                    branch_str.append(f"【{item}】")
+                elif isinstance(item, (tuple, list)):
+                    branch_str.append(f" ➔ (Lv.{item[0]}需进化液) ➔ 【{item[1]}】")
+            prefix = f"分支{idx}：" if len(chains) > 1 else "路线："
+            lines.append(f"  {prefix}{''.join(branch_str)}")
+
+        lines.append("━━━━━━━━━━━━━━")
+        lines.append("💡 进化说明：")
+        lines.append("• 精灵达到指定等级后，携带 1 个【进化液】，发送【进化 精灵名】即可完成形态突破！")
+        lines.append("• 突破后种族底表、六维数值与总战力将获得大幅质的飞跃！")
+        return "\r\n".join(lines)
+
+    # 3. 默认查询自己当前拥有的精灵进化进度
+    lst = sp.get("list") or []
+    if not lst:
+        return "亲，您还没有领养精灵，请先发送【领养精灵】吧！发送【进化路线 全部】可查看全服图鉴。"
+
+    bag = sp.get("bag") or {}
+    evo_liquid_cnt = int(bag.get("进化液", 0) or 0)
+    lines = ["🧬【我的精灵进化路线】", "━━━━━━━━━━━━━━"]
+
+    act_name = sp.get("active")
+    ready_count = 0
+    for it in lst:
+        if not isinstance(it, dict):
+            continue
+        nm = it.get("name")
+        lvl = int(it.get("level", 1) or 1)
+        base = all_sp.get(nm, {})
+        evo = base.get("evolve", "否")
+        evo_lv = int(base.get("lv", 0) or 0)
+        mark = "【出战】" if nm == act_name else "【队伍】"
+
+        if evo and evo != "否":
+            if lvl >= evo_lv:
+                ready_count += 1
+                lines.append(f"{mark}{nm} Lv.{lvl} ➔ Lv.{evo_lv}「{evo}」✨【已达标！可进化】")
+            else:
+                lines.append(f"{mark}{nm} Lv.{lvl} ➔ Lv.{evo_lv}「{evo}」（还差 {evo_lv - lvl} 级）")
+        else:
+            lines.append(f"{mark}{nm} Lv.{lvl} 👑【已达终极形态】")
+
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append(f"🎒 背包持有【进化液】：{evo_liquid_cnt} 个（可在【精灵商城】购买）")
+    if ready_count > 0:
+        lines.append(f"🎉 您当前有 {ready_count} 只精灵已满足进化等级！发送【进化 精灵名】即可突破！")
+    else:
+        lines.append("💡 发送【进化路线 精灵名】可查询任意图鉴进化树（如：【进化路线 火苗】）")
+        lines.append("💡 发送【进化路线 全部】可浏览全服核心进化图谱")
+    return "\r\n".join(lines)
+
+
+def cmd_evolve(gid, qq, name=""):
+    sp = _spirits(gid, qq)
+    name = (name or "").strip()
+    if not name:
+        name = sp.get("active") or ""
+    if not name:
+        return "亲，请指定要进化的精灵名称：【进化 精灵名】（如：【进化 叶子】），也可发送【进化路线】查看进化进度！"
     it = _wsp(sp, name)
     if not it:
-        return "亲，您没有该精灵，无法进化！"
+        return f"亲，您没有名为「{name}」的精灵，无法进化！"
     base = _SPIRITS().get(name, {})
     evo = base.get("evolve", "否")
     if not evo or evo == "否":
-        return "亲，该精灵无法再次进化！"
-    if int(it.get("level", 1)) < base.get("lv", 0):
-        return f"亲，需要达到 Lv.{base.get('lv',0)} 才能进化，当前 Lv.{it.get('level',1)}！"
+        return f"亲，【{name}】已经是终极形态了，无法再次进化！"
+    evo_lv = int(base.get("lv", 0) or 0)
+    cur_lv = int(it.get("level", 1) or 1)
+    if cur_lv < evo_lv:
+        return f"亲，【{name}】需要达到 Lv.{evo_lv} 才能进化，当前为 Lv.{cur_lv}（还差 {evo_lv - cur_lv} 级）！可先去【精灵冒险】或享用【起司/奇异甜食】升级哦~"
     bag = sp.setdefault("bag", {})
-    if int(bag.get("进化液", 0)) <= 0:
-        return "亲，需要【进化液】才能进化，请到商城购买！"
+    if int(bag.get("进化液", 0) or 0) <= 0:
+        return f"亲，【{name}】已达到进化等级 Lv.{evo_lv}，但还需要 1 个【进化液】才能激发潜能！请前往【精灵商城】购买吧！"
     bag["进化液"] = int(bag.get("进化液", 0)) - 1
     if int(bag.get("进化液", 0)) <= 0:
         del bag["进化液"]
+
+    old_p = _power(it)
     _apply_new_species(it, evo)
+    new_p = _power(it)
+
     if sp.get("active") == name and not _wsp(sp, name):
         sp["active"] = evo
     if sp.get("ride") == name and not _wsp(sp, name):
@@ -855,11 +1139,23 @@ def cmd_evolve(gid, qq, name):
                 expd["names"][_idx_n] = evo
                 break
     _save(gid, qq, sp)
-    return f"恭喜！「{name}」进化成「{_fmt_name(it)}」（总战力：{_power(it)}）！"
+
+    new_base = _SPIRITS().get(evo, {}) or {}
+    nxt_evo = new_base.get("evolve", "否")
+    nxt_lv = int(new_base.get("lv", 0) or 0)
+    nxt_tip = f"（下一阶段：Lv.{nxt_lv} 可进化为「{nxt_evo}」）" if (nxt_evo and nxt_evo != "否") else "（👑 已达成终极形态！）"
+
+    trait = it.get("trait") or "温顺"
+    return (f"🧬【形态突破·华丽进化】\r\n"
+            f"恭喜！您的精灵「{name}」成功突破进化为「{_fmt_name(it)}」！\r\n"
+            f"✨ 种族进阶：属性【{it.get('type')}系】 | 性格【{trait}】\r\n"
+            f"📈 属性飞跃：生命 {it.get('hp')} | 攻击 {it.get('atk')} | 防御 {it.get('def')} | 特攻 {it.get('spa')} | 特防 {it.get('spd')} | 速度 {it.get('spe')}\r\n"
+            f"💥 总战力大幅跃升：{old_p} ➔ {new_p}！\r\n"
+            f"💡 {nxt_tip}")
 
 
 def cmd_recast(gid, qq, name=""):
-    """洗练性格天赋词条：消耗 1 个【洗练果实】，重置精灵性格词条并重算六维"""
+    """洗练性格天赋词条：消耗 1 个【洗练果实】，重置精灵性格词条并重算六维（按当前等级保留综合成长）"""
     sp = _spirits(gid, qq)
     target_name = (name or "").strip() or sp.get("active")
     it = _wsp(sp, target_name) if target_name else None
@@ -871,14 +1167,15 @@ def cmd_recast(gid, qq, name=""):
     old_trait = it.get("trait") or "温顺"
     base = _SPIRITS().get(it.get("name"), {}) or {}
     shiny = bool(it.get("shiny"))
-    old_calc = _calc_variant_stats(base, shiny=shiny, trait=old_trait)
+    lvl = max(1, int(it.get("level", 1) or 1))
+    old_calc = _calc_stats_at_level(base, level=lvl, shiny=shiny, trait=old_trait)
     new_trait = _roll_trait(prefer_rare=True)
     # 避免连续洗出同一个词条
     for _ in range(4):
         if new_trait != old_trait:
             break
         new_trait = _roll_trait(prefer_rare=True)
-    new_calc = _calc_variant_stats(base, shiny=shiny, trait=new_trait)
+    new_calc = _calc_stats_at_level(base, level=lvl, shiny=shiny, trait=new_trait)
     for k in ("hp", "atk", "def", "spa", "spd", "spe"):
         bonus = max(0, int(it.get(k, 0)) - old_calc.get(k, 0))
         it[k] = new_calc.get(k, it.get(k, 0)) + bonus
@@ -908,11 +1205,12 @@ def cmd_awaken_shiny(gid, qq, name=""):
     if bag["闪光结晶"] <= 0:
         bag.pop("闪光结晶", None)
     rate = int((_SHOP().get("闪光结晶") or {}).get("effect", 35) or 35)
+    lvl = max(1, int(it.get("level", 1) or 1))
     if random.randint(1, 100) <= rate:
         base = _SPIRITS().get(it.get("name"), {}) or {}
         trait = it.get("trait") or "温顺"
-        old_calc = _calc_variant_stats(base, shiny=False, trait=trait)
-        new_calc = _calc_variant_stats(base, shiny=True, trait=trait)
+        old_calc = _calc_stats_at_level(base, level=lvl, shiny=False, trait=trait)
+        new_calc = _calc_stats_at_level(base, level=lvl, shiny=True, trait=trait)
         for k in ("hp", "atk", "def", "spa", "spd", "spe"):
             bonus = max(0, int(it.get(k, 0)) - old_calc.get(k, 0))
             it[k] = new_calc.get(k, it.get(k, 0)) + bonus
@@ -984,7 +1282,7 @@ def cmd_use_item(gid, qq, raw_arg):
         if bag[item_name] <= 0:
             bag.pop(item_name, None)
         evo_hint = ""
-        if int(it.get("level", 1)) < _cfgi("最大等级", 100):
+        if int(it.get("level", 1)) < _cfgi("最大等级", 150):
             evo_hint = _add_exp(gid, qq, sp, it, gain_exp, save_now=False) or ""
         _save(gid, qq, sp)
         return (f"🧀 美味享用！出战精灵【{_fmt_name(it)}】美美地享用了「{item_name}」×{cnt}！\r\n"
@@ -1006,11 +1304,35 @@ def cmd_use_item(gid, qq, raw_arg):
     if not field:
         return f"亲，「{item_name}」暂无法直接使用！"
     if field == "level":
-        max_lv = _cfgi("最大等级", 100)
+        max_lv = _cfgi("最大等级", 150)
         cur_lv = int(it.get("level", 1))
         if cur_lv >= max_lv:
             return f"亲，您的精灵【{act_name}】已达最高等级 Lv.{max_lv}！"
         cnt = min(cnt, max_lv - cur_lv)
+        it["level"] = cur_lv + cnt
+
+        # 升级综合加全六维属性！
+        base = _SPIRITS().get(it.get("name"), {}) or {}
+        shiny = bool(it.get("shiny"))
+        trait = it.get("trait") or "温顺"
+        base_v = _calc_variant_stats(base, shiny=shiny, trait=trait)
+        growth = _calc_level_growth(base_v)
+        for k in ("hp", "atk", "def", "spa", "spd", "spe"):
+            it[k] = int(it.get(k, 0)) + growth.get(k, 1) * cnt
+
+        evo_hint = ""
+        evo = base.get("evolve", "否")
+        if evo and evo != "否" and it["level"] >= int(base.get("lv", 0) or 0):
+            evo_hint = f"\r\n💡 【{act_name}】已达进化等级 Lv.{base.get('lv', 0)}，可发送【进化 {act_name}】完成形态突破！"
+
+        bag[item_name] = have - cnt
+        if bag[item_name] <= 0:
+            bag.pop(item_name, None)
+        _save(gid, qq, sp)
+        return (f"✨ 使用成功！消耗「{item_name}」×{cnt}\r\n"
+                f"出战精灵【{_fmt_name(it)}】等级升至 Lv.{it['level']}（+{cnt}级）！\r\n"
+                f"📈 综合属性提升：生命+{growth['hp']*cnt}、攻击+{growth['atk']*cnt}、防御+{growth['def']*cnt}、特攻+{growth['spa']*cnt}、特防+{growth['spd']*cnt}、速度+{growth['spe']*cnt}！\r\n"
+                f"💥 当前总战力：{_power(it)}{evo_hint}")
     delta = eff * cnt
     it[field] = int(it.get(field, 0)) + delta
     bag[item_name] = have - cnt
@@ -1117,7 +1439,7 @@ def cmd_travel(gid, qq, arg=""):
         evo_note = ""
         if it is not None:
             it["bond"] = int(it.get("bond", 0) or 0) + 5
-            if int(it.get("level", 1)) < _cfgi("最大等级", 100):
+            if int(it.get("level", 1)) < _cfgi("最大等级", 150):
                 evo_note = _add_exp(gid, qq, sp, it, exp_gain, save_now=False)
         if ST.txn_coins_acct(gid, qq, gold_gain, {"spirits": json.dumps(sp, ensure_ascii=False)}) is None:
             return "旅行结算系统繁忙，请稍后重试！"
@@ -1233,7 +1555,7 @@ def cmd_expedition(gid, qq, arg=""):
         sp.pop("expedition", None)
         evo_msgs = []
         for x in team_its:
-            if int(x.get("level", 1)) < _cfgi("最大等级", 100):
+            if int(x.get("level", 1)) < _cfgi("最大等级", 150):
                 ev = _add_exp(gid, qq, sp, x, exp_gain, save_now=False)
                 if ev:
                     evo_msgs.append(f"{x.get('name')}:{ev.strip()}")
@@ -1500,10 +1822,11 @@ def _handle_inner(gid, qq, raw):
     if _need_switch() and m not in _wake:
         return "【精灵系统】已经被关闭了，无法使用该功能！\r\n如需开启，请机器人管理发送【精灵开关】进行开启！"
     # 指令分发
-    if m in _wake:
+    if m in _wake or m in ("精灵系统", "精灵菜单", "精灵帮助", "精灵玩法", "精灵"):
         return MENU
-    if m.startswith("领养精灵"):
-        return cmd_adopt(gid, qq, m[4:].strip())
+    if m.startswith(("领养精灵", "领养")):
+        _pfx = "领养精灵" if m.startswith("领养精灵") else "领养"
+        return cmd_adopt(gid, qq, m[len(_pfx):].strip())
     if m == "领取精灵礼包":
         return cmd_gift(gid, qq)
     if m.startswith(("我的精灵", "精灵列表")):
@@ -1533,35 +1856,42 @@ def _handle_inner(gid, qq, raw):
     if m == "回收出战精灵":
         return cmd_cancel_active(gid, qq)
     # 带参数
-    if m.startswith("查看精灵"):
-        return cmd_view(gid, qq, m[4:].strip())
+    if m.startswith(("查看精灵", "查询精灵")):
+        _pfx = "查看精灵" if m.startswith("查看精灵") else "查询精灵"
+        return cmd_view(gid, qq, m[len(_pfx):].strip())
     if m.startswith("购买"):
         # 坐骑系统的 购买坐骑 由坐骑引擎接管, 此处放行
         if m.startswith(("购买坐骑", "购买体力", "购买魅力", "购买奴隶位")):
             return None
         _raw_b = m[2:]
         _barg = _raw_b.strip()
-        if not _barg or _barg in _SHOP() or _raw_b[:1].isspace():
-            return cmd_buy(gid, qq, _barg)
-        return None
+        return cmd_buy(gid, qq, _barg)
     if m.startswith("精灵冒险"):
         return cmd_adventure(gid, qq, m[4:].strip())
     if m.startswith("使用精灵球"):
         return cmd_catch(gid, qq, m[5:].strip())
-    if m.startswith("使用物品"):
-        return cmd_use_item(gid, qq, m[4:].strip())
-    if m.startswith("出战精灵"):
-        return cmd_set_active(gid, qq, m[4:].strip())
+    if m.startswith(("使用物品", "使用道具", "使用", "吃")):
+        _pfx = "使用物品" if m.startswith("使用物品") else ("使用道具" if m.startswith("使用道具") else ("使用" if m.startswith("使用") else "吃"))
+        _uarg = m[len(_pfx):].strip()
+        if _uarg:
+            shop = _SHOP()
+            sp_bag = _spirits(gid, qq).get("bag", {})
+            if any(_uarg.startswith(k) for k in shop) or any(_uarg.startswith(k) for k in sp_bag):
+                return cmd_use_item(gid, qq, _uarg)
+    if m.startswith(("出战精灵", "出战")):
+        _pfx = "出战精灵" if m.startswith("出战精灵") else "出战"
+        return cmd_set_active(gid, qq, m[len(_pfx):].strip())
     if m.startswith("携带精灵"):
         return cmd_ride(gid, qq, m[4:].strip())
     if m.startswith("丢弃精灵"):
         return cmd_discard(gid, qq, m[4:].strip())
+    if m.startswith(("进化路线", "精灵进化路线", "进化图鉴", "进化链", "进化树")):
+        _pfx = next(p for p in ("精灵进化路线", "进化路线", "进化图鉴", "进化链", "进化树") if m.startswith(p))
+        return cmd_evolution_route(gid, qq, m[len(_pfx):].strip())
     if m.startswith("进化"):
         _raw_e = m[2:]
         _earg = _raw_e.strip()
-        if not _earg or _earg in _SPIRITS() or _raw_e[:1].isspace():
-            return cmd_evolve(gid, qq, _earg)
-        return None
+        return cmd_evolve(gid, qq, _earg)
     if m.startswith("洗练"):
         _raw_r = m[2:]
         _rarg = _raw_r.strip()
@@ -1606,5 +1936,7 @@ COMMANDS = (
     # V8 并入：原正则刮词域（与 handle 分支对应）
     "出战状态", "回收出战精灵", "我的背包", "挑战", "查看出战精灵",
     "精灵列表", "精灵地图", "进化", "领取精灵礼包",
+    "进化路线", "精灵进化路线", "进化图鉴", "进化链", "进化树",
+    "领养", "出战",
 )
 

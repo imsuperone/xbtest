@@ -1091,7 +1091,7 @@
       },
       "最大等级": {
         "type": "int",
-        "default": 100
+        "default": 150
       },
       "冒险间隔": {
         "type": "int",
