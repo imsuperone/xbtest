@@ -92,6 +92,16 @@ def _valid_img_bases():
     if _IMG_BASES_CACHE:
         return _IMG_BASES_CACHE
     out = []
+    # 动态将 AstrBot 官方持久化目录置于首位（最高优先级，确保用户上传/自定义坐骑图片永不丢失）
+    try:
+        pers = ST.get_persistent_data_dir(_PLUGIN_BASE) if hasattr(ST, "get_persistent_data_dir") else ""
+        if pers:
+            for p_sub in ("data/img/rides", "img/rides", "data/img/坐骑图标", "img/坐骑图标", "data/games/img/rides"):
+                p_cand = os.path.join(pers, p_sub)
+                if os.path.isdir(p_cand) and p_cand not in out:
+                    out.append(p_cand)
+    except Exception:
+        pass
     for base in _ALT_IMG_BASES:
         try:
             if base and os.path.isdir(base) and base not in out:
@@ -365,11 +375,31 @@ def _ride_img_path(name):
             p = str(v.get("img")).strip()
             if p:
                 cands = []
-                if os.path.isabs(p):
+                pers = ""
+                try:
+                    pers = ST.get_persistent_data_dir(_PLUGIN_BASE) if hasattr(ST, "get_persistent_data_dir") else ""
+                except Exception:
+                    pers = ""
+
+                # 1. 兼容 persistent/ 虚拟持久化前缀
+                if p.startswith("persistent/") or p == "persistent":
+                    sub = p[len("persistent"):].lstrip("/\\")
+                    if pers:
+                        cands.append(os.path.join(pers, sub))
+                elif os.path.isabs(p):
                     cands.append(p)
                 else:
-                    # 相对插件 data 目录 + 旧路径别名
-                    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    # 2. 优先在持久化数据目录下找（防更新被抹除）
+                    if pers:
+                        for _ap in _alias_img_path(p):
+                            cands.append(os.path.join(pers, _ap))
+                            if _ap.startswith("data/"):
+                                cands.append(os.path.join(pers, _ap[5:]))
+                            else:
+                                cands.append(os.path.join(pers, "data", _ap))
+                        cands.append(os.path.join(pers, p))
+                    # 3. 相对插件包内目录 + 旧路径别名
+                    base = _PLUGIN_BASE
                     for _ap in _alias_img_path(p):
                         cands.append(os.path.join(base, _ap))
                     cands.append(p)

@@ -104,7 +104,7 @@ def _parse_text_items(bank, text):
 
 
 def _write_bank_file(fpath, items):
-    """安全原子写入题库文件"""
+    """安全原子写入题库文件（同时镜像写入 AstrBot 规范持久化目录，升级绝不丢失）"""
     tmp_path = fpath + ".tmp"
     with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(items, f, ensure_ascii=False, indent=2)
@@ -112,6 +112,25 @@ def _write_bank_file(fpath, items):
         os.replace(tmp_path, fpath)
     else:
         os.rename(tmp_path, fpath)
+
+    # 同步镜像写入持久化目录
+    try:
+        from core import storage as ST
+        pers = ST.get_persistent_data_dir() if hasattr(ST, "get_persistent_data_dir") else ""
+        if pers:
+            pq_dir = os.path.join(pers, "data", "questions")
+            os.makedirs(pq_dir, exist_ok=True)
+            p_target = os.path.join(pq_dir, os.path.basename(fpath))
+            if os.path.abspath(p_target) != os.path.abspath(fpath):
+                p_tmp = p_target + ".tmp"
+                with open(p_tmp, "w", encoding="utf-8") as pf:
+                    json.dump(items, pf, ensure_ascii=False, indent=2)
+                if os.path.isfile(p_target):
+                    os.replace(p_tmp, p_target)
+                else:
+                    os.rename(p_tmp, p_target)
+    except Exception:
+        pass
 
 
 def _clear_runtime_cache():

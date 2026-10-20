@@ -147,13 +147,18 @@ def set_persistent_data_dir(path):
 _MIGRATED_DIRS = set()  # 进程内 once：同目录重复解析不再重跑迁移探测（热切换新目录仍跑）
 
 
-def _auto_migrate_and_heal(cand, base):
+def _auto_migrate_and_heal(cand, base, force=False):
     """自动双向自愈与迁移：把旧数据/图库无损同步迁移到持久化目录"""
     if not cand or not os.path.isdir(cand):
         return
+    # 若持久化目录与包内数据目录为同一物理目录（本地回退未隔离环境），跳过镜像自愈（防自我递归写入 data/data）
+    cand_real = os.path.realpath(cand)
+    base_data_real = os.path.realpath(os.path.join(base, "data"))
+    if cand_real in (os.path.realpath(base), base_data_real):
+        return
     try:
         _key = os.path.abspath(cand)
-        if _key in _MIGRATED_DIRS:
+        if not force and _key in _MIGRATED_DIRS:
             return
     except Exception:
         _key = ""
@@ -175,7 +180,7 @@ def _auto_migrate_and_heal(cand, base):
                 except Exception:
                     pass
         # 插件根目录下旧数据自愈迁移到持久化目录（绝不反向覆盖已存在的有效用户数据）
-        for f in ("xb.db", "nuli_slave.db", "xbbot.db", "config.json", "events.json"):
+        for f in ("xb.db", "nuli_slave.db", "xbbot.db", "config.json", "events.json", "shop.json", "atlas.json"):
             src_f = os.path.join(base, "data", f)
             dst_f = os.path.join(cand, "xb.db" if f.endswith(".db") else f)
             if os.path.isfile(src_f) and not os.path.isfile(dst_f):
@@ -183,6 +188,59 @@ def _auto_migrate_and_heal(cand, base):
                     shutil.copy2(src_f, dst_f)
                 except Exception:
                     pass
+
+        # 坐骑自定义图片双向持久化自愈：
+        # 1. 升级插件后，若插件包内的坐骑图片丢失或被覆盖，自动将持久化目录中的坐骑图片恢复到包内
+        # 2. 用户在包内放入的新坐骑图片，镜像备份到持久化目录，防下一次更新被抹除
+        for ride_sub in ("rides", "坐骑图标"):
+            cand_ride_dirs = [
+                os.path.join(cand, "data", "img", ride_sub),
+                os.path.join(cand, "img", ride_sub),
+            ]
+            base_ride_dir = os.path.join(base, "data", "img", ride_sub)
+            os.makedirs(base_ride_dir, exist_ok=True)
+            for crd in cand_ride_dirs:
+                if os.path.isdir(crd):
+                    for fname in os.listdir(crd):
+                        if fname.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
+                            c_file = os.path.join(crd, fname)
+                            b_file = os.path.join(base_ride_dir, fname)
+                            if os.path.isfile(c_file) and not os.path.isfile(b_file):
+                                try:
+                                    shutil.copy2(c_file, b_file)
+                                except Exception:
+                                    pass
+            if os.path.isdir(base_ride_dir):
+                target_cand_dir = os.path.join(cand, "data", "img", ride_sub)
+                os.makedirs(target_cand_dir, exist_ok=True)
+                for fname in os.listdir(base_ride_dir):
+                    if fname.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
+                        b_file = os.path.join(base_ride_dir, fname)
+                        c_file = os.path.join(target_cand_dir, fname)
+                        if os.path.isfile(b_file) and not os.path.isfile(c_file):
+                            try:
+                                shutil.copy2(b_file, c_file)
+                            except Exception:
+                                pass
+
+        # 娱乐题库自愈双向同步：
+        cand_q_dir = os.path.join(cand, "data", "questions")
+        base_q_dir = os.path.join(base, "data", "questions")
+        os.makedirs(cand_q_dir, exist_ok=True)
+        if os.path.isdir(cand_q_dir):
+            for q_name in ("trick.json", "miri.json", "quiz.json", "chain.json"):
+                c_q = os.path.join(cand_q_dir, q_name)
+                b_q = os.path.join(base_q_dir, q_name)
+                if os.path.isfile(c_q) and not os.path.isfile(b_q):
+                    try:
+                        shutil.copy2(c_q, b_q)
+                    except Exception:
+                        pass
+                elif os.path.isfile(b_q) and not os.path.isfile(c_q):
+                    try:
+                        shutil.copy2(b_q, c_q)
+                    except Exception:
+                        pass
         # 内置武器图库自愈迁移（仅全新时播种一次；已存在则不动，避免覆盖用户改池/删图；
         # 旧 data/gacha_img 布局继续兼容读取，不强制搬迁）
         try:

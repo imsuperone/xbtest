@@ -793,3 +793,92 @@ function initLogsEvents() {
 }
 
 initLogsEvents();
+
+// ---------- 对齐官方最新版本内容事件绑定 ----------
+function initAlignLatestEvents() {
+  const btn = document.getElementById("btnAlignLatest");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const targets = [];
+    if (document.getElementById("alignOptRiddles")?.checked) targets.push("riddles");
+    if (document.getElementById("alignOptRides")?.checked) targets.push("rides");
+    if (document.getElementById("alignOptPresets")?.checked) targets.push("presets");
+    if (document.getElementById("alignOptWeapons")?.checked) targets.push("weapons");
+
+    if (targets.length === 0) {
+      toast("请至少勾选一项需要对齐的内容", "bad");
+      return;
+    }
+
+    const doBackup = document.getElementById("alignOptBackup")?.checked ?? true;
+    const ok = await uiConfirm(
+      `确定要对齐选中的 ${targets.length} 项官方最新内容吗？\n\n` +
+      `• 系统将自动合并最新官方数据并修复错漏题目\n` +
+      `• 100% 完整保留您的所有自定义坐骑、自建题目与上传图片\n` +
+      (doBackup ? `• 执行前将自动创建备份快照，可随时回滚` : ``),
+      "确认对齐最新版本"
+    );
+    if (!ok) return;
+
+    const spinner = document.getElementById("alignSpinner");
+    const resBox = document.getElementById("alignResultBox");
+    if (spinner) spinner.style.display = "inline";
+    if (btn) btn.disabled = true;
+    if (resBox) resBox.style.display = "none";
+
+    try {
+      toast("正在对齐官方最新版本内容…", "ok");
+      const res = await getBridge().apiPost("system/align_defaults", {
+        targets: targets,
+        backup: doBackup
+      });
+
+      if (!res || !res.ok) {
+        throw new Error(res?.error || res?.msg || "接口响应异常");
+      }
+
+      toast("对齐完成！", "ok");
+      if (resBox) {
+        let detailsHtml = "";
+        const d = res.details || {};
+        if (d.riddles) {
+          const rStats = d.riddles.stats || {};
+          let lines = [];
+          for (const [k, v] of Object.entries(rStats)) {
+            lines.push(`<b>${esc(k)}</b>: 共 ${v.total} 题 (对齐/更新 ${v.official_aligned} 题，保留自建 ${v.custom_preserved} 题)`);
+          }
+          detailsHtml += `<div style="margin-bottom:8px">🧩 <b>娱乐题库对齐</b>：<br>${lines.join("<br>")}</div>`;
+        }
+        if (d.rides) {
+          detailsHtml += `<div style="margin-bottom:8px">🐎 <b>坐骑系统对齐</b>：${esc(d.rides.msg || "已对齐官方默认坐骑")}</div>`;
+        }
+        if (d.presets) {
+          detailsHtml += `<div style="margin-bottom:8px">⚖️ <b>经济平衡对齐</b>：${esc(d.presets.msg || "已对齐推荐预设")}</div>`;
+        }
+        if (d.weapons) {
+          detailsHtml += `<div style="margin-bottom:8px">⚔️ <b>武器属性对齐</b>：${esc(d.weapons.msg || "已对齐武器预设")}</div>`;
+        }
+
+        const bText = res.backup_snapshot ? `<div style="color:var(--muted);font-size:11.5px;margin-top:6px">🛡️ 已生成安全快照：<code>${esc(res.backup_snapshot)}</code></div>` : "";
+
+        resBox.innerHTML = `
+          <div style="font-weight:600;color:var(--ok);font-size:13.5px;margin-bottom:8px">✅ 官方最新内容对齐成功！</div>
+          <div style="display:flex;flex-direction:column;gap:4px">${detailsHtml}</div>
+          ${bText}
+        `;
+        resBox.style.display = "block";
+      }
+    } catch (e) {
+      toast("对齐失败: " + e.message, "bad");
+      if (resBox) {
+        resBox.innerHTML = `<div style="color:var(--bad);font-weight:600">❌ 对齐失败: ${esc(e.message)}</div>`;
+        resBox.style.display = "block";
+      }
+    } finally {
+      if (spinner) spinner.style.display = "none";
+      if (btn) btn.disabled = false;
+    }
+  });
+}
+
+initAlignLatestEvents();

@@ -790,16 +790,108 @@
         <div class="m3-page-header">
           <div class="m3-page-header-info">
             <h2>关于小白机器人</h2>
-            <div class="m3-subtitle">版本与环境配置概览</div>
+            <div class="m3-subtitle">版本与运行环境概览</div>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:12px;font-size:13.5px;line-height:1.8">
-          <div>作者：<b>Light</b></div>
-          <div>插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
-          <div>仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
-          <div>当前版本：<b id="aboutVersion">v26w1021f</b></div>
-          <div>前端版本：<b id="aboutFrontendVer">v26w1021f</b></div>
+
+        <!-- 基础环境信息卡片 -->
+        <div class="apple-card" style="margin-bottom:16px;padding:16px 20px">
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:13.5px;line-height:1.8">
+            <div>作者：<b>Light</b></div>
+            <div>插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
+            <div>仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+              <div>后端版本：<b id="aboutVersion">v26w1021h</b></div>
+              <div>前端版本：<b id="aboutFrontendVer">v26w1021h</b></div>
+            </div>
+            <!-- 持久化与升级保障状态徽章 -->
+            <div style="margin-top:4px;padding:10px 14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:12.5px;color:var(--text);display:flex;align-items:flex-start;gap:8px">
+              <span style="font-size:16px;line-height:1">🛡️</span>
+              <div>
+                <b style="color:var(--ok)">自定义资源多重持久化保障已生效</b>
+                <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
+                  所有用户上传的坐骑图片、自定义坐骑与自建题库均已接入 AstrBot 规范持久化隔离层（<code>data/plugin_data/astrbot_plugin_xbbot_beta/</code>），插件热更新或重装绝不掉图、绝不丢失数据。
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- 对齐官方最新版本内容卡片 -->
+        <div class="panel" style="margin-top:16px;background:var(--cardBg, var(--panel));border:1px solid var(--line);border-radius:16px;padding:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+            <div>
+              <h3 style="margin:0;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px">
+                <span>📦</span> 对齐官方最新版本内容
+              </h3>
+              <div style="color:var(--muted);font-size:12px;margin-top:3px">
+                插件更新后，您可自由勾选将官方最新内容同步到当前运行环境；系统采用非破坏性智能合并，<b>绝不覆盖或删除您的任何自定义内容</b>。
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <!-- 勾选项 1: 题库 -->
+            <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer">
+              <input type="checkbox" id="alignOptRiddles" checked style="width:18px;height:18px;margin-top:2px;cursor:pointer">
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:13.5px">🧩 官方娱乐题库（急转弯、猜字谜、知识问答、成语接龙）</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px">
+                  纠错官方题干与答案（如世界上哪个英文字母最多人戴等逻辑修正），增量合并官方新题；<b>100% 保留所有用户自建与导入的题目</b>。
+                </div>
+              </div>
+            </label>
+
+            <!-- 勾选项 2: 坐骑 -->
+            <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer">
+              <input type="checkbox" id="alignOptRides" checked style="width:18px;height:18px;margin-top:2px;cursor:pointer">
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:13.5px">🐎 官方默认坐骑数据与预设图片</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px">
+                  对齐 10 款官方默认坐骑的基础售价、加成定位与高清预设图片；<b>100% 保留所有用户自定义新增的坐骑及用户自行绑定的图片</b>。
+                </div>
+              </div>
+            </label>
+
+            <!-- 勾选项 3: 平衡预设 -->
+            <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer">
+              <input type="checkbox" id="alignOptPresets" style="width:18px;height:18px;margin-top:2px;cursor:pointer">
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:13.5px">⚖️ 基础数值与经济平衡预设</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px">
+                  对齐官方推荐基准（银行利率上限1%、每日利息结算上限3次、SSR抽卡概率~1%等）；<b>不会修改或减少任何玩家已有的金币或资产</b>。
+                </div>
+              </div>
+            </label>
+
+            <!-- 勾选项 4: 武器池默认属性 -->
+            <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer">
+              <input type="checkbox" id="alignOptWeapons" style="width:18px;height:18px;margin-top:2px;cursor:pointer">
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:13.5px">⚔️ 武器池内置默认属性</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px">
+                  将 42 款内置武器（SSR/SR/R）默认攻击力与描述同步为最新官方标准；<b>保留用户自定义的武器与新增属性</b>。
+                </div>
+              </div>
+            </label>
+          </div>
+
+          <!-- 安全备份勾选 -->
+          <div style="margin-top:14px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text)">
+            <input type="checkbox" id="alignOptBackup" checked style="width:16px;height:16px;cursor:pointer">
+            <label for="alignOptBackup" style="cursor:pointer">🛡️ 执行对齐前自动创建安全备份快照（支持一键回滚）</label>
+          </div>
+
+          <!-- 执行按钮与反馈 -->
+          <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <button id="btnAlignLatest" class="btn" style="padding:10px 24px;font-size:13.5px">🚀 一键对齐所选内容到最新版本</button>
+            <span id="alignSpinner" style="display:none;font-size:12.5px;color:var(--muted)">⏳ 正在执行智能对齐与安全合并，请稍候...</span>
+          </div>
+
+          <!-- 结果展示框 -->
+          <div id="alignResultBox" style="display:none;margin-top:16px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:12.5px;line-height:1.7"></div>
+        </div>
+
       </div>
     </div>
 
@@ -1100,17 +1192,17 @@
       </div>
     </div>
   </div>
-    <script defer src="./js/00_core.js?v=26w1021f"></script>
-  <script defer src="./js/01_theme.js?v=26w1021f"></script>
-  <script defer src="./js/02_export.js?v=26w1021f"></script>
-  <script defer src="./js/03_import.js?v=26w1021f"></script>
-  <script defer src="./js/04_media.js?v=26w1021f"></script>
-  <script defer src="./js/05_config.js?v=26w1021f"></script>
-  <script defer src="./js/06_users.js?v=26w1021f"></script>
-  <script defer src="./js/07_spirit.js?v=26w1021f"></script>
-  <script defer src="./js/08_shop.js?v=26w1021f"></script>
-  <script defer src="./js/09_views.js?v=26w1021f"></script>
-  <script defer src="./js/10_ops.js?v=26w1021f"></script>
-  <script defer src="./js/11_questions.js?v=26w1021f"></script>
+    <script defer src="./js/00_core.js?v=26w1021h"></script>
+  <script defer src="./js/01_theme.js?v=26w1021h"></script>
+  <script defer src="./js/02_export.js?v=26w1021h"></script>
+  <script defer src="./js/03_import.js?v=26w1021h"></script>
+  <script defer src="./js/04_media.js?v=26w1021h"></script>
+  <script defer src="./js/05_config.js?v=26w1021h"></script>
+  <script defer src="./js/06_users.js?v=26w1021h"></script>
+  <script defer src="./js/07_spirit.js?v=26w1021h"></script>
+  <script defer src="./js/08_shop.js?v=26w1021h"></script>
+  <script defer src="./js/09_views.js?v=26w1021h"></script>
+  <script defer src="./js/10_ops.js?v=26w1021h"></script>
+  <script defer src="./js/11_questions.js?v=26w1021h"></script>
 </body>
 </html>

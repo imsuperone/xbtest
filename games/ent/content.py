@@ -200,6 +200,16 @@ def _load_bank_file(filename, fallback_list=None):
     q_dir = os.path.join(base_dir, "data", "questions")
     target_path = os.path.join(q_dir, filename)
 
+    # 优先使用持久化数据目录中的题库文件（防更新插件被覆写）
+    try:
+        pers = ST.get_persistent_data_dir(base_dir) if hasattr(ST, "get_persistent_data_dir") else ""
+        if pers:
+            pers_q = os.path.join(pers, "data", "questions", filename)
+            if os.path.isfile(pers_q):
+                target_path = pers_q
+    except Exception:
+        pass
+
     def _def_fall():
         if fallback_list:
             return list(fallback_list)

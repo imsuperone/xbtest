@@ -58,7 +58,24 @@ def _safe_path(rel, base=""):
         if _inside(p, pb):
             return p
         return None
+
+    # 先检查包内是否存在
     p = os.path.join(b, s.lstrip("/"))
+    if os.path.exists(p) and _inside(p, b):
+        return os.path.realpath(p)
+
+    # 包内不存在时，穿透检查持久化目录是否存在该文件（支持升级后直接读持久化）
+    pb = _pers_base(b)
+    if pb:
+        p_pers = os.path.join(pb, s.lstrip("/"))
+        if os.path.exists(p_pers) and _inside(p_pers, pb):
+            return os.path.realpath(p_pers)
+        if s.startswith("data/"):
+            p_pers_sub = os.path.join(pb, s[5:].lstrip("/"))
+            if os.path.exists(p_pers_sub) and _inside(p_pers_sub, pb):
+                return os.path.realpath(p_pers_sub)
+
+    # 文件尚未创建时（如写入/上传/新建文件夹），返回包内合法目标路径
     if _inside(p, b):
         return os.path.realpath(p)
     data_base = os.path.join(b, "data")
@@ -280,6 +297,44 @@ async def handle_images_upload(request, plugin_base=""):
             dst = os.path.join(dst_dir, filename)
             with open(dst, "wb") as w:
                 w.write(data)
+
+            # 持久化双写与镜像保障：
+            # 若上传至图片目录（如 rides、gacha 等），无论写在包内还是持久化目录，
+            # 均同步镜像写入 AstrBot 规范持久化目录，确保插件升级更新时绝对不丢！
+            pb = _pers_base(base)
+            if pb:
+                clean_target = target_dir.replace("\\", "/").strip().lstrip("/")
+                if clean_target.startswith("persistent/"):
+                    clean_target = clean_target[len("persistent/"):].lstrip("/")
+                pers_targets = [
+                    os.path.join(pb, clean_target),
+                ]
+                if clean_target.startswith("data/"):
+                    pers_targets.append(os.path.join(pb, clean_target[5:]))
+                elif not clean_target.startswith("data/"):
+                    pers_targets.append(os.path.join(pb, "data", clean_target))
+                for pt in pers_targets:
+                    try:
+                        os.makedirs(pt, exist_ok=True)
+                        p_file = os.path.join(pt, filename)
+                        with open(p_file, "wb") as pw:
+                            pw.write(data)
+                    except Exception:
+                        pass
+
+            # 若上传的是坐骑图片，立即主动刷新坐骑模块目录缓存
+            try:
+                from ...games import ride as _g_ride
+                if hasattr(_g_ride, "_refresh_img_bases"):
+                    _g_ride._refresh_img_bases()
+            except Exception:
+                try:
+                    from games import ride as _g_ride
+                    if hasattr(_g_ride, "_refresh_img_bases"):
+                        _g_ride._refresh_img_bases()
+                except Exception:
+                    pass
+
             return json_response({"ok": True, "path": _to_rel(dst, base) or os.path.relpath(dst, base).replace(os.sep, "/"), "size": len(data)})
         except Exception as e:
             return _err(f"upload failed: {e}", 500)
@@ -309,6 +364,38 @@ async def handle_images_delete(request, plugin_base=""):
                 os.remove(fp)
             elif os.path.isdir(fp):
                 shutil.rmtree(fp)
+
+            # 同步删除持久化镜像文件
+            pb = _pers_base(base)
+            if pb and os.path.realpath(pb) != os.path.realpath(base):
+                clean_rel = rel.replace("\\", "/").strip().lstrip("/")
+                if clean_rel.startswith("persistent/"):
+                    clean_rel = clean_rel[len("persistent/"):].lstrip("/")
+                cands = [
+                    os.path.join(pb, clean_rel),
+                    os.path.join(pb, clean_rel[5:]) if clean_rel.startswith("data/") else os.path.join(pb, "data", clean_rel)
+                ]
+                for p_cand in cands:
+                    try:
+                        if os.path.isfile(p_cand):
+                            os.remove(p_cand)
+                        elif os.path.isdir(p_cand):
+                            shutil.rmtree(p_cand)
+                    except Exception:
+                        pass
+
+            try:
+                from ...games import ride as _g_ride
+                if hasattr(_g_ride, "_refresh_img_bases"):
+                    _g_ride._refresh_img_bases()
+            except Exception:
+                try:
+                    from games import ride as _g_ride
+                    if hasattr(_g_ride, "_refresh_img_bases"):
+                        _g_ride._refresh_img_bases()
+                except Exception:
+                    pass
+
             return json_response({"ok": True, "path": rel})
         except Exception as e:
             return _err(f"delete failed: {e}", 500)
@@ -340,6 +427,38 @@ async def handle_images_rename(request, plugin_base=""):
     def _work():
         try:
             os.rename(fp, np)
+
+            # 同步重命名持久化镜像文件
+            pb = _pers_base(base)
+            if pb and os.path.realpath(pb) != os.path.realpath(base):
+                clean_src = src.replace("\\", "/").strip().lstrip("/")
+                if clean_src.startswith("persistent/"):
+                    clean_src = clean_src[len("persistent/"):].lstrip("/")
+                clean_dst = dst.replace("\\", "/").strip().lstrip("/")
+                if clean_dst.startswith("persistent/"):
+                    clean_dst = clean_dst[len("persistent/"):].lstrip("/")
+                for s_sub in (clean_src, clean_src[5:] if clean_src.startswith("data/") else "data/" + clean_src):
+                    pers_s = os.path.join(pb, s_sub)
+                    if os.path.exists(pers_s):
+                        d_name = os.path.basename(clean_dst)
+                        pers_d = os.path.join(os.path.dirname(pers_s), d_name)
+                        try:
+                            os.rename(pers_s, pers_d)
+                        except Exception:
+                            pass
+
+            try:
+                from ...games import ride as _g_ride
+                if hasattr(_g_ride, "_refresh_img_bases"):
+                    _g_ride._refresh_img_bases()
+            except Exception:
+                try:
+                    from games import ride as _g_ride
+                    if hasattr(_g_ride, "_refresh_img_bases"):
+                        _g_ride._refresh_img_bases()
+                except Exception:
+                    pass
+
             return json_response({"ok": True, "path": _to_rel(np, base) or os.path.relpath(np, base).replace(os.sep, "/")})
         except Exception as e:
             return _err(f"rename failed: {e}", 500)
