@@ -72,19 +72,15 @@ def cmd_deposit(gid, qq, amount):
         countdown_str = _format_countdown(left_sec)
         pot_interest = min(cap, max(1, int(total * rate / 100.0))) if total > 0 and rate > 0 else 0
 
-        if max_daily > 0 and (cur_cnt + (1 if interest > 0 else 0)) >= max_daily:
-            settle_info = f"今日结息次数已达上限（{max_daily}次），次日0点重置"
-        else:
-            settle_info = f"需满{term_h}小时（距下次结息还剩{countdown_str}，满期预计收益{ST.fmt_coins(pot_interest)}{ST.coin_name()}）"
-
-        msg = (f"存款成功！消耗{cs}点体力，共存入：{ST.fmt_coins(amount)}，\r\n"
-               f"上期结息：{ST.fmt_coins(interest)}，当前总存款：{ST.fmt_coins(total)}，{settle_info}\r\n"
-               f"剩余{ST.coin_name()}：{ST.fmt_coins(ST.coins_get(gid, qq))}")
+        interest_info = f"（获得利息：{ST.fmt_coins(interest)}）" if interest > 0 else ""
+        msg = (f"存款成功！消耗{cs}点体力，共存入：{ST.fmt_coins(amount)}{interest_info}，\r\n"
+               f"当前总存款：{ST.fmt_coins(total)}，剩余{ST.coin_name()}：{ST.fmt_coins(ST.coins_get(gid, qq))}")
         return msg
 
 
 def _settle_interest(a, rate, cap):
-    """按 上次取款时间戳 到现在的小时数计息(满 存款期限 小时才结息, 封顶利息上限, 每日最多结息 N 次)"""
+    """按 上次取款时间戳 到现在的小时数计息(满 存款期限 小时才结息, 封顶利息上限, 每日最多结息 N 次)。
+    利率硬顶最高 1%（低了可以，高了一律按 1% 结算），每日结息次数最多 3 次。"""
     ts = a.get("withdraw_timestamp", "")
     try:
         last = float(ts) if ts else 0.0
@@ -93,19 +89,21 @@ def _settle_interest(a, rate, cap):
     dep = a.int("deposit")
     if dep <= 0 or rate <= 0:
         return 0
-    max_daily = cfgi("银行配置", "每日结息次数", 3)
-    if max_daily > 0:
-        today_s = str(dt.date.today())
-        cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
-        if cur_cnt >= max_daily:
-            return 0
+    # 最高就给 1%（不论模式与配置，超过 1% 强制钳位为 1%，低于 1% 允许）
+    eff_rate = min(1.0, max(0.0, float(rate)))
+    # 每日最多结息 3 次（上限一天给三次，低于 3 次允许）
+    max_daily = min(3, max(1, cfgi("银行配置", "每日结息次数", 3)))
+    today_s = str(dt.date.today())
+    cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
+    if cur_cnt >= max_daily:
+        return 0
     term_h = max(1, cfgi("银行配置", "存款期限", 1))
     if last > 0:
         elapsed_h = (time.time() - last) / 3600.0
         if elapsed_h < term_h:
             return 0
-    raw_interest = int(dep * rate / 100.0)
-    interest = max(1, raw_interest) if dep > 0 else 0
+    raw_interest = int(dep * eff_rate / 100.0)
+    interest = max(1, raw_interest) if dep > 0 and raw_interest > 0 else raw_interest
     return min(interest, cap)
 
 
@@ -144,22 +142,9 @@ def cmd_withdraw(gid, qq, amount):
         if ST.txn_coins_acct(gid, qq, amount + interest, updates) is None:
             return "提示：银行系统繁忙，取款操作未完成，请稍后重试。"
 
-        pot_interest = min(cap, max(1, int(new_dep * rate / 100.0))) if new_dep > 0 and rate > 0 else 0
-
-        msg = (f"取款成功！获得利息：{ST.fmt_coins(interest)}，本次取款：{ST.fmt_coins(amount)}，\r\n"
+        interest_info = f"（获得利息：{ST.fmt_coins(interest)}）" if interest > 0 else ""
+        msg = (f"取款成功！本次取款：{ST.fmt_coins(amount)}{interest_info}，\r\n"
                f"还剩存款：{ST.fmt_coins(new_dep)}，剩余{ST.coin_name()}：{ST.fmt_coins(ST.coins_get(gid, qq))}")
-        if interest > 0:
-            if new_dep > 0:
-                msg += f"\r\n（提示：本期利息已到账，剩余存款开启新一轮结息，满{term_h}小时后结算）"
-            else:
-                msg += "\r\n（提示：存款已全部取出，本期结息已完成）"
-        else:
-            if max_daily > 0 and cur_cnt >= max_daily:
-                msg += f"\r\n（提示：今日结息次数已达上限{max_daily}次，次日0点重置）"
-            elif new_dep > 0:
-                msg += f"\r\n（提示：利息结算需满{term_h}小时，还需{countdown_str}，到期可获{ST.fmt_coins(pot_interest)}{ST.coin_name()}，不影响剩余存款计息）"
-            else:
-                msg += f"\r\n（提示：提前支取未获利息，原距结息还需{countdown_str}，存款已清空）"
         return msg
 
 

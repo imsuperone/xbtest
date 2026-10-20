@@ -455,29 +455,51 @@ def _img_path(path):
 
 
 def cmd_shop():
-    lines = ["🛍️ 欢迎来到精灵商城 / 精灵商店！", "━━━━━━━━━━━━━━"]
-    _effects_desc = {
-        "精灵球": "捕捉野生精灵(成功率+10%)",
-        "时间球": "捕捉野生精灵(成功率+30%)",
-        "狩猎球": "捕捉野生精灵(成功率+40%)",
-        "极速球": "捕捉野生精灵(成功率+70%)",
-        "大师球": "100%必定捕捉成功并极大概率觉醒闪光",
-        "奇异甜食": "出战精灵等级直接提升 1 级",
-        "起司": "精灵黄金美食！羁绊+15、经验+300、全属性增强并恢复活力",
-        "吐司": "精灵美味吐司！羁绊+15、经验+300、全属性增强并恢复活力",
-        "攻击之源": "出战精灵永久攻击+2",
-        "防御之源": "出战精灵永久防御+2",
-        "特防之源": "出战精灵永久特防+2",
-        "特攻之源": "出战精灵永久特攻+2",
-        "进化液": "助达标精灵完成形态进化",
-        "洗练果实": "洗练重置精灵性格与词条天赋",
-        "闪光结晶": "35%觉醒✨闪光形态(全属性+15%)",
-    }
-    for name, d in _SHOP().items():
-        desc = _effects_desc.get(name) or (f"{d.get('attr','')}效果+{d.get('effect','')}" if d.get('attr') else "珍稀道具")
-        lines.append(f"【{name}】 价格:{ST.fmt_coins(d.get('price',0))}{ST.coin_name()}\r\n　└ 作用：{desc}")
+    lines = ["🛍️ 欢迎来到精灵商城！", "━━━━━━━━━━━━━━"]
+    shop = _SHOP()
+    
+    # 紧凑分类展示，彻底杜绝单行刷屏
+    lines.append("【🎯 精灵球】(作用：抓捕野生精灵)")
+    ball_items = []
+    for b in ("精灵球", "时间球", "狩猎球", "极速球", "大师球"):
+        if b in shop:
+            extra = " 必中" if b == "大师球" else ""
+            ball_items.append(f"{b}({ST.fmt_coins(shop[b].get('price',0))}{extra})")
+    lines.append("· " + " · ".join(ball_items))
+
+    lines.append("【🧀 美食培育】(作用：提升亲密羁绊/经验/属性增益)")
+    food_items = []
+    for f_name in ("起司", "吐司", "奇异甜食"):
+        if f_name in shop:
+            hint = " 全属性+远足buff" if f_name in ("起司", "吐司") else " 直升1级"
+            food_items.append(f"{f_name}({ST.fmt_coins(shop[f_name].get('price',0))}{hint})")
+    lines.append("· " + " · ".join(food_items))
+
+    lines.append("【⚡ 属性之源】(作用：出战精灵对应属性永久+2)")
+    src_items = []
+    for s_name in ("攻击之源", "防御之源", "特防之源", "特攻之源"):
+        if s_name in shop:
+            src_items.append(f"{s_name}({ST.fmt_coins(shop[s_name].get('price',0))})")
+    lines.append("· " + " · ".join(src_items))
+
+    lines.append("【✨ 觉醒进化】(作用：形态进化与天赋性格洗练)")
+    evo_items = []
+    for e_name in ("进化液", "洗练果实", "闪光结晶"):
+        if e_name in shop:
+            hint = " 觉醒闪光" if e_name == "闪光结晶" else ""
+            evo_items.append(f"{e_name}({ST.fmt_coins(shop[e_name].get('price',0))}{hint})")
+    lines.append("· " + " · ".join(evo_items))
+
+    # 自定义拓展物品兼容
+    known = {"精灵球", "时间球", "狩猎球", "极速球", "大师球", "奇异甜食", "起司", "吐司",
+             "攻击之源", "防御之源", "特防之源", "特攻之源", "进化液", "洗练果实", "闪光结晶"}
+    customs = [f"{k}({ST.fmt_coins(v.get('price',0))})" for k, v in shop.items() if k not in known]
+    if customs:
+        lines.append("【📦 拓展道具】(作用：专属定制道具)")
+        lines.append("· " + " · ".join(customs))
+
     lines.append("━━━━━━━━━━━━━━")
-    lines.append("💡 发送【购买 物品名称】进行购买（如：购买 精灵球）")
+    lines.append("💡 发送【购买 物品名称】进行购买（如：购买 起司）")
     return "\r\n".join(lines)
 
 
@@ -510,6 +532,8 @@ def _resolve_map(place):
         return None
     place = str(place).strip()
     maps = _MAPS()
+    if place == "原神":
+        return "常青森林" if "常青森林" in maps else place
     if place in maps:
         return place
     # 纯数字序号
@@ -625,9 +649,9 @@ def cmd_adventure(gid, qq, place):
     is_shiny = random.randint(1, 100) <= _shiny_rate()
     sp["wild"] = {"name": wild, "level": wl, "shiny": 1 if is_shiny else 0}
     # 冒险历练奖励(挑战奖励配置): 经验 + 金币（调低至符合零门槛休闲玩法期望）
-    exp_lo = _cfgi("挑战奖励_经验下限", 20); exp_hi = _cfgi("挑战奖励_经验上限", 45)
-    gold_lo = max(0, _cfgi("挑战奖励_金钱下限", 10))
-    gold_hi = max(gold_lo, _cfgi("挑战奖励_金钱上限", 30))
+    exp_lo = _cfgi("挑战奖励_经验下限", 250); exp_hi = _cfgi("挑战奖励_经验上限", 500)
+    gold_lo = max(0, _cfgi("挑战奖励_金钱下限", 400))
+    gold_hi = max(gold_lo, _cfgi("挑战奖励_金钱上限", 1000))
     exp = random.randint(max(1, exp_lo), max(exp_lo, exp_hi))
     gold = random.randint(gold_lo, gold_hi)
     evo_hint = ""

@@ -1123,15 +1123,15 @@
       },
       "挑战奖励_金钱上限": {
         "type": "int",
-        "default": 2000
+        "default": 1000
       },
       "挑战奖励_经验下限": {
         "type": "int",
-        "default": 500
+        "default": 250
       },
       "挑战奖励_经验上限": {
         "type": "int",
-        "default": 1000
+        "default": 500
       },
       "挑战扣除_金钱下限": {
         "type": "int",
@@ -1155,7 +1155,7 @@
       },
       "挑战奖励_金钱下限": {
         "type": "int",
-        "default": 800
+        "default": 400
       },
       "挑战扣除_消耗体力": {
         "type": "int",
