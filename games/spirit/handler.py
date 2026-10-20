@@ -29,7 +29,7 @@ MENU = (
     "━━━━━━━━━━━━━━\r\n"
     "🐣 领养精灵　　🎁 领取精灵礼包\r\n"
     "📋 我的精灵　　🔍 查看精灵 名称\r\n"
-    "🛍️ 精灵商城　　🎒 我的背包\r\n"
+    "🛍️ 精灵商店/商城　🎒 我的背包\r\n"
     "🗺️ 精灵地图　　📍 查看地图 地点\r\n"
     "⚔️ 精灵冒险 地点　　🔮 使用精灵球 名称\r\n"
     "💊 使用物品 名称*数量　💖 羁绊\r\n"
@@ -455,11 +455,29 @@ def _img_path(path):
 
 
 def cmd_shop():
-    lines = ["欢迎来到精灵商城！", "━━━━━━━━━━━━━━"]
+    lines = ["🛍️ 欢迎来到精灵商城 / 精灵商店！", "━━━━━━━━━━━━━━"]
+    _effects_desc = {
+        "精灵球": "捕捉野生精灵(成功率+10%)",
+        "时间球": "捕捉野生精灵(成功率+30%)",
+        "狩猎球": "捕捉野生精灵(成功率+40%)",
+        "极速球": "捕捉野生精灵(成功率+70%)",
+        "大师球": "100%必定捕捉成功并极大概率觉醒闪光",
+        "奇异甜食": "出战精灵等级直接提升 1 级",
+        "起司": "精灵黄金美食！羁绊+15、经验+300、全属性增强并恢复活力",
+        "吐司": "精灵美味吐司！羁绊+15、经验+300、全属性增强并恢复活力",
+        "攻击之源": "出战精灵永久攻击+2",
+        "防御之源": "出战精灵永久防御+2",
+        "特防之源": "出战精灵永久特防+2",
+        "特攻之源": "出战精灵永久特攻+2",
+        "进化液": "助达标精灵完成形态进化",
+        "洗练果实": "洗练重置精灵性格与词条天赋",
+        "闪光结晶": "35%觉醒✨闪光形态(全属性+15%)",
+    }
     for name, d in _SHOP().items():
-        lines.append(f"{name}　价格:{d.get('price',0)}{ST.coin_name()}"
-                     f"　效果:{d.get('attr','') or d.get('effect','')}")
-    lines.append("发送【购买 物品名称】进行购买")
+        desc = _effects_desc.get(name) or (f"{d.get('attr','')}效果+{d.get('effect','')}" if d.get('attr') else "珍稀道具")
+        lines.append(f"【{name}】 价格:{ST.fmt_coins(d.get('price',0))}{ST.coin_name()}\r\n　└ 作用：{desc}")
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("💡 发送【购买 物品名称】进行购买（如：购买 精灵球）")
     return "\r\n".join(lines)
 
 
@@ -538,11 +556,37 @@ def cmd_backpack(gid, qq):
     bag = sp.get("bag", {})
     if not bag:
         return "亲，您的背包为空，请到精灵商城购买需要的物品吧！"
-    lines = ["🎒 我的背包　您的背包信息如下："]
+    lines = ["🎒 我的背包　您的背包物品如下：", "━━━━━━━━━━━━━━"]
+    shop = _SHOP()
+    _effects_desc = {
+        "精灵球": "基础捕捉道具，收服成功率+10%",
+        "时间球": "高级捕捉道具，收服成功率+30%",
+        "狩猎球": "稀有捕捉道具，收服成功率+40%",
+        "极速球": "强力捕捉道具，收服成功率+70%",
+        "大师球": "终极捕捉道具，100%必定收服成功并极大概率觉醒闪光",
+        "奇异甜食": "服用后出战精灵等级直接提升 1 级",
+        "起司": "精灵黄金美食！提升亲密羁绊(+15)、经验(+300)与全属性并恢复活力",
+        "吐司": "精灵美味大餐！提升亲密羁绊(+15)、经验(+300)与全属性并恢复活力",
+        "攻击之源": "强化出战精灵攻击力 2 点",
+        "防御之源": "强化出战精灵防御力 2 点",
+        "特防之源": "强化出战精灵特防 2 点",
+        "特攻之源": "强化出战精灵特攻 2 点",
+        "进化液": "激发潜能，助达标精灵完成形态进化",
+        "洗练果实": "洗练重置精灵性格特征与词条天赋",
+        "闪光结晶": "激发觉醒✨闪光变异形态（全属性+15%）",
+    }
     for name, cnt in bag.items():
-        lines.append(f"{name} ×{cnt}")
-    lines.append("使用精灵球格式为：【使用精灵球 精灵球名称】")
-    lines.append("使用物品格式为：【使用物品 物品名称*数量】")
+        desc = _effects_desc.get(name)
+        if not desc:
+            info = shop.get(name, {})
+            if info:
+                desc = f"{info.get('attr', '')}效果+{info.get('effect', '')}"
+            else:
+                desc = "珍稀道具"
+        lines.append(f"【{name}】 ×{cnt}\r\n　└ 作用：{desc}")
+    lines.append("━━━━━━━━━━━━━━")
+    lines.append("💡 使用精灵球：【使用精灵球 精灵球名称】")
+    lines.append("💡 使用物品：【使用物品 物品名称*数量】（如：使用物品 起司*1）")
     return "\r\n".join(lines)
 
 
@@ -894,6 +938,36 @@ def cmd_use_item(gid, qq, raw_arg):
         return cmd_recast(gid, qq, act_name)
     if attr == "闪光" or item_name == "闪光结晶":
         return cmd_awaken_shiny(gid, qq, act_name)
+    if attr == "美食" or item_name in ("起司", "吐司"):
+        gain_bond = 15 * cnt
+        gain_exp = 300 * cnt
+        cur_bond = int(it.get("bond", 0) or 0) + gain_bond
+        it["bond"] = cur_bond
+        hp_add = 10 * cnt
+        atk_add = 2 * cnt
+        def_add = 2 * cnt
+        spa_add = 2 * cnt
+        spd_add = 2 * cnt
+        spe_add = 1 * cnt
+        it["hp"] = int(it.get("hp", 0) or 0) + hp_add
+        it["atk"] = int(it.get("atk", 0) or 0) + atk_add
+        it["def"] = int(it.get("def", 0) or 0) + def_add
+        it["spa"] = int(it.get("spa", 0) or 0) + spa_add
+        it["spd"] = int(it.get("spd", 0) or 0) + spd_add
+        it["spe"] = int(it.get("spe", 0) or 0) + spe_add
+        it["buff_stamina"] = True
+        bag[item_name] = have - cnt
+        if bag[item_name] <= 0:
+            bag.pop(item_name, None)
+        evo_hint = ""
+        if int(it.get("level", 1)) < _cfgi("最大等级", 100):
+            evo_hint = _add_exp(gid, qq, sp, it, gain_exp, save_now=False) or ""
+        _save(gid, qq, sp)
+        return (f"🧀 美味享用！出战精灵【{_fmt_name(it)}】美美地享用了「{item_name}」×{cnt}！\r\n"
+                f"💖 亲密羁绊 +{gain_bond}（当前羁绊值：{cur_bond}）\r\n"
+                f"✨ 经验 +{gain_exp}，体质大增：生命+{hp_add}、攻防各+{atk_add}、速度+{spe_add}\r\n"
+                f"⚡ 充满活力！精灵进入【精力充沛】状态（总战力：{_power(it)}）"
+                + (f"\r\n{evo_hint.strip()}" if evo_hint else ""))
     field_map = {
         "等级": "level",
         "HP": "hp",
@@ -1008,6 +1082,11 @@ def cmd_travel(gid, qq, arg=""):
         except Exception:
             pass
         exp_gain = random.randint(200, 360)
+        cheese_bonus_tip = ""
+        if it is not None and it.pop("buff_stamina", None):
+            gold_gain = int(gold_gain * 1.5)
+            exp_gain = int(exp_gain * 1.5)
+            cheese_bonus_tip = "\r\n⚡ 触发【精力充沛】饱腹增益：本次旅行收益额外提升50%！"
         bag = sp.setdefault("bag", {})
         bag[drop_item] = int(bag.get(drop_item, 0) or 0) + 1
         sp.pop("travel", None)
@@ -1024,6 +1103,7 @@ def cmd_travel(gid, qq, arg=""):
                 f"📖 旅途见闻：{story}。\r\n"
                 f"🎁 伴手礼：「{drop_item}」×1（已放入背包）\r\n"
                 f"✨ 旅途收获：{ST.coin_name()}+{ST.fmt_coins(gold_gain)}、经验+{exp_gain}、羁绊+5"
+                + cheese_bonus_tip
                 + (f"\r\n{evo_note.strip()}" if evo_note else ""))
 
     expd = sp.get("expedition")
@@ -1411,7 +1491,8 @@ def _handle_inner(gid, qq, raw):
         if not rest:
             return cmd_my(gid, qq, target=target)
         return None
-    if m == "精灵商城":
+    m_trim = m.rstrip("!！。?？~ ").strip()
+    if m_trim in ("精灵商城", "精灵商店", "百宝屋", "精灵百宝屋", "商城", "商店"):
         return cmd_shop()
     if m.startswith(("我的背包", "精灵背包")):
         _pfx = "我的背包" if m.startswith("我的背包") else "精灵背包"
@@ -1497,7 +1578,7 @@ COMMANDS = (
     "旅行精灵", "外出漫游", "精灵旅行", "召回旅行",
     "精灵远征", "派遣远征", "收获远征", "远征状态",
     "出战精灵", "携带精灵", "丢弃精灵",
-    "我的精灵", "精灵商城", "精灵背包", "精灵对战", "精灵排行", "羁绊",
+    "我的精灵", "精灵商城", "精灵商店", "百宝屋", "精灵百宝屋", "商城", "商店", "精灵背包", "精灵对战", "精灵排行", "羁绊",
     # V8 并入：原正则刮词域（与 handle 分支对应）
     "出战状态", "回收出战精灵", "我的背包", "挑战", "查看出战精灵",
     "精灵列表", "精灵地图", "进化", "领取精灵礼包",
