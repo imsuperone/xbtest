@@ -67,11 +67,6 @@ def cmd_deposit(gid, qq, amount):
         if ST.txn_coins_acct(gid, qq, -amount, updates, require_funds=True) is None:
             return "提示：银行系统繁忙，存款操作未完成，请稍后重试。"
         total = old + amount + interest
-        settle_base_ts = float(updates.get("withdraw_timestamp", prev_ts if prev_ts > 0 else time.time()))
-        left_sec = max(0, int(term_h * 3600 - (time.time() - settle_base_ts)))
-        countdown_str = _format_countdown(left_sec)
-        pot_interest = min(cap, max(1, int(total * rate / 100.0))) if total > 0 and rate > 0 else 0
-
         interest_info = f"（获得利息：{ST.fmt_coins(interest)}）" if interest > 0 else ""
         msg = (f"存款成功！消耗{cs}点体力，共存入：{ST.fmt_coins(amount)}{interest_info}，\r\n"
                f"当前总存款：{ST.fmt_coins(total)}，剩余{ST.coin_name()}：{ST.fmt_coins(ST.coins_get(gid, qq))}")
@@ -80,7 +75,7 @@ def cmd_deposit(gid, qq, amount):
 
 def _settle_interest(a, rate, cap):
     """按 上次取款时间戳 到现在的小时数计息(满 存款期限 小时才结息, 封顶利息上限, 每日最多结息 N 次)。
-    利率硬顶最高 1%（低了可以，高了一律按 1% 结算），每日结息次数最多 3 次。"""
+    未自定义时默认最高 1%、每日结息最多 3 次；若用户自定义了利率或结息次数，则完全尊崇用户自定义。"""
     ts = a.get("withdraw_timestamp", "")
     try:
         last = float(ts) if ts else 0.0
@@ -89,10 +84,23 @@ def _settle_interest(a, rate, cap):
     dep = a.int("deposit")
     if dep <= 0 or rate <= 0:
         return 0
-    # 最高就给 1%（不论模式与配置，超过 1% 强制钳位为 1%，低于 1% 允许）
-    eff_rate = min(1.0, max(0.0, float(rate)))
-    # 每日最多结息 3 次（上限一天给三次，低于 3 次允许）
-    max_daily = min(3, max(1, cfgi("银行配置", "每日结息次数", 3)))
+
+    customs = ST._CONFIG.get("_custom_keys") or {}
+    # 判断用户是否自定义了存款利率（在管理台保存过、或显式配置了不同于默认1%的数值）
+    is_rate_custom = ("银行配置.存款利率" in customs) or ("银行配置.利率" in customs) or (float(rate) != 1.0)
+    if is_rate_custom:
+        eff_rate = max(0.0, float(rate))
+    else:
+        eff_rate = min(1.0, max(0.0, float(rate)))
+
+    # 判断用户是否自定义了每日结息次数
+    cfg_daily = cfgi("银行配置", "每日结息次数", 3)
+    is_daily_custom = ("银行配置.每日结息次数" in customs) or ("银行配置.日结算上限" in customs) or (cfg_daily != 3)
+    if is_daily_custom:
+        max_daily = max(1, cfg_daily)
+    else:
+        max_daily = min(3, max(1, cfg_daily))
+
     today_s = str(dt.date.today())
     cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
     if cur_cnt >= max_daily:
@@ -120,16 +128,9 @@ def cmd_withdraw(gid, qq, amount):
             return f"提示：存款余额不足，当前银行存款总额为 {ST.fmt_coins(dep)} {ST.coin_name()}。"
         rate = cfgi("银行配置", "存款利率", 1)
         cap = cfgi("银行配置", "利息上限", 50000)
-        max_daily = cfgi("银行配置", "每日结息次数", 3)
-        term_h = max(1, cfgi("银行配置", "存款期限", 1))
+        interest = _settle_interest(a, rate, cap)
         today_s = str(dt.date.today())
         cur_cnt = int(a.get("interest_count", "0") or 0) if a.get("interest_date", "") == today_s else 0
-        interest = _settle_interest(a, rate, cap)
-
-        # 结算前计算未满期剩余时间
-        last_ts = float(a.get("withdraw_timestamp", "0") or "0")
-        left_sec = max(0, int(term_h * 3600 - (time.time() - last_ts))) if last_ts > 0 else 0
-        countdown_str = _format_countdown(left_sec)
 
         # 取款仅扣除本次取出的存款本金，利息为银行派发的收益额外计入钱包
         new_dep = dep - amount

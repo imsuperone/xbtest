@@ -36,7 +36,7 @@ async def handle_align_defaults(request=None, plugin_base=""):
     targets 可选:
       - 'riddles': 娱乐题库（急转弯、猜字谜、知识问答、成语接龙，增量合并修复官方题目，保留用户自建题目）
       - 'rides': 官方坐骑商城属性与预设图片（对齐默认坐骑价格/加成/图片，100%保留用户自定义坐骑与自定义图片）
-      - 'presets': 基础数值与经济平衡预设（银行利率上限1%、SSR抽卡概率~1%、探险收益等推荐数值，不修改用户金币资产）
+      - 'presets': 基础数值与经济平衡预设（银行默认利率1%/日结3次、SSR抽卡概率~1%等推荐数值，受自定义保护，不修改用户金币资产）
       - 'weapons': 42款内置武器默认攻击力与描述对齐
     backup: 布尔值，是否在对齐前自动创建安全备份快照（默认 True）
     """
@@ -257,17 +257,27 @@ async def handle_align_defaults(request=None, plugin_base=""):
     # 4. 对齐基础数值与经济平衡预设 (presets)
     if "presets" in targets or "balance" in targets or "预设" in targets:
         try:
-            # 银行利率上限与每日结算次数规范
-            ST.set_ini("银行配置", "利率上限", 1)
-            ST.set_ini("银行配置", "日结算上限", 3)
-            # 奴隶/抽奖 SSR 概率基准平衡
-            ST.set_ini("奴隶配置", "SSR概率", 1)
-            ST.set_ini("奴隶配置", "抽卡模式", "标准")
+            customs = ST._CONFIG.get("_custom_keys") or {}
+            # 银行存款利率与每日结息次数规范（尊重用户自定义，仅在未自定义时对齐）
+            if "银行配置.存款利率" not in customs and "银行配置.利率" not in customs:
+                ST.set_ini("银行配置", "存款利率", 1)
+            if "银行配置.每日结息次数" not in customs and "银行配置.日结算上限" not in customs:
+                ST.set_ini("银行配置", "每日结息次数", 3)
+            # 清理历史可能写入的废弃键
+            b_sec = ST._CONFIG.get("银行配置", {})
+            b_sec.pop("利率上限", None)
+            b_sec.pop("日结算上限", None)
+
+            # 奴隶/抽奖 SSR 概率基准平衡（仅在未自定义时对齐）
+            if "奴隶配置.SSR概率" not in customs:
+                ST.set_ini("奴隶配置", "SSR概率", 1)
+            if "奴隶配置.抽卡模式" not in customs:
+                ST.set_ini("奴隶配置", "抽卡模式", "标准")
             ST.save_config()
 
             results["presets"] = {
                 "ok": True,
-                "msg": "已对齐官方最新经济与数值平衡预设（银行最高利率1%/日结3次、SSR抽卡概率~1%等），玩家金币与资产不受任何影响"
+                "msg": "已对齐官方最新经济与数值平衡预设（银行默认利率1%/日结3次、SSR抽卡概率~1%等，已保护用户手动自定义项）"
             }
         except Exception as e:
             results["presets"] = {"ok": False, "msg": f"对齐平衡预设失败: {e}"}

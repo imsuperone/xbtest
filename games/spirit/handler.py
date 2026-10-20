@@ -559,38 +559,37 @@ def _img_path(path):
 
 
 def cmd_shop():
-    lines = ["🛍️ 欢迎来到精灵商城！", "━━━━━━━━━━━━━━"]
+    lines = ["🛒 精灵商城", "━━━━━━━━━━━━━━"]
     shop = _SHOP()
-    
-    # 紧凑分类展示，彻底杜绝单行刷屏
-    lines.append("【🎯 精灵球】(作用：抓捕野生精灵)")
+
+    lines.append("【精灵球】野生抓捕")
     ball_items = []
     for b in ("精灵球", "时间球", "狩猎球", "极速球", "大师球"):
         if b in shop:
-            extra = " 必中" if b == "大师球" else ""
+            extra = "·必中" if b == "大师球" else ""
             ball_items.append(f"{b}({ST.fmt_coins(shop[b].get('price',0))}{extra})")
     lines.append("· " + " · ".join(ball_items))
 
-    lines.append("【🧀 美食培育】(作用：提升亲密羁绊/经验/属性增益)")
+    lines.append("【培育补给】")
     food_items = []
     for f_name in ("起司", "吐司", "奇异甜食"):
         if f_name in shop:
-            hint = " 全属性+远足buff" if f_name in ("起司", "吐司") else " 直升1级"
+            hint = "·升1级" if f_name == "奇异甜食" else ""
             food_items.append(f"{f_name}({ST.fmt_coins(shop[f_name].get('price',0))}{hint})")
     lines.append("· " + " · ".join(food_items))
 
-    lines.append("【⚡ 属性之源】(作用：出战精灵对应属性永久+2)")
+    lines.append("【属性之源】出战永久+2")
     src_items = []
     for s_name in ("攻击之源", "防御之源", "特防之源", "特攻之源"):
         if s_name in shop:
             src_items.append(f"{s_name}({ST.fmt_coins(shop[s_name].get('price',0))})")
     lines.append("· " + " · ".join(src_items))
 
-    lines.append("【✨ 觉醒进化】(作用：形态进化与天赋性格洗练)")
+    lines.append("【进阶道具】")
     evo_items = []
     for e_name in ("进化液", "洗练果实", "闪光结晶"):
         if e_name in shop:
-            hint = " 觉醒闪光" if e_name == "闪光结晶" else ""
+            hint = "·觉醒闪光" if e_name == "闪光结晶" else ""
             evo_items.append(f"{e_name}({ST.fmt_coins(shop[e_name].get('price',0))}{hint})")
     lines.append("· " + " · ".join(evo_items))
 
@@ -599,11 +598,11 @@ def cmd_shop():
              "攻击之源", "防御之源", "特防之源", "特攻之源", "进化液", "洗练果实", "闪光结晶"}
     customs = [f"{k}({ST.fmt_coins(v.get('price',0))})" for k, v in shop.items() if k not in known]
     if customs:
-        lines.append("【📦 拓展道具】(作用：专属定制道具)")
+        lines.append("【其他道具】")
         lines.append("· " + " · ".join(customs))
 
     lines.append("━━━━━━━━━━━━━━")
-    lines.append("💡 发送【购买 物品名称】进行购买（如：购买 起司）")
+    lines.append("发送【购买 物品名*数量】购买（如：购买 起司*5）")
     return "\r\n".join(lines)
 
 
@@ -697,37 +696,36 @@ def cmd_backpack(gid, qq):
     bag = sp.get("bag", {})
     if not bag:
         return "亲，您的背包为空，请到精灵商城购买需要的物品吧！"
-    lines = ["🎒 我的背包　您的背包物品如下：", "━━━━━━━━━━━━━━"]
+    lines = ["🎒 我的背包", "━━━━━━━━━━━━━━"]
     shop = _SHOP()
     _effects_desc = {
-        "精灵球": "基础捕捉道具，收服成功率+10%",
-        "时间球": "高级捕捉道具，收服成功率+30%",
-        "狩猎球": "稀有捕捉道具，收服成功率+40%",
-        "极速球": "强力捕捉道具，收服成功率+70%",
-        "大师球": "终极捕捉道具，100%必定收服成功并极大概率觉醒闪光",
-        "奇异甜食": "服用后出战精灵等级直接提升 1 级",
-        "起司": "精灵黄金美食！提升亲密羁绊(+15)、经验(+300)与全属性并恢复活力",
-        "吐司": "精灵美味大餐！提升亲密羁绊(+15)、经验(+300)与全属性并恢复活力",
-        "攻击之源": "强化出战精灵攻击力 2 点",
-        "防御之源": "强化出战精灵防御力 2 点",
-        "特防之源": "强化出战精灵特防 2 点",
-        "特攻之源": "强化出战精灵特攻 2 点",
-        "进化液": "激发潜能，助达标精灵完成形态进化",
-        "洗练果实": "洗练重置精灵性格特征与词条天赋",
-        "闪光结晶": "激发觉醒✨闪光变异形态（全属性+15%）",
+        "精灵球": "基础捕捉道具，收服率+10%",
+        "时间球": "高级捕捉道具，收服率+30%",
+        "狩猎球": "稀有捕捉道具，收服率+40%",
+        "极速球": "强力捕捉道具，收服率+70%",
+        "大师球": "终极捕捉道具，100%必中",
+        "奇异甜食": "出战精灵等级提升1级",
+        "起司": "提升亲密羁绊与远足属性",
+        "吐司": "提升亲密羁绊与远足属性",
+        "攻击之源": "出战精灵永久攻击+2",
+        "防御之源": "出战精灵永久防御+2",
+        "特防之源": "出战精灵永久特防+2",
+        "特攻之源": "出战精灵永久特攻+2",
+        "进化液": "激发潜能助精灵形态进化",
+        "洗练果实": "洗练重置精灵性格与词条",
+        "闪光结晶": "觉醒闪光变异形态",
     }
     for name, cnt in bag.items():
         desc = _effects_desc.get(name)
         if not desc:
             info = shop.get(name, {})
             if info:
-                desc = f"{info.get('attr', '')}效果+{info.get('effect', '')}"
+                desc = f"{info.get('attr', '')}+{info.get('effect', '')}"
             else:
                 desc = "珍稀道具"
-        lines.append(f"【{name}】 ×{cnt}\r\n　└ 作用：{desc}")
+        lines.append(f"· {name} ×{cnt}（{desc}）")
     lines.append("━━━━━━━━━━━━━━")
-    lines.append("💡 使用精灵球：【使用精灵球 精灵球名称】")
-    lines.append("💡 使用物品：【使用物品 物品名称*数量】（如：使用物品 起司*1）")
+    lines.append("使用精灵球：【使用精灵球 名称】\r\n使用道具：【使用物品 名称*数量】（如：使用物品 起司*1）")
     return "\r\n".join(lines)
 
 
