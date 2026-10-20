@@ -368,9 +368,10 @@ def _start_24(gid, qq):
     ST.recall_set(f"game24_players_{gid}", "")
     _set_active_game(gid, "二四点")
     _start_timeout_task(gid, "game24", "二四点", f"参考算式：{ans_expr} = 24")
-    return ("🃏 二四点开始！用 + - * / 和括号把下面 4 个数算出 24：\r\n"
-            "【%s】\r\n回复你的算式即可！（其他玩家可发送【加入二四点】加入，管理员或开局者发送【结束二四点】）"
-            % " ".join(map(str, nums)))
+    return ("🃏【24点】二四点开始！给出 4 个数字：【%s】\r\n"
+            "请使用加减乘除计算出24，回复你的算式！\r\n"
+            "（其他玩家可发送【加入二四点】加入，发送【退出二四点】退出）"
+            % "  ".join(map(str, nums)))
 
 
 
@@ -391,9 +392,9 @@ def _join_game(gid, qq, kind, label):
         pass
     owner = ST.recall_get(f"{kind}_owner_{gid}")
     if not owner:
-        return f"当前没有进行中的{label}对局！"
+        return f"当前没有进行中的{label}对局，发送【开始{label}】开启新局吧~"
     if str(owner) == str(qq):
-        return "您是开局者，无需加入！"
+        return f"你是本轮{label}的开局者，请直接作答~"
     start = ST.recall_get(f"{kind}_start_{gid}", "0")
     try:
         try:
@@ -405,29 +406,38 @@ def _join_game(gid, qq, kind, label):
         except Exception:
             _st = 0
         if int(time.time()) - max(_st, _lt) >= 30:
-            return "开局已超过30秒，无法加入，请等待下一局！"
+            return f"本轮{label}开局已超过30秒，无法中途加入，请等待下一局哦~"
     except Exception:
         pass
     players = _get_players(gid, f"{kind}_players_")
-    if str(qq) not in players:
-        players.append(str(qq))
-        ST.recall_set(f"{kind}_players_{gid}", ",".join(players))
-    return f"你已加入{label}！发送你的答案参与吧~"
+    if str(qq) in players:
+        return f"你已加入本局{label}，请直接作答~"
+    players.append(str(qq))
+    ST.recall_set(f"{kind}_players_{gid}", ",".join(players))
+    if kind == "chain":
+        last_word = ST.recall_get(f"chain_{gid}", "")
+        return f"🎉 你已加入{label}！当前词语为【{last_word}】，请用尾字「{last_word[-1]}」接龙（词语2-6字）~"
+    return f"🎉 你已加入{label}！请直接回复你的答案~"
 
 
 
 
 def _quit_game(gid, qq, kind, label, is_admin=False):
-    """只退出发送者自己（普通成员与管理员发送【退出XX】行为严格一致：只退自己，绝不结束全群游戏）。"""
+    """只退出发送者自己（只退自己，绝不影响别人继续玩；若只剩自己一人则对局自然结束）。"""
     owner = ST.recall_get(f"{kind}_owner_{gid}")
     if not owner:
         _clear_active_game(gid)
         return f"当前没有进行中的【{label}】对局！"
+    ans = ""
+    ans_part = ""
     if kind == "game24":
-        ans = ST.recall_get(f"game24_ans_{gid}")
+        ans = ST.recall_get(f"game24_ans_{gid}") or ""
         ans_part = f"\r\n参考算式为：【{ans} = 24】" if ans else ""
+    elif kind == "chain":
+        ans = ""
+        ans_part = "\r\n随时发送【开始接龙】开启新局~"
     else:
-        ans = ST.recall_get(f"{kind}_{gid}_{owner}")
+        ans = ST.recall_get(f"{kind}_{gid}_{owner}") or ST.recall_get(f"{kind}_ans_{gid}") or ""
         ans_part = f"\r\n本题正确答案为：【{ans}】" if ans else ""
     players = _get_players(gid, f"{kind}_players_")
 
@@ -444,49 +454,65 @@ def _quit_game(gid, qq, kind, label, is_admin=False):
             new_owner = players.pop(0)
             ST.recall_set(f"{kind}_owner_{gid}", str(new_owner))
             ST.recall_set(f"{kind}_players_{gid}", ",".join(players))
-            if ans and kind != "game24":
+            if ans and kind not in ("game24", "chain"):
                 ST.recall_set(f"{kind}_{gid}_{new_owner}", ans)
                 ST.recall_set(f"{kind}_{gid}_{qq}", "")
-            return f"你已退出【{label}】！对局已转交其他参与者继续进行~"
+            return f"你已退出【{label}】！其他玩家请继续作答~"
         else:
-            # 只有自己一人在玩，自己退出则对局自然结束
+            # 只有自己一人在玩，退出则对局结束并公布答案（文案绝不体现里面有人/无人）
             _cancel_timeout_task(gid, kind)
             ST.recall_set(f"{kind}_owner_{gid}", "")
             ST.recall_set(f"{kind}_players_{gid}", "")
             ST.recall_set(f"{kind}_ans_{gid}", "")
             for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
                 ST.recall_set(k, "")
+            if kind == "chain":
+                ST.recall_set(f"chain_{gid}", "")
+                ST.recall_set(f"chain_used_{gid}", "")
+                ST.recall_set(f"chain_last_qq_{gid}", "")
             _clear_active_game(gid)
-            return f"你已退出【{label}】，因无其他参与者，对局结束！{ans_part}"
+            return f"你已退出【{label}】！对局结束。{ans_part}"
 
     # 3. 发送者根本不在对局中
-    return f"你并未参与当前的【{label}】对局哦~（发送【加入{label}】即可加入作答）"
+    return f"你并未参与当前的【{label}】对局哦~"
+
+
 
 
 def _end_game(gid, qq, kind, label, is_admin=False):
-    """结束当前群内的游戏对局（权限：机器人管理员 或 当前开局者）。"""
+    """结束当前群内的游戏对局（权限：机器人管理员 或 当前开局者强制结束）。
+    不论里面有没有人玩，一律强制结束对局并公布答案，文案不体现里面是否有人。"""
     owner = ST.recall_get(f"{kind}_owner_{gid}")
     if not owner:
         _clear_active_game(gid)
         return f"当前没有进行中的【{label}】对局！"
+    ans = ""
+    ans_part = ""
     if kind == "game24":
-        ans = ST.recall_get(f"game24_ans_{gid}")
+        ans = ST.recall_get(f"game24_ans_{gid}") or ""
         ans_part = f"\r\n参考算式为：【{ans} = 24】" if ans else ""
+    elif kind == "chain":
+        ans = ""
+        ans_part = "\r\n随时发送【开始接龙】开启新局~"
     else:
-        ans = ST.recall_get(f"{kind}_{gid}_{owner}")
+        ans = ST.recall_get(f"{kind}_{gid}_{owner}") or ST.recall_get(f"{kind}_ans_{gid}") or ""
         ans_part = f"\r\n本题正确答案为：【{ans}】" if ans else ""
 
     # 权限校验：必须是管理员或者当前开局者
     if not is_admin and str(owner) != str(qq):
-        return f"只有开局者或管理员可以提前结束【{label}】对局哦！（参与者如需退出请发送【退出{label}】）"
+        return f"只有开局者或管理员可结束【{label}】对局哦！（如个人不玩请发送【退出{label}】）"
 
-    # 执行清理并公布答案
+    # 执行清理并公布答案（不论里面有无其他玩家，直接强制结束）
     _cancel_timeout_task(gid, kind)
     ST.recall_set(f"{kind}_owner_{gid}", "")
     ST.recall_set(f"{kind}_players_{gid}", "")
     ST.recall_set(f"{kind}_ans_{gid}", "")
     for k in (f"{kind}_{gid}_{owner}", f"{kind}_{gid}_{qq}", f"{kind}_start_{gid}", f"{kind}_last_time_{gid}"):
         ST.recall_set(k, "")
+    if kind == "chain":
+        ST.recall_set(f"chain_{gid}", "")
+        ST.recall_set(f"chain_used_{gid}", "")
+        ST.recall_set(f"chain_last_qq_{gid}", "")
     _clear_active_game(gid)
 
     if is_admin and str(owner) != str(qq):

@@ -437,7 +437,8 @@ def cmd_rob_zone(gid, qq):
         return "亲，您的体力不足，无法实施银行打劫！"
     ok, mins = _cd(a, "rob_bank_time", cfgi("银行配置", "打劫银行间隔", 10))
     if not ok:
-        return f"{mins}分钟后再来打劫银行吧！"
+        cd_str = str(mins) if str(mins).endswith(("秒", "分", "分钟", "小时")) else f"{mins}分钟"
+        return f"{cd_str}后再来打劫银行吧！"
     prob = cfgi("银行配置", "打劫银行成功概率", 70)
     try:
         from ..sign import eff_prob as _luck_eff2
@@ -559,7 +560,8 @@ def cmd_sell_slave(gid, qq, target):
         return "亲，对方是个穷光蛋，无法对他实施打劫！"
     ok, mins = _cd(a, "rob_time", cfgi("银行配置", "打劫关押时间", 5))
     if not ok:
-        return f"{mins}分钟后再来打劫吧！"
+        cd_str = str(mins) if str(mins).endswith(("秒", "分", "分钟", "小时")) else f"{mins}分钟"
+        return f"{cd_str}后再来打劫吧！"
     prob = cfgi("银行配置", "打劫成功概率", 65)
     try:
         from ..sign import eff_prob as _luck_eff3

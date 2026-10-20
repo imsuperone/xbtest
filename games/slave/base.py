@@ -434,8 +434,9 @@ def cd_check(u, key, minutes_key):
         return True, 0
     left = minutes * 60 - (_time.time() - last)
     if left > 0:
-        return False, int(left / 60) + 1
-    return True, 0
+        from ...core.storage.time_fmt import format_cd_time
+        return False, format_cd_time(left)
+    return True, ""
 
 
 def cd_commit(u, key):
@@ -458,8 +459,11 @@ def _event_delta():
 # ============================================================
 
 
-def _fmt(mins, act):
-    return _S.T.COOLDOWN_MIN.format(min=mins, act=act)
+def _fmt(time_val, act):
+    t_str = str(time_val)
+    if not t_str.endswith(("秒", "分", "分钟", "小时")):
+        t_str = f"{t_str}分钟"
+    return _S.T.COOLDOWN_MIN.format(min=t_str, act=act)
 
 
 

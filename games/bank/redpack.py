@@ -34,7 +34,7 @@ def cmd_redpack(gid, qq, amount, pwd=None):
         pwd = "".join(random.choices(string.digits, k=5))
     last = a.int("redpack_send_time")
     if last and time.time() - last < interval:
-        return f"亲，您还需休息{int(interval - (time.time() - last))}秒才能发下一个红包！"
+        return f"亲，您还需休息{ST.format_cd_time(interval - (time.time() - last))}才能发下一个红包！"
     if ST.coins_get(gid, qq) < amount:
         return "亲，您的账户余额不足，无法发红包！"
     if a.int("stamina") < cost_tili:

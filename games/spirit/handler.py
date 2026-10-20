@@ -609,8 +609,8 @@ def cmd_adventure(gid, qq, place):
     last = _recall_get(key)
     gap = _cfgi("冒险间隔", 5) * 60
     if last and time.time() - float(last) < gap:
-        left = int((gap - (time.time() - float(last))) / 60) + 1
-        return f"{left}分钟再来冒险吧！"
+        rem_s = gap - (time.time() - float(last))
+        return f"{ST.format_cd_time(rem_s)}再来冒险吧！"
 
     # 体力消耗与防脚本校验
     d_tili = max(2, _cfgi("挑战扣除_消耗体力", 2))
@@ -1063,7 +1063,7 @@ def cmd_travel(gid, qq, arg=""):
         if left_s > 0:
             left_m = max(1, (int(left_s) + 59) // 60)
             return (f"🧳 您的精灵【{t_name}】正在外出漫游中~\r\n"
-                    f"⏳ 距离归来还需约 {left_m} 分钟，届时发送【旅行精灵】即可迎接并拆开伴手礼！")
+                    f"⏳ 距离归来还需约 {ST.format_cd_time(left_s)}，届时发送【旅行精灵】即可迎接并拆开伴手礼！")
         # 已完成旅行，结算伴手礼
         it = _wsp(sp, t_name) or (sp["list"][0] if sp.get("list") else None)
         charm_val = _u(gid, qq).int("charm")
@@ -1168,7 +1168,7 @@ def cmd_expedition(gid, qq, arg=""):
         if left_s > 0:
             left_m = max(1, (int(left_s) + 59) // 60)
             return (f"🚩【远征进行中】远征小队（{'、'.join(names)}）正在探索秘境深处！\r\n"
-                    f"⏳ 距离远征完成还需约 {left_m} 分钟，完成后发送【精灵远征】即可收获战利品！")
+                    f"⏳ 距离远征完成还需约 {ST.format_cd_time(left_s)}，完成后发送【精灵远征】即可收获战利品！")
         # 远征完成，结算全队经验 + 金币 + 现有商城道具池掉落
         charm_val = _u(gid, qq).int("charm")
         rem_names = list(names)
@@ -1314,8 +1314,8 @@ def cmd_pvp(gid, qq, target):
     last_ts = float(_recall_get(cd_key, "0") or 0)
     cd_s = max(1, _cfgi("对战间隔", 1)) * 60
     if last_ts and time.time() - last_ts < cd_s:
-        left_m = max(1, (int(cd_s - (time.time() - last_ts)) + 59) // 60)
-        return f"亲，您的精灵刚经历过激战，请休息 {left_m} 分钟后再发起对战吧！"
+        rem_s = cd_s - (time.time() - last_ts)
+        return f"亲，您的精灵刚经历过激战，请休息 {ST.format_cd_time(rem_s)}后再发起对战吧！"
     myp, tap = _power(mine), _power(theirs)
     my_cash, ta_cash = ST.coins_get(gid, qq), ST.coins_get(gid, target)
     stake = min(PVP_STAKE_CAP, max(200, my_cash // PVP_STAKE_DIV), max(200, ta_cash // PVP_STAKE_DIV))

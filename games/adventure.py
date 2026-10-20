@@ -144,7 +144,8 @@ def cmd_start(gid, qq, mapname):
     last = int(ST.recall_get("advt_%s_%s" % (gid, qq), "0") or 0)
     gap = _cfgi("冒险间隔", 3) * 60
     if last and _now() - last < gap:
-        return "休息一下，过会儿再冒险吧！"
+        rem_s = gap - (_now() - last)
+        return f"亲，您刚经历过冒险，请休息 {ST.format_cd_time(rem_s)}后再来冒险吧！"
     # 体力+金钱同锁单事务：禁两腿分扣半成功开局
     with ST._LOCK:
         cur_st = a.int("stamina")

@@ -23,7 +23,7 @@ def _build_status_line(gid, qq, u, acct, slaves):
     parts = []
     try:
         ok_bz, mins_bz = cd_check(u, "搬砖时间", "搬砖间隔")
-        parts.append("搬砖就绪" if ok_bz else f"搬砖({mins_bz}分)")
+        parts.append("搬砖就绪" if ok_bz else f"搬砖({mins_bz})")
     except Exception:
         pass
     try:

@@ -137,7 +137,7 @@ def _cd(a, key, mins):
                     ts = t.timestamp()
             left = mins * 60 - (time.time() - ts)
             if left > 0:
-                return False, int(left / 60) + 1
+                return False, ST.format_cd_time(left)
         except Exception:
             pass
     return True, 0

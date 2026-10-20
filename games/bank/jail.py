@@ -101,7 +101,8 @@ def cmd_bail(gid, qq, target, self_bail=False, kind="保释"):
         # 劫狱冷却：锁外只读校验，写入延后到锁内 txn（防校验失败仍污染缓存冷却）
         ok, mins = _cd(a, "jailbreak_time", cfgi("银行配置", "劫狱间隔", 5))
         if not ok:
-            return f"{mins}分钟后再来劫狱吧！"
+            cd_str = str(mins) if str(mins).endswith(("秒", "分", "分钟", "小时")) else f"{mins}分钟"
+            return f"{cd_str}后再来劫狱吧！"
     else:
         fee_lo = cfgi("银行配置", "保释金钱下限", 5000)
         fee_hi = cfgi("银行配置", "保释金钱上限", 10000)
@@ -127,7 +128,8 @@ def cmd_bail(gid, qq, target, self_bail=False, kind="保释"):
             if kind == "劫狱":
                 ok, mins = _cd(a2, "jailbreak_time", cfgi("银行配置", "劫狱间隔", 5))
                 if not ok:
-                    return f"{mins}分钟后再来劫狱吧！"
+                    cd_str = str(mins) if str(mins).endswith(("秒", "分", "分钟", "小时")) else f"{mins}分钟"
+                    return f"{cd_str}后再来劫狱吧！"
                 a2.set("jailbreak_time", _now_s())
             row = ST._DB.execute(
                 "SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))

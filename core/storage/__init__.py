@@ -16,6 +16,7 @@ from .wallet import *
 from .accounts import *
 from .groups import *
 from .backup import *
+from .time_fmt import *
 from . import state as _state
 from .state import Acct, Group
 
@@ -28,7 +29,7 @@ __all__ = ["register_names","register_name","parse_at","is_qq_mention","set_conf
            "init","flush_all","merge_from","get_persistent_data_dir","set_persistent_data_dir",
            "set_config_path","set_astrbot_config","set_ini","save_config",
            "set_backup_dir","backup_user_data","maybe_auto_backup","clean_old_backups",
-           "recall_set","recall_get","recall_prefix","dual_attr"]
+           "recall_set","recall_get","recall_prefix","dual_attr","format_cd_time"]
 
 
 def dual_attr(anchor, attr, *mod_candidates):

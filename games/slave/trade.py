@@ -40,7 +40,8 @@ def cmd_buy_slave(gid, qq, target, st):
     if _S.is_bot_qq(prev_owner):
         return _S.T.BOT_NO_TRADE
     if _time.time() < protected_until(tgt):
-        left = int((protected_until(tgt) - _time.time()) / 60) + 1
+        from ...core.storage.time_fmt import format_cd_time
+        left = format_cd_time(protected_until(tgt) - _time.time())
         prot_qq = uget(tgt, "protector")
         if prot_qq and st.has_section(prot_qq):
             return _S.T.BUY_PROTECTED.format(who=uname(st, prot_qq), min=left)
@@ -201,7 +202,8 @@ def cmd_protect(gid, qq, target, st):
     if uget(u, "owner") != qq:
         return _S.T.PROTECT_NOT_YOURS
     if _time.time() < protected_until(u):
-        left = int((protected_until(u) - _time.time())/60)+1
+        from ...core.storage.time_fmt import format_cd_time
+        left = format_cd_time(protected_until(u) - _time.time())
         return _S.T.ALREADY_PROTECTED_BY_YOU.format(min=left)
     ok, mins = cd_check(U(st, qq), "protect_time", "保护间隔")
     if not ok:
@@ -263,8 +265,9 @@ def cmd_ransom(gid, qq, target, st):
     last_r = cn_parse(uget(s, "赎身时间"))
     iv_r = cfgi("间隔配置", "赎身间隔", 30)
     if last_r and _time.time() - last_r < iv_r * 60:
-        left = int((iv_r * 60 - (_time.time() - last_r)) / 60) + 1
-        return _S.T.RANSOM_CD.format(min=left)
+        rem_s = iv_r * 60 - (_time.time() - last_r)
+        from ...core.storage.time_fmt import format_cd_time
+        return _S.T.RANSOM_CD.format(min=format_cd_time(rem_s))
     price = int(int(uget(s, "price") or 0) * cfgf("费用配置", "赎身花费倍率", 1.5))
     if coins_get(gid, qq) < price:
         return _S.T.POOR.format(coin=coin_name()) + f"(需{price})"
@@ -297,8 +300,9 @@ def cmd_freedom(gid, qq, st):
     last_f = cn_parse(uget(u, "自由时间"))
     iv_f = cfgi("间隔配置", "自由间隔", 30)
     if last_f and _time.time() - last_f < iv_f * 60:
-        left = int((iv_f * 60 - (_time.time() - last_f)) / 60) + 1
-        return _S.T.FREE_CD.format(min=left)
+        rem_s = iv_f * 60 - (_time.time() - last_f)
+        from ...core.storage.time_fmt import format_cd_time
+        return _S.T.FREE_CD.format(min=format_cd_time(rem_s))
     price = int(int(uget(u, "price") or 0) * cfgf("费用配置", "赎身花费倍率", 1.5))
     have = coins_get(gid, qq)
     if have < price:
