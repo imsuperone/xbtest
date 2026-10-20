@@ -31,6 +31,18 @@ _MAIN_MENU = (
     "----------------\r\n"
     "发送系统关键词打开菜单，如【签到系统】【精灵系统】"
 )
+_SHOP_GUIDE = (
+    "🛒 小白系统商城指南\r\n"
+    "━━━━━━━━━━━━━━\r\n"
+    "🐾【精灵商城】抓捕精灵球、属性之源、进化液等\r\n"
+    "　👉 发送：【精灵商城】或【精灵商店】\r\n"
+    "🐎【坐骑商城】被动增益座驾（打工/战力加成）\r\n"
+    "　👉 发送：【坐骑商城】或【坐骑商店】\r\n"
+    "⚔️【神兵抽奖】稀有武器与专属宝物\r\n"
+    "　👉 发送：【抽奖】或【抽卡】\r\n"
+    "━━━━━━━━━━━━━━\r\n"
+    "💡 请发送对应具体名称即可前往选购！"
+)
 def _resolve_reply(cand, reply):
     if cand in _DEFAULT_MARKERS:
         return reply
@@ -703,8 +715,11 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
             return _mg
     except Exception:
         pass
-    if raw.strip() in ("主菜单", "菜单", "系统菜单"):
+    raw_s = raw.strip()
+    if raw_s in ("主菜单", "菜单", "系统菜单"):
         return _MAIN_MENU
+    if raw_s in ("商城", "商店", "系统商城", "系统商店", "所有商城", "所有商店"):
+        return _SHOP_GUIDE
     if raw.strip().startswith(("测试xbtest", "测试testxb", "xbtest")):
         if not is_admin:
             return "亲亲，你没有相关权限哦~该指令仅限机器人管理员使用！"

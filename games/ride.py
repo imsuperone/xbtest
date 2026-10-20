@@ -737,7 +737,7 @@ def handle(gid, qq, raw):
         return "【坐骑管理】已经被关闭了，无法使用该功能！\r\n如需开启，请机器人管理发送【坐骑开关】进行开启！"
     if text == "我的坐骑":
         return cmd_my(gid, qq)
-    if text == "坐骑商城":
+    if text in ("坐骑商城", "坐骑商店"):
         return cmd_shop()
     if text == "查看欢迎坐骑":
         return cmd_view_welcome(gid, qq)
@@ -758,7 +758,7 @@ def handle(gid, qq, raw):
 
 COMMANDS = (
     "购买坐骑", "查看坐骑", "丢弃坐骑", "设置欢迎坐骑",
-    "切换坐骑", "回收欢迎坐骑", "坐骑商城", "我的坐骑",
+    "切换坐骑", "回收欢迎坐骑", "坐骑商城", "坐骑商店", "我的坐骑",
     # V8 并入：原正则刮词域（与 handle 分支对应）
     "查看欢迎坐骑",
 )
