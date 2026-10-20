@@ -76,9 +76,9 @@ def cmd_gacha(gid, qq, st, count=1):
     if coins_add(gid, qq, -cost) is None:
         return "武器抽奖系统繁忙，本次未扣款，请稍后重试！"
 
-    pr = {"R": cfgi("设置", "抽武器R概率", 50),
-          "SR": cfgi("设置", "抽武器SR概率", 38),
-          "SSR": cfgi("设置", "抽武器SSR概率", 2)}
+    pr = {"R": cfgi("设置", "抽武器R概率", 80),
+          "SR": cfgi("设置", "抽武器SR概率", 19),
+          "SSR": cfgi("设置", "抽武器SSR概率", 1)}
     exp_map = {"R": cfgi("设置", "R经验", 9),
                "SR": cfgi("设置", "SR经验", 99),
                "SSR": cfgi("设置", "SSR经验", 299)}

@@ -454,6 +454,13 @@ const CMD_NUMS = {
     ["冒险配置", "冒险间隔", "冒险间隔(分)", "int"], ["冒险配置", "最大轮数", "最大轮数", "int"],
     ["冒险配置", "事件金钱下限", "事件金钱下限", "int"], ["冒险配置", "事件金钱上限", "事件金钱上限", "int"],
     ["冒险配置", "结局金钱下限", "结局金钱下限", "int"], ["冒险配置", "结局金钱上限", "结局金钱上限", "int"]],
+  "查看欢迎坐骑": [["坐骑配置", "欢迎冷却小时", "欢迎冷却(小时)", "float"], ["坐骑配置", "欢迎金币除数", "奖励除数(售价/N)", "int"],
+    ["坐骑配置", "欢迎金币下限", "奖励金币下限", "int"], ["坐骑配置", "欢迎金币上限", "奖励金币上限", "int"]],
+  "设置欢迎坐骑": [["坐骑配置", "欢迎冷却小时", "欢迎冷却(小时)", "float"], ["坐骑配置", "欢迎金币除数", "奖励除数(售价/N)", "int"],
+    ["坐骑配置", "欢迎金币下限", "奖励金币下限", "int"], ["坐骑配置", "欢迎金币上限", "奖励金币上限", "int"]],
+  "回收欢迎坐骑": [["坐骑配置", "欢迎冷却小时", "欢迎冷却(小时)", "float"]],
+  "购买坐骑": [["坐骑配置", "欢迎冷却小时", "欢迎冷却(小时)", "float"], ["坐骑配置", "欢迎金币除数", "奖励除数(售价/N)", "int"]],
+  "我的坐骑": [["坐骑配置", "欢迎冷却小时", "欢迎冷却(小时)", "float"], ["坐骑配置", "欢迎金币除数", "奖励除数(售价/N)", "int"]],
 };
 
 // 获取指定系统的全部数值项列表：[{sec, key, desc, val}]
@@ -887,7 +894,7 @@ function renderCmdNums(numCmd, isNew) {
         });
       });
       scored.sort((a, b) => b[0] - a[0]);
-      nums = scored.slice(0, 8).map(([s, sec, it]) => [sec, it.key, it.key, it.type]);
+      nums = scored.slice(0, 8).map(([s, sec, it]) => [sec, it.key, it.desc || it.key, it.type]);
     } catch(e){}
   }
 
@@ -896,8 +903,16 @@ function renderCmdNums(numCmd, isNew) {
 
   const directHtml = nums.length
     ? nums.map(([sec, key, label]) => {
-        const v = (CMD_CFG[sec] || {})[key] ?? "";
-        return `<label class="cnum"><span>${esc(label)}</span>` +
+        let v = (CMD_CFG[sec] || {})[key];
+        if (v === undefined || v === "" || v === null) {
+          const grp = (typeof CFG !== "undefined" && CFG.schema && CFG.schema.groups && CFG.schema.groups[sec]) || [];
+          const schItem = grp.find((it) => it.key === key);
+          if (schItem) {
+            v = schItem.value !== undefined ? schItem.value : (schItem.default ?? "");
+          }
+        }
+        if (v === undefined || v === null) v = "";
+        return `<label class="cnum" title="[${esc(sec)}] ${esc(key)}"><span>${esc(label)}</span>` +
           `<input type="number" step="any" data-cmd-num data-nsec="${esc(sec)}" data-nkey="${esc(key)}" value="${esc(v)}"></label>`;
       }).join("")
     : `<small class="hint" style="grid-column:1/-1">该指令无直接绑定数值，可展开下方本系统全部数值进行调控。</small>`;

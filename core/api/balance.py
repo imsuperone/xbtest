@@ -101,7 +101,7 @@ SYSTEM_SECTIONS = [
         "id": "ride",
         "name": "🐎 坐骑系统",
         "sections": ["坐骑配置"],
-        "commands": ["购买坐骑", "坐骑列表", "我的坐骑", "骑乘坐骑", "回收坐骑"],
+        "commands": ["购买坐骑", "查看坐骑", "我的坐骑", "设置欢迎坐骑", "查看欢迎坐骑", "回收欢迎坐骑", "丢弃坐骑", "切换坐骑", "坐骑商城"],
     },
     {
         "id": "sect",
@@ -202,7 +202,7 @@ PRESETS = {
             "奇遇触发概率": "20", "保护时长小时": "12", "保护费用": "1000",
             "抽武器花费": "20000", "十连抽花费": "180000",
             "三十连抽花费": "500000", "五十连抽花费": "800000", "百连抽花费": "1500000",
-            "抽武器R概率": "45", "抽武器SR概率": "40", "抽武器SSR概率": "15",
+            "抽武器R概率": "80", "抽武器SR概率": "19", "抽武器SSR概率": "1",
             "R经验": "20", "SR经验": "200", "SSR经验": "1000",
             "一星武器消耗同武器数量": "2", "二星武器消耗同武器数量": "3",
             "三星武器消耗同武器数量": "4", "四星武器消耗同武器数量": "5", "五星武器消耗同武器数量": "5",
@@ -259,6 +259,11 @@ PRESETS = {
         },
         # 6. 坐骑系统
         "坐骑配置": {
+            "欢迎冷却小时": "1",
+            "欢迎金币开关": "真",
+            "欢迎金币除数": "5000",
+            "欢迎金币下限": "10",
+            "欢迎金币上限": "500",
             "价格_企鹅": "10000", "价格_伞兵": "25000", "价格_宝驴": "50000",
             "价格_保时捷": "120000", "价格_法拉利": "250000", "价格_玛莎拉蒂": "400000",
             "价格_劳斯莱斯": "800000", "价格_布加迪威龙": "1500000", "价格_私人航空": "4000000",
@@ -361,7 +366,7 @@ PRESETS = {
             "奇遇触发概率": "30", "保护时长小时": "24", "保护费用": "500",
             "抽武器花费": "15000", "十连抽花费": "135000",
             "三十连抽花费": "380000", "五十连抽花费": "600000", "百连抽花费": "1150000",
-            "抽武器R概率": "35", "抽武器SR概率": "40", "抽武器SSR概率": "25",
+            "抽武器R概率": "70", "抽武器SR概率": "28", "抽武器SSR概率": "2",
             "R经验": "40", "SR经验": "300", "SSR经验": "1500",
             "一星武器消耗同武器数量": "2", "二星武器消耗同武器数量": "2",
             "三星武器消耗同武器数量": "3", "四星武器消耗同武器数量": "4", "五星武器消耗同武器数量": "4",
@@ -416,6 +421,11 @@ PRESETS = {
             "闪光基础概率": "2", "洗练果实价格": "1500", "闪光结晶价格": "12000",
         },
         "坐骑配置": {
+            "欢迎冷却小时": "0.5",
+            "欢迎金币开关": "真",
+            "欢迎金币除数": "3000",
+            "欢迎金币下限": "20",
+            "欢迎金币上限": "1000",
             "价格_企鹅": "5000", "价格_伞兵": "12000", "价格_宝驴": "25000",
             "价格_保时捷": "60000", "价格_法拉利": "120000", "价格_玛莎拉蒂": "200000",
             "价格_劳斯莱斯": "400000", "价格_布加迪威龙": "800000", "价格_私人航空": "2000000",
@@ -516,7 +526,7 @@ PRESETS = {
             "奇遇触发概率": "12", "保护时长小时": "8", "保护费用": "2500",
             "抽武器花费": "30000", "十连抽花费": "270000",
             "三十连抽花费": "750000", "五十连抽花费": "1200000", "百连抽花费": "2200000",
-            "抽武器R概率": "55", "抽武器SR概率": "35", "抽武器SSR概率": "10",
+            "抽武器R概率": "90", "抽武器SR概率": "9", "抽武器SSR概率": "1",
             "R经验": "15", "SR经验": "150", "SSR经验": "800",
             "一星武器消耗同武器数量": "2", "二星武器消耗同武器数量": "3",
             "三星武器消耗同武器数量": "4", "四星武器消耗同武器数量": "5", "五星武器消耗同武器数量": "6",
@@ -571,6 +581,11 @@ PRESETS = {
             "闪光基础概率": "1", "洗练果实价格": "6000", "闪光结晶价格": "50000",
         },
         "坐骑配置": {
+            "欢迎冷却小时": "2",
+            "欢迎金币开关": "真",
+            "欢迎金币除数": "8000",
+            "欢迎金币下限": "5",
+            "欢迎金币上限": "200",
             "价格_企鹅": "20000", "价格_伞兵": "50000", "价格_宝驴": "100000",
             "价格_保时捷": "250000", "价格_法拉利": "500000", "价格_玛莎拉蒂": "800000",
             "价格_劳斯莱斯": "1600000", "价格_布加迪威龙": "3000000", "价格_私人航空": "8000000",
@@ -810,7 +825,7 @@ _MIN_MAX_PAIRS = [
 ]
 
 _LAST_REALTIME_TICK_TS = 0.0
-_REALTIME_TICK_INTERVAL = 600.0  # 自动巡检间隔：10 分钟
+_REALTIME_TICK_INTERVAL = 300.0  # 自动巡检间隔：5 分钟
 
 
 def _clean_round(val, mult):
@@ -942,13 +957,20 @@ def compute_realtime_economy(base_mode="casual"):
             faucet_mult = round(0.92 - 0.14 * ratio, 2)   # 0.78 ~ 0.92
             sink_mult = round(1.15 + 0.25 * ratio, 2)     # 1.15 ~ 1.40
             summary = f"全服货币存量偏高（通胀指数 {inflation_index}），已温和收紧水龙头产出并加大金币回收力度"
-        else:
+        elif inflation_index <= 4.00:
             phase = "🔥 高位紧缩期"
             phase_code = "high_inflation"
-            ratio = min(1.0, (inflation_index - 2.20) / 2.80)
-            faucet_mult = round(0.75 - 0.20 * ratio, 2)   # 0.55 ~ 0.75
-            sink_mult = round(1.42 + 0.38 * ratio, 2)     # 1.42 ~ 1.80
+            ratio = (inflation_index - 2.20) / 1.80
+            faucet_mult = round(0.72 - 0.27 * ratio, 2)   # 0.45 ~ 0.72
+            sink_mult = round(1.45 + 0.75 * ratio, 2)     # 1.45 ~ 2.20
             summary = f"全服处于高通胀状态（通胀指数 {inflation_index}），已强力收紧产出并提升高阶消费回收池"
+        else:
+            phase = "💥 恶性通胀熔断期"
+            phase_code = "hyper_inflation"
+            ratio = min(1.0, (inflation_index - 4.00) / 4.00)  # 4.00 ~ 8.00 强效持续压制
+            faucet_mult = round(max(0.12, 0.42 - 0.30 * ratio), 2)   # 0.12 ~ 0.42 (强力锁水龙头!)
+            sink_mult = round(min(4.50, 2.20 + 2.00 * ratio), 2)     # 2.20 ~ 4.20 (强效大额抽水!)
+            summary = f"全服处于重度通胀状态（通胀指数 {inflation_index}），已启动高压熔断：产出极速收紧至 {faucet_mult}x，金币回收池全面升温至 {sink_mult}x"
 
         # 贫富分化修正：若前 10% 巨鲸垄断超 70% 财富且处于稳态/通胀期，额外上调回收消耗率抑制巨鲸囤币
         if player_count >= 10 and top10_share >= 0.70 and inflation_index >= 0.85:
@@ -988,10 +1010,10 @@ def build_realtime_preset(base_mode="casual", metrics=None):
     sink_mult = float(metrics.get("sink_mult", 1.0))
 
     if sink_mult > 1.0:
-        # 通胀期：前期不变（1.0x），中期平缓（+40%），后期跳高（+160%）
-        starter_sink_mult = 1.0
-        mid_sink_mult = round(1.0 + (sink_mult - 1.0) * 0.40, 2)
-        late_sink_mult = round(1.0 + (sink_mult - 1.0) * 1.60, 2)
+        # 通胀期：前期微幅联动（+15%），中期吸收（+65%），后期强效跳高（+170%）
+        starter_sink_mult = round(1.0 + (sink_mult - 1.0) * 0.15, 2)
+        mid_sink_mult = round(1.0 + (sink_mult - 1.0) * 0.65, 2)
+        late_sink_mult = round(1.0 + (sink_mult - 1.0) * 1.70, 2)
     else:
         # 通缩/开荒期：全员享受降价优惠
         starter_sink_mult = sink_mult
@@ -1005,7 +1027,11 @@ def build_realtime_preset(base_mode="casual", metrics=None):
         if sec in preset and key in preset[sec]:
             try:
                 base_v = int(float(preset[sec][key]))
-                eff_faucet = 1.0 if (faucet_mult < 1.0 and (sec, key) in _STARTER_FAUCET_KEYS) else faucet_mult
+                if faucet_mult < 1.0 and (sec, key) in _STARTER_FAUCET_KEYS:
+                    # 恶性通胀期（<0.5x）新手基础福利也适度紧缩（保底 50%），普通通胀期保持 1.0x
+                    eff_faucet = max(0.50, round(faucet_mult * 1.5, 2)) if faucet_mult < 0.50 else 1.0
+                else:
+                    eff_faucet = faucet_mult
                 preset[sec][key] = str(_clean_round(base_v, eff_faucet))
             except Exception:
                 pass
@@ -1258,8 +1284,11 @@ def maybe_realtime_tick(force=False):
             base_mode = "casual"
         prev_meta = ST._CONFIG.get("_realtime_balance_meta") or {}
         metrics = compute_realtime_economy(base_mode)
+        prev_idx = float(prev_meta.get("inflation_index", -1))
+        curr_idx = float(metrics.get("inflation_index", 0.0))
         if (
             force
+            or abs(curr_idx - prev_idx) >= 0.1
             or float(prev_meta.get("faucet_mult", -1)) != float(metrics.get("faucet_mult", 1.0))
             or float(prev_meta.get("sink_mult", -1)) != float(metrics.get("sink_mult", 1.0))
         ):

@@ -61,15 +61,15 @@
       },
       "抽武器R概率": {
         "type": "int",
-        "default": 45
+        "default": 80
       },
       "抽武器SR概率": {
         "type": "int",
-        "default": 40
+        "default": 19
       },
       "抽武器SSR概率": {
         "type": "int",
-        "default": 15
+        "default": 1
       },
       "R经验": {
         "type": "int",
@@ -1240,9 +1240,9 @@
         "desc": "设置欢迎坐骑的用户在冷却后发消息入场时，是否发放金币奖励（真/假）"
       },
       "欢迎冷却小时": {
-        "type": "int",
-        "default": 3,
-        "desc": "欢迎坐骑入场触发的冷却间隔（小时，默认 3 小时）"
+        "type": "float",
+        "default": 1,
+        "desc": "欢迎坐骑入场触发的冷却间隔（小时，默认 1 小时）"
       },
       "欢迎金币除数": {
         "type": "int",

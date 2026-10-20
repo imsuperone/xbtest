@@ -597,7 +597,7 @@ def cmd_recycle_welcome(gid, qq, name):
 
 
 def check_welcome(gid, qq):
-    """欢迎坐骑触发: 用户 3 小时内第一次出现(发消息)时, 若设置了欢迎坐骑则推送一次。
+    """欢迎坐骑触发: 用户 1 小时内第一次出现(发消息)时, 若设置了欢迎坐骑则推送一次。
     返回 (文本, [图片]) 或 None。由 main._dispatch 在收到群消息时调用。欢迎文案带群昵称、坐骑图片及微量金币奖励（坐骑价值/5000）。
     维护期直接 None（与 router/_dispatch 维护门同语义，直调也不漏）。"""
     try:
@@ -629,7 +629,7 @@ def check_welcome(gid, qq):
             _last_ts = int(last or "0")
         except Exception:
             _last_ts = 0
-        cooldown_sec = max(60, int(float(_cfg("欢迎冷却小时", 3)) * 3600))
+        cooldown_sec = max(60, int(float(_cfg("欢迎冷却小时", 1)) * 3600))
         if last and now - _last_ts < cooldown_sec:
             return None
         ST.recall_set(key, str(now))
