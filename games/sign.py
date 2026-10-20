@@ -776,6 +776,26 @@ def _rank_by(gid, fn, name, topn=10):
     return _render_rank(lst, name, gid, topn)
 
 
+def cmd_overview_rank(gid):
+    """综合排行榜 / 排行榜：展示财富/签到/魅力榜前三速览与榜单导航"""
+    try:
+        wealth_part = _rank_by(gid, None, "财富", topn=3)
+        sign_part = _rank_by(gid, None, "签到", topn=3)
+        charm_part = _rank_by(gid, None, "魅力", topn=3)
+        out = [
+            wealth_part,
+            "──────────────",
+            sign_part,
+            "──────────────",
+            charm_part,
+            "━━━━━━━━━━━━━━",
+            "💡 发送【财富榜】【签到榜】【魅力榜】【身价榜】【发言榜】查看对应完整榜单，发送【个人排行】查看自身名次"
+        ]
+        return "\r\n".join(out)
+    except Exception as e:
+        return f"获取排行榜失败: {e}"
+
+
 _MENU = (
     "❤️ 签到系统\r\n"
     "━━━━━━━━━━━━━━\r\n"
@@ -783,7 +803,7 @@ _MENU = (
     "🍀 每日打卡　　　👍 赞我\r\n"
     "💪 购买体力 数量　购买魅力 数量\r\n"
     "🎁 领取新手礼包　👤 我的信息\r\n"
-    "🏆 个人排行　财富榜　签到榜　魅力榜\r\n"
+    "🏆 个人排行　排行榜　财富榜　签到榜　魅力榜\r\n"
     "━━━━━━━━━━━━━━\r\n"
     "💡 发送对应指令即可游玩"
 )
@@ -869,12 +889,18 @@ def handle(gid, qq, raw):
     if text == "每日打卡":
         return cmd_daily_checkin(gid, qq)
     # 排行优先于签到，避免 “签到榜” 误判为签到
-    if text in ("个人财富榜", "财富榜"):
+    if text in ("个人财富榜", "财富榜", "财富排行榜", "财富排行"):
         return cmd_rank(gid, "cash", None)
-    if text == "签到榜":
+    if text in ("签到榜", "签到排行榜", "签到排行", "连签榜", "连签排行"):
         return cmd_rank(gid, "sign", None)
-    if text in ("魅力排行榜", "魅力榜"):
+    if text in ("魅力排行榜", "魅力榜", "魅力排行"):
         return cmd_rank(gid, "charm", None)
+    if text in ("发言榜", "发言排行榜", "发言排行"):
+        return cmd_rank(gid, "talk", None)
+    if text in ("个人排行", "我的排行"):
+        return cmd_mine_rank(gid, qq)
+    if text in ("排行榜", "综合排行榜", "综合榜", "榜单"):
+        return cmd_overview_rank(gid)
     if text in ("签到", "打卡"):
         return cmd_sign(gid, qq)
     if text in ("个人排行", "我的排行"):
@@ -910,9 +936,11 @@ def handle(gid, qq, raw):
 # 显式指令注册表（V8 起为唯一词表来源：engine_commands 与 _collect_commands 同读此表）。
 # 与 handle 内分支逐字对应，增删指令时两处同改。
 COMMANDS = (
-    "个人财富榜", "财富榜",
-    "签到榜",
-    "魅力排行榜", "魅力榜",
+    "个人财富榜", "财富榜", "财富排行榜", "财富排行",
+    "签到榜", "签到排行榜", "签到排行", "连签榜", "连签排行",
+    "魅力排行榜", "魅力榜", "魅力排行",
+    "发言榜", "发言排行榜", "发言排行",
+    "排行榜", "综合排行榜", "综合榜", "榜单",
     "每日打卡",
     "签到", "打卡",
     "个人排行", "我的排行",

@@ -23,7 +23,7 @@ from .combat import (
 from ..config.slave import SHIELD_TREASURE, TREASURE_GOURD_NAME
 from .gacha import _gacha_pool, _img_path, _weapon_img_path, cmd_gacha, cmd_starup, cmd_treasure_menu, cmd_treasure_up, cmd_weapon_menu
 from .nick import clear_note_name, mark_known
-from .profile import cmd_menu, cmd_myinfo, cmd_query, cmd_rank, cmd_rank_price, cmd_rank_sign
+from .profile import cmd_menu, cmd_myinfo, cmd_query, cmd_rank, cmd_rank_price
 from .social import cmd_flatter, cmd_pray, cmd_revolt, cmd_self_work, cmd_study, cmd_work_collect, cmd_work_dispatch
 from .trade import cmd_buy_slave, cmd_buyslot, cmd_freedom, cmd_protect, cmd_ransom, cmd_release, cmd_torture
 from .slave_state import _resolve_persistent_data_dir
@@ -81,9 +81,7 @@ _ROUTE_EXACT = {
     "宝物菜单": lambda gid, qq, target, st, text: cmd_treasure_menu(gid, qq, st),
     "身价排行榜": lambda gid, qq, target, st, text: cmd_rank_price(gid, st),
     "身价排行": lambda gid, qq, target, st, text: cmd_rank_price(gid, st),
-    "签到排行榜": lambda gid, qq, target, st, text: cmd_rank_sign(gid, st),
-    "签到排行": lambda gid, qq, target, st, text: cmd_rank_sign(gid, st),
-    "排行榜": lambda gid, qq, target, st, text: cmd_rank(gid, st),
+    "身价榜": lambda gid, qq, target, st, text: cmd_rank_price(gid, st),
     "奴隶打工": lambda gid, qq, target, st, text: cmd_work_dispatch(gid, qq, st),
     "我要打工": lambda gid, qq, target, st, text: cmd_work_dispatch(gid, qq, st),
     "奴隶收工": lambda gid, qq, target, st, text: cmd_work_collect(gid, qq, st),
@@ -439,9 +437,9 @@ COMMANDS = (
     "宝物升阶", "升阶", "我要造反", "造反", "讨好主人", "讨好",
     "我要学习", "学习", "我要祈福", "祈福",
     # V8 并入：原正则刮词域（与 handle/_ROUTE_EXACT 分支对应），路由前缀词回归显式表
-    "排行榜", "奴隶打工", "我要打工", "奴隶收工", "搬砖",
+    "奴隶打工", "我要打工", "奴隶收工", "搬砖",
     "武器菜单", "宝物菜单",
-    "我要自由", "身价排行", "身价排行榜", "签到排行", "签到排行榜",
+    "我要自由", "身价排行", "身价排行榜", "身价榜",
     # 宝物直接发送名字查询（带【】或不带）
     "酒神葫芦", "四象护符", "金蟾", "玉如意", "雷公锤", "夜明珠",
     "【酒神葫芦】", "【四象护符】", "【金蟾】", "【玉如意】", "【雷公锤】", "【夜明珠】",

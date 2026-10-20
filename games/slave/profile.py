@@ -220,37 +220,11 @@ def cmd_rank_price(gid, st):
     for i, (p, q) in enumerate(lst, 1):
         out.append(f"{i}. [{uname(st, q)}] {store.fmt_coins(p)}")
     return "\r\n".join(out)
-def cmd_rank_sign(gid, st):
-    """签到排行榜：统一委托 sign.cmd_rank(gid, 'sign', st)，与【签到榜】完全同源"""
-    try:
-        try:
-            from ..sign import cmd_rank as _sign_rank
-        except ImportError:
-            from games.sign import cmd_rank as _sign_rank  # type: ignore
-        return _sign_rank(gid, "sign", st)
-    except Exception:
-        lst = []
-        for q in st.sections():
-            if not q.isdigit():
-                continue
-            if _S.is_bot_qq(q):
-                continue
-            try:
-                acct = ST.acct(gid, q)
-                dcount = max(
-                    int(uget(st[q], "total_sign_days", "0") or 0),
-                    acct.int("sign_count"),
-                    acct.int("total_sign_days"),
-                )
-            except Exception:
-                dcount = 0
-            lst.append((dcount, q))
-        lst.sort(reverse=True)
-        out = ["📅 签到排行榜"]
-        for i, (dcount, q) in enumerate(lst[:10], 1):
-            out.append(f"{i}. [{uname(st, q)}] {dcount}天")
-        return "\r\n".join(out)
-def cmd_rank(gid, st):
-    return cmd_rank_price(gid, st) + "\r\n\r\n" + cmd_rank_sign(gid, st)
 
-__all__ = ["cmd_menu", "cmd_myinfo", "cmd_query", "cmd_rank", "cmd_rank_price", "cmd_rank_sign", "coin_name"]
+
+def cmd_rank(gid, st):
+    """奴隶系统排行榜：仅展示奴隶身价排行"""
+    return cmd_rank_price(gid, st)
+
+
+__all__ = ["cmd_menu", "cmd_myinfo", "cmd_query", "cmd_rank", "cmd_rank_price", "coin_name"]
