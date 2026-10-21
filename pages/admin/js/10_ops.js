@@ -797,6 +797,139 @@ initLogsEvents();
 // ---------- 对齐官方最新版本内容事件绑定 ----------
 function initAlignLatestEvents() {
   const btn = document.getElementById("btnAlignLatest");
+  const btnPreview = document.getElementById("btnAlignPreview");
+  const diffBox = document.getElementById("alignDiffBox");
+  const diffContent = document.getElementById("alignDiffContent");
+  const pillsBox = document.getElementById("alignDiffSummaryPills");
+  const verBadge = document.getElementById("alignOffVerBadge");
+
+  // 绑定多选卡片选中高亮状态
+  const cards = document.querySelectorAll(".align-opt-card");
+  cards.forEach(card => {
+    const cb = card.querySelector('input[type="checkbox"]');
+    if (!cb) return;
+    card.classList.toggle("checked", cb.checked);
+    cb.addEventListener("change", () => {
+      card.classList.toggle("checked", cb.checked);
+    });
+  });
+
+  let _previewCache = null;
+
+  async function loadAlignPreview(silent = false) {
+    try {
+      if (!silent) toast("正在获取版本差异明细…", "ok");
+      const res = await getBridge().apiGet("system/align_preview", {});
+      if (!res || !res.ok) throw new Error(res?.error || "获取差异失败");
+      _previewCache = res;
+
+      if (verBadge) {
+        verBadge.textContent = `官方基准：${res.official_version || "最新"} (${res.official_updated_at || "2026-10-21"})`;
+      }
+
+      if (diffContent) {
+        let html = "";
+        const ps = res.preset_summary || {};
+        const rd = res.riddles_summary || {};
+        const rs = res.rides_summary || {};
+        const ws = res.weapons_summary || {};
+
+        if (pillsBox) {
+          pillsBox.innerHTML = `
+            <span class="align-badge align-badge-info">待更新: ${ps.will_update || 0}</span>
+            <span class="align-badge align-badge-safe">无变化: ${ps.unchanged || 0}</span>
+            <span class="align-badge align-badge-protect">用户自定义锁: ${ps.custom_locked || 0}</span>
+          `;
+        }
+
+        // 题库概览
+        html += `<div style="margin-bottom:12px;padding:10px 12px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);border-radius:8px">
+          <div style="font-weight:600;color:var(--ok);margin-bottom:4px">🧩 娱乐题库（官方标准 ${rd.official_total || 0} 道 / 本地活跃 ${rd.active_total || 0} 道）</div>
+          <div style="color:var(--muted);font-size:12px">
+            自建题目保留: <b>${rd.custom_total || 0}</b> 道 | 官方修正/增量题: <b>${rd.to_fix_total || 0}</b> 道（对齐后将自动纠错官方题干与答案）
+          </div>
+        </div>`;
+
+        // 坐骑与武器概览
+        html += `<div style="margin-bottom:12px;display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:8px">
+          <div style="padding:8px 12px;background:var(--cardBg, var(--panel));border:1px solid var(--line);border-radius:8px">
+            <div style="font-weight:600">🐎 官方默认坐骑（${rs.official_count || 10} 款）</div>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px">本地共有 ${rs.active_count || 0} 款（含自建 ${rs.custom_count || 0} 款 🔒 保留）</div>
+          </div>
+          <div style="padding:8px 12px;background:var(--cardBg, var(--panel));border:1px solid var(--line);border-radius:8px">
+            <div style="font-weight:600">⚔️ 内置武器属性（${ws.official_count || 42} 款）</div>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px">本地共有 ${ws.active_count || 0} 款（含自建 ${ws.custom_count || 0} 款 🔒 保留）</div>
+          </div>
+        </div>`;
+
+        // 数值预设对比
+        html += `<div style="font-weight:600;margin-bottom:6px">⚖️ 数值平衡与经济规则逐项对比：</div>`;
+        const diffs = res.diff_details || [];
+        if (diffs.length === 0) {
+          html += `<div style="color:var(--muted);padding:8px">暂无数值差异</div>`;
+        } else {
+          html += `<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden">`;
+          diffs.forEach(it => {
+            if (it.status === "custom_locked") {
+              html += `<div class="align-diff-item custom-locked">
+                <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
+                <div class="align-diff-vals">
+                  <span class="align-val-locked">${esc(it.current)}</span>
+                  <span class="align-badge align-badge-protect" style="font-size:10.5px">用户自定义 🔒 保留</span>
+                </div>
+              </div>`;
+            } else if (it.status === "unchanged") {
+              html += `<div class="align-diff-item">
+                <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
+                <div class="align-diff-vals">
+                  <span style="color:var(--muted)">${esc(it.current)}</span>
+                  <span style="color:var(--ok);font-weight:bold">✓</span>
+                </div>
+              </div>`;
+            } else {
+              html += `<div class="align-diff-item will-update">
+                <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
+                <div class="align-diff-vals">
+                  <span class="align-val-old">${esc(it.current)}</span>
+                  <span class="align-val-arrow">→</span>
+                  <span class="align-val-new">${esc(it.official)}</span>
+                </div>
+              </div>`;
+            }
+          });
+          html += `</div>`;
+        }
+
+        diffContent.innerHTML = html;
+      }
+      return true;
+    } catch (err) {
+      if (!silent) toast("拉取差异预览失败: " + err.message, "bad");
+      if (diffContent) {
+        diffContent.innerHTML = `<div style="color:var(--bad)">拉取差异失败: ${esc(err.message)}</div>`;
+      }
+      return false;
+    }
+  }
+
+  // 展开 / 折叠差异对比抽屉
+  if (btnPreview) {
+    btnPreview.addEventListener("click", async () => {
+      if (!diffBox) return;
+      if (diffBox.style.display === "none" || !diffBox.style.display) {
+        diffBox.style.display = "block";
+        btnPreview.innerHTML = `<span>🔼</span> 收起变更差异`;
+        await loadAlignPreview(false);
+      } else {
+        diffBox.style.display = "none";
+        btnPreview.innerHTML = `<span>🔍</span> 查看变更差异 (Diff)`;
+      }
+    });
+  }
+
+  // 页面就绪后静默获取一次版本号
+  setTimeout(() => { loadAlignPreview(true); }, 800);
+
   if (!btn) return;
   btn.addEventListener("click", async () => {
     const targets = [];
@@ -813,9 +946,10 @@ function initAlignLatestEvents() {
     const doBackup = document.getElementById("alignOptBackup")?.checked ?? true;
     const ok = await uiConfirm(
       `确定要对齐选中的 ${targets.length} 项官方最新内容吗？\n\n` +
-      `• 系统将自动合并最新官方数据并修复错漏题目\n` +
+      `• 系统将自动合并最新官方数据并修复错漏题目（如急转弯英文字母等）\n` +
       `• 100% 完整保留您的所有自定义坐骑、自建题目与上传图片\n` +
-      (doBackup ? `• 执行前将自动创建备份快照，可随时回滚` : ``),
+      `• 用户手动调整过的数值配置已受自定义锁保护，不会被官方覆盖\n` +
+      (doBackup ? `• 执行前将自动创建备份快照，可随时在备份管理中一键回滚` : ``),
       "确认对齐最新版本"
     );
     if (!ok) return;
@@ -830,7 +964,8 @@ function initAlignLatestEvents() {
       toast("正在对齐官方最新版本内容…", "ok");
       const res = await getBridge().apiPost("system/align_defaults", {
         targets: targets,
-        backup: doBackup
+        backup: doBackup,
+        force_custom: false
       });
 
       if (!res || !res.ok) {
@@ -867,6 +1002,11 @@ function initAlignLatestEvents() {
           ${bText}
         `;
         resBox.style.display = "block";
+      }
+
+      // 对齐成功后刷新差异面板
+      if (diffBox && diffBox.style.display !== "none") {
+        await loadAlignPreview(true);
       }
     } catch (e) {
       toast("对齐失败: " + e.message, "bad");

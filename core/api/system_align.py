@@ -29,6 +29,226 @@ try:
 except ImportError:
     from core.api.snapshots import _snap_name, _snap_index, _snap_index_save  # type: ignore
 
+try:
+    from .balance import PRESETS
+except ImportError:
+    try:
+        from core.api.balance import PRESETS  # type: ignore
+    except ImportError:
+        PRESETS = {}
+
+try:
+    from ..version import get_version
+except ImportError:
+    try:
+        from core.version import get_version  # type: ignore
+    except ImportError:
+        def get_version(p=""):
+            return "26w1021l"
+
+
+OFFICIAL_UPDATE_DATE = "2026-10-21"
+
+
+async def handle_align_preview(request=None, plugin_base=""):
+    """
+    只读预览官方最新版本差异（不修改任何本地数据）：
+    - 呈现官方基准版本与发布时间
+    - 逐项对比数值预设（清晰标记：[用户自定义 🔒 保留] / [✓ 无变化] / [待更新：当前值 → 官方新值]）
+    - 统计娱乐题库各分类当前题目数、官方题目数、自建题目数及待校准修复数
+    - 统计坐骑与抽卡武器官方预设与用户自建数量
+    """
+    base_dir = plugin_base or plugin_root(__file__)
+    ver = get_version(base_dir)
+
+    # 1. 数值平衡与基础设置对比
+    custom_keys = (getattr(ST, "_CONFIG", {}) or {}).get("_custom_keys") or {}
+    std_preset = PRESETS.get("standard", {}) if isinstance(PRESETS, dict) else {}
+
+    diff_details = []
+    preset_summary = {
+        "total": 0,
+        "will_update": 0,
+        "unchanged": 0,
+        "custom_locked": 0,
+    }
+
+    # 优先挑选玩家最关注的核心参数进行顺序展示
+    priority_sections = ["设置", "费用配置", "银行配置", "娱乐配置", "签到配置", "抽奖配置", "精灵配置"]
+    ordered_secs = [s for s in priority_sections if s in std_preset] + [s for s in std_preset if s not in priority_sections]
+
+    for sec in ordered_secs:
+        kv = std_preset.get(sec, {})
+        if not isinstance(kv, dict):
+            continue
+        cur_sec = (getattr(ST, "_CONFIG", {}) or {}).get(sec, {}) or {}
+        for k, off_val in kv.items():
+            preset_summary["total"] += 1
+            cur_val = cur_sec.get(k)
+            s_cur = str(cur_val) if cur_val is not None else "(未设置)"
+            s_off = str(off_val)
+            full_k = f"{sec}.{k}"
+            is_custom = full_k in custom_keys
+
+            if is_custom:
+                status = "custom_locked"
+                preset_summary["custom_locked"] += 1
+            elif s_cur == s_off:
+                status = "unchanged"
+                preset_summary["unchanged"] += 1
+            else:
+                status = "will_update"
+                preset_summary["will_update"] += 1
+
+            diff_details.append({
+                "section": sec,
+                "key": k,
+                "current": s_cur,
+                "official": s_off,
+                "is_custom": is_custom,
+                "status": status,
+            })
+
+    # 2. 娱乐题库对比
+    seed_dir = os.path.join(base_dir, "data", "seeds", "questions")
+    q_dir = os.path.join(base_dir, "data", "questions")
+    riddles_banks = {}
+    total_q_official = 0
+    total_q_active = 0
+    total_q_custom = 0
+    total_q_to_fix = 0
+
+    for b_key, meta in _BANK_MAP.items():
+        fname = meta["file"]
+        seed_file = os.path.join(seed_dir, fname)
+        active_file = os.path.join(q_dir, fname)
+
+        seed_items = []
+        if os.path.isfile(seed_file):
+            try:
+                with open(seed_file, "r", encoding="utf-8") as sf:
+                    seed_items = json.load(sf)
+            except Exception:
+                seed_items = []
+
+        active_items = []
+        if os.path.isfile(active_file):
+            try:
+                with open(active_file, "r", encoding="utf-8") as af:
+                    active_items = json.load(af)
+            except Exception:
+                active_items = []
+
+        is_qa = meta.get("is_qa", True)
+        custom_cnt = 0
+        to_fix_cnt = 0
+
+        if is_qa:
+            seed_map = {it["q"].strip().lower(): it for it in seed_items if isinstance(it, dict) and it.get("q")}
+            for it in active_items:
+                if isinstance(it, dict) and it.get("q"):
+                    qk = it["q"].strip().lower()
+                    if qk in seed_map:
+                        off_ans = str(seed_map[qk].get("a") or "").strip()
+                        act_ans = str(it.get("a") or "").strip()
+                        if off_ans != act_ans:
+                            to_fix_cnt += 1
+                    else:
+                        custom_cnt += 1
+            # 官方新增题
+            new_seed_cnt = len([k for k in seed_map if not any(isinstance(x, dict) and x.get("q", "").strip().lower() == k for x in active_items)])
+            to_fix_cnt += new_seed_cnt
+        else:
+            seed_set = {str(w).strip().lower() for w in seed_items if str(w).strip()}
+            for it in active_items:
+                w = str(it).strip().lower()
+                if w and w not in seed_set:
+                    custom_cnt += 1
+            new_seed_cnt = len([w for w in seed_set if not any(str(x).strip().lower() == w for x in active_items)])
+            to_fix_cnt += new_seed_cnt
+
+        riddles_banks[meta["name"]] = {
+            "key": b_key,
+            "file": fname,
+            "active_count": len(active_items),
+            "official_count": len(seed_items),
+            "custom_count": custom_cnt,
+            "to_fix_count": to_fix_cnt,
+        }
+        total_q_official += len(seed_items)
+        total_q_active += len(active_items)
+        total_q_custom += custom_cnt
+        total_q_to_fix += to_fix_cnt
+
+    # 3. 官方坐骑对比
+    try:
+        try:
+            from ...games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP
+        except ImportError:
+            from games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP  # type: ignore
+    except Exception:
+        OFF_RIDE_SHOP = {}
+
+    raw_rides = ST.cfg("商城图鉴", "ride_shop", {})
+    cur_rides = {}
+    if isinstance(raw_rides, dict):
+        cur_rides = raw_rides
+    elif isinstance(raw_rides, str) and raw_rides.strip():
+        try:
+            cur_rides = json.loads(raw_rides)
+        except Exception:
+            cur_rides = {}
+
+    custom_rides_cnt = len([k for k in cur_rides if k not in OFF_RIDE_SHOP])
+    rides_summary = {
+        "official_count": len(OFF_RIDE_SHOP),
+        "active_count": len(cur_rides),
+        "custom_count": custom_rides_cnt,
+    }
+
+    # 4. 武器属性对比
+    try:
+        try:
+            from ...games.config.shop import DEFAULT_WEAPON_ATTRS
+        except ImportError:
+            from games.config.shop import DEFAULT_WEAPON_ATTRS  # type: ignore
+    except Exception:
+        DEFAULT_WEAPON_ATTRS = {}
+
+    raw_w = ST.cfg("商城图鉴", "weapon_attrs", {})
+    cur_w = {}
+    if isinstance(raw_w, dict):
+        cur_w = raw_w
+    elif isinstance(raw_w, str) and raw_w.strip():
+        try:
+            cur_w = json.loads(raw_w)
+        except Exception:
+            cur_w = {}
+
+    custom_weapons_cnt = len([k for k in cur_w if k not in DEFAULT_WEAPON_ATTRS])
+    weapons_summary = {
+        "official_count": len(DEFAULT_WEAPON_ATTRS),
+        "active_count": len(cur_w),
+        "custom_count": custom_weapons_cnt,
+    }
+
+    return json_response({
+        "ok": True,
+        "official_version": ver,
+        "official_updated_at": OFFICIAL_UPDATE_DATE,
+        "preset_summary": preset_summary,
+        "diff_details": diff_details,
+        "riddles_summary": {
+            "official_total": total_q_official,
+            "active_total": total_q_active,
+            "custom_total": total_q_custom,
+            "to_fix_total": total_q_to_fix,
+            "banks": riddles_banks,
+        },
+        "rides_summary": rides_summary,
+        "weapons_summary": weapons_summary,
+    })
+
 
 async def handle_align_defaults(request=None, plugin_base=""):
     """
@@ -39,6 +259,7 @@ async def handle_align_defaults(request=None, plugin_base=""):
       - 'presets': 基础数值与经济平衡预设（银行默认利率1%/日结3次、SSR抽卡概率~1%等推荐数值，受自定义保护，不修改用户金币资产）
       - 'weapons': 42款内置武器默认攻击力与描述对齐
     backup: 布尔值，是否在对齐前自动创建安全备份快照（默认 True）
+    force_custom: 布尔值，是否强制覆盖用户自定义项（默认 False，严格保护用户自定义配置）
     """
     data = await get_req_json(request) if request else {}
     if not isinstance(data, dict):
@@ -48,6 +269,7 @@ async def handle_align_defaults(request=None, plugin_base=""):
         targets = [targets]
     targets = [str(t).strip().lower() for t in targets if str(t).strip()]
     do_backup = bool(data.get("backup", True))
+    force_custom = bool(data.get("force_custom", False))
 
     base_dir = plugin_base or plugin_root(__file__)
     pers_dir = ST.get_persistent_data_dir(base_dir) if hasattr(ST, "get_persistent_data_dir") else ""
@@ -257,27 +479,36 @@ async def handle_align_defaults(request=None, plugin_base=""):
     # 4. 对齐基础数值与经济平衡预设 (presets)
     if "presets" in targets or "balance" in targets or "预设" in targets:
         try:
-            customs = ST._CONFIG.get("_custom_keys") or {}
-            # 银行存款利率与每日结息次数规范（尊重用户自定义，仅在未自定义时对齐）
-            if "银行配置.存款利率" not in customs and "银行配置.利率" not in customs:
-                ST.set_ini("银行配置", "存款利率", 1)
-            if "银行配置.每日结息次数" not in customs and "银行配置.日结算上限" not in customs:
-                ST.set_ini("银行配置", "每日结息次数", 3)
-            # 清理历史可能写入的废弃键
-            b_sec = ST._CONFIG.get("银行配置", {})
-            b_sec.pop("利率上限", None)
-            b_sec.pop("日结算上限", None)
+            customs = (getattr(ST, "_CONFIG", {}) or {}).get("_custom_keys") or {}
+            std_preset = PRESETS.get("standard", {}) if isinstance(PRESETS, dict) else {}
 
-            # 奴隶/抽奖 SSR 概率基准平衡（仅在未自定义时对齐）
-            if "奴隶配置.SSR概率" not in customs:
-                ST.set_ini("奴隶配置", "SSR概率", 1)
-            if "奴隶配置.抽卡模式" not in customs:
-                ST.set_ini("奴隶配置", "抽卡模式", "标准")
+            aligned_keys = 0
+            preserved_keys = 0
+
+            for sec, kv in std_preset.items():
+                if not isinstance(kv, dict):
+                    continue
+                for k, off_val in kv.items():
+                    full_k = f"{sec}.{k}"
+                    if not force_custom and full_k in customs:
+                        preserved_keys += 1
+                        continue
+                    ST.set_ini(sec, k, off_val)
+                    aligned_keys += 1
+
+            # 清理历史废弃键
+            b_sec = (getattr(ST, "_CONFIG", {}) or {}).get("银行配置", {})
+            if isinstance(b_sec, dict):
+                b_sec.pop("利率上限", None)
+                b_sec.pop("日结算上限", None)
+
             ST.save_config()
 
             results["presets"] = {
                 "ok": True,
-                "msg": "已对齐官方最新经济与数值平衡预设（银行默认利率1%/日结3次、SSR抽卡概率~1%等，已保护用户手动自定义项）"
+                "msg": f"已对齐 {aligned_keys} 项官方基准数值，保护保留 {preserved_keys} 项用户手动自定义配置（不受覆盖）",
+                "aligned_keys": aligned_keys,
+                "preserved_keys": preserved_keys
             }
         except Exception as e:
             results["presets"] = {"ok": False, "msg": f"对齐平衡预设失败: {e}"}

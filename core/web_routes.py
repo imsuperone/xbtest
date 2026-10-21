@@ -93,6 +93,7 @@ _XB_API_ROUTES = [
     ("questions/reset", "POST", "page_questions_reset", "恢复默认题库", ("core.api.questions", "handle_questions_reset", "questions reset", {})),
     ("version/align", "POST", "page_version_align", "对齐官方最新版本预设", ("core.api.system_align", "handle_align_defaults", "align defaults", {"with_base": True})),
     ("system/align_defaults", "POST", "page_system_align_defaults", "对齐官方最新版本内容", ("core.api.system_align", "handle_align_defaults", "align defaults", {"with_base": True})),
+    ("system/align_preview", "GET,POST", "page_system_align_preview", "预览官方最新版本差异", ("core.api.system_align", "handle_align_preview", "align preview", {"with_base": True})),
 ]
 
 # WebDAV 双前缀别名表（backup/ 与 backups/ 同义，由循环展开注册）

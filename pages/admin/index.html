@@ -818,35 +818,60 @@
         </div>
 
         <!-- 对齐官方最新版本内容卡片 -->
-        <div class="panel" style="margin-top:16px;background:var(--cardBg, var(--panel));border:1px solid var(--line);border-radius:16px;padding:20px">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+        <div class="panel" style="margin-top:16px;background:var(--cardBg, var(--panel));border:1px solid var(--line);border-radius:16px;padding:22px">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
             <div>
-              <h3 style="margin:0;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px">
+              <h3 style="margin:0;font-size:16.5px;font-weight:700;display:flex;align-items:center;gap:8px">
                 <span>📦</span> 对齐官方最新版本内容
+                <span id="alignOffVerBadge" class="align-badge align-badge-info" style="font-size:11.5px">官方基准：加载中...</span>
               </h3>
-              <div style="color:var(--muted);font-size:12px;margin-top:3px">
-                插件更新后，您可自由勾选将官方最新内容同步到当前运行环境；系统采用非破坏性智能合并，<b>绝不覆盖或删除您的任何自定义内容</b>。
+              <div style="color:var(--muted);font-size:12.5px;margin-top:4px">
+                插件升级后，您可自主选择将官方最新基准同步至当前环境；系统采用非破坏性增量合并，<b>100% 保护您的所有自定义内容与自建数据</b>。
               </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button id="btnAlignPreview" type="button" class="btn" style="padding:7px 14px;font-size:12.5px;background:var(--panel);border:1px solid var(--line);color:var(--text);display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+                <span>🔍</span> 查看变更差异 (Diff)
+              </button>
+            </div>
+          </div>
+
+          <!-- 差异对比可折叠面板 (Diff Drawer) -->
+          <div id="alignDiffBox" style="display:none;margin-bottom:16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden">
+            <div style="padding:10px 14px;background:rgba(0,0,0,0.03);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <div style="font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px">
+                <span>📊</span> 官方最新标准 vs 本地运行环境差异清单
+              </div>
+              <div id="alignDiffSummaryPills" style="display:flex;gap:6px;font-size:11.5px;flex-wrap:wrap"></div>
+            </div>
+            <div id="alignDiffContent" style="padding:12px 14px;max-height:360px;overflow-y:auto;font-size:12.5px;line-height:1.6">
+              正在加载版本差异预览...
             </div>
           </div>
 
           <div style="display:flex;flex-direction:column;gap:12px">
             <!-- 勾选项 1: 题库 -->
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer">
-              <input type="checkbox" id="alignOptRiddles" checked style="width:18px;height:18px;margin-top:2px;cursor:pointer">
+            <label class="align-opt-card checked" for="alignOptRiddles">
+              <input type="checkbox" id="alignOptRiddles" checked>
               <div style="flex:1">
-                <div style="font-weight:600;font-size:13.5px">🧩 官方娱乐题库（急转弯、猜字谜、知识问答、成语接龙）</div>
+                <div class="align-opt-title-row">
+                  <span style="font-weight:600;font-size:14px">🧩 官方娱乐题库（急转弯、猜字谜、知识问答、成语接龙）</span>
+                  <span class="align-badge align-badge-safe">增量修复 · 100%保留自建</span>
+                </div>
                 <div style="font-size:12px;color:var(--muted);margin-top:2px">
-                  纠错官方题干与答案（如世界上哪个英文字母最多人戴等逻辑修正），增量合并官方新题；<b>100% 保留所有用户自建与导入的题目</b>。
+                  纠错官方题干与答案（如“英文字母最多人戴”等逻辑修正），增量合并官方新题；<b>100% 完整保留用户自建与导入的所有题目</b>。
                 </div>
               </div>
             </label>
 
             <!-- 勾选项 2: 坐骑 -->
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer">
-              <input type="checkbox" id="alignOptRides" checked style="width:18px;height:18px;margin-top:2px;cursor:pointer">
+            <label class="align-opt-card checked" for="alignOptRides">
+              <input type="checkbox" id="alignOptRides" checked>
               <div style="flex:1">
-                <div style="font-weight:600;font-size:13.5px">🐎 官方默认坐骑数据与预设图片</div>
+                <div class="align-opt-title-row">
+                  <span style="font-weight:600;font-size:14px">🐎 官方默认坐骑数据与预设图片</span>
+                  <span class="align-badge align-badge-safe">图片双重持久化 · 自建坐骑保留</span>
+                </div>
                 <div style="font-size:12px;color:var(--muted);margin-top:2px">
                   对齐 10 款官方默认坐骑的基础售价、加成定位与高清预设图片；<b>100% 保留所有用户自定义新增的坐骑及用户自行绑定的图片</b>。
                 </div>
@@ -854,23 +879,29 @@
             </label>
 
             <!-- 勾选项 3: 平衡预设 -->
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer">
-              <input type="checkbox" id="alignOptPresets" style="width:18px;height:18px;margin-top:2px;cursor:pointer">
+            <label class="align-opt-card" for="alignOptPresets">
+              <input type="checkbox" id="alignOptPresets">
               <div style="flex:1">
-                <div style="font-weight:600;font-size:13.5px">⚖️ 基础数值与经济平衡预设</div>
+                <div class="align-opt-title-row">
+                  <span style="font-weight:600;font-size:14px">⚖️ 基础数值与经济平衡预设</span>
+                  <span class="align-badge align-badge-protect">用户自定义项受锁保护 🔒</span>
+                </div>
                 <div style="font-size:12px;color:var(--muted);margin-top:2px">
-                  对齐官方推荐基准（银行默认利率1%、每日利息结算上限3次、SSR抽卡概率~1%等）；<b>受自定义保护，不会修改玩家已有资产或覆盖用户手动调控的利息</b>。
+                  对齐官方推荐基准（银行默认利率1%、每日利息结算上限3次、SSR抽卡概率~1%等）；<b>已保护自定义配置，绝不覆盖用户手动调控的利息或自定义数值</b>。
                 </div>
               </div>
             </label>
 
             <!-- 勾选项 4: 武器池默认属性 -->
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer">
-              <input type="checkbox" id="alignOptWeapons" style="width:18px;height:18px;margin-top:2px;cursor:pointer">
+            <label class="align-opt-card" for="alignOptWeapons">
+              <input type="checkbox" id="alignOptWeapons">
               <div style="flex:1">
-                <div style="font-weight:600;font-size:13.5px">⚔️ 武器池内置默认属性</div>
+                <div class="align-opt-title-row">
+                  <span style="font-weight:600;font-size:14px">⚔️ 武器池内置默认属性</span>
+                  <span class="align-badge align-badge-info">42款内置官方标准</span>
+                </div>
                 <div style="font-size:12px;color:var(--muted);margin-top:2px">
-                  将 42 款内置武器（SSR/SR/R）默认攻击力与描述同步为最新官方标准；<b>保留用户自定义的武器与新增属性</b>。
+                  将 42 款内置武器（SSR/SR/R）默认攻击力与描述同步为最新官方标准；<b>保留用户自定义的所有武器与新增属性</b>。
                 </div>
               </div>
             </label>

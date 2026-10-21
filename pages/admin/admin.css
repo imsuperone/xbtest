@@ -5282,4 +5282,125 @@
   }
 }
 
+/* ==========================================================================
+ * 官方最新版本对齐卡片与差异对比 (System Align)
+ * ========================================================================== */
+.align-opt-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+.align-opt-card:hover {
+  border-color: var(--acc, #3b82f6);
+  background: rgba(99, 102, 241, 0.03);
+}
+.align-opt-card.checked {
+  border-color: var(--acc, #3b82f6);
+  background: rgba(99, 102, 241, 0.05);
+}
+.align-opt-card input[type="checkbox"] {
+  width: 20px !important;
+  height: 20px !important;
+  margin-top: 2px !important;
+  border: 2px solid var(--outline, #94a3b8) !important;
+  border-radius: 5px !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.align-opt-card input[type="checkbox"]:checked {
+  background-color: var(--acc, #3b82f6) !important;
+  border-color: var(--acc, #3b82f6) !important;
+}
+.align-opt-card input[type="checkbox"]:checked::after {
+  content: "" !important;
+  width: 5px !important;
+  height: 10px !important;
+  border: solid #ffffff !important;
+  border-width: 0 2.5px 2.5px 0 !important;
+  transform: rotate(45deg) !important;
+  margin-bottom: 2px !important;
+}
+.align-opt-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.align-badge {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.align-badge-safe {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+.align-badge-protect {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.align-badge-info {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.align-diff-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.align-diff-item:last-child {
+  border-bottom: none;
+}
+.align-diff-item.will-update {
+  background: rgba(59, 130, 246, 0.04);
+}
+.align-diff-item.custom-locked {
+  background: rgba(245, 158, 11, 0.05);
+}
+.align-diff-key {
+  font-weight: 500;
+  color: var(--text);
+}
+.align-diff-vals {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.align-val-old {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.align-val-arrow {
+  color: var(--acc, #3b82f6);
+  font-weight: bold;
+}
+.align-val-new {
+  color: var(--ok, #22c55e);
+  font-weight: 600;
+}
+.align-val-locked {
+  color: #d97706;
+  font-weight: 600;
+}
+
 

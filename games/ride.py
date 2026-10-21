@@ -121,12 +121,13 @@ def _refresh_img_bases():
 
 
 def _probe_img_base(base, name):
-    # 单目录单次 isfile 探测（原 isfile+pathlib 双查同义，合并省一半 syscall）
-    # 优先检查主路径，兼容中文文件名编码与多布局
+    # 单目录探测：优先 .jpg，并兼容 .png / .jpeg / .webp 等用户常见上传格式
     try:
-        p = os.path.join(base, str(name) + ".jpg")
-        if os.path.isfile(p):
-            return [p]
+        s_name = str(name)
+        for ext in (".jpg", ".png", ".jpeg", ".webp", ".gif"):
+            p = os.path.join(base, s_name + ext)
+            if os.path.isfile(p):
+                return [p]
     except Exception:
         pass
     return []
