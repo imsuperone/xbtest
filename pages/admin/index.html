@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light dark">
   <title>小白测试版 - 小白机器人</title>
-  <link rel="stylesheet" href="./admin.css?v=26w1021f">
+  <link rel="stylesheet" href="./admin.css?v=26w1021m">
   <!-- 主题色/深浅色优先读取本地缓存实现首帧零阻塞渲染，未缓存时最多挂起 150ms -->
   <style>
     html[data-boot] { visibility: hidden; background: #f4f6f8; }
@@ -40,7 +40,7 @@
           <span class="island-trigger-text">导航</span>
         </button>
         <div class="brand-text">
-          <h1>小白测试版 <span class="version-tag" data-ver="26w1021f">v26w1021f</span></h1>
+          <h1>小白测试版 <span class="version-tag" data-ver="26w1021m">v26w1021m</span></h1>
         </div>
       </div>
       <div class="top-bar-actions" style="position:relative">
@@ -801,8 +801,8 @@
             <div>插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
             <div>仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
             <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-              <div>后端版本：<b id="aboutVersion">v26w1021k</b></div>
-              <div>前端版本：<b id="aboutFrontendVer">v26w1021k</b></div>
+              <div>后端版本：<b id="aboutVersion">v26w1021m</b></div>
+              <div>前端版本：<b id="aboutFrontendVer">v26w1021m</b></div>
             </div>
             <!-- 持久化与升级保障状态徽章 -->
             <div style="margin-top:4px;padding:10px 14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:12.5px;color:var(--text);display:flex;align-items:flex-start;gap:8px">
@@ -884,7 +884,7 @@
               <div style="flex:1">
                 <div class="align-opt-title-row">
                   <span style="font-weight:600;font-size:14px">⚖️ 基础数值与经济平衡预设</span>
-                  <span class="align-badge align-badge-protect">用户自定义项受锁保护 🔒</span>
+                  <span id="alignPresetsBadge" class="align-badge align-badge-safe">官方推荐基准</span>
                 </div>
                 <div style="font-size:12px;color:var(--muted);margin-top:2px">
                   对齐官方推荐基准（银行默认利率1%、每日利息结算上限3次、SSR抽卡概率~1%等）；<b>已保护自定义配置，绝不覆盖用户手动调控的利息或自定义数值</b>。
@@ -908,10 +908,13 @@
           </div>
 
           <!-- 安全备份勾选 -->
-          <div style="margin-top:14px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text)">
-            <input type="checkbox" id="alignOptBackup" checked style="width:16px;height:16px;cursor:pointer">
-            <label for="alignOptBackup" style="cursor:pointer">🛡️ 执行对齐前自动创建安全备份快照（支持一键回滚）</label>
-          </div>
+          <label class="align-backup-row" for="alignOptBackup">
+            <input type="checkbox" id="alignOptBackup" checked>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text)">
+              <span>🛡️</span>
+              <span>执行对齐前自动创建安全备份快照（支持一键回滚 · 防手抖容灾）</span>
+            </div>
+          </label>
 
           <!-- 执行按钮与反馈 -->
           <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -1223,17 +1226,17 @@
       </div>
     </div>
   </div>
-    <script defer src="./js/00_core.js?v=26w1021k"></script>
-  <script defer src="./js/01_theme.js?v=26w1021k"></script>
-  <script defer src="./js/02_export.js?v=26w1021k"></script>
-  <script defer src="./js/03_import.js?v=26w1021k"></script>
-  <script defer src="./js/04_media.js?v=26w1021k"></script>
-  <script defer src="./js/05_config.js?v=26w1021k"></script>
-  <script defer src="./js/06_users.js?v=26w1021k"></script>
-  <script defer src="./js/07_spirit.js?v=26w1021k"></script>
-  <script defer src="./js/08_shop.js?v=26w1021k"></script>
-  <script defer src="./js/09_views.js?v=26w1021k"></script>
-  <script defer src="./js/10_ops.js?v=26w1021k"></script>
-  <script defer src="./js/11_questions.js?v=26w1021k"></script>
+    <script defer src="./js/00_core.js?v=26w1021m"></script>
+  <script defer src="./js/01_theme.js?v=26w1021m"></script>
+  <script defer src="./js/02_export.js?v=26w1021m"></script>
+  <script defer src="./js/03_import.js?v=26w1021m"></script>
+  <script defer src="./js/04_media.js?v=26w1021m"></script>
+  <script defer src="./js/05_config.js?v=26w1021m"></script>
+  <script defer src="./js/06_users.js?v=26w1021m"></script>
+  <script defer src="./js/07_spirit.js?v=26w1021m"></script>
+  <script defer src="./js/08_shop.js?v=26w1021m"></script>
+  <script defer src="./js/09_views.js?v=26w1021m"></script>
+  <script defer src="./js/10_ops.js?v=26w1021m"></script>
+  <script defer src="./js/11_questions.js?v=26w1021m"></script>
 </body>
 </html>

@@ -827,6 +827,17 @@ function initAlignLatestEvents() {
         verBadge.textContent = `官方基准：${res.official_version || "最新"} (${res.official_updated_at || "2026-10-21"})`;
       }
 
+      const presetsBadge = document.getElementById("alignPresetsBadge");
+      if (presetsBadge) {
+        if ((res.preset_summary?.custom_locked || 0) > 0) {
+          presetsBadge.className = "align-badge align-badge-protect";
+          presetsBadge.textContent = `${res.preset_summary.custom_locked} 项自定义项受锁保护 🔒`;
+        } else {
+          presetsBadge.className = "align-badge align-badge-safe";
+          presetsBadge.textContent = "官方推荐基准";
+        }
+      }
+
       if (diffContent) {
         let html = "";
         const ps = res.preset_summary || {};
@@ -863,15 +874,26 @@ function initAlignLatestEvents() {
         </div>`;
 
         // 数值预设对比
-        html += `<div style="font-weight:600;margin-bottom:6px">⚖️ 数值平衡与经济规则逐项对比：</div>`;
         const diffs = res.diff_details || [];
+        html += `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+          <div style="font-weight:600">⚖️ 规则对比明细：</div>
+          <div id="alignDiffFilterBar" style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" class="btn align-filter-chip active" data-filter="update" style="padding:2px 8px;font-size:11px">待更新 (${ps.will_update || 0})</button>
+            <button type="button" class="btn align-filter-chip" data-filter="custom" style="padding:2px 8px;font-size:11px">自定义锁 (${ps.custom_locked || 0})</button>
+            <button type="button" class="btn align-filter-chip" data-filter="same" style="padding:2px 8px;font-size:11px">已一致 (${ps.unchanged || 0})</button>
+            <button type="button" class="btn align-filter-chip" data-filter="all" style="padding:2px 8px;font-size:11px">全部 (${diffs.length})</button>
+          </div>
+        </div>`;
+
         if (diffs.length === 0) {
           html += `<div style="color:var(--muted);padding:8px">暂无数值差异</div>`;
         } else {
-          html += `<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden">`;
+          html += `<div id="alignDiffItemsList" style="border:1px solid var(--line);border-radius:8px;overflow:hidden">`;
           diffs.forEach(it => {
+            const filterTag = it.status === "custom_locked" ? "custom" : (it.status === "unchanged" ? "same" : "update");
+            const hideClass = (filterTag !== "update" && ps.will_update > 0) ? " style=\"display:none\"" : "";
             if (it.status === "custom_locked") {
-              html += `<div class="align-diff-item custom-locked">
+              html += `<div class="align-diff-item custom-locked" data-filter-tag="${filterTag}"${hideClass}>
                 <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
                 <div class="align-diff-vals">
                   <span class="align-val-locked">${esc(it.current)}</span>
@@ -879,15 +901,15 @@ function initAlignLatestEvents() {
                 </div>
               </div>`;
             } else if (it.status === "unchanged") {
-              html += `<div class="align-diff-item">
+              html += `<div class="align-diff-item" data-filter-tag="${filterTag}"${hideClass}>
                 <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
                 <div class="align-diff-vals">
                   <span style="color:var(--muted)">${esc(it.current)}</span>
-                  <span style="color:var(--ok);font-weight:bold">✓</span>
+                  <span style="color:var(--ok);font-weight:bold">✓ 一致</span>
                 </div>
               </div>`;
             } else {
-              html += `<div class="align-diff-item will-update">
+              html += `<div class="align-diff-item will-update" data-filter-tag="${filterTag}"${hideClass}>
                 <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
                 <div class="align-diff-vals">
                   <span class="align-val-old">${esc(it.current)}</span>
@@ -910,6 +932,30 @@ function initAlignLatestEvents() {
       }
       return false;
     }
+  }
+
+  // 差异明细分类过滤按钮点击事件委托
+  if (diffContent) {
+    diffContent.addEventListener("click", (e) => {
+      const chip = e.target.closest(".align-filter-chip");
+      if (!chip) return;
+      const fbar = document.getElementById("alignDiffFilterBar");
+      if (fbar) {
+        fbar.querySelectorAll(".align-filter-chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+      }
+      const filter = chip.getAttribute("data-filter");
+      const list = document.getElementById("alignDiffItemsList");
+      if (!list) return;
+      list.querySelectorAll(".align-diff-item").forEach(item => {
+        const tag = item.getAttribute("data-filter-tag");
+        if (filter === "all" || tag === filter) {
+          item.style.display = "flex";
+        } else {
+          item.style.display = "none";
+        }
+      });
+    });
   }
 
   // 展开 / 折叠差异对比抽屉
