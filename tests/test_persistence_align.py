@@ -127,6 +127,25 @@ class TestPersistenceAndAlign(unittest.TestCase):
         # Penguin price aligned to official standard (213250)
         self.assertEqual(updated_rides["企鹅"]["price"], 213250)
 
+    def test_align_preview_realtime_mode(self):
+        from core.api.system_align import handle_align_preview
+        from core.api.balance import build_realtime_preset
+        
+        # In realtime mode without custom overrides, all standard values should match
+        preset, _, _ = build_realtime_preset("standard")
+        config_data = {sec: dict(kv) for sec, kv in preset.items() if isinstance(kv, dict)}
+        config_data["_balance_control_type"] = "realtime"
+        config_data["_active_balance_mode"] = "standard"
+        ST.set_config(config_data)
+        
+        preview = asyncio.run(handle_align_preview(plugin_base=self.plugin_base))
+        self.assertTrue(preview.get("ok"))
+        summary = preview.get("preset_summary", {})
+        self.assertEqual(summary.get("control_type"), "realtime")
+        # In realtime mode, will_update should be 0 because config matches realtime standard preset
+        self.assertEqual(summary.get("will_update"), 0)
+        self.assertGreater(summary.get("unchanged"), 200)
+
 
 if __name__ == "__main__":
     unittest.main()
