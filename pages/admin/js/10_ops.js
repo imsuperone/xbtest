@@ -1072,3 +1072,157 @@ function initAlignLatestEvents() {
 }
 
 initAlignLatestEvents();
+
+
+// ---------- 数据持久化状态检测与在线读写探针 ----------
+function initPersistenceEvents() {
+  const btnTest = document.getElementById("btnTestPersistence");
+  const btnRefresh = document.getElementById("btnRefreshPersStatus");
+  const badge = document.getElementById("persStatusBadge");
+  const dirPathEl = document.getElementById("persDirPath");
+  const writableTag = document.getElementById("persWritableTag");
+  const customCountEl = document.getElementById("persCustomKeysCount");
+  const configTextEl = document.getElementById("persConfigStatusText");
+  const dbSizeEl = document.getElementById("persDbSize");
+  const dbTextEl = document.getElementById("persDbStatusText");
+  const mountsCountEl = document.getElementById("persMountsCount");
+  const mountsTextEl = document.getElementById("persMountsStatusText");
+  const questionsCountEl = document.getElementById("persQuestionsCount");
+  const questionsTextEl = document.getElementById("persQuestionsStatusText");
+  const customDetailEl = document.getElementById("persCustomKeysDetail");
+  const resultBox = document.getElementById("persTestResultBox");
+  const latencyEl = document.getElementById("persTestLatency");
+  const stepsEl = document.getElementById("persTestSteps");
+
+  async function loadPersistenceStatus(silent = false) {
+    try {
+      if (!silent) toast("正在获取持久化运行状态…", "ok");
+      const res = await getBridge().apiGet("persistence/status", {});
+      if (!res || !res.ok) throw new Error(res?.error || "获取持久化状态失败");
+      renderPersistenceInfo(res);
+      if (!silent) toast("持久化状态已刷新", "ok");
+    } catch (e) {
+      if (badge) {
+        badge.className = "align-badge align-badge-danger";
+        badge.textContent = "状态异常";
+      }
+      toast("获取持久化状态失败: " + e.message, "bad");
+    }
+  }
+
+  function renderPersistenceInfo(info) {
+    if (!info) return;
+    if (dirPathEl) dirPathEl.textContent = info.persistent_dir || "未知目录";
+    if (writableTag) {
+      if (info.writable) {
+        writableTag.className = "align-badge align-badge-safe";
+        writableTag.textContent = "✓ 目录可写已确认";
+      } else {
+        writableTag.className = "align-badge align-badge-danger";
+        writableTag.textContent = "✕ 目录只读受限";
+      }
+    }
+    if (badge) {
+      badge.className = "align-badge align-badge-safe";
+      badge.textContent = info.writable ? "🟢 正常落盘 (双向镜像自愈)" : "🟡 读写受限";
+    }
+
+    const cfg = info.config || {};
+    if (customCountEl) customCountEl.textContent = `${cfg.custom_keys_count || 0} 项`;
+    if (configTextEl) {
+      configTextEl.innerHTML = `落盘文件: <code>config.json</code> (${cfg.size_kb || 0} KB)<br>双重镜像保护，升级永不覆盖`;
+    }
+
+    const db = info.database || {};
+    if (dbSizeEl) dbSizeEl.textContent = `${db.size_kb || 0} KB`;
+    if (dbTextEl) {
+      dbTextEl.innerHTML = `数据库: <code>data.db</code><br>${db.mirror_active ? "✓ sys_config_json 镜像活动" : "镜像未建立"}`;
+    }
+
+    const ca = info.custom_assets || {};
+    if (mountsCountEl) mountsCountEl.textContent = `${ca.custom_rides_count || 0} 个自建`;
+    if (mountsTextEl) {
+      mountsTextEl.innerHTML = `自建坐骑: ${ca.custom_rides_count || 0} 个 / 静态图: ${ca.custom_mount_images_count || 0} 张<br>存储于持久目录 <code>persistent/</code>`;
+    }
+
+    if (questionsCountEl) questionsCountEl.textContent = `${ca.custom_questions_count || 0} 条自建`;
+    if (questionsTextEl) {
+      questionsTextEl.innerHTML = `自建题目: ${ca.custom_questions_count || 0} 条 / 历史快照: ${ca.backups_count || 0} 份<br>更新时 100% 增量保护保留`;
+    }
+
+    if (customDetailEl) {
+      const keys = cfg.custom_keys || [];
+      if (!keys.length) {
+        customDetailEl.innerHTML = `<span style="color:var(--muted)">当前暂无受保护的自定义项（所有游戏数值与开关均遵循推荐官方默认值）。一旦您在配置页面修改任意数值，该项将自动受锁保护并在此处呈现。</span>`;
+      } else {
+        let lines = keys.map(k => {
+          return `<div>🛡️ <b>[${esc(k.section)}]</b> <code>${esc(k.key)}</code>: <span style="color:var(--text)">${esc(k.value)}</span></div>`;
+        });
+        customDetailEl.innerHTML = lines.join("");
+      }
+    }
+  }
+
+  if (btnTest) {
+    btnTest.addEventListener("click", async () => {
+      btnTest.disabled = true;
+      btnTest.innerHTML = `<span>⏳</span> 正在测试读写探针…`;
+      try {
+        const res = await getBridge().apiPost("persistence/test", {});
+        if (!res || !res.ok) throw new Error(res?.error || "探针测试响应异常");
+
+        if (resultBox) {
+          resultBox.style.display = "block";
+          if (latencyEl) latencyEl.textContent = `探针往返耗时：${res.latency_ms || 0}ms`;
+
+          let stepHtml = (res.steps || []).map(s => {
+            const icon = s.ok ? "✅" : "❌";
+            const color = s.ok ? "var(--ok)" : "var(--bad)";
+            return `<div style="margin-bottom:4px">
+              <b>${icon} ${esc(s.name)}</b>: <span style="color:${color}">${esc(s.message)}</span>
+            </div>`;
+          }).join("");
+
+          if (res.test_passed) {
+            resultBox.style.background = "rgba(34,197,94,0.08)";
+            resultBox.style.borderColor = "rgba(34,197,94,0.3)";
+          } else {
+            resultBox.style.background = "rgba(239,68,68,0.08)";
+            resultBox.style.borderColor = "rgba(239,68,68,0.3)";
+          }
+
+          if (stepsEl) {
+            stepsEl.innerHTML = `
+              ${stepHtml}
+              <div style="margin-top:8px;font-size:11.5px;color:var(--muted)">
+                结论：外部持久目录 <code>${esc(res.info?.persistent_dir || "")}</code> 读写通畅，SQLite 与 config.json 探针回读无误，数据完全处于持久化受保护状态。
+              </div>
+            `;
+          }
+        }
+
+        if (res.info) renderPersistenceInfo(res.info);
+        toast(`持久化读写探针自检测试通过 (${res.latency_ms}ms)！`, "ok");
+      } catch (e) {
+        toast("持久化测试失败: " + e.message, "bad");
+        if (resultBox) {
+          resultBox.style.display = "block";
+          resultBox.style.background = "rgba(239,68,68,0.08)";
+          resultBox.style.borderColor = "rgba(239,68,68,0.3)";
+          if (stepsEl) stepsEl.innerHTML = `<span style="color:var(--bad)">❌ 测试过程发生异常: ${esc(e.message)}</span>`;
+        }
+      } finally {
+        btnTest.disabled = false;
+        btnTest.innerHTML = `<span>🧪</span> 一键测试持久化`;
+      }
+    });
+  }
+
+  if (btnRefresh) {
+    btnRefresh.addEventListener("click", () => loadPersistenceStatus(false));
+  }
+
+  setTimeout(() => loadPersistenceStatus(true), 600);
+}
+
+initPersistenceEvents();

@@ -27,6 +27,8 @@ _XB_API_ROUTES = [
     ("rank", "GET", "page_rank", "排行榜", ("core.api.stats", "handle_rank", "rank", {"mode": "req"})),
     ("config/get", "GET", "page_cfg_get", "读取运行配置", ("core.api.settings", "handle_cfg_get", "get", {"mode": "get_req"})),
     ("config/save", "POST", "page_cfg_save", "保存运行配置", ("core.api.settings", "handle_cfg_save", "save", {"mode": "get_req", "with_base": True})),
+    ("persistence/status", "GET", "page_persistence_status", "获取持久化真实状态与已保护数据清单", ("core.api.persistence", "handle_persistence_status", "persistence status", {"with_base": True})),
+    ("persistence/test", "POST", "page_persistence_test", "执行持久化落盘读写探针测试", ("core.api.persistence", "handle_persistence_test", "persistence test", {"with_base": True})),
     ("config/auto_balance", "POST", "page_config_auto_balance", "游戏数值智能平衡一键匹配", ("core.api.balance", "handle_config_auto_balance", "auto balance", {})),
     ("config/balance_state", "GET", "page_balance_state", "平衡档位真实状态与漂移检测", ("core.api.balance", "handle_balance_state", "balance state", {"mode": "req"})),
     ("analytics/overview", "GET", "page_analytics_overview", "群生态与经济运行大屏数据", ("core.api.stats", "handle_analytics_overview", "analytics", {})),
@@ -124,6 +126,7 @@ _XB_MUTATING_HANDLERS = frozenset({
     "handle_logs_clear",
     "handle_webdav_backup_now", "handle_webdav_restore", "handle_webdav_delete",
     "handle_slave_calibrate",
+    "handle_persistence_test",
     "handle_questions_save", "handle_questions_import", "handle_questions_reset",
     "handle_align_defaults",
 })

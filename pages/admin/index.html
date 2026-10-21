@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light dark">
   <title>小白测试版 - 小白机器人</title>
-  <link rel="stylesheet" href="./admin.css?v=26w1021n">
+  <link rel="stylesheet" href="./admin.css?v=26w1021o">
   <!-- 主题色/深浅色优先读取本地缓存实现首帧零阻塞渲染，未缓存时最多挂起 150ms -->
   <style>
     html[data-boot] { visibility: hidden; background: #f4f6f8; }
@@ -40,7 +40,7 @@
           <span class="island-trigger-text">导航</span>
         </button>
         <div class="brand-text">
-          <h1>小白测试版 <span class="version-tag" data-ver="26w1021n">v26w1021n</span></h1>
+          <h1>小白测试版 <span class="version-tag" data-ver="26w1021o">v26w1021o</span></h1>
         </div>
       </div>
       <div class="top-bar-actions" style="position:relative">
@@ -801,8 +801,8 @@
             <div>插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
             <div>仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
             <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-              <div>后端版本：<b id="aboutVersion">v26w1021n</b></div>
-              <div>前端版本：<b id="aboutFrontendVer">v26w1021n</b></div>
+              <div>后端版本：<b id="aboutVersion">v26w1021o</b></div>
+              <div>前端版本：<b id="aboutFrontendVer">v26w1021o</b></div>
             </div>
             <!-- 持久化与升级保障状态徽章 -->
             <div style="margin-top:4px;padding:10px 14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:12.5px;color:var(--text);display:flex;align-items:flex-start;gap:8px">
@@ -814,6 +814,93 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- 数据持久化状态与在线自检卡片 -->
+        <div class="panel" style="margin-top:16px;background:var(--cardBg, var(--panel));border:1px solid var(--line);border-radius:16px;padding:22px">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+            <div>
+              <h3 style="margin:0;font-size:16.5px;font-weight:700;display:flex;align-items:center;gap:8px">
+                <span>💾</span> 数据持久化状态与在线自检
+                <span id="persStatusBadge" class="align-badge align-badge-safe" style="font-size:11.5px">状态检测中...</span>
+              </h3>
+              <div style="color:var(--muted);font-size:12.5px;margin-top:4px">
+                直观展示当前哪些数据已持久化、哪些遵循官方默认，并支持一键真实写盘与读回探针自检。
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button id="btnTestPersistence" type="button" class="btn primary" style="padding:7px 16px;font-size:13px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600">
+                <span>🧪</span> 一键测试持久化
+              </button>
+              <button id="btnRefreshPersStatus" type="button" class="btn" style="padding:7px 12px;font-size:12.5px;background:var(--panel);border:1px solid var(--line);color:var(--text);display:inline-flex;align-items:center;gap:4px;cursor:pointer">
+                <span>🔄</span> 刷新状态
+              </button>
+            </div>
+          </div>
+
+          <!-- 持久化物理路径提示栏 -->
+          <div style="padding:10px 14px;background:rgba(0,0,0,0.03);border:1px solid var(--line);border-radius:10px;font-size:12.5px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--muted)">📁 宿主持久化物理目录:</span>
+              <code id="persDirPath" style="font-size:12px;user-select:all;word-break:break-all">加载中...</code>
+            </div>
+            <span id="persWritableTag" class="align-badge align-badge-info" style="font-size:11px">可写状态检测中</span>
+          </div>
+
+          <!-- 持久化模块自检指标卡片网格 -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-top:14px">
+            <div style="padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px">
+              <div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between">
+                <span>🛡️ 已持久化自定义配置</span>
+                <b id="persCustomKeysCount" style="color:var(--accent, #3b82f6)">0 项</b>
+              </div>
+              <div style="font-size:11.5px;color:var(--text);margin-top:6px;line-height:1.4" id="persConfigStatusText">双向镜像自愈中</div>
+            </div>
+            <div style="padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px">
+              <div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between">
+                <span>🗄️ SQLite 核心数据库</span>
+                <b id="persDbSize" style="color:var(--ok)">0 KB</b>
+              </div>
+              <div style="font-size:11.5px;color:var(--text);margin-top:6px;line-height:1.4" id="persDbStatusText">sys_config_json 镜像活动</div>
+            </div>
+            <div style="padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px">
+              <div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between">
+                <span>🐎 自建坐骑与图片</span>
+                <b id="persMountsCount" style="color:var(--accent, #3b82f6)">0 个</b>
+              </div>
+              <div style="font-size:11.5px;color:var(--text);margin-top:6px;line-height:1.4" id="persMountsStatusText">用户自建坐骑与图片</div>
+            </div>
+            <div style="padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px">
+              <div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between">
+                <span>📝 自建题库与备份</span>
+                <b id="persQuestionsCount" style="color:var(--accent, #3b82f6)">0 条</b>
+              </div>
+              <div style="font-size:11.5px;color:var(--text);margin-top:6px;line-height:1.4" id="persQuestionsStatusText">自增题目与安全备份</div>
+            </div>
+          </div>
+
+          <!-- 展开查看已持久化的自定义项明细 -->
+          <div style="margin-top:14px">
+            <details style="border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--panel)">
+              <summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text)">
+                🔍 查看已持久化保护的自定义参数清单（_custom_keys）
+              </summary>
+              <div id="persCustomKeysDetail" style="margin-top:8px;font-size:12px;color:var(--muted);line-height:1.6;max-height:180px;overflow-y:auto">
+                暂无自定义项（所有配置项遵循官方默认值）
+              </div>
+            </details>
+          </div>
+
+          <!-- 探针测试结果区域 (默认隐藏，点击测试后展开) -->
+          <div id="persTestResultBox" style="display:none;margin-top:14px;padding:12px 16px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.3);border-radius:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <b style="font-size:13px;color:var(--ok);display:flex;align-items:center;gap:6px">
+                <span>✅</span> 探针自检测试报告
+              </b>
+              <span id="persTestLatency" style="font-size:12px;color:var(--muted)">耗时：0ms</span>
+            </div>
+            <div id="persTestSteps" style="font-size:12px;color:var(--text);line-height:1.7"></div>
           </div>
         </div>
 
@@ -1226,17 +1313,17 @@
       </div>
     </div>
   </div>
-    <script defer src="./js/00_core.js?v=26w1021n"></script>
-  <script defer src="./js/01_theme.js?v=26w1021n"></script>
-  <script defer src="./js/02_export.js?v=26w1021n"></script>
-  <script defer src="./js/03_import.js?v=26w1021n"></script>
-  <script defer src="./js/04_media.js?v=26w1021n"></script>
-  <script defer src="./js/05_config.js?v=26w1021n"></script>
-  <script defer src="./js/06_users.js?v=26w1021n"></script>
-  <script defer src="./js/07_spirit.js?v=26w1021n"></script>
-  <script defer src="./js/08_shop.js?v=26w1021n"></script>
-  <script defer src="./js/09_views.js?v=26w1021n"></script>
-  <script defer src="./js/10_ops.js?v=26w1021n"></script>
-  <script defer src="./js/11_questions.js?v=26w1021n"></script>
+    <script defer src="./js/00_core.js?v=26w1021o"></script>
+  <script defer src="./js/01_theme.js?v=26w1021o"></script>
+  <script defer src="./js/02_export.js?v=26w1021o"></script>
+  <script defer src="./js/03_import.js?v=26w1021o"></script>
+  <script defer src="./js/04_media.js?v=26w1021o"></script>
+  <script defer src="./js/05_config.js?v=26w1021o"></script>
+  <script defer src="./js/06_users.js?v=26w1021o"></script>
+  <script defer src="./js/07_spirit.js?v=26w1021o"></script>
+  <script defer src="./js/08_shop.js?v=26w1021o"></script>
+  <script defer src="./js/09_views.js?v=26w1021o"></script>
+  <script defer src="./js/10_ops.js?v=26w1021o"></script>
+  <script defer src="./js/11_questions.js?v=26w1021o"></script>
 </body>
 </html>
