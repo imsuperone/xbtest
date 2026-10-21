@@ -116,12 +116,20 @@ async def handle_align_preview(request=None, plugin_base=""):
 
             if is_custom:
                 status = "custom_locked"
+                lock_reason = "用户自定义 🔒 保留"
                 preset_summary["custom_locked"] += 1
             elif s_cur == s_off:
                 status = "unchanged"
+                lock_reason = ""
                 preset_summary["unchanged"] += 1
+            elif ctrl_type == "realtime" and cur_val is not None:
+                # 实时调控模式下，本地活跃运行值/自适应值绝不被标为待更新，100% 保持自适应状态
+                status = "custom_locked"
+                lock_reason = "实时调控自适应 🔒 保持"
+                preset_summary["custom_locked"] += 1
             else:
                 status = "will_update"
+                lock_reason = ""
                 preset_summary["will_update"] += 1
 
             diff_details.append({
@@ -131,6 +139,7 @@ async def handle_align_preview(request=None, plugin_base=""):
                 "official": s_off,
                 "is_custom": is_custom,
                 "status": status,
+                "lock_reason": lock_reason,
             })
 
     # 2. 娱乐题库对比

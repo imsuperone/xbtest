@@ -42,20 +42,28 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
     raw_custom_keys = config_obj.get("_custom_keys") or {}
     custom_keys_list = []
     if isinstance(raw_custom_keys, dict):
-        for sec, fields in raw_custom_keys.items():
-            if isinstance(fields, dict):
-                for f_name, f_val in fields.items():
+        for k_entry, val in raw_custom_keys.items():
+            if isinstance(val, dict):
+                for f_name, f_val in val.items():
                     custom_keys_list.append({
-                        "section": sec,
+                        "section": str(k_entry),
                         "key": f_name,
                         "value": str(f_val)[:40] if f_val is not None else "",
                         "type": "field",
                     })
-            else:
+            elif "." in str(k_entry):
+                sec, f_name = str(k_entry).split(".", 1)
                 custom_keys_list.append({
                     "section": sec,
+                    "key": f_name,
+                    "value": str(val)[:40] if val is not None else "",
+                    "type": "field",
+                })
+            else:
+                custom_keys_list.append({
+                    "section": str(k_entry),
                     "key": "*",
-                    "value": str(fields)[:40],
+                    "value": str(val)[:40],
                     "type": "section",
                 })
 
@@ -86,8 +94,17 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
         from games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP
     except Exception:
         OFF_RIDE_SHOP = {}
-    raw_rides = ST.cfg("商城图鉴", "ride_shop", {})
-    cur_rides = raw_rides if isinstance(raw_rides, dict) else {}
+    raw_rides = ST.cfg("商城图鉴", "ride_shop", "")
+    if not raw_rides:
+        raw_rides = (getattr(ST, "_CONFIG", {}) or {}).get("商城图鉴", {}).get("ride_shop", {})
+    cur_rides = {}
+    if isinstance(raw_rides, dict):
+        cur_rides = raw_rides
+    elif isinstance(raw_rides, str) and raw_rides.strip():
+        try:
+            cur_rides = json.loads(raw_rides)
+        except Exception:
+            cur_rides = {}
     custom_rides = [k for k in cur_rides if k not in OFF_RIDE_SHOP]
 
     # 4. 自定义抽卡武器持久化统计
@@ -95,8 +112,17 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
         from games.config.shop import DEFAULT_WEAPON_ATTRS
     except Exception:
         DEFAULT_WEAPON_ATTRS = {}
-    raw_w = ST.cfg("商城图鉴", "weapon_attrs", {})
-    cur_w = raw_w if isinstance(raw_w, dict) else {}
+    raw_w = ST.cfg("商城图鉴", "weapon_attrs", "")
+    if not raw_w:
+        raw_w = (getattr(ST, "_CONFIG", {}) or {}).get("商城图鉴", {}).get("weapon_attrs", {})
+    cur_w = {}
+    if isinstance(raw_w, dict):
+        cur_w = raw_w
+    elif isinstance(raw_w, str) and raw_w.strip():
+        try:
+            cur_w = json.loads(raw_w)
+        except Exception:
+            cur_w = {}
     custom_weapons = [k for k in cur_w if k not in DEFAULT_WEAPON_ATTRS]
 
     # 5. 自建题库持久化统计
@@ -134,14 +160,40 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
         except Exception:
             backups_cnt = 0
 
-    # 7. 用户自定义上传静态资源目录
-    mount_images_dir = os.path.join(pers_dir, "mounts")
-    mount_images_cnt = 0
-    if os.path.isdir(mount_images_dir):
-        try:
-            mount_images_cnt = len([f for f in os.listdir(mount_images_dir) if os.path.isfile(os.path.join(mount_images_dir, f))])
-        except Exception:
-            mount_images_cnt = 0
+    # 7. 用户自定义上传与绑定的坐骑图片统计（准确涵盖 data/img/rides 与持久化镜像）
+    OFF_IMG_NAMES = {
+        "企鹅.jpg", "伞兵.jpg", "宝驴.jpg", "保时捷.jpg", "法拉利.jpg",
+        "玛莎拉蒂.jpg", "劳斯莱斯.jpg", "布加迪威龙.jpg", "私人航空.jpg", "老八.jpg"
+    }
+    custom_mount_images = set()
+
+    # (1) 收集自建坐骑配置中绑定的自定义图片
+    for rname, rinfo in cur_rides.items():
+        if isinstance(rinfo, dict):
+            c_img = str(rinfo.get("img") or "").replace("\\", "/").strip()
+            if c_img:
+                bname = os.path.basename(c_img)
+                if bname and bname not in OFF_IMG_NAMES:
+                    custom_mount_images.add(bname)
+
+    # (2) 探测插件本地与持久化目录中的自定义图片文件
+    search_dirs = [
+        os.path.join(plugin_base or plugin_root(__file__), "data", "img", "rides"),
+        os.path.join(pers_dir, "data", "img", "rides"),
+        os.path.join(pers_dir, "img", "rides"),
+        os.path.join(pers_dir, "rides"),
+        os.path.join(pers_dir, "mounts"),
+    ]
+    for sdir in search_dirs:
+        if os.path.isdir(sdir):
+            try:
+                for fname in os.listdir(sdir):
+                    if fname.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")):
+                        if fname not in OFF_IMG_NAMES:
+                            custom_mount_images.add(fname)
+            except Exception:
+                pass
+    mount_images_cnt = len(custom_mount_images)
 
     return {
         "ok": True,

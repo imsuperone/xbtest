@@ -853,7 +853,7 @@ function initAlignLatestEvents() {
             <span class="align-badge" style="background:rgba(99,102,241,0.12);color:var(--acc,#3b82f6);border:1px solid rgba(99,102,241,0.25);font-weight:600">⚙️ ${esc(ctrlModeLabel)}</span>
             <span class="align-badge align-badge-info">待对齐: ${ps.will_update || 0}</span>
             <span class="align-badge align-badge-safe">已一致: ${ps.unchanged || 0}</span>
-            <span class="align-badge align-badge-protect">自定义保护: ${ps.custom_locked || 0}</span>
+            <span class="align-badge align-badge-protect">${ps.control_type === "realtime" ? "自适应/自定义保护" : "自定义保护"}: ${ps.custom_locked || 0}</span>
           `;
         }
 
@@ -879,6 +879,10 @@ function initAlignLatestEvents() {
 
         // 数值预设对比
         const diffs = res.diff_details || [];
+        const isPresetsChecked = document.getElementById("alignOptPresets")?.checked;
+        if (!isPresetsChecked) {
+          html += `<div style="margin-bottom:10px;padding:8px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:8px;font-size:12px;color:var(--text)">💡 <b>当前未勾选「基础数值预设」</b>：本地所有运行中的经济数值与调控规则将 <b>100% 保持当前值不变</b>；仅在勾选上方对应选项时才会对齐基准数值。</div>`;
+        }
         html += `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
           <div style="font-weight:600">⚖️ 规则对比明细：</div>
           <div id="alignDiffFilterBar" style="display:flex;gap:6px;flex-wrap:wrap">
@@ -901,7 +905,7 @@ function initAlignLatestEvents() {
                 <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
                 <div class="align-diff-vals">
                   <span class="align-val-locked">${esc(it.current)}</span>
-                  <span class="align-badge align-badge-protect" style="font-size:10.5px">用户自定义 🔒 保留</span>
+                  <span class="align-badge align-badge-protect" style="font-size:10.5px">${esc(it.lock_reason || "用户自定义 🔒 保留")}</span>
                 </div>
               </div>`;
             } else if (it.status === "unchanged") {
@@ -1142,7 +1146,7 @@ function initPersistenceEvents() {
     const ca = info.custom_assets || {};
     if (mountsCountEl) mountsCountEl.textContent = `${ca.custom_rides_count || 0} 个自建`;
     if (mountsTextEl) {
-      mountsTextEl.innerHTML = `自建坐骑: ${ca.custom_rides_count || 0} 个 / 静态图: ${ca.custom_mount_images_count || 0} 张<br>存储于持久目录 <code>persistent/</code>`;
+      mountsTextEl.innerHTML = `自建坐骑: <b>${ca.custom_rides_count || 0}</b> 款 / 自建图片: <b>${ca.custom_mount_images_count || 0}</b> 张<br>路径: <code>data/img/rides/</code>（双重持久化镜像保护 🔒）`;
     }
 
     if (questionsCountEl) questionsCountEl.textContent = `${ca.custom_questions_count || 0} 条自建`;
