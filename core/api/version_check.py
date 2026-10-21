@@ -330,5 +330,10 @@ async def handle_version_channel(request=None):
 def handle_version_get(req=None):
     """返回当前插件版本号，单源于 metadata.yaml"""
     v = _get_local_version()
-    return no_cache_response(json_response({"version": v, "status": "ok"}))
+    return no_cache_response(json_response({
+        "ok": True,
+        "status": "ok",
+        "version": v,
+        "plugin": "astrbot_plugin_xbbot_beta",
+    }))
 
