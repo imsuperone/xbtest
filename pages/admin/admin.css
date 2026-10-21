@@ -5076,9 +5076,25 @@
   background: var(--badSoft);
   border-color: var(--bad);
 }
+.weapon-atk-wrap {
+  flex: 0 0 140px;
+  min-width: 130px;
+}
+.weapon-desc-wrap {
+  flex: 1;
+  min-width: 0;
+}
 .weapon-desc-input {
-  font-size: 12px !important;
-  padding: 5px 8px;
+  font-size: 13px !important;
+  padding: 6px 10px;
+  color: var(--text) !important;
+  background: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+}
+.weapon-desc-input::placeholder {
+  color: var(--muted) !important;
+  opacity: 0.8;
 }
 .weapon-file-hint {
   font-size: 11px;
@@ -5210,6 +5226,27 @@
     padding: 4px 6px;
     font-size: 11px;
   }
+  .weapon-card-main .weapon-row-split {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+  }
+  .weapon-atk-wrap {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .weapon-desc-wrap {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .weapon-desc-input {
+    font-size: 14px !important;
+    padding: 7px 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
   .weapon-card-header {
     gap: 6px;
     padding-bottom: 6px;
@@ -5245,4 +5282,4 @@
   }
 }
 
-
+

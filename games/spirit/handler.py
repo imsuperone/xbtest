@@ -558,51 +558,105 @@ def _img_path(path):
         return ""
 
 
+def _shop_item_desc(name, info):
+    """取精灵商城道具简明说明（支持内置道具及用户自定义新增道具自动推导，绝不留空）"""
+    desc = str((info or {}).get("desc") or "").strip()
+    if desc:
+        return desc
+    builtin_descs = {
+        "精灵球": "收服率+10%",
+        "时间球": "收服率+30%",
+        "狩猎球": "收服率+40%",
+        "极速球": "收服率+70%",
+        "大师球": "100%必中",
+        "起司": "喂食精灵：加亲密/经验/全属性",
+        "吐司": "喂食精灵：加亲密/经验/全属性",
+        "奇异甜食": "出战精灵直接升1级",
+        "攻击之源": "永久攻击+2",
+        "防御之源": "永久防御+2",
+        "特防之源": "永久特防+2",
+        "特攻之源": "永久特攻+2",
+        "进化液": "达标精灵完成形态进化",
+        "洗练果实": "重置性格与天赋词条",
+        "闪光结晶": "觉醒变异闪光形态",
+    }
+    if name in builtin_descs:
+        return builtin_descs[name]
+    attr = str((info or {}).get("attr") or "").strip()
+    eff = str((info or {}).get("effect") or "").strip()
+    if attr == "精灵球":
+        return f"收服率+{eff}%" if eff else "抓捕野生精灵道具"
+    elif attr == "等级":
+        return f"出战精灵升{eff}级" if eff else "精灵升级道具"
+    elif attr in ("生命", "HP"):
+        return f"出战生命+{eff}" if eff else "出战生命强化"
+    elif attr in ("攻击", "防御", "特攻", "特防", "速度"):
+        return f"出战{attr}+{eff}" if eff else f"出战{attr}强化"
+    elif attr == "美食":
+        return "喂食增加亲密、经验与属性"
+    elif attr == "进化":
+        return "精灵形态进化道具"
+    elif attr == "洗练":
+        return "洗练重置性格与天赋"
+    elif attr == "闪光":
+        return f"觉醒闪光形态({eff}%)" if eff else "觉醒闪光形态"
+    elif attr:
+        return f"{attr}+{eff}" if eff else attr
+    return "专属道具"
+
+
 def cmd_shop():
     lines = ["🛒 精灵商城", "━━━━━━━━━━━━━━"]
     shop = _SHOP()
 
-    lines.append("【精灵球】野生抓捕")
-    ball_items = []
+    lines.append("【精灵球】野生精灵抓捕")
     for b in ("精灵球", "时间球", "狩猎球", "极速球", "大师球"):
         if b in shop:
-            extra = "·必中" if b == "大师球" else ""
-            ball_items.append(f"{b}({ST.fmt_coins(shop[b].get('price',0))}{extra})")
-    lines.append("· " + " · ".join(ball_items))
+            p_str = ST.fmt_coins(shop[b].get("price", 0))
+            d_str = _shop_item_desc(b, shop[b])
+            lines.append(f"· {b}: {p_str}{ST.coin_name()} ({d_str})")
 
-    lines.append("【培育补给】")
-    food_items = []
+    lines.append("\r\n【食物与升级】")
     for f_name in ("起司", "吐司", "奇异甜食"):
         if f_name in shop:
-            hint = "·升1级" if f_name == "奇异甜食" else ""
-            food_items.append(f"{f_name}({ST.fmt_coins(shop[f_name].get('price',0))}{hint})")
-    lines.append("· " + " · ".join(food_items))
+            p_str = ST.fmt_coins(shop[f_name].get("price", 0))
+            d_str = _shop_item_desc(f_name, shop[f_name])
+            lines.append(f"· {f_name}: {p_str}{ST.coin_name()} ({d_str})")
 
-    lines.append("【属性之源】出战永久+2")
-    src_items = []
-    for s_name in ("攻击之源", "防御之源", "特防之源", "特攻之源"):
-        if s_name in shop:
-            src_items.append(f"{s_name}({ST.fmt_coins(shop[s_name].get('price',0))})")
-    lines.append("· " + " · ".join(src_items))
+    lines.append("\r\n【属性强化】出战精灵永久加成")
+    src_3 = [s for s in ("攻击之源", "防御之源", "特防之源") if s in shop]
+    if src_3 and len(src_3) == 3 and shop[src_3[0]].get("price") == shop[src_3[1]].get("price") == shop[src_3[2]].get("price"):
+        p_str = ST.fmt_coins(shop[src_3[0]].get("price", 6000))
+        lines.append(f"· 攻击之源 / 防御之源 / 特防之源: 各{p_str}{ST.coin_name()} (对应属性+2)")
+    else:
+        for s in ("攻击之源", "防御之源", "特防之源"):
+            if s in shop:
+                p_str = ST.fmt_coins(shop[s].get("price", 0))
+                lines.append(f"· {s}: {p_str}{ST.coin_name()} ({_shop_item_desc(s, shop[s])})")
+    if "特攻之源" in shop:
+        p_str = ST.fmt_coins(shop["特攻之源"].get("price", 0))
+        lines.append(f"· 特攻之源: {p_str}{ST.coin_name()} ({_shop_item_desc('特攻之源', shop['特攻之源'])})")
 
-    lines.append("【进阶道具】")
-    evo_items = []
+    lines.append("\r\n【进阶洗练】")
     for e_name in ("进化液", "洗练果实", "闪光结晶"):
         if e_name in shop:
-            hint = "·觉醒闪光" if e_name == "闪光结晶" else ""
-            evo_items.append(f"{e_name}({ST.fmt_coins(shop[e_name].get('price',0))}{hint})")
-    lines.append("· " + " · ".join(evo_items))
+            p_str = ST.fmt_coins(shop[e_name].get("price", 0))
+            d_str = _shop_item_desc(e_name, shop[e_name])
+            lines.append(f"· {e_name}: {p_str}{ST.coin_name()} ({d_str})")
 
     # 自定义拓展物品兼容
     known = {"精灵球", "时间球", "狩猎球", "极速球", "大师球", "奇异甜食", "起司", "吐司",
              "攻击之源", "防御之源", "特防之源", "特攻之源", "进化液", "洗练果实", "闪光结晶"}
-    customs = [f"{k}({ST.fmt_coins(v.get('price',0))})" for k, v in shop.items() if k not in known]
+    customs = [k for k in shop.keys() if k not in known]
     if customs:
-        lines.append("【其他道具】")
-        lines.append("· " + " · ".join(customs))
+        lines.append("\r\n【自定义道具】")
+        for k in customs:
+            p_str = ST.fmt_coins(shop[k].get("price", 0))
+            d_str = _shop_item_desc(k, shop[k])
+            lines.append(f"· {k}: {p_str}{ST.coin_name()} ({d_str})")
 
     lines.append("━━━━━━━━━━━━━━")
-    lines.append("发送【购买 物品名*数量】购买（如：购买 起司*5）")
+    lines.append("购买：【购买 物品名*数量】（如：购买 起司*5）")
     return "\r\n".join(lines)
 
 

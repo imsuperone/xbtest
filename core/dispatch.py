@@ -243,16 +243,29 @@ async def handle_admin_list(event, gid, qq, slave, ST):
 
 
 # ==================== respond（原 dispatch/respond.py 并入） ====================
+def _is_command_like(text: str) -> bool:
+    """判定是否为机器人指令/斜杠指令（防欢迎坐骑误拦截吞掉其他插件指令）"""
+    if not text:
+        return False
+    s = text.strip()
+    return s.startswith(("/", "／", "!", "！", "#", "＃", "、", "\\", "$", "￥", ".", "。", "-", "—", "~", "～"))
+
+
 def _run_handle_and_welcome(gid, qq, raw, is_admin, handle_fn, ride):
     try:
         r = handle_fn(gid, qq, raw, is_admin)
     except Exception:
         r = None
     if not r:
-        try:
-            r = ride.check_welcome(gid, qq) or None
-        except Exception:
-            pass
+        # 指令类消息绝对禁调迎新坐骑，杜绝吞掉其他插件的指令（如 /xbnext、/help 等）
+        if not _is_command_like(raw):
+            try:
+                w_res = ride.check_welcome(gid, qq)
+                if w_res:
+                    return ("__WELCOME__", w_res)
+            except Exception:
+                pass
+        return None
     return r
 
 
@@ -313,7 +326,8 @@ def _is_pure_custom(raw, ST):
 
 
 async def send_reply(event, reply, qq, raw, gid, ST, logger, do_platform,
-                     name_prefix, build_chain, message_chain_cls, has_core, cq_img_re):
+                     name_prefix, build_chain, message_chain_cls, has_core, cq_img_re,
+                     is_welcome=False):
     """平台动作/前缀/链发送四兼容 + 去图兜底。原逻辑逐行平移。"""
     if logger:
         try:
@@ -339,7 +353,8 @@ async def send_reply(event, reply, qq, raw, gid, ST, logger, do_platform,
         reply = (reply[:1] + "\u200b\u200c" + reply[1:]) if len(reply) > 1 else ("\u200b\u200c" + reply)
     try:
         comp = build_chain(reply)
-        event.stop_event()
+        if not is_welcome:
+            event.stop_event()
         if hasattr(event, "chain_result"):
             yield event.chain_result(comp)
         elif hasattr(event, "make_result"):
@@ -356,7 +371,8 @@ async def send_reply(event, reply, qq, raw, gid, ST, logger, do_platform,
             yield event.plain_result(reply[0] if isinstance(reply, tuple) else reply)
     except Exception:
         try:
-            event.stop_event()
+            if not is_welcome:
+                event.stop_event()
             raw_txt = reply[0] if isinstance(reply, tuple) else str(reply)
             cleaned_txt = cq_img_re.sub("", raw_txt).strip() if has_core else raw_txt
             yield event.plain_result(cleaned_txt)

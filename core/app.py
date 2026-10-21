@@ -870,11 +870,14 @@ class XbBot(Star):
             reply = await _dispatch_reply.run_business(
                 gid, qq, raw, is_admin, _get_exec(), handle, ride)
             if reply:
+                is_w = isinstance(reply, tuple) and len(reply) == 2 and reply[0] == "__WELCOME__"
+                actual_reply = reply[1] if is_w else reply
                 async for r in _dispatch_reply.send_reply(
-                        event, reply, qq, raw, gid, ST, _logger_layer,
+                        event, actual_reply, qq, raw, gid, ST, _logger_layer,
                         _do_platform, _name_prefix, _build_chain, MessageChain,
                         _HAS_CORE,
-                        _plat_layer._CQ_IMG if _HAS_CORE else None):
+                        _plat_layer._CQ_IMG if _HAS_CORE else None,
+                        is_welcome=is_w):
                     yield r
         except Exception as e:
             import traceback

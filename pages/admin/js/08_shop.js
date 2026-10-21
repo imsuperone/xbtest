@@ -497,12 +497,15 @@ function renderPoolBox(forceOpen = false) {
               ${thumb ? `<img src="${esc(thumb)}" alt="${esc(name)}">` : `<span class="rarity-chip rarity-chip-${rar.toLowerCase()}">${esc(rar)}</span>`}
             </div>
             <div class="weapon-card-main">
-              <div class="ride-row-split" style="gap:8px">
-                <div class="input-with-label" title="攻击加成数值" style="flex:0 0 145px;min-width:140px">
+              <div class="ride-row-split weapon-row-split" style="gap:8px">
+                <div class="input-with-label weapon-atk-wrap" title="攻击加成数值">
                   <span class="input-label" style="font-size:11.5px;font-weight:700">⚔️ 攻击</span>
                   <input class="m3-input" type="number" data-pool-atk value="${esc(_paAtk)}" style="flex:1;min-width:0;width:100%;padding:4px 6px;text-align:right;font-weight:700">
                 </div>
-                <input class="m3-input weapon-desc-input" data-pool-desc value="${esc(_paDesc)}" placeholder="背景/特性描述..." style="flex:1;min-width:0" title="武器特性与背景描述">
+                <div class="input-with-label weapon-desc-wrap" title="武器特性与背景描述">
+                  <span class="input-label" style="font-size:11.5px;font-weight:700">📝 简介</span>
+                  <input class="m3-input weapon-desc-input" data-pool-desc value="${esc(_paDesc)}" placeholder="背景/特性描述..." style="flex:1;min-width:0;width:100%" title="武器特性与背景描述">
+                </div>
               </div>
             </div>
           </div>

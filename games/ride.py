@@ -423,13 +423,13 @@ def _ride_bonus_by_price(price):
     """根据坐骑价值计算被动加成百分比（搬砖工钱/远征金币/打架战力加成）"""
     p = int(price or 0)
     if p >= 2000000:
-        return 15
-    if p >= 500000:
-        return 10
-    if p >= 100000:
         return 6
+    if p >= 500000:
+        return 4
+    if p >= 100000:
+        return 2
     if p > 0:
-        return 3
+        return 1
     return 0
 
 
@@ -698,9 +698,9 @@ def check_welcome(gid, qq):
             if enable_rew:
                 shop = _ride_shop()
                 price = int(shop.get(w, 0) or _mount_price(w) or 0)
-                div = max(1, int(float(_cfg("欢迎金币除数", 5000))))
+                div = max(1, int(float(_cfg("欢迎金币除数", 10000))))
                 r_lo = max(0, int(float(_cfg("欢迎金币下限", 10))))
-                r_hi = max(r_lo, int(float(_cfg("欢迎金币上限", 500))))
+                r_hi = max(r_lo, int(float(_cfg("欢迎金币上限", 200))))
                 base_rew = max(r_lo, min(r_hi, price // div)) if price else r_lo
                 # 计算坐骑加成百分比（直接享受该坐骑配置的 buff%）
                 pct = _ride_bonus(w, price)
