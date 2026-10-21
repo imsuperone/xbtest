@@ -305,7 +305,7 @@ def cmd_gamble(gid, qq, amount):
                 f"您当前总资产为{ST.fmt_coins(total_pre)}{ST.coin_name()}，本次最多可下注{ST.fmt_coins(max_bet)}{ST.coin_name()}！")
     if cur_cash_pre < amount:
         return "亲，您的现金不足，无法进行赌博（不可直接透支银行存款下注，请先前往银行取款）！"
-    lim = cfgi("银行配置", "赌博限定次数", 5)
+    lim = cfgi("银行配置", "赌博限定次数", 15)
     meli = cfgi("银行配置", "赌博魅力减少", 20)
     jail_mins = cfgi("银行配置", "赌博关押时间", 8)
     prob = cfgi("银行配置", "赌博成功概率", 42)
