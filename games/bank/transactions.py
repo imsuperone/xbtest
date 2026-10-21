@@ -287,7 +287,7 @@ def cmd_gamble(gid, qq, amount):
         return _show_jail(a)
     if amount < 100:
         return f"亲，赌博最小金额为100{ST.coin_name()}！格式为：【赌博 金额】"
-    maxamt = cfgi("银行配置", "赌博最大金额", 100000)
+    maxamt = cfgi("银行配置", "赌博最大金额", 10000)
     if amount > maxamt:
         return f"亲，预赌金额不得超过{maxamt}{ST.coin_name()}！"
     cs = cfgi("银行配置", "赌博消耗体力", 10)
@@ -307,13 +307,13 @@ def cmd_gamble(gid, qq, amount):
         return "亲，您的现金不足，无法进行赌博（不可直接透支银行存款下注，请先前往银行取款）！"
     lim = cfgi("银行配置", "赌博限定次数", 5)
     meli = cfgi("银行配置", "赌博魅力减少", 20)
-    jail_mins = cfgi("银行配置", "赌博关押时间", 5)
-    prob = cfgi("银行配置", "赌博成功概率", 60)
+    jail_mins = cfgi("银行配置", "赌博关押时间", 8)
+    prob = cfgi("银行配置", "赌博成功概率", 42)
     try:
         from ..sign import eff_prob as _luck_eff
-        prob = _luck_eff(prob, gid, qq)
+        prob = min(48.0, _luck_eff(prob, gid, qq))
     except Exception:
-        pass
+        prob = min(48.0, float(prob))
     gain = int(amount * GAMBLE_MULT)
     # 原子化：钱包+体力+魅力+日计数 统归事务处理，避免半成功/脏读
     try:

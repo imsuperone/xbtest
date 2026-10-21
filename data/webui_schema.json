@@ -735,28 +735,28 @@
       },
       "赌博成功概率": {
         "type": "int",
-        "default": 52
+        "default": 42
       },
       "赌博消耗体力": {
         "type": "int",
-        "default": 5
+        "default": 10
       },
       "赌博魅力减少": {
         "type": "int",
-        "default": 2
+        "default": 10
       },
       "赌博限定次数": {
         "type": "int",
-        "default": 20
+        "default": 5
       },
       "赌博关押时间": {
         "type": "int",
-        "default": 5,
+        "default": 8,
         "desc": "赌博被抓关押时间(分钟，建议5~10分钟)"
       },
       "赌博最大金额": {
         "type": "int",
-        "default": 100000
+        "default": 10000
       },
       "存取款消耗体力": {
         "type": "int",
@@ -1087,27 +1087,27 @@
       },
       "升级经验": {
         "type": "int",
-        "default": 300
+        "default": 500
       },
       "最大等级": {
         "type": "int",
-        "default": 150
+        "default": 100
       },
       "冒险间隔": {
         "type": "int",
-        "default": 2
+        "default": 6
       },
       "等级加成下限": {
         "type": "int",
-        "default": 3
+        "default": 1
       },
       "等级加成上限": {
         "type": "int",
-        "default": 8
+        "default": 4
       },
       "精灵数量": {
         "type": "int",
-        "default": 8
+        "default": 6
       },
       "魅力减少": {
         "type": "int",
@@ -1123,23 +1123,23 @@
       },
       "挑战奖励_金钱上限": {
         "type": "int",
-        "default": 1000
+        "default": 150
       },
       "挑战奖励_经验下限": {
         "type": "int",
-        "default": 250
+        "default": 40
       },
       "挑战奖励_经验上限": {
         "type": "int",
-        "default": 500
+        "default": 100
       },
       "挑战扣除_金钱下限": {
         "type": "int",
-        "default": 50
+        "default": 30
       },
       "挑战扣除_金钱上限": {
         "type": "int",
-        "default": 150
+        "default": 80
       },
       "初始精灵_1": {
         "type": "string",
@@ -1155,11 +1155,11 @@
       },
       "挑战奖励_金钱下限": {
         "type": "int",
-        "default": 400
+        "default": 50
       },
       "挑战扣除_消耗体力": {
         "type": "int",
-        "default": 3
+        "default": 4
       },
       "精灵球": {
         "type": "int",
@@ -1167,12 +1167,12 @@
       },
       "旅行时长分钟": {
         "type": "int",
-        "default": 60,
+        "default": 90,
         "desc": "单次精灵旅行时长（分钟）"
       },
       "旅行消耗体力": {
         "type": "int",
-        "default": 10,
+        "default": 12,
         "desc": "派遣精灵旅行消耗的体力"
       },
       "旅行消耗魅力": {
@@ -1182,32 +1182,32 @@
       },
       "旅行金币下限": {
         "type": "int",
-        "default": 350,
+        "default": 80,
         "desc": "精灵旅行归来带回金币的下限"
       },
       "旅行金币上限": {
         "type": "int",
-        "default": 850,
+        "default": 220,
         "desc": "精灵旅行归来带回金币的上限"
       },
       "远征时长分钟": {
         "type": "int",
-        "default": 120,
+        "default": 150,
         "desc": "精灵小队远征时长（分钟）"
       },
       "远征单只体力": {
         "type": "int",
-        "default": 8,
+        "default": 10,
         "desc": "远征每只参战精灵消耗的体力（最高3只共24体力）"
       },
       "远征单只金币下限": {
         "type": "int",
-        "default": 350,
+        "default": 60,
         "desc": "远征每只参战精灵带回金币下限"
       },
       "远征单只金币上限": {
         "type": "int",
-        "default": 650,
+        "default": 150,
         "desc": "远征每只参战精灵带回金币上限"
       },
       "闪光基础概率": {
@@ -1217,12 +1217,12 @@
       },
       "洗练果实价格": {
         "type": "int",
-        "default": 3000,
+        "default": 8000,
         "desc": "洗练精灵性格消耗的金币价格"
       },
       "闪光结晶价格": {
         "type": "int",
-        "default": 25000,
+        "default": 50000,
         "desc": "直接觉醒精灵闪光形态消耗的金币价格"
       }
     }

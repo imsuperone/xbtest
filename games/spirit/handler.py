@@ -211,12 +211,12 @@ def _calc_variant_stats(base, shiny=False, trait=""):
 def _calc_level_growth(base_variant_stats):
     """根据精灵变异初始属性计算每升 1 级的综合全属性成长增量"""
     growth = {}
-    growth["hp"] = max(2, int(round(base_variant_stats.get("hp", 40) * STAT_GROWTH_RATES.get("hp", 0.05))))
-    growth["atk"] = max(1, int(round(base_variant_stats.get("atk", 40) * STAT_GROWTH_RATES.get("atk", 0.04))))
-    growth["def"] = max(1, int(round(base_variant_stats.get("def", 40) * STAT_GROWTH_RATES.get("def", 0.04))))
-    growth["spa"] = max(1, int(round(base_variant_stats.get("spa", 40) * STAT_GROWTH_RATES.get("spa", 0.04))))
-    growth["spd"] = max(1, int(round(base_variant_stats.get("spd", 40) * STAT_GROWTH_RATES.get("spd", 0.04))))
-    growth["spe"] = max(1, int(round(base_variant_stats.get("spe", 40) * STAT_GROWTH_RATES.get("spe", 0.025))))
+    growth["hp"] = max(1, int(round(base_variant_stats.get("hp", 40) * STAT_GROWTH_RATES.get("hp", 0.02))))
+    growth["atk"] = max(1, int(round(base_variant_stats.get("atk", 40) * STAT_GROWTH_RATES.get("atk", 0.015))))
+    growth["def"] = max(1, int(round(base_variant_stats.get("def", 40) * STAT_GROWTH_RATES.get("def", 0.015))))
+    growth["spa"] = max(1, int(round(base_variant_stats.get("spa", 40) * STAT_GROWTH_RATES.get("spa", 0.015))))
+    growth["spd"] = max(1, int(round(base_variant_stats.get("spd", 40) * STAT_GROWTH_RATES.get("spd", 0.015))))
+    growth["spe"] = max(1, int(round(base_variant_stats.get("spe", 40) * STAT_GROWTH_RATES.get("spe", 0.01))))
     return growth
 
 
@@ -273,9 +273,9 @@ def _desc(it):
 def _exp_need(it):
     # P0: 配置误设为0时 while exp>=0 恒真无限循环卡死，钳位>=1
     try:
-        need = int(it.get("level", 1)) * int(_cfgi("升级经验", 300))
+        need = int(it.get("level", 1)) * int(_cfgi("升级经验", 500))
     except Exception:
-        need = _SP_DEFAULTS.get("升级经验", 300)
+        need = _SP_DEFAULTS.get("升级经验", 500)
     return need if need >= EXP_FLOOR else EXP_FLOOR
 
 
@@ -339,7 +339,7 @@ def _add_exp(gid, qq, sp, it, amount, save_now=True):
     it["exp"] = int(it.get("exp", 0)) + int(amount)
     evolved = ""
     levels_gained = 0
-    max_lv = _cfgi("最大等级", 150)
+    max_lv = _cfgi("最大等级", 100)
 
     base = _SPIRITS().get(it.get("name"), {}) or {}
     shiny = bool(it.get("shiny"))
@@ -806,7 +806,7 @@ def cmd_adventure(gid, qq, place):
         return f"{ST.format_cd_time(rem_s)}再来冒险吧！"
 
     # 体力消耗与防脚本校验
-    d_tili = max(2, _cfgi("挑战扣除_消耗体力", 2))
+    d_tili = max(3, _cfgi("挑战扣除_消耗体力", 4))
     cur_st = ST.acct(gid, qq).int("stamina")
     if cur_st < d_tili:
         return f"亲，精灵冒险需要消耗 {d_tili} 点体力，您当前体力（{cur_st}）不足！"
@@ -818,17 +818,17 @@ def cmd_adventure(gid, qq, place):
     is_shiny = random.randint(1, 100) <= _shiny_rate()
     sp["wild"] = {"name": wild, "level": wl, "shiny": 1 if is_shiny else 0}
     # 冒险历练奖励(挑战奖励配置): 经验 + 金币（调低至符合零门槛休闲玩法期望）
-    exp_lo = _cfgi("挑战奖励_经验下限", 250); exp_hi = _cfgi("挑战奖励_经验上限", 500)
-    gold_lo = max(0, _cfgi("挑战奖励_金钱下限", 400))
-    gold_hi = max(gold_lo, _cfgi("挑战奖励_金钱上限", 1000))
+    exp_lo = _cfgi("挑战奖励_经验下限", 40); exp_hi = _cfgi("挑战奖励_经验上限", 100)
+    gold_lo = max(0, _cfgi("挑战奖励_金钱下限", 50))
+    gold_hi = max(gold_lo, _cfgi("挑战奖励_金钱上限", 150))
     exp = random.randint(max(1, exp_lo), max(exp_lo, exp_hi))
     gold = random.randint(gold_lo, gold_hi)
     evo_hint = ""
-    if act_it.get("level") < _cfgi("最大等级", 150):
+    if act_it.get("level") < _cfgi("最大等级", 100):
         evo_hint = _add_exp(gid, qq, sp, act_it, exp, save_now=False) or ""
     # H: 挑战扣除
-    d_lo = _cfgi("挑战扣除_金钱下限", 0)
-    d_hi = _cfgi("挑战扣除_金钱上限", 0)
+    d_lo = _cfgi("挑战扣除_金钱下限", 30)
+    d_hi = _cfgi("挑战扣除_金钱上限", 80)
     d_gold = 0
     d_stam = d_tili
     if d_hi > 0 or d_lo > 0:
@@ -1334,7 +1334,7 @@ def cmd_use_item(gid, qq, raw_arg):
         if bag[item_name] <= 0:
             bag.pop(item_name, None)
         evo_hint = ""
-        if int(it.get("level", 1)) < _cfgi("最大等级", 150):
+        if int(it.get("level", 1)) < _cfgi("最大等级", 100):
             evo_hint = _add_exp(gid, qq, sp, it, gain_exp, save_now=False) or ""
         _save(gid, qq, sp)
         return (f"🧀 美味享用！出战精灵【{_fmt_name(it)}】美美地享用了「{item_name}」×{cnt}！\r\n"
@@ -1356,7 +1356,7 @@ def cmd_use_item(gid, qq, raw_arg):
     if not field:
         return f"亲，「{item_name}」暂无法直接使用！"
     if field == "level":
-        max_lv = _cfgi("最大等级", 150)
+        max_lv = _cfgi("最大等级", 100)
         cur_lv = int(it.get("level", 1))
         if cur_lv >= max_lv:
             return f"亲，您的精灵【{act_name}】已达最高等级 Lv.{max_lv}！"
@@ -1466,8 +1466,8 @@ def cmd_travel(gid, qq, arg=""):
         it = _wsp(sp, t_name) or (sp["list"][0] if sp.get("list") else None)
         charm_val = _u(gid, qq).int("charm")
         drop_item = _pick_shop_drop(charm_val=charm_val, high_tier_bonus=5)
-        t_lo = max(0, _cfgi("旅行金币下限", 350))
-        t_hi = max(t_lo, _cfgi("旅行金币上限", 850))
+        t_lo = max(0, _cfgi("旅行金币下限", 80))
+        t_hi = max(t_lo, _cfgi("旅行金币上限", 220))
         gold_gain = random.randint(t_lo, t_hi)
         try:
             try:
@@ -1479,7 +1479,7 @@ def cmd_travel(gid, qq, arg=""):
                 gold_gain += gold_gain * int(_r_pct) // 100
         except Exception:
             pass
-        exp_gain = random.randint(200, 360)
+        exp_gain = random.randint(40, 90)
         cheese_bonus_tip = ""
         if it is not None and it.pop("buff_stamina", None):
             gold_gain = int(gold_gain * 1.5)
@@ -1491,7 +1491,7 @@ def cmd_travel(gid, qq, arg=""):
         evo_note = ""
         if it is not None:
             it["bond"] = int(it.get("bond", 0) or 0) + 5
-            if int(it.get("level", 1)) < _cfgi("最大等级", 150):
+            if int(it.get("level", 1)) < _cfgi("最大等级", 100):
                 evo_note = _add_exp(gid, qq, sp, it, exp_gain, save_now=False)
         if ST.txn_coins_acct(gid, qq, gold_gain, {"spirits": json.dumps(sp, ensure_ascii=False)}) is None:
             return "旅行结算系统繁忙，请稍后重试！"
@@ -1580,9 +1580,9 @@ def cmd_expedition(gid, qq, arg=""):
             team_its = lst[:min(3, len(lst))]
         cnt = max(1, len(team_its))
         total_p = sum(_power(x) for x in team_its)
-        e_lo = max(0, _cfgi("远征单只金币下限", 350))
-        e_hi = max(e_lo, _cfgi("远征单只金币上限", 650))
-        gold_gain = random.randint(e_lo * cnt, e_hi * cnt) + min(1500, total_p // 10)
+        e_lo = max(0, _cfgi("远征单只金币下限", 60))
+        e_hi = max(e_lo, _cfgi("远征单只金币上限", 150))
+        gold_gain = random.randint(e_lo * cnt, e_hi * cnt) + min(300, total_p // 50)
         try:
             try:
                 from ..ride import active_ride_info
@@ -1593,7 +1593,7 @@ def cmd_expedition(gid, qq, arg=""):
                 gold_gain += gold_gain * int(_r_pct2) // 100
         except Exception:
             pass
-        exp_gain = random.randint(260, 420)
+        exp_gain = random.randint(50, 120)
         bag = sp.setdefault("bag", {})
         drops = []
         # 远征产出调优：保底 1 件道具，队伍≥2只且高战力大成功时有 25% 概率额外带回第2件，杜绝无限批发
@@ -1607,7 +1607,7 @@ def cmd_expedition(gid, qq, arg=""):
         sp.pop("expedition", None)
         evo_msgs = []
         for x in team_its:
-            if int(x.get("level", 1)) < _cfgi("最大等级", 150):
+            if int(x.get("level", 1)) < _cfgi("最大等级", 100):
                 ev = _add_exp(gid, qq, sp, x, exp_gain, save_now=False)
                 if ev:
                     evo_msgs.append(f"{x.get('name')}:{ev.strip()}")
