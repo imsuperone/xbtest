@@ -109,6 +109,13 @@ async def handle_align_preview(request=None, plugin_base=""):
         for k, off_val in kv.items():
             preset_summary["total"] += 1
             cur_val = cur_sec.get(k)
+            if cur_val is None and hasattr(ST, "cfg"):
+                try:
+                    c_ret = ST.cfg(sec, k, None)
+                    if c_ret is not None and c_ret != "":
+                        cur_val = c_ret
+                except Exception:
+                    pass
             s_cur = str(cur_val) if cur_val is not None else "(未设置)"
             s_off = str(off_val)
             full_k = f"{sec}.{k}"
@@ -222,15 +229,25 @@ async def handle_align_preview(request=None, plugin_base=""):
     except Exception:
         OFF_RIDE_SHOP = {}
 
-    raw_rides = ST.cfg("商城图鉴", "ride_shop", {})
     cur_rides = {}
-    if isinstance(raw_rides, dict):
-        cur_rides = raw_rides
-    elif isinstance(raw_rides, str) and raw_rides.strip():
-        try:
-            cur_rides = json.loads(raw_rides)
-        except Exception:
-            cur_rides = {}
+    for cand in (
+        ST.cfg("商城图鉴", "ride_shop", ""),
+        (getattr(ST, "_CONFIG", {}) or {}).get("商城图鉴", {}).get("ride_shop", {}),
+    ):
+        if not cand:
+            continue
+        c_dict = {}
+        if isinstance(cand, dict):
+            c_dict = cand
+        elif isinstance(cand, str) and cand.strip():
+            try:
+                parsed = json.loads(cand)
+                if isinstance(parsed, dict):
+                    c_dict = parsed
+            except Exception:
+                pass
+        if c_dict:
+            cur_rides.update(c_dict)
 
     custom_rides_cnt = len([k for k in cur_rides if k not in OFF_RIDE_SHOP])
     rides_summary = {
@@ -428,16 +445,26 @@ async def handle_align_defaults(request=None, plugin_base=""):
             except ImportError:
                 from games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP  # type: ignore
 
-            # 当前活跃坐骑配置
-            raw_rides = ST.cfg("商城图鉴", "ride_shop", {})
+            # 当前活跃坐骑配置（合并 sidecar 文件与内存/配置）
             cur_rides = {}
-            if isinstance(raw_rides, dict):
-                cur_rides = copy.deepcopy(raw_rides)
-            elif isinstance(raw_rides, str) and raw_rides.strip():
-                try:
-                    cur_rides = json.loads(raw_rides)
-                except Exception:
-                    cur_rides = {}
+            for cand in (
+                ST.cfg("商城图鉴", "ride_shop", ""),
+                (getattr(ST, "_CONFIG", {}) or {}).get("商城图鉴", {}).get("ride_shop", {}),
+            ):
+                if not cand:
+                    continue
+                c_dict = {}
+                if isinstance(cand, dict):
+                    c_dict = cand
+                elif isinstance(cand, str) and cand.strip():
+                    try:
+                        parsed = json.loads(cand)
+                        if isinstance(parsed, dict):
+                            c_dict = parsed
+                    except Exception:
+                        pass
+                if c_dict:
+                    cur_rides.update(copy.deepcopy(c_dict))
 
             aligned_off_rides = 0
             custom_rides_count = 0

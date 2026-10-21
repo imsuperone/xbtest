@@ -94,17 +94,27 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
         from games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP
     except Exception:
         OFF_RIDE_SHOP = {}
-    raw_rides = ST.cfg("商城图鉴", "ride_shop", "")
-    if not raw_rides:
-        raw_rides = (getattr(ST, "_CONFIG", {}) or {}).get("商城图鉴", {}).get("ride_shop", {})
+
     cur_rides = {}
-    if isinstance(raw_rides, dict):
-        cur_rides = raw_rides
-    elif isinstance(raw_rides, str) and raw_rides.strip():
-        try:
-            cur_rides = json.loads(raw_rides)
-        except Exception:
-            cur_rides = {}
+    for cand in (
+        ST.cfg("商城图鉴", "ride_shop", ""),
+        (getattr(ST, "_CONFIG", {}) or {}).get("商城图鉴", {}).get("ride_shop", {}),
+    ):
+        if not cand:
+            continue
+        c_dict = {}
+        if isinstance(cand, dict):
+            c_dict = cand
+        elif isinstance(cand, str) and cand.strip():
+            try:
+                parsed = json.loads(cand)
+                if isinstance(parsed, dict):
+                    c_dict = parsed
+            except Exception:
+                pass
+        if c_dict:
+            cur_rides.update(c_dict)
+
     custom_rides = [k for k in cur_rides if k not in OFF_RIDE_SHOP]
 
     # 4. 自定义抽卡武器持久化统计
@@ -112,17 +122,27 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
         from games.config.shop import DEFAULT_WEAPON_ATTRS
     except Exception:
         DEFAULT_WEAPON_ATTRS = {}
-    raw_w = ST.cfg("商城图鉴", "weapon_attrs", "")
-    if not raw_w:
-        raw_w = (getattr(ST, "_CONFIG", {}) or {}).get("商城图鉴", {}).get("weapon_attrs", {})
+
     cur_w = {}
-    if isinstance(raw_w, dict):
-        cur_w = raw_w
-    elif isinstance(raw_w, str) and raw_w.strip():
-        try:
-            cur_w = json.loads(raw_w)
-        except Exception:
-            cur_w = {}
+    for cand in (
+        ST.cfg("商城图鉴", "weapon_attrs", ""),
+        (getattr(ST, "_CONFIG", {}) or {}).get("商城图鉴", {}).get("weapon_attrs", {}),
+    ):
+        if not cand:
+            continue
+        c_dict = {}
+        if isinstance(cand, dict):
+            c_dict = cand
+        elif isinstance(cand, str) and cand.strip():
+            try:
+                parsed = json.loads(cand)
+                if isinstance(parsed, dict):
+                    c_dict = parsed
+            except Exception:
+                pass
+        if c_dict:
+            cur_w.update(c_dict)
+
     custom_weapons = [k for k in cur_w if k not in DEFAULT_WEAPON_ATTRS]
 
     # 5. 自建题库持久化统计
