@@ -44,7 +44,7 @@ except ImportError:
         from core.version import get_version  # type: ignore
     except ImportError:
         def get_version(p=""):
-            return "26w1021m"
+            return "unknown"
 
 
 OFFICIAL_UPDATE_DATE = "2026-10-21"
