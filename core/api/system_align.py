@@ -61,9 +61,31 @@ async def handle_align_preview(request=None, plugin_base=""):
     base_dir = plugin_base or plugin_root(__file__)
     ver = get_version(base_dir)
 
-    # 1. 数值平衡与基础设置对比
+    # 1. 数值平衡与基础设置对比（自适应识别实时动态调控模式 vs 固定预设模式）
     custom_keys = (getattr(ST, "_CONFIG", {}) or {}).get("_custom_keys") or {}
-    std_preset = PRESETS.get("standard", {}) if isinstance(PRESETS, dict) else {}
+    ctrl_type = str(
+        (getattr(ST, "_CONFIG", {}) or {}).get("_balance_control_type")
+        or ST.cfg("设置", "调控模式", "")
+        or "realtime"
+    ).strip().lower()
+    ctrl_type = "fixed" if ctrl_type in ("fixed", "固定", "固定模式") else "realtime"
+
+    active_mode = str(
+        (getattr(ST, "_CONFIG", {}) or {}).get("_active_balance_mode")
+        or ST.cfg("设置", "平衡模式", "")
+        or "standard"
+    ).strip()
+    if active_mode not in PRESETS:
+        active_mode = "standard"
+
+    if ctrl_type == "realtime":
+        try:
+            from core.api.balance import build_realtime_preset
+            std_preset, _, _ = build_realtime_preset(active_mode)
+        except Exception:
+            std_preset = PRESETS.get(active_mode, PRESETS.get("standard", {}))
+    else:
+        std_preset = PRESETS.get(active_mode, PRESETS.get("standard", {}))
 
     diff_details = []
     preset_summary = {
@@ -71,6 +93,8 @@ async def handle_align_preview(request=None, plugin_base=""):
         "will_update": 0,
         "unchanged": 0,
         "custom_locked": 0,
+        "control_type": ctrl_type,
+        "active_mode": active_mode,
     }
 
     # 优先挑选玩家最关注的核心参数进行顺序展示
@@ -480,7 +504,30 @@ async def handle_align_defaults(request=None, plugin_base=""):
     if "presets" in targets or "balance" in targets or "预设" in targets:
         try:
             customs = (getattr(ST, "_CONFIG", {}) or {}).get("_custom_keys") or {}
-            std_preset = PRESETS.get("standard", {}) if isinstance(PRESETS, dict) else {}
+
+            ctrl_type = str(
+                (getattr(ST, "_CONFIG", {}) or {}).get("_balance_control_type")
+                or ST.cfg("设置", "调控模式", "")
+                or "realtime"
+            ).strip().lower()
+            ctrl_type = "fixed" if ctrl_type in ("fixed", "固定", "固定模式") else "realtime"
+
+            active_mode = str(
+                (getattr(ST, "_CONFIG", {}) or {}).get("_active_balance_mode")
+                or ST.cfg("设置", "平衡模式", "")
+                or "standard"
+            ).strip()
+            if active_mode not in PRESETS:
+                active_mode = "standard"
+
+            if ctrl_type == "realtime":
+                try:
+                    from core.api.balance import build_realtime_preset
+                    std_preset, _, _ = build_realtime_preset(active_mode)
+                except Exception:
+                    std_preset = PRESETS.get(active_mode, PRESETS.get("standard", {}))
+            else:
+                std_preset = PRESETS.get(active_mode, PRESETS.get("standard", {}))
 
             aligned_keys = 0
             preserved_keys = 0
@@ -502,11 +549,24 @@ async def handle_align_defaults(request=None, plugin_base=""):
                 b_sec.pop("利率上限", None)
                 b_sec.pop("日结算上限", None)
 
+            # 同步更新调控状态标记，确保与实时调控引擎无缝融合
+            if ctrl_type == "realtime":
+                try:
+                    from core.api.balance import compute_realtime_economy
+                    ST._CONFIG["_balance_control_type"] = "realtime"
+                    ST._CONFIG["_active_balance_mode"] = active_mode
+                    ST._CONFIG["_realtime_balance_meta"] = compute_realtime_economy(active_mode)
+                except Exception:
+                    pass
+            else:
+                ST._CONFIG["_balance_control_type"] = "fixed"
+                ST._CONFIG["_active_balance_mode"] = active_mode
+
             ST.save_config()
 
             results["presets"] = {
                 "ok": True,
-                "msg": f"已对齐 {aligned_keys} 项官方基准数值，保护保留 {preserved_keys} 项用户手动自定义配置（不受覆盖）",
+                "msg": f"已对齐经济平衡数值（调控模式: {'实时动态调控' if ctrl_type == 'realtime' else '固定标准预设'}），已保护 {preserved_keys} 项用户自定义数值。",
                 "aligned_keys": aligned_keys,
                 "preserved_keys": preserved_keys
             }

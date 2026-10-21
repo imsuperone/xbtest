@@ -5305,23 +5305,35 @@
   border-color: var(--acc, #3b82f6);
   background: rgba(99, 102, 241, 0.05);
 }
-.align-opt-card input[type="checkbox"] {
-  width: 20px !important;
-  height: 20px !important;
+.align-opt-card input[type="checkbox"],
+.align-backup-row input[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 22px !important;
+  height: 22px !important;
   margin-top: 2px !important;
   border: 2px solid var(--outline, #94a3b8) !important;
-  border-radius: 5px !important;
+  border-radius: 6px !important;
+  background-color: var(--card, #ffffff) !important;
   cursor: pointer;
   flex-shrink: 0;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  transition: all 0.2s ease !important;
 }
-.align-opt-card input[type="checkbox"]:checked {
+.align-opt-card input[type="checkbox"]:checked,
+.align-backup-row input[type="checkbox"]:checked {
   background-color: var(--acc, #3b82f6) !important;
   border-color: var(--acc, #3b82f6) !important;
 }
-.align-opt-card input[type="checkbox"]:checked::after {
+.align-opt-card input[type="checkbox"]:checked::after,
+.align-backup-row input[type="checkbox"]:checked::after {
   content: "" !important;
-  width: 5px !important;
-  height: 10px !important;
+  display: block !important;
+  width: 6px !important;
+  height: 11px !important;
   border: solid #ffffff !important;
   border-width: 0 2.5px 2.5px 0 !important;
   transform: rotate(45deg) !important;

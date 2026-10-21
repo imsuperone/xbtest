@@ -846,10 +846,14 @@ function initAlignLatestEvents() {
         const ws = res.weapons_summary || {};
 
         if (pillsBox) {
+          const ctrlModeLabel = ps.control_type === "realtime" ? "实时调控模式（自适应）" : "固定预设模式";
+          const upDate = res.official_updated_at || "2026-10-21";
           pillsBox.innerHTML = `
-            <span class="align-badge align-badge-info">待更新: ${ps.will_update || 0}</span>
-            <span class="align-badge align-badge-safe">无变化: ${ps.unchanged || 0}</span>
-            <span class="align-badge align-badge-protect">用户自定义锁: ${ps.custom_locked || 0}</span>
+            <span class="align-badge align-badge-info" style="font-weight:700">官方基准发布: ${esc(upDate)}</span>
+            <span class="align-badge" style="background:rgba(99,102,241,0.12);color:var(--acc,#3b82f6);border:1px solid rgba(99,102,241,0.25);font-weight:600">⚙️ ${esc(ctrlModeLabel)}</span>
+            <span class="align-badge align-badge-info">待对齐: ${ps.will_update || 0}</span>
+            <span class="align-badge align-badge-safe">已一致: ${ps.unchanged || 0}</span>
+            <span class="align-badge align-badge-protect">自定义保护: ${ps.custom_locked || 0}</span>
           `;
         }
 
@@ -904,17 +908,17 @@ function initAlignLatestEvents() {
               html += `<div class="align-diff-item" data-filter-tag="${filterTag}"${hideClass}>
                 <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
                 <div class="align-diff-vals">
-                  <span style="color:var(--muted)">${esc(it.current)}</span>
-                  <span style="color:var(--ok);font-weight:bold">✓ 一致</span>
+                  <span style="color:var(--muted);font-weight:500">${esc(it.current)}</span>
+                  <span class="align-badge align-badge-safe" style="font-size:11px;font-weight:700">✓ 官方一致</span>
                 </div>
               </div>`;
             } else {
               html += `<div class="align-diff-item will-update" data-filter-tag="${filterTag}"${hideClass}>
                 <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
                 <div class="align-diff-vals">
-                  <span class="align-val-old">${esc(it.current)}</span>
-                  <span class="align-val-arrow">→</span>
-                  <span class="align-val-new">${esc(it.official)}</span>
+                  <span class="align-val-old" style="color:var(--bad,#ef4444);font-weight:600;padding:1px 6px;background:rgba(239,68,68,0.1);border-radius:4px">${esc(it.current)}</span>
+                  <span class="align-val-arrow" style="font-weight:800;color:var(--acc,#3b82f6)">→</span>
+                  <span class="align-val-new" style="color:var(--ok,#16a34a);font-weight:700;padding:1px 6px;background:rgba(22,163,74,0.1);border-radius:4px">${esc(it.official)}</span>
                 </div>
               </div>`;
             }
