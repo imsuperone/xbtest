@@ -3,38 +3,59 @@
  * 涵盖 105 种鱼类图鉴展示、增删改查、生态水域/品质筛选、JSON导入导出、恢复默认与群友实时运行大屏
  */
 
+function escapeHtml(s) {
+  if (typeof esc === "function") return esc(s);
+  return String(s || "").replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 let _fishingAllFishes = [];
 let _fishingCurrentZone = "all";
 let _fishingCurrentQuality = "all";
 let _fishingSearchKeyword = "";
 let _fishingOverviewData = null;
+let _fishingEventsBound = false;
 
 async function loadFishing(force = false) {
+  initFishingEvents();
   try {
     const p1 = getBridge().apiGet("fishing/overview").catch(() => null);
     const p2 = getBridge().apiGet("fishing/fishes").catch(() => null);
     const [ovResp, fResp] = await Promise.all([p1, p2]);
 
-    if (ovResp && ovResp.code === 0) {
-      _fishingOverviewData = ovResp;
-      renderFishingOverview(ovResp);
+    if (ovResp) {
+      const ov = (ovResp.code === 0 && ovResp.data) ? ovResp.data : (ovResp.total_species !== undefined ? ovResp : (ovResp.data || null));
+      if (ov) {
+        _fishingOverviewData = ov;
+        renderFishingOverview(ov);
+      }
     }
-    if (fResp && fResp.code === 0) {
-      _fishingAllFishes = fResp.data || [];
-      renderFishingGrid();
+
+    let fishes = [];
+    if (Array.isArray(fResp)) {
+      fishes = fResp;
+    } else if (fResp && Array.isArray(fResp.data)) {
+      fishes = fResp.data;
+    } else if (fResp && Array.isArray(fResp.fishes)) {
+      fishes = fResp.fishes;
+    } else if (fResp && typeof fResp === "object" && Array.isArray(fResp.list)) {
+      fishes = fResp.list;
     }
+
+    _fishingAllFishes = fishes;
+    renderFishingGrid();
   } catch (e) {
     toast("加载钓鱼系统数据失败: " + e.message, "bad");
   }
 }
 
 function renderFishingOverview(data) {
+  if (!data) return;
   const elSp = document.getElementById("fishingStatSpecies");
   const elPonds = document.getElementById("fishingStatPonds");
   const elAqFishes = document.getElementById("fishingStatAquariumFishes");
   const elBkFishes = document.getElementById("fishingStatBucketFishes");
 
-  if (elSp) elSp.innerText = data.total_species || 0;
+  if (elSp) elSp.innerText = data.total_species || _fishingAllFishes.length || 0;
   if (elPonds) elPonds.innerText = data.active_ponds || 0;
   if (elAqFishes) elAqFishes.innerText = data.total_aquarium_fishes || 0;
   if (elBkFishes) elBkFishes.innerText = data.total_bucket_fishes || 0;
@@ -46,7 +67,7 @@ function renderFishingOverview(data) {
     const countSpan = btn.querySelector(".zone-count");
     if (countSpan) {
       if (z === "all") {
-        countSpan.innerText = data.total_species || 0;
+        countSpan.innerText = data.total_species || _fishingAllFishes.length || 0;
       } else {
         countSpan.innerText = zones[z] || 0;
       }
@@ -180,12 +201,18 @@ function openFishEditModal(fishId = null) {
 
   document.getElementById("modalFishEditTitle").innerText = fishId ? "✏️ 编辑鱼类品种" : "＋ 新增鱼类品种";
   const modal = document.getElementById("modalFishEdit");
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    modal.classList.add("open", "show");
+    modal.style.display = "flex";
+  }
 }
 
 function closeFishEditModal() {
   const modal = document.getElementById("modalFishEdit");
-  if (modal) modal.style.display = "none";
+  if (modal) {
+    modal.classList.remove("open", "show");
+    modal.style.display = "none";
+  }
 }
 
 async function saveFishForm() {
@@ -293,12 +320,18 @@ async function exportFishingJSON() {
 
 function openFishingImportModal() {
   const modal = document.getElementById("modalFishingImport");
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    modal.classList.add("open", "show");
+    modal.style.display = "flex";
+  }
 }
 
 function closeFishingImportModal() {
   const modal = document.getElementById("modalFishingImport");
-  if (modal) modal.style.display = "none";
+  if (modal) {
+    modal.classList.remove("open", "show");
+    modal.style.display = "none";
+  }
 }
 
 async function doFishingImport() {
@@ -341,7 +374,10 @@ async function doFishingImport() {
 // ==================== 实时群友监控大屏 ====================
 async function openFishingRuntimeMonitor() {
   const modal = document.getElementById("modalFishingRuntime");
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    modal.classList.add("open", "show");
+    modal.style.display = "flex";
+  }
 
   const box = document.getElementById("fishingRuntimeListBox");
   if (box) box.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">正在实时拉取全群鱼塘与水族馆挂机状态…</div>';
@@ -401,11 +437,17 @@ async function openFishingRuntimeMonitor() {
 
 function closeFishingRuntimeMonitor() {
   const modal = document.getElementById("modalFishingRuntime");
-  if (modal) modal.style.display = "none";
+  if (modal) {
+    modal.classList.remove("open", "show");
+    modal.style.display = "none";
+  }
 }
 
 // ==================== 事件绑定与初始化 ====================
-document.addEventListener("DOMContentLoaded", () => {
+function initFishingEvents() {
+  if (_fishingEventsBound) return;
+  _fishingEventsBound = true;
+
   // 水域过滤切换
   document.querySelectorAll("[data-fish-zone]").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -446,11 +488,24 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("fishFormCancel")?.addEventListener("click", closeFishEditModal);
   document.getElementById("fishFormSave")?.addEventListener("click", saveFishForm);
 
-  document.getElementById("modalFishImportClose")?.addEventListener("click", closeFishingImportModal);
+  document.getElementById("modalFishingImportClose")?.addEventListener("click", closeFishingImportModal);
   document.getElementById("fishImportCancel")?.addEventListener("click", closeFishingImportModal);
   document.getElementById("fishImportDo")?.addEventListener("click", doFishingImport);
 
-  document.getElementById("modalFishRuntimeClose")?.addEventListener("click", closeFishingRuntimeMonitor);
+  document.getElementById("modalFishingRuntimeClose")?.addEventListener("click", closeFishingRuntimeMonitor);
+
+  // 背景点击关闭弹窗
+  ["modalFishEdit", "modalFishingImport", "modalFishingRuntime"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("click", (e) => {
+        if (e.target === el) {
+          el.classList.remove("open", "show");
+          el.style.display = "none";
+        }
+      });
+    }
+  });
 
   // 文件选择器读取 JSON
   document.getElementById("fishImportFileInput")?.addEventListener("change", (e) => {
@@ -464,7 +519,13 @@ document.addEventListener("DOMContentLoaded", () => {
       reader.readAsText(file, "UTF-8");
     }
   });
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initFishingEvents);
+} else {
+  initFishingEvents();
+}
 
 window.loadFishing = loadFishing;
 window.openFishEditModal = openFishEditModal;

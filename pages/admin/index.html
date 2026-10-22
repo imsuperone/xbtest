@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light dark">
   <title>小白测试版 - 小白机器人</title>
-  <link rel="stylesheet" href="./admin.css?v=26w1022e">
+  <link rel="stylesheet" href="./admin.css?v=26w1022f">
   <!-- 主题色/深浅色优先读取本地缓存实现首帧零阻塞渲染，未缓存时最多挂起 150ms -->
   <style>
     html[data-boot] { visibility: hidden; background: #f4f6f8; }
@@ -40,7 +40,7 @@
           <span class="island-trigger-text">导航</span>
         </button>
         <div class="brand-text">
-          <h1>小白测试版 <span class="version-tag" data-ver="26w1022e">v26w1022e</span></h1>
+          <h1>小白测试版 <span class="version-tag" data-ver="26w1022f">v26w1022f</span></h1>
         </div>
       </div>
       <div class="top-bar-actions" style="position:relative">
@@ -666,8 +666,6 @@
         <div id="fishingGridBox" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px"></div>
       </div>
     </div>
-      </div>
-    </div>
 
 
     <!-- 9. 商城 Tab -->
@@ -941,8 +939,8 @@
             <div>插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
             <div>仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
             <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-              <div>后端版本：<b id="aboutVersion">v26w1022e</b></div>
-              <div>前端版本：<b id="aboutFrontendVer">v26w1022e</b></div>
+              <div>后端版本：<b id="aboutVersion">v26w1022f</b></div>
+              <div>前端版本：<b id="aboutFrontendVer">v26w1022f</b></div>
             </div>
             <!-- 持久化与升级保障状态徽章 -->
             <div style="margin-top:4px;padding:10px 14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:12.5px;color:var(--text);display:flex;align-items:flex-start;gap:8px">
@@ -1049,16 +1047,16 @@
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
             <div>
               <h3 style="margin:0;font-size:16.5px;font-weight:700;display:flex;align-items:center;gap:8px">
-                <span>📦</span> 对齐官方最新版本内容
-                <span id="alignOffVerBadge" class="align-badge align-badge-info" style="font-size:11.5px">官方基准：加载中...</span>
+                <span>🔄</span> 最新预设数据补全与同步
+                <span id="alignOffVerBadge" class="align-badge align-badge-info" style="font-size:11.5px">版本基准：加载中...</span>
               </h3>
               <div style="color:var(--muted);font-size:12.5px;margin-top:4px">
-                插件升级后，您可自主选择将官方最新基准同步至当前环境；系统采用非破坏性增量合并，<b>100% 保护您的所有自定义内容与自建数据</b>。
+                插件升级后，可自主选择将系统内置的最新题库纠错、坐骑图鉴与推荐数值合并同步至当前环境；采用增量合并，<b>100% 保护您的所有自定义内容与自建数据</b>。
               </div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
               <button id="btnAlignPreview" type="button" class="btn" style="padding:7px 14px;font-size:12.5px;background:var(--panel);border:1px solid var(--line);color:var(--text);display:inline-flex;align-items:center;gap:6px;cursor:pointer">
-                <span>🔍</span> 查看变更差异 (Diff)
+                <span>🔍</span> 查看更新差异 (Diff)
               </button>
             </div>
           </div>
@@ -1067,7 +1065,7 @@
           <div id="alignDiffBox" style="display:none;margin-bottom:16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden">
             <div style="padding:10px 14px;background:rgba(0,0,0,0.03);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
               <div style="font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px">
-                <span>📊</span> 官方最新标准 vs 本地运行环境差异清单
+                <span>📊</span> 最新预设与当前运行环境差异清单
               </div>
               <div id="alignDiffSummaryPills" style="display:flex;gap:6px;font-size:11.5px;flex-wrap:wrap"></div>
             </div>
@@ -1082,11 +1080,11 @@
               <input type="checkbox" id="alignOptRiddles" checked>
               <div style="flex:1">
                 <div class="align-opt-title-row">
-                  <span style="font-weight:600;font-size:14px">🧩 官方娱乐题库（急转弯、猜字谜、知识问答、成语接龙）</span>
-                  <span class="align-badge align-badge-safe">增量修复 · 100%保留自建</span>
+                  <span style="font-weight:600;font-size:14px">🧩 娱乐题库（急转弯、猜字谜、知识问答、成语接龙）</span>
+                  <span class="align-badge align-badge-safe">增量修复 · 保留自建题目</span>
                 </div>
                 <div style="font-size:12px;color:var(--muted);margin-top:2px">
-                  纠错官方题干与答案（如“英文字母最多人戴”等逻辑修正），增量合并官方新题；<b>100% 完整保留用户自建与导入的所有题目</b>。
+                  纠错内置题干与答案，增量合并新版题目；<b>完整保留用户自建与导入的所有题目</b>。
                 </div>
               </div>
             </label>
@@ -1096,11 +1094,11 @@
               <input type="checkbox" id="alignOptRides" checked>
               <div style="flex:1">
                 <div class="align-opt-title-row">
-                  <span style="font-weight:600;font-size:14px">🐎 官方默认坐骑数据与预设图片</span>
+                  <span style="font-weight:600;font-size:14px">🐎 坐骑数据与预设图片补全</span>
                   <span class="align-badge align-badge-safe">图片双重持久化 · 自建坐骑保留</span>
                 </div>
                 <div style="font-size:12px;color:var(--muted);margin-top:2px">
-                  对齐 10 款官方默认坐骑的基础售价、加成定位与高清预设图片；<b>100% 保留所有用户自定义新增的坐骑及用户自行绑定的图片</b>。
+                  补齐 10 款官方默认坐骑的基础售价、定位与预设图片；<b>保留所有自定义新增坐骑与用户绑定的图片</b>。
                 </div>
               </div>
             </label>
@@ -1111,10 +1109,10 @@
               <div style="flex:1">
                 <div class="align-opt-title-row">
                   <span style="font-weight:600;font-size:14px">⚖️ 基础数值与经济平衡预设</span>
-                  <span id="alignPresetsBadge" class="align-badge align-badge-safe">官方推荐基准</span>
+                  <span id="alignPresetsBadge" class="align-badge align-badge-safe">推荐基准</span>
                 </div>
                 <div style="font-size:12px;color:var(--muted);margin-top:2px">
-                  对齐官方推荐基准（银行默认利率1%、每日利息结算上限3次、SSR抽卡概率~1%等）；<b>已保护自定义配置，绝不覆盖用户手动调控的利息或自定义数值</b>。
+                  对齐官方推荐基准（银行默认利率1%、每日利息结算上限3次、SSR抽卡概率~1%等）；<b>已调控的自定义配置受保护，绝不强制覆盖</b>。
                 </div>
               </div>
             </label>
@@ -1125,10 +1123,10 @@
               <div style="flex:1">
                 <div class="align-opt-title-row">
                   <span style="font-weight:600;font-size:14px">⚔️ 武器池内置默认属性</span>
-                  <span class="align-badge align-badge-info">42款内置官方标准</span>
+                  <span class="align-badge align-badge-info">42款内置标准</span>
                 </div>
                 <div style="font-size:12px;color:var(--muted);margin-top:2px">
-                  将 42 款内置武器（SSR/SR/R）默认攻击力与描述同步为最新官方标准；<b>保留用户自定义的所有武器与新增属性</b>。
+                  将 42 款内置武器（SSR/SR/R）默认攻击力与描述同步为标准基准；<b>保留用户自定义的所有武器与新增属性</b>。
                 </div>
               </div>
             </label>
@@ -1139,19 +1137,19 @@
             <input type="checkbox" id="alignOptBackup" checked>
             <div style="flex:1">
               <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-weight:600;font-size:13.5px">🛡️ 同步前自动创建安全备份</span>
-                <span class="align-badge align-badge-safe" style="font-size:11px">推荐开启 · 双重保险</span>
+                <span style="font-weight:600;font-size:13.5px">🛡️ 同步前自动创建配置快照备份</span>
+                <span class="align-badge align-badge-safe" style="font-size:11px">推荐勾选 · 双重保险</span>
               </div>
               <div style="font-size:12px;color:var(--muted);margin-top:3px">
-                系统将在同步前自动保存一份当前配置还原点；若后续想恢复当前状态，可随时在【运维 · 备份管理】一键还原。
+                同步前自动保存一份当前完整配置还原点；若后续想恢复，可随时在【运维 · 备份管理】一键还原。
               </div>
             </div>
           </label>
 
           <!-- 执行按钮与反馈 -->
           <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <button id="btnAlignLatest" class="btn" style="padding:10px 24px;font-size:13.5px">🚀 一键对齐所选内容到最新版本</button>
-            <span id="alignSpinner" style="display:none;font-size:12.5px;color:var(--muted)">⏳ 正在执行智能对齐与安全合并，请稍候...</span>
+            <button id="btnAlignLatest" class="btn" style="padding:10px 24px;font-size:13.5px">🚀 开始同步选中的预设内容</button>
+            <span id="alignSpinner" style="display:none;font-size:12.5px;color:var(--muted)">⏳ 正在同步并安全合并，请稍候...</span>
           </div>
 
           <!-- 结果展示框 -->
@@ -1458,19 +1456,19 @@
       </div>
     </div>
   </div>
-    <script defer src="./js/00_core.js?v=26w1022e"></script>
-  <script defer src="./js/01_theme.js?v=26w1022e"></script>
-  <script defer src="./js/02_export.js?v=26w1022e"></script>
-  <script defer src="./js/03_import.js?v=26w1022e"></script>
-  <script defer src="./js/04_media.js?v=26w1022e"></script>
-  <script defer src="./js/05_config.js?v=26w1022e"></script>
-  <script defer src="./js/06_users.js?v=26w1022e"></script>
-  <script defer src="./js/07_spirit.js?v=26w1022e"></script>
-  <script defer src="./js/08_shop.js?v=26w1022e"></script>
-  <script defer src="./js/09_views.js?v=26w1022e"></script>
-  <script defer src="./js/10_ops.js?v=26w1022e"></script>
-  <script defer src="./js/11_questions.js?v=26w1022e"></script>
-  <script defer src="./js/12_fishing.js?v=26w1022e"></script>
+    <script defer src="./js/00_core.js?v=26w1022f"></script>
+  <script defer src="./js/01_theme.js?v=26w1022f"></script>
+  <script defer src="./js/02_export.js?v=26w1022f"></script>
+  <script defer src="./js/03_import.js?v=26w1022f"></script>
+  <script defer src="./js/04_media.js?v=26w1022f"></script>
+  <script defer src="./js/05_config.js?v=26w1022f"></script>
+  <script defer src="./js/06_users.js?v=26w1022f"></script>
+  <script defer src="./js/07_spirit.js?v=26w1022f"></script>
+  <script defer src="./js/08_shop.js?v=26w1022f"></script>
+  <script defer src="./js/09_views.js?v=26w1022f"></script>
+  <script defer src="./js/10_ops.js?v=26w1022f"></script>
+  <script defer src="./js/11_questions.js?v=26w1022f"></script>
+  <script defer src="./js/12_fishing.js?v=26w1022f"></script>
 
 
   <!-- 鱼类编辑/添加弹窗 -->
