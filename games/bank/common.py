@@ -144,31 +144,97 @@ def _cd(a, key, mins):
 
 
 # ---- 监狱(入狱/出狱) ----
+def _clean_user_nick(s):
+    s = str(s or "").strip()
+    s = re.sub(r"<%.*?%>", "", s)
+    s = re.sub(r"<[^>]+>", "", s)
+    s = s.lstrip("@").strip()
+    return s
+
+
 def _find_qq_by_name(gid, name):
     name = str(name or "").strip()
     if not name:
         return None
+    clean = _clean_user_nick(name)
+    targets = [n for n in (name, clean) if n]
+
+    # 1. 尝试从 slave_state 的分群昵称与全局反查表匹配
     try:
-        from ..slave.nick import NOTE_NAMES_BY_GROUP
-        for (g, q), n in NOTE_NAMES_BY_GROUP.items():
-            if (gid is None or str(g) == str(gid)) and n == name:
+        from ..slave import slave_state as _sl_S
+        for (g, q), n in getattr(_sl_S, "NOTE_NAMES_BY_GROUP", {}).items():
+            if gid is None or str(g) == str(gid):
+                n_clean = _clean_user_nick(n)
+                if any(t == n or t == n_clean for t in targets):
+                    return str(q)
+        for q, n in getattr(_sl_S, "NOTE_NAMES", {}).items():
+            n_clean = _clean_user_nick(n)
+            if any(t == n or t == n_clean for t in targets):
                 return str(q)
     except Exception:
         pass
+
+    # 2. 尝试从 slave ini 配置匹配
     try:
         from ..slave.nick import state as _sl_state
         if gid:
             st = _sl_state(str(gid))
             for q in st.sections():
-                if st[q].get("name", "").strip() == name:
+                n = st[q].get("name", "").strip()
+                n_clean = _clean_user_nick(n)
+                if any(t == n or t == n_clean for t in targets):
                     return str(q)
     except Exception:
         pass
+
+    # 3. 尝试从 storage 内存 @ 反查表匹配
     try:
         with ST._AT_NAMES_LOCK:
-            q = ST._AT_NAMES.get(name)
-            if q:
-                return str(q)
+            for t in targets:
+                q = ST._AT_NAMES.get(t)
+                if q:
+                    return str(q)
+            for k, q in ST._AT_NAMES.items():
+                if _clean_user_nick(k) == clean:
+                    return str(q)
+    except Exception:
+        pass
+
+    # 4. 尝试从 SQLite accounts / groups 数据库精确匹配
+    try:
+        import json as _json
+        db = ST._ensure_db() if hasattr(ST, "_ensure_db") else getattr(ST, "_DB", None)
+        if db is not None:
+            cur = db.cursor()
+            if gid:
+                cur.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),))
+                for row in cur.fetchall():
+                    try:
+                        d = _json.loads(row[1]) if isinstance(row[1], str) else (row[1] or {})
+                        un = _clean_user_nick(d.get("name") or d.get("card") or d.get("nickname") or "")
+                        if un and un == clean:
+                            return str(row[0])
+                    except Exception:
+                        pass
+                cur.execute("SELECT qq, data FROM groups WHERE gid=?", (int(gid),))
+                for row in cur.fetchall():
+                    try:
+                        d = _json.loads(row[1]) if isinstance(row[1], str) else (row[1] or {})
+                        un = _clean_user_nick(d.get("name") or d.get("card") or "")
+                        if un and un == clean:
+                            return str(row[0])
+                    except Exception:
+                        pass
+            # 全局 accounts 检索兜底
+            cur.execute("SELECT qq, data FROM accounts WHERE data LIKE ? LIMIT 50", (f"%{clean}%",))
+            for row in cur.fetchall():
+                try:
+                    d = _json.loads(row[1]) if isinstance(row[1], str) else (row[1] or {})
+                    un = _clean_user_nick(d.get("name") or d.get("card") or d.get("nickname") or "")
+                    if un and un == clean:
+                        return str(row[0])
+                except Exception:
+                    pass
     except Exception:
         pass
     return None

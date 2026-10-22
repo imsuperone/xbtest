@@ -52,7 +52,33 @@ def _parse_transfer_cmd(text, raw, gid):
         target = m_cq.group(1) or m_cq.group(2)
         tail = _RE_CQ_AT.sub(" ", tail).strip()
 
-    # 2. 尝试匹配 @QQ 或 @昵称
+    # 2. 优先尝试提取末尾金额（支持带任意 @昵称、富文本标记 <%...%> 或尖括号的目标）
+    # 例如："@A-◣fax小翠◥.Tcui<%ĀĀÖ> 1" 或 "@某人 100"
+    m_end_amt = re.search(r"\s+(-?\d+)\s*(?:金币|金|币|元|点)?$", tail)
+    if m_end_amt:
+        try:
+            cand_amt = int(m_end_amt.group(1))
+        except Exception:
+            cand_amt = 0
+        target_part = tail[:m_end_amt.start()].strip()
+        if not target and target_part:
+            cq_in = _RE_CQ_AT.search(target_part)
+            if cq_in:
+                target = cq_in.group(1) or cq_in.group(2)
+            else:
+                clean_target = re.sub(r"<%.*?%>", "", target_part)
+                clean_target = re.sub(r"<[^>]+>", "", clean_target).lstrip("@").strip()
+                clean_target = re.sub(r"(?:" + _RE_COIN_SUFFIX + r")$", "", clean_target).strip()
+                if clean_target.isdigit() and 5 <= len(clean_target) <= 12:
+                    target = clean_target
+                else:
+                    t_cand = _find_qq_by_name(gid, target_part) or _find_qq_by_name(gid, clean_target)
+                    if t_cand:
+                        target = t_cand
+        if target:
+            return target, cand_amt, None
+
+    # 3. 尝试匹配 @QQ 或 @昵称
     if not target and "@" in tail:
         m_at_qq = re.search(r"@\s*(\d{5,12})(?:" + _RE_COIN_SUFFIX + r")?", tail)
         if m_at_qq:
@@ -62,7 +88,9 @@ def _parse_transfer_cmd(text, raw, gid):
             m_at_nick = re.search(r"@\s*(\S+)", tail)
             if m_at_nick:
                 cand = m_at_nick.group(1).strip()
-                t_cand = _find_qq_by_name(gid, cand)
+                cand_clean = re.sub(r"<%.*?%>", "", cand)
+                cand_clean = re.sub(r"<[^>]+>", "", cand_clean).strip()
+                t_cand = _find_qq_by_name(gid, cand) or _find_qq_by_name(gid, cand_clean)
                 if t_cand:
                     target = t_cand
                     tail = re.sub(r"@\s*\S+", " ", tail, count=1).strip()

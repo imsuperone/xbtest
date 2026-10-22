@@ -68,17 +68,23 @@ window.closeSlaveWeaponsModal = function() {
   }
 };
 
-function formatWeaponsCell(weaponsStr, name = "", qq = "") {
+window.showSlaveWeaponsByIndex = function(idx) {
+  const r = (window._SLAVE_ROWS_CACHE || RAW_SLAVE_USERS || [])[idx];
+  if (!r) return;
+  window.showSlaveWeaponsModal(r.name || r.qq, r.qq, r.weapons);
+};
+
+function formatWeaponsCell(weaponsStr, name = "", qq = "", idx = -1) {
   if (!weaponsStr) return '<span style="color:var(--muted)">-</span>';
   const list = String(weaponsStr).split('|').map(s => s.trim()).filter(Boolean);
   if (!list.length) return '<span style="color:var(--muted)">-</span>';
   const maxShow = 2;
   const show = list.slice(0, maxShow);
-  const safeName = esc(name || "");
-  const safeQq = esc(qq || "");
-  const safeStr = esc(weaponsStr);
-  const badges = show.map(w => `<span class="badge badge-warn" style="white-space:nowrap;font-size:11px;padding:2px 7px;line-height:1.2;cursor:pointer" title="点击查看全部装备" onclick="showSlaveWeaponsModal('${safeName}','${safeQq}','${safeStr}')">${esc(w)}</span>`).join('');
-  const more = list.length > maxShow ? `<span class="badge badge-primary" style="white-space:nowrap;font-size:11px;padding:2px 6px;cursor:pointer;line-height:1.2;font-weight:700" title="点击查看全部 ${list.length} 件装备" onclick="showSlaveWeaponsModal('${safeName}','${safeQq}','${safeStr}')">+${list.length - maxShow}</span>` : '';
+  const clickHandler = (idx >= 0)
+    ? `window.showSlaveWeaponsByIndex(${idx})`
+    : `window.showSlaveWeaponsModal('${esc(name||"")}','${esc(qq||"")}','${esc(weaponsStr)}')`;
+  const badges = show.map(w => `<span class="badge badge-warn" style="white-space:nowrap;font-size:11px;padding:2px 7px;line-height:1.2;cursor:pointer" title="点击查看全部装备" onclick="${clickHandler}">${esc(w)}</span>`).join('');
+  const more = list.length > maxShow ? `<span class="badge badge-primary" style="white-space:nowrap;font-size:11px;padding:2px 6px;cursor:pointer;line-height:1.2;font-weight:700" title="点击查看全部 ${list.length} 件装备" onclick="${clickHandler}">+${list.length - maxShow}</span>` : '';
   return `<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:160px;max-width:240px">${badges}${more}</div>`;
 }
 
@@ -107,9 +113,10 @@ function renderSlaveTable() {
   if (sHint) {
     sHint.innerHTML = `共 <strong>${RAW_SLAVE_USERS.length}</strong> 条奴隶档案（当前匹配 <strong>${rows.length}</strong> 条） · 实时展示身价与主奴武装关系`;
   }
+  window._SLAVE_ROWS_CACHE = rows;
   let html = "";
   if (!rows.length) html = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">暂无奴隶数据</td></tr>`;
-  else html = rows.map(r => `<tr>
+  else html = rows.map((r, idx) => `<tr>
     <td><span class="badge badge-primary">${esc(r.gid)}</span></td>
     <td><strong>${esc(r.qq)}</strong></td>
     <td>${esc(r.name||"")}</td>
@@ -117,7 +124,7 @@ function renderSlaveTable() {
     <td><span style="font-weight:700;color:var(--text)">${(r.price || 0).toLocaleString()}</span></td>
     <td><span class="badge badge-primary">${r.slaves || 0} 人</span></td>
     <td>${formatProtectCell(r.protect)}</td>
-    <td>${formatWeaponsCell(r.weapons, r.name, r.qq)}</td>
+    <td>${formatWeaponsCell(r.weapons, r.name, r.qq, idx)}</td>
   </tr>`).join("");
   body.innerHTML = html;
 }
@@ -508,7 +515,8 @@ function renderSpiritBagTable() {
     return;
   }
 
-  body.innerHTML = list.map(u => {
+  window._SPIRIT_BAG_ROWS_CACHE = list;
+  body.innerHTML = list.map((u, idx) => {
     const maxChips = 4;
     const showEntries = u.entries.slice(0, maxChips);
     const chipsHtml = showEntries.map(([name, count]) => {
@@ -516,7 +524,7 @@ function renderSpiritBagTable() {
       return `<span class="badge ${cat.cls}" style="margin:2px 3px 2px 0;font-size:11px">${esc(name)} <b style="opacity:0.85">×${count}</b></span>`;
     }).join("");
     const moreChip = u.entries.length > maxChips
-      ? `<span class="badge badge-secondary" style="margin:2px 0;font-size:11px;cursor:pointer;font-weight:700" onclick="showTrainerBagModal('${esc(u.gid)}','${esc(u.qq)}')">+${u.entries.length - maxChips} 种</span>`
+      ? `<span class="badge badge-secondary" style="margin:2px 0;font-size:11px;cursor:pointer;font-weight:700" onclick="window.showTrainerBagByIndex(${idx})">+${u.entries.length - maxChips} 种</span>`
       : (u.entries.length === 0 ? '<span style="color:var(--muted)">空背包</span>' : '');
 
     return `<tr>
@@ -525,23 +533,34 @@ function renderSpiritBagTable() {
       <td>${esc(u.userName)}</td>
       <td><div style="display:flex;flex-wrap:wrap;align-items:center">${chipsHtml}${moreChip}</div></td>
       <td><span class="badge badge-warn">${u.kinds} 种</span> / <strong>${u.totalCount}</strong> 件</td>
-      <td><button class="ghost sm" onclick="showTrainerBagModal('${esc(u.gid)}','${esc(u.qq)}')">查看全背包</button></td>
+      <td><button class="ghost sm" type="button" onclick="window.showTrainerBagByIndex(${idx})">查看全背包</button></td>
     </tr>`;
   }).join("");
 }
 
-function showTrainerBagModal(gid, qq) {
+window.showTrainerBagByIndex = function(idx) {
+  const u = (window._SPIRIT_BAG_ROWS_CACHE || RAW_SPIRIT_BAG_USERS || [])[idx];
+  if (!u) return;
+  window.showTrainerBagModal(u.gid, u.qq);
+};
+
+window.showTrainerBagModal = function(gid, qq) {
   const modal = document.getElementById("modalSpiritBagDetail");
   if (!modal) return;
+  const bagUser = (RAW_SPIRIT_BAG_USERS || []).find(u => String(u.gid) === String(gid) && String(u.qq) === String(qq));
   const user = (RAW_SPIRIT_USERS || []).find(u => String(u.gid) === String(gid) && String(u.qq) === String(qq));
   const title = document.getElementById("modalSpiritBagTitle");
   const content = document.getElementById("modalSpiritBagContent");
 
-  const userName = user ? (user.name || user.qq) : qq;
+  const userName = bagUser ? (bagUser.userName || bagUser.qq) : (user ? (user.name || user.qq) : qq);
   if (title) title.innerHTML = `🎒 训练师背包明细 · ${esc(userName)} <span style="font-size:12px;color:var(--muted)">(QQ:${esc(qq)} · 群:${esc(gid)})</span>`;
 
-  const bag = (user && typeof user.bag === "object" && user.bag) ? user.bag : {};
-  const entries = Object.entries(bag).filter(([_, n]) => (parseInt(n, 10) || 0) > 0);
+  let entries = [];
+  if (bagUser && Array.isArray(bagUser.entries) && bagUser.entries.length) {
+    entries = bagUser.entries;
+  } else if (user && typeof user.bag === "object" && user.bag) {
+    entries = Object.entries(user.bag).filter(([_, n]) => (parseInt(n, 10) || 0) > 0);
+  }
 
   if (!entries.length) {
     content.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted)">该训练师当前背包空空如也，暂未拥有任何道具物品。</div>`;
@@ -559,15 +578,15 @@ function showTrainerBagModal(gid, qq) {
   }
   modal.classList.add("open", "show");
   modal.style.display = "flex";
-}
+};
 
-function closeTrainerBagModal() {
+window.closeTrainerBagModal = function() {
   const modal = document.getElementById("modalSpiritBagDetail");
   if (modal) {
     modal.classList.remove("open", "show");
     modal.style.display = "none";
   }
-}
+};
 
 // 绑定搜索与过滤事件
 function initSpiritBagEvents() {

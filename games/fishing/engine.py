@@ -157,10 +157,11 @@ def _settle_aquarium(data):
     """自动结算水族馆挂机利息与水质健康度衰减"""
     aq = data.get("aquarium", {})
     now = int(time.time())
-    last = int(aq.get("last_settle_ts", now))
-    elapsed_hours = (now - last) // 3600
+    last = int(aq.get("last_settle_ts") or now)
+    cur_water = int(aq.get("water_quality", 100))
+    elapsed_hours = min(72, max(0, (now - last) // 3600))
     if elapsed_hours <= 0:
-        return 0, 0
+        return 0, cur_water
 
     today = time.strftime("%Y-%m-%d")
     if aq.get("daily_date") != today:
@@ -419,7 +420,9 @@ def cmd_bucket(gid, qq):
         crown = " 👑" if f.get("is_gold_crown") else ""
         lines.append(f"{idx}. [{f.get('quality_label')}] {f.get('name')}{crown} ({f.get('weight')}kg · {f.get('price')}金币)")
     lines.append("━━━━━━━━━━━━")
-    lines.append("💡 发送【出售】全卖换金币，或【存鱼 <序号>】放入水族馆赚取利息！")
+    lines.append("【出售 <序号>】卖出单条鱼")
+    lines.append("【存鱼 <序号>】将鱼存入水族馆")
+    lines.append("【一键出售】卖出所有鱼")
     return "\n".join(lines)
 
 # ==================== 指令 5：出售渔获 ====================
@@ -430,8 +433,8 @@ def cmd_sell(gid, qq, arg=""):
     if not bucket:
         return "🪣 您的水桶里没有鱼可以出售哦！"
 
-    arg = arg.strip()
-    if arg and arg.isdigit():
+    arg = (arg or "").strip()
+    if arg.isdigit():
         idx = int(arg) - 1
         if idx < 0 or idx >= len(bucket):
             return f"❌ 序号无效！水桶内目前仅有 1 ~ {len(bucket)} 号渔获。"
@@ -439,15 +442,20 @@ def cmd_sell(gid, qq, arg=""):
         val = int(fish.get("price", 0))
         ST.coins_add(gid, qq, val)
         _save_data(gid, qq, d)
-        return f"💰【单条出售成功】您成功卖出了 [{fish.get('quality_label')}] 【{fish.get('name')}】，获得 {val} {ST.coin_name()}！"
-    else:
-        # 全部一键出售
+        return f"💰【单条出售成功】您成功卖出了 [{fish.get('quality_label')}] 【{fish.get('name')}】，获得 {val:,} {ST.coin_name()}！"
+    elif arg in ("全部", "all", "所有", "一键", "一键出售"):
         count = len(bucket)
         total_val = sum(int(f.get("price", 0)) for f in bucket)
         bucket.clear()
         ST.coins_add(gid, qq, total_val)
         _save_data(gid, qq, d)
-        return f"💰【全桶变现成功】成功出售水桶内全部 {count} 条渔获，喜提 {total_val} {ST.coin_name()}入账！水桶已彻底腾空~"
+        return f"💰【一键出售成功】成功出售水桶中全部 {count} 条渔获，共获得 {total_val:,} {ST.coin_name()}！"
+    else:
+        return (
+            "💡 出售渔获提示：\n"
+            "• 发送【出售 <序号>】卖出单条指定鱼，例如：出售 1\n"
+            "• 发送【一键出售】卖出水桶中的所有鱼"
+        )
 
 # ==================== 指令 6：水族馆展示与改名 ====================
 def cmd_aquarium(gid, qq):
@@ -488,7 +496,9 @@ def cmd_aquarium(gid, qq):
             h_int = max(1, int(int(f.get("price", 0)) * BASE_INTEREST_RATE * eff))
             lines.append(f"{idx}. [{f.get('quality_label')}] {f.get('name')}{crown} (时息 +{h_int})")
     lines.append("━━━━━━━━━━━━")
-    lines.append("💡 发送【水族馆换水】满水质，发送【水族馆改名 <名称>】自定义招牌！")
+    lines.append("【取鱼 <序号>】取出单条鱼")
+    lines.append("【换水】将水质恢复至满状态")
+    lines.append("【水族馆改名 <名称>】自定义招牌！")
     return "\n".join(lines)
 
 def cmd_rename_aquarium(gid, qq, new_name):
@@ -560,6 +570,9 @@ def cmd_take_fish(gid, qq, arg):
 def cmd_clean_water(gid, qq):
     ST = _get_st()
     d = _get_data(gid, qq)
+    earned, cur_water = _settle_aquarium(d)
+    if earned > 0:
+        ST.coins_add(gid, qq, earned)
     aq = d.get("aquarium", {})
     cur_water = int(aq.get("water_quality", 100))
     if cur_water >= 100:
@@ -678,24 +691,13 @@ def cmd_menu():
     return (
         "🎣 钓鱼与水族馆系统\n"
         "━━━━━━━━━━━━\n"
-        "🌾【生态培育】\n"
         "• 打窝 [1-4/饵名] 投放鱼饵聚鱼（发送【打窝】查配方）\n"
-        "• 鱼塘　　　　查看发酵进度、保护期与剩余次数\n"
-        "• 钓鱼 / 抛竿　挥竿起鱼（水桶满仓前置智能拦截）\n"
-        "\n"
-        "🪣【渔获交易】\n"
-        "• 水桶　　　　查看持有渔获、规格重量与总估值\n"
-        "• 出售 [序号]　单条变现（不填序号一键全桶变现）\n"
-        "\n"
-        "🏛️【水族展馆】\n"
-        "• 水族馆　　　查看展馆名鱼、水质健康度与时息收益\n"
-        "• 存鱼/取鱼 　在水桶与水族展馆之间调配名鱼\n"
-        "• 水族馆换水　生态保洁满水质，享利息全额+5%加成\n"
-        "• 水族馆改名　定制专属水族馆响亮大招牌\n"
-        "\n"
-        "🥷【互动与图鉴】\n"
-        "• 偷鱼 @群友　过保护期后偷取目标鱼塘剩余渔获\n"
-        "• 钓鱼图鉴　　查看全水域鱼类收集进度与概率加成\n"
+        "• 鱼塘 查看发酵进度、保护期与剩余次数\n"
+        "• 钓鱼 / 抛竿 挥竿起鱼（智能水桶满仓拦截）\n"
+        "• 水桶 查看渔获水桶（支持出售、一键出售与存鱼）\n"
+        "• 水族馆 查看展馆名鱼与利息（支持取鱼、换水与改名）\n"
+        "• 偷鱼 @群友 偷取已成熟且过保护期的鱼塘\n"
+        "• 钓鱼图鉴 查看鱼类图鉴解锁进度与概率加成\n"
         "━━━━━━━━━━━━\n"
         "💡 发送【钓鱼系统】或【钓鱼菜单】可唤醒本菜单"
     )

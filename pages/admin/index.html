@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light dark">
   <title>小白测试版 - 小白机器人</title>
-  <link rel="stylesheet" href="./admin.css?v=26w1022f">
+  <link rel="stylesheet" href="./admin.css?v=26w1022g">
   <!-- 主题色/深浅色优先读取本地缓存实现首帧零阻塞渲染，未缓存时最多挂起 150ms -->
   <style>
     html[data-boot] { visibility: hidden; background: #f4f6f8; }
@@ -40,7 +40,7 @@
           <span class="island-trigger-text">导航</span>
         </button>
         <div class="brand-text">
-          <h1>小白测试版 <span class="version-tag" data-ver="26w1022f">v26w1022f</span></h1>
+          <h1>小白测试版 <span class="version-tag" data-ver="26w1022g">v26w1022g</span></h1>
         </div>
       </div>
       <div class="top-bar-actions" style="position:relative">
@@ -596,13 +596,13 @@
             <div class="m3-subtitle">打窝培育发酵 · 满桶前置拦截 · 离线水族馆挂机利息 · 群友偷鱼博弈与105种全水域生态图鉴</div>
           </div>
           <div class="m3-action-bar">
-            <button class="btn sm" id="btnFishAdd" type="button">＋ 添加鱼种</button>
-            <button class="ghost sm" id="btnFishRefresh" type="button">刷新图鉴</button>
-            <button class="ghost sm" id="btnFishExport" type="button" title="导出全量105种鱼类图鉴JSON">📤 导出图鉴</button>
-            <button class="ghost sm" id="btnFishImport" type="button" title="导入自定义或追加鱼类配置JSON">📥 导入图鉴</button>
-            <button class="ghost sm" id="btnFishResetDefault" type="button" title="一键恢复系统默认105种全水域鱼类品种">↩️ 恢复默认105种</button>
-            <button class="ghost sm del" id="btnFishClearAll" type="button" title="一键清空全部鱼类品种，方便从零开始自建全新鱼池">🧹 清空全部鱼种</button>
-            <button class="btn sm tonal" id="btnFishRuntime" type="button" title="实时查看各群玩家鱼塘状态、保护期、水族馆展鱼与水质">📊 实时鱼塘大屏</button>
+            <button class="btn sm" id="btnFishAdd" type="button" onclick="openFishEditModal(null)">＋ 添加鱼种</button>
+            <button class="ghost sm" id="btnFishRefresh" type="button" onclick="loadFishing(true)">刷新图鉴</button>
+            <button class="ghost sm" id="btnFishExport" type="button" onclick="exportFishingJSON()" title="导出全量105种鱼类图鉴JSON">📤 导出图鉴</button>
+            <button class="ghost sm" id="btnFishImport" type="button" onclick="openFishingImportModal()" title="导入自定义或追加鱼类配置JSON">📥 导入图鉴</button>
+            <button class="ghost sm" id="btnFishResetDefault" type="button" onclick="restoreDefaultFishes()" title="一键恢复系统默认105种全水域鱼类品种">↩️ 恢复默认105种</button>
+            <button class="ghost sm del" id="btnFishClearAll" type="button" onclick="clearAllFishes()" title="一键清空全部鱼类品种，方便从零开始自建全新鱼池">🧹 清空全部鱼种</button>
+            <button class="btn sm tonal" id="btnFishRuntime" type="button" onclick="openFishingRuntimeMonitor()" title="实时查看各群玩家鱼塘状态、保护期、水族馆展鱼与水质">📊 实时鱼塘大屏</button>
           </div>
         </div>
 
@@ -633,17 +633,17 @@
         <!-- 水域分段标签与过滤器 -->
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:16px 0 12px">
           <div class="atlas-seg-tabs" id="fishingZoneTabs" style="display:flex;gap:6px;flex-wrap:wrap">
-            <button type="button" class="atlas-seg-btn active" data-fish-zone="all">🌐 全部水域 (<span class="zone-count" id="zoneCount-all">105</span>)</button>
-            <button type="button" class="atlas-seg-btn" data-fish-zone="淡水湖泊与溪流">🏞️ 淡水湖泊 (<span class="zone-count">20</span>)</button>
-            <button type="button" class="atlas-seg-btn" data-fish-zone="浅海珊瑚礁">🪸 浅海珊瑚 (<span class="zone-count">20</span>)</button>
-            <button type="button" class="atlas-seg-btn" data-fish-zone="深海大洋">🌊 深海大洋 (<span class="zone-count">20</span>)</button>
-            <button type="button" class="atlas-seg-btn" data-fish-zone="极地极寒冰海">❄️ 极寒冰海 (<span class="zone-count">15</span>)</button>
-            <button type="button" class="atlas-seg-btn" data-fish-zone="迷你幻想秘境">🌌 迷你秘境 (<span class="zone-count">15</span>)</button>
-            <button type="button" class="atlas-seg-btn" data-fish-zone="趣味杂物池">🧦 趣味彩蛋 (<span class="zone-count">15</span>)</button>
+            <button type="button" class="atlas-seg-btn active" data-fish-zone="all" onclick="selectFishZone('all', this)">🌐 全部水域 (<span class="zone-count" id="zoneCount-all">105</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="淡水湖泊与溪流" onclick="selectFishZone('淡水湖泊与溪流', this)">🏞️ 淡水湖泊 (<span class="zone-count">20</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="浅海珊瑚礁" onclick="selectFishZone('浅海珊瑚礁', this)">🪸 浅海珊瑚 (<span class="zone-count">20</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="深海大洋" onclick="selectFishZone('深海大洋', this)">🌊 深海大洋 (<span class="zone-count">20</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="极地极寒冰海" onclick="selectFishZone('极地极寒冰海', this)">❄️ 极寒冰海 (<span class="zone-count">15</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="迷你幻想秘境" onclick="selectFishZone('迷你幻想秘境', this)">🌌 迷你秘境 (<span class="zone-count">15</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="趣味杂物池" onclick="selectFishZone('趣味杂物池', this)">🧦 趣味彩蛋 (<span class="zone-count">15</span>)</button>
           </div>
 
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <select id="fishQualityFilter" style="padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:12px">
+            <select id="fishQualityFilter" onchange="onFishQualityChange(this.value)" style="padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:12px">
               <option value="all">全部品质筛选</option>
               <option value="白色普通">⚪ 白色普通</option>
               <option value="绿色优秀">🟢 绿色优秀</option>
@@ -655,7 +655,7 @@
 
             <div class="m3-filter-search" style="min-width:200px;margin:0">
               <span class="m3-search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 11.99 14 9.5 14z"/></svg></span>
-              <input id="fishSearchInput" placeholder="搜索鱼种名、简介或ID…" />
+              <input id="fishSearchInput" oninput="onFishSearchInput(this.value)" placeholder="搜索鱼种名、简介或ID…" />
             </div>
 
             <div style="font-size:12px;color:var(--muted)">当前匹配: <span id="fishingFilterResultCount" style="font-weight:700;color:var(--pri)">105</span> 种</div>
@@ -939,8 +939,8 @@
             <div>插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
             <div>仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
             <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-              <div>后端版本：<b id="aboutVersion">v26w1022f</b></div>
-              <div>前端版本：<b id="aboutFrontendVer">v26w1022f</b></div>
+              <div>后端版本：<b id="aboutVersion">v26w1022g</b></div>
+              <div>前端版本：<b id="aboutFrontendVer">v26w1022g</b></div>
             </div>
             <!-- 持久化与升级保障状态徽章 -->
             <div style="margin-top:4px;padding:10px 14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:12.5px;color:var(--text);display:flex;align-items:flex-start;gap:8px">
@@ -1456,19 +1456,19 @@
       </div>
     </div>
   </div>
-    <script defer src="./js/00_core.js?v=26w1022f"></script>
-  <script defer src="./js/01_theme.js?v=26w1022f"></script>
-  <script defer src="./js/02_export.js?v=26w1022f"></script>
-  <script defer src="./js/03_import.js?v=26w1022f"></script>
-  <script defer src="./js/04_media.js?v=26w1022f"></script>
-  <script defer src="./js/05_config.js?v=26w1022f"></script>
-  <script defer src="./js/06_users.js?v=26w1022f"></script>
-  <script defer src="./js/07_spirit.js?v=26w1022f"></script>
-  <script defer src="./js/08_shop.js?v=26w1022f"></script>
-  <script defer src="./js/09_views.js?v=26w1022f"></script>
-  <script defer src="./js/10_ops.js?v=26w1022f"></script>
-  <script defer src="./js/11_questions.js?v=26w1022f"></script>
-  <script defer src="./js/12_fishing.js?v=26w1022f"></script>
+    <script defer src="./js/00_core.js?v=26w1022g"></script>
+  <script defer src="./js/01_theme.js?v=26w1022g"></script>
+  <script defer src="./js/02_export.js?v=26w1022g"></script>
+  <script defer src="./js/03_import.js?v=26w1022g"></script>
+  <script defer src="./js/04_media.js?v=26w1022g"></script>
+  <script defer src="./js/05_config.js?v=26w1022g"></script>
+  <script defer src="./js/06_users.js?v=26w1022g"></script>
+  <script defer src="./js/07_spirit.js?v=26w1022g"></script>
+  <script defer src="./js/08_shop.js?v=26w1022g"></script>
+  <script defer src="./js/09_views.js?v=26w1022g"></script>
+  <script defer src="./js/10_ops.js?v=26w1022g"></script>
+  <script defer src="./js/11_questions.js?v=26w1022g"></script>
+  <script defer src="./js/12_fishing.js?v=26w1022g"></script>
 
 
   <!-- 鱼类编辑/添加弹窗 -->
@@ -1476,7 +1476,7 @@
     <div class="m3-modal-box" style="max-width:520px;width:92%;max-height:88vh;overflow-y:auto">
       <div class="m3-modal-header" style="display:flex;justify-content:space-between;align-items:center">
         <h2 id="modalFishEditTitle" style="margin:0;font-size:16px;font-weight:700">✏️ 编辑鱼类品种</h2>
-        <button id="modalFishEditClose" class="iconBtn" style="border:none;background:transparent;font-size:18px;cursor:pointer" title="关闭">✕</button>
+        <button id="modalFishEditClose" onclick="closeFishEditModal()" class="iconBtn" style="border:none;background:transparent;font-size:18px;cursor:pointer" title="关闭">✕</button>
       </div>
       <div class="m3-modal-body" style="padding:16px 20px 24px;display:flex;flex-direction:column;gap:12px">
         <input type="hidden" id="fishFormId" />
@@ -1560,7 +1560,7 @@
     <div class="m3-modal-box" style="max-width:540px;width:92%">
       <div class="m3-modal-header" style="display:flex;justify-content:space-between;align-items:center">
         <h2 style="margin:0;font-size:16px;font-weight:700">📥 导入鱼类配置 JSON</h2>
-        <button id="modalFishingImportClose" class="iconBtn" style="border:none;background:transparent;font-size:18px;cursor:pointer" title="关闭">✕</button>
+        <button id="modalFishingImportClose" onclick="closeFishingImportModal()" class="iconBtn" style="border:none;background:transparent;font-size:18px;cursor:pointer" title="关闭">✕</button>
       </div>
       <div class="m3-modal-body" style="padding:16px 20px">
         <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
@@ -1587,7 +1587,7 @@
     <div class="m3-modal-box" style="max-width:800px;width:95%;max-height:85vh;overflow-y:auto">
       <div class="m3-modal-header" style="display:flex;justify-content:space-between;align-items:center">
         <h2 style="margin:0;font-size:16px;font-weight:700">📊 全群玩家实时鱼塘与水族馆运行监测</h2>
-        <button id="modalFishingRuntimeClose" class="iconBtn" style="border:none;background:transparent;font-size:18px;cursor:pointer" title="关闭">✕</button>
+        <button id="modalFishingRuntimeClose" onclick="closeFishingRuntimeMonitor()" class="iconBtn" style="border:none;background:transparent;font-size:18px;cursor:pointer" title="关闭">✕</button>
       </div>
       <div class="m3-modal-body" id="fishingRuntimeListBox" style="padding:16px 20px 24px;overflow-x:auto"></div>
     </div>
@@ -1597,7 +1597,7 @@
     <div class="m3-modal-box" style="max-width:560px;width:92%;max-height:85vh;overflow-y:auto">
       <div class="m3-modal-header" style="display:flex;justify-content:space-between;align-items:center">
         <h2 id="modalSpiritBagTitle" style="margin:0;font-size:16px;font-weight:700">🎒 训练师背包明细</h2>
-        <button id="modalSpiritBagClose" class="iconBtn" style="border:none;background:transparent;font-size:18px;cursor:pointer" title="关闭">✕</button>
+        <button id="modalSpiritBagClose" onclick="closeTrainerBagModal()" class="iconBtn" style="border:none;background:transparent;font-size:18px;cursor:pointer" title="关闭">✕</button>
       </div>
       <div class="m3-modal-body" id="modalSpiritBagContent" style="padding:16px 20px 24px">
         <!-- 动态渲染背包卡片 -->

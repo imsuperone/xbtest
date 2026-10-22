@@ -41,8 +41,10 @@ WEIGHT_GRADES = [
 
 def load_all_fishes():
     global _CACHED_FISHES
-    if _CACHED_FISHES is not None:
+    if _CACHED_FISHES is not None and len(_CACHED_FISHES) > 0:
         return _CACHED_FISHES
+
+    # 1. 优先读取已持久化的自定义或运行中 JSON
     if os.path.isfile(_FISH_JSON_PATH):
         try:
             with open(_FISH_JSON_PATH, "r", encoding="utf-8") as f:
@@ -52,6 +54,19 @@ def load_all_fishes():
                     return _CACHED_FISHES
         except Exception:
             pass
+
+    # 2. 若 fishing_fishes.json 缺失或为空，自动从默认 105 种预设兜底并持久化
+    if os.path.isfile(_FISH_DEFAULT_JSON_PATH):
+        try:
+            with open(_FISH_DEFAULT_JSON_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list) and len(data) > 0:
+                    _CACHED_FISHES = data
+                    save_all_fishes(data)
+                    return _CACHED_FISHES
+        except Exception:
+            pass
+
     _CACHED_FISHES = []
     return _CACHED_FISHES
 

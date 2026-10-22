@@ -10,8 +10,8 @@ from .engine import (
 
 COMMANDS = (
     "钓鱼系统", "钓鱼菜单", "打窝列表", "打窝",
-    "鱼塘", "钓鱼", "抛竿", "水桶", "出售", "卖鱼",
-    "水族馆换水", "清洁水族馆", "水族馆改名", "改名水族馆", "水族馆",
+    "鱼塘", "钓鱼", "抛竿", "水桶", "出售", "卖鱼", "一键出售", "全部出售",
+    "换水", "水族馆换水", "清洁水族馆", "水族馆改名", "改名水族馆", "水族馆",
     "存鱼", "取鱼", "偷鱼", "钓鱼图鉴", "鱼类图鉴"
 )
 
@@ -56,7 +56,9 @@ def handle(gid, qq, raw, is_admin=False):
     if text == "水桶":
         return cmd_bucket(gid, qq)
 
-    # 出售 / 卖鱼
+    # 出售 / 卖鱼 / 一键出售
+    if text in ("一键出售", "全部出售"):
+        return cmd_sell(gid, qq, "全部")
     if text in ("出售", "卖鱼"):
         return cmd_sell(gid, qq, "")
     if text.startswith("出售") or text.startswith("卖鱼"):
@@ -68,8 +70,8 @@ def handle(gid, qq, raw, is_admin=False):
         arg = text[5:].strip()
         return cmd_rename_aquarium(gid, qq, arg)
 
-    # 水族馆换水 / 清洁水族馆
-    if text in ("水族馆换水", "清洁水族馆"):
+    # 换水 / 水族馆换水 / 清洁水族馆
+    if text in ("换水", "水族馆换水", "清洁水族馆"):
         return cmd_clean_water(gid, qq)
 
     # 存鱼 / 取鱼

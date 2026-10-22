@@ -18,27 +18,39 @@ let _fishingEventsBound = false;
 async function loadFishing(force = false) {
   initFishingEvents();
   try {
-    const p1 = getBridge().apiGet("fishing/overview").catch(() => null);
-    const p2 = getBridge().apiGet("fishing/fishes").catch(() => null);
-    const [ovResp, fResp] = await Promise.all([p1, p2]);
+    const p1 = getBridge().apiGet("fishing/overview");
+    const p2 = getBridge().apiGet("fishing/fishes");
+    const [ovResp, fResp] = await Promise.all([
+      p1.catch(err => { console.warn("fishing/overview error:", err); return null; }),
+      p2.catch(err => { console.warn("fishing/fishes error:", err); return null; })
+    ]);
 
     if (ovResp) {
-      const ov = (ovResp.code === 0 && ovResp.data) ? ovResp.data : (ovResp.total_species !== undefined ? ovResp : (ovResp.data || null));
-      if (ov) {
-        _fishingOverviewData = ov;
-        renderFishingOverview(ov);
+      let ov = ovResp;
+      if (typeof ov === "string") {
+        try { ov = JSON.parse(ov); } catch(e) {}
+      }
+      const parsedOv = (ov && ov.code === 0 && ov.data) ? ov.data : ((ov && ov.total_species !== undefined) ? ov : (ov ? ov.data : null));
+      if (parsedOv) {
+        _fishingOverviewData = parsedOv;
+        renderFishingOverview(parsedOv);
       }
     }
 
+    let parsedFResp = fResp;
+    if (typeof parsedFResp === "string") {
+      try { parsedFResp = JSON.parse(parsedFResp); } catch(e) {}
+    }
+
     let fishes = [];
-    if (Array.isArray(fResp)) {
-      fishes = fResp;
-    } else if (fResp && Array.isArray(fResp.data)) {
-      fishes = fResp.data;
-    } else if (fResp && Array.isArray(fResp.fishes)) {
-      fishes = fResp.fishes;
-    } else if (fResp && typeof fResp === "object" && Array.isArray(fResp.list)) {
-      fishes = fResp.list;
+    if (Array.isArray(parsedFResp)) {
+      fishes = parsedFResp;
+    } else if (parsedFResp && Array.isArray(parsedFResp.data)) {
+      fishes = parsedFResp.data;
+    } else if (parsedFResp && Array.isArray(parsedFResp.fishes)) {
+      fishes = parsedFResp.fishes;
+    } else if (parsedFResp && typeof parsedFResp === "object" && Array.isArray(parsedFResp.list)) {
+      fishes = parsedFResp.list;
     }
 
     _fishingAllFishes = fishes;
@@ -113,11 +125,13 @@ function renderFishingGrid() {
   if (countBadge) countBadge.innerText = filtered.length;
 
   if (filtered.length === 0) {
+    const isTotalEmpty = (!_fishingAllFishes || _fishingAllFishes.length === 0);
     container.innerHTML = `
       <div style="grid-column:1/-1;text-align:center;padding:48px 16px;color:var(--muted)">
         <div style="font-size:36px;margin-bottom:8px">🎣</div>
-        <div style="font-size:14px">暂无符合条件的鱼类品种</div>
-        <div style="font-size:12px;margin-top:4px">请尝试切换水域、品质或清空搜索关键字</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px">暂无符合条件的鱼类品种</div>
+        <div style="font-size:12px;margin-bottom:14px">${isTotalEmpty ? '当前尚未加载到任何鱼类图鉴数据，可点击下方一键初始化：' : '请尝试切换上方水域生态标签、品质下拉框或清空关键字'}</div>
+        ${isTotalEmpty ? '<button class="btn sm" type="button" onclick="restoreDefaultFishes()" style="margin:0 auto">↩️ 一键载入系统默认 105 种鱼类图鉴</button>' : ''}
       </div>
     `;
     return;
@@ -443,82 +457,106 @@ function closeFishingRuntimeMonitor() {
   }
 }
 
+// ==================== 水域与筛选直接触发函数 ====================
+window.selectFishZone = function(zone, btn) {
+  _fishingCurrentZone = zone;
+  document.querySelectorAll("[data-fish-zone]").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-fish-zone") === zone);
+  });
+  renderFishingGrid();
+};
+
+window.onFishQualityChange = function(val) {
+  _fishingCurrentQuality = val;
+  renderFishingGrid();
+};
+
+let _searchTimer = null;
+window.onFishSearchInput = function(val) {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => {
+    _fishingSearchKeyword = val;
+    renderFishingGrid();
+  }, 150);
+};
+
 // ==================== 事件绑定与初始化 ====================
 function initFishingEvents() {
-  if (_fishingEventsBound) return;
-  _fishingEventsBound = true;
-
-  // 水域过滤切换
+  // 水域过滤切换（保留委托绑定）
   document.querySelectorAll("[data-fish-zone]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("[data-fish-zone]").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      _fishingCurrentZone = btn.getAttribute("data-fish-zone");
-      renderFishingGrid();
-    });
+    btn.onclick = () => window.selectFishZone(btn.getAttribute("data-fish-zone"), btn);
   });
 
   // 品质过滤
-  document.getElementById("fishQualityFilter")?.addEventListener("change", (e) => {
-    _fishingCurrentQuality = e.target.value;
-    renderFishingGrid();
-  });
+  const qFilter = document.getElementById("fishQualityFilter");
+  if (qFilter) qFilter.onchange = (e) => window.onFishQualityChange(e.target.value);
 
   // 搜索关键字防抖
-  let searchTimer = null;
-  document.getElementById("fishSearchInput")?.addEventListener("input", (e) => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      _fishingSearchKeyword = e.target.value;
-      renderFishingGrid();
-    }, 200);
-  });
+  const sInput = document.getElementById("fishSearchInput");
+  if (sInput) sInput.oninput = (e) => window.onFishSearchInput(e.target.value);
 
   // 顶部操作栏事件
-  document.getElementById("btnFishAdd")?.addEventListener("click", () => openFishEditModal(null));
-  document.getElementById("btnFishRefresh")?.addEventListener("click", () => loadFishing(true));
-  document.getElementById("btnFishExport")?.addEventListener("click", exportFishingJSON);
-  document.getElementById("btnFishImport")?.addEventListener("click", openFishingImportModal);
-  document.getElementById("btnFishResetDefault")?.addEventListener("click", restoreDefaultFishes);
-  document.getElementById("btnFishClearAll")?.addEventListener("click", clearAllFishes);
-  document.getElementById("btnFishRuntime")?.addEventListener("click", openFishingRuntimeMonitor);
+  const btnAdd = document.getElementById("btnFishAdd");
+  if (btnAdd) btnAdd.onclick = () => openFishEditModal(null);
+  const btnRef = document.getElementById("btnFishRefresh");
+  if (btnRef) btnRef.onclick = () => loadFishing(true);
+  const btnExp = document.getElementById("btnFishExport");
+  if (btnExp) btnExp.onclick = exportFishingJSON;
+  const btnImp = document.getElementById("btnFishImport");
+  if (btnImp) btnImp.onclick = openFishingImportModal;
+  const btnRes = document.getElementById("btnFishResetDefault");
+  if (btnRes) btnRes.onclick = restoreDefaultFishes;
+  const btnClr = document.getElementById("btnFishClearAll");
+  if (btnClr) btnClr.onclick = clearAllFishes;
+  const btnRun = document.getElementById("btnFishRuntime");
+  if (btnRun) btnRun.onclick = openFishingRuntimeMonitor;
 
   // 弹窗关闭与保存
-  document.getElementById("modalFishEditClose")?.addEventListener("click", closeFishEditModal);
-  document.getElementById("fishFormCancel")?.addEventListener("click", closeFishEditModal);
-  document.getElementById("fishFormSave")?.addEventListener("click", saveFishForm);
+  const mEditClose = document.getElementById("modalFishEditClose");
+  if (mEditClose) mEditClose.onclick = closeFishEditModal;
+  const fCancel = document.getElementById("fishFormCancel");
+  if (fCancel) fCancel.onclick = closeFishEditModal;
+  const fSave = document.getElementById("fishFormSave");
+  if (fSave) fSave.onclick = saveFishForm;
 
-  document.getElementById("modalFishingImportClose")?.addEventListener("click", closeFishingImportModal);
-  document.getElementById("fishImportCancel")?.addEventListener("click", closeFishingImportModal);
-  document.getElementById("fishImportDo")?.addEventListener("click", doFishingImport);
+  const mImpClose = document.getElementById("modalFishingImportClose");
+  if (mImpClose) mImpClose.onclick = closeFishingImportModal;
+  const fImpCancel = document.getElementById("fishImportCancel");
+  if (fImpCancel) fImpCancel.onclick = closeFishingImportModal;
+  const fImpDo = document.getElementById("fishImportDo");
+  if (fImpDo) fImpDo.onclick = doFishingImport;
 
-  document.getElementById("modalFishingRuntimeClose")?.addEventListener("click", closeFishingRuntimeMonitor);
+  const mRunClose = document.getElementById("modalFishingRuntimeClose");
+  if (mRunClose) mRunClose.onclick = closeFishingRuntimeMonitor;
 
   // 背景点击关闭弹窗
   ["modalFishEdit", "modalFishingImport", "modalFishingRuntime"].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
-      el.addEventListener("click", (e) => {
+      el.onclick = (e) => {
         if (e.target === el) {
           el.classList.remove("open", "show");
           el.style.display = "none";
         }
-      });
+      };
     }
   });
 
   // 文件选择器读取 JSON
-  document.getElementById("fishImportFileInput")?.addEventListener("change", (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const text = evt.target.result;
-        document.getElementById("fishingImportText").value = text;
-      };
-      reader.readAsText(file, "UTF-8");
-    }
-  });
+  const fInput = document.getElementById("fishImportFileInput");
+  if (fInput) {
+    fInput.onchange = (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const text = evt.target.result;
+          document.getElementById("fishingImportText").value = text;
+        };
+        reader.readAsText(file, "UTF-8");
+      }
+    };
+  }
 }
 
 if (document.readyState === "loading") {
@@ -530,11 +568,13 @@ if (document.readyState === "loading") {
 window.loadFishing = loadFishing;
 window.openFishEditModal = openFishEditModal;
 window.closeFishEditModal = closeFishEditModal;
+window.saveFishForm = saveFishForm;
 window.deleteFishItem = deleteFishItem;
 window.restoreDefaultFishes = restoreDefaultFishes;
 window.clearAllFishes = clearAllFishes;
 window.exportFishingJSON = exportFishingJSON;
 window.openFishingImportModal = openFishingImportModal;
 window.closeFishingImportModal = closeFishingImportModal;
+window.doFishingImport = doFishingImport;
 window.openFishingRuntimeMonitor = openFishingRuntimeMonitor;
 window.closeFishingRuntimeMonitor = closeFishingRuntimeMonitor;

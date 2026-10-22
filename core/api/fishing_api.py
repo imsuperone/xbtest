@@ -115,6 +115,9 @@ async def handle_fishing_fishes(req=None):
     """获取所有鱼类品种（支持区域、品质过滤与搜索）"""
     try:
         fishes = load_all_fishes()
+        if not fishes:
+            reset_default_fishes()
+            fishes = load_all_fishes()
         zone = get_req_query(req, "zone", "").strip()
         quality = get_req_query(req, "quality", "").strip()
         search = get_req_query(req, "search", "").strip().lower()
