@@ -93,7 +93,7 @@
           <button data-tab="users">用户管理</button>
           <button data-tab="slave">奴隶管理</button>
           <button data-tab="spirit_users">精灵用户</button>
-          <button data-tab="spirit_bag">精灵背包</button>
+          <button data-tab="spirit_bag">道具背包</button>
         </div>
         <div class="side-group">
           <div class="side-group-title">群开关</div>
@@ -378,7 +378,7 @@
               <th>最强精灵</th>
               <th data-spiritsort="level" style="cursor:pointer" title="点击按等级排序">最高 Lv ⇕</th>
               <th data-spiritsort="power" style="cursor:pointer" title="点击按战力排序">总战力 ⇕</th>
-              <th>背包详情</th>
+              
             </tr></thead>
             <tbody id="spiritUsersBody"></tbody>
           </table>
@@ -391,8 +391,8 @@
       <div class="panel">
         <div class="m3-page-header">
           <div class="m3-page-header-info">
-            <h2>精灵系统 · 背包详情</h2>
-            <div class="m3-subtitle">独立查看各群训练师持有的道具资产、数量分布与明细</div>
+            <h2>用户资产 · 道具背包</h2>
+            <div class="m3-subtitle">集中查看全服各群用户当前持有的道具背包资产、全部道具清单与明细</div>
           </div>
           <div class="m3-action-bar">
             <button id="btnSpiritBagRefresh" class="ghost sm">刷新数据</button>
@@ -414,10 +414,11 @@
               <option value="other">其他道具</option>
             </select>
             <select id="spiritBagSort">
-              <option value="count_desc">道具数量 ↓ (从多到少)</option>
-              <option value="count_asc">道具数量 ↑ (从少到多)</option>
-              <option value="qq_asc">训练师 QQ 顺序</option>
-              <option value="item_asc">道具名称</option>
+              <option value="count_desc">道具总数 ↓ (从多到少)</option>
+              <option value="count_asc">道具总数 ↑ (从少到多)</option>
+              <option value="kinds_desc">道具种类 ↓ (种类最多)</option>
+              <option value="qq_asc">用户 QQ 顺序</option>
+              <option value="gid_asc">群号顺序</option>
             </select>
           </div>
         </div>
@@ -428,12 +429,11 @@
           <table>
             <thead><tr>
               <th style="min-width:90px">群号</th>
-              <th style="min-width:110px">训练师 QQ</th>
+              <th style="min-width:110px">用户 QQ</th>
               <th style="min-width:100px">昵称</th>
-              <th style="min-width:130px">道具名称</th>
-              <th style="min-width:90px">持有数量</th>
-              <th style="min-width:110px">道具分类</th>
-              <th style="min-width:100px">操作</th>
+              <th style="min-width:280px">持有道具清单</th>
+              <th style="min-width:120px">道具种类 / 总数</th>
+              <th style="min-width:90px">操作</th>
             </tr></thead>
             <tbody id="spiritBagBody"></tbody>
           </table>
@@ -592,7 +592,7 @@
       <div class="panel">
         <div class="m3-page-header">
           <div class="m3-page-header-info">
-            <h2>🎣 元梦之星风格钓鱼与水族馆</h2>
+            <h2>🎣 钓鱼与水族馆系统</h2>
             <div class="m3-subtitle">打窝培育发酵 · 满桶前置拦截 · 离线水族馆挂机利息 · 群友偷鱼博弈与105种全水域生态图鉴</div>
           </div>
           <div class="m3-action-bar">
@@ -601,6 +601,7 @@
             <button class="ghost sm" id="btnFishExport" type="button" title="导出全量105种鱼类图鉴JSON">📤 导出图鉴</button>
             <button class="ghost sm" id="btnFishImport" type="button" title="导入自定义或追加鱼类配置JSON">📥 导入图鉴</button>
             <button class="ghost sm" id="btnFishResetDefault" type="button" title="一键恢复系统默认105种全水域鱼类品种">↩️ 恢复默认105种</button>
+            <button class="ghost sm del" id="btnFishClearAll" type="button" title="一键清空全部鱼类品种，方便从零开始自建全新鱼池">🧹 清空全部鱼种</button>
             <button class="btn sm tonal" id="btnFishRuntime" type="button" title="实时查看各群玩家鱼塘状态、保护期、水族馆展鱼与水质">📊 实时鱼塘大屏</button>
           </div>
         </div>
@@ -1133,12 +1134,17 @@
             </label>
           </div>
 
-          <!-- 安全备份勾选 -->
+          <!-- 安全备份机制 -->
           <label class="align-backup-row" for="alignOptBackup">
-            <input type="checkbox" id="alignOptBackup">
-            <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text)">
-              <span>🛡️</span>
-              <span>对齐前保存配置备份快照（可选，方便随时一键回滚）</span>
+            <input type="checkbox" id="alignOptBackup" checked>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-weight:600;font-size:13.5px">🛡️ 同步前自动创建安全备份</span>
+                <span class="align-badge align-badge-safe" style="font-size:11px">推荐开启 · 双重保险</span>
+              </div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px">
+                系统将在同步前自动保存一份当前配置还原点；若后续想恢复当前状态，可随时在【运维 · 备份管理】一键还原。
+              </div>
             </div>
           </label>
 

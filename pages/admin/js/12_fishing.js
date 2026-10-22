@@ -11,8 +11,8 @@ let _fishingOverviewData = null;
 
 async function loadFishing(force = false) {
   try {
-    const p1 = api("fishing/overview").catch(() => null);
-    const p2 = api("fishing/fishes").catch(() => null);
+    const p1 = getBridge().apiGet("fishing/overview").catch(() => null);
+    const p2 = getBridge().apiGet("fishing/fishes").catch(() => null);
     const [ovResp, fResp] = await Promise.all([p1, p2]);
 
     if (ovResp && ovResp.code === 0) {
@@ -214,7 +214,7 @@ async function saveFishForm() {
   }
 
   try {
-    const res = await api("fishing/fish/save", { method: "POST", body: { fish } });
+    const res = await getBridge().apiPost("fishing/fish/save", { fish });
     if (res && res.code === 0) {
       toast("保存鱼类品种成功！", "ok");
       closeFishEditModal();
@@ -230,7 +230,7 @@ async function saveFishForm() {
 async function deleteFishItem(id, name) {
   if (!confirm(`确定要彻底删除鱼类【${name}】吗？删除后玩家将无法钓出该品种。`)) return;
   try {
-    const res = await api("fishing/fish/delete", { method: "POST", body: { id } });
+    const res = await getBridge().apiPost("fishing/fish/delete", { id });
     if (res && res.code === 0) {
       toast(`已成功删除【${name}】！`, "ok");
       await loadFishing(true);
@@ -245,7 +245,7 @@ async function deleteFishItem(id, name) {
 async function restoreDefaultFishes() {
   if (!confirm("⚠️ 确定要将全水域鱼类品种恢复为系统初始的 105 种预设吗？\n自制的自定义品种将会被覆盖替换。")) return;
   try {
-    const res = await api("fishing/reset", { method: "POST" });
+    const res = await getBridge().apiPost("fishing/reset", {});
     if (res && res.code === 0) {
       toast(res.msg || "已恢复默认 105 种鱼类图鉴！", "ok");
       await loadFishing(true);
@@ -257,10 +257,25 @@ async function restoreDefaultFishes() {
   }
 }
 
+async function clearAllFishes() {
+  if (!confirm("⚠️ 确定要清空全服所有鱼类品种吗？\n清空后图鉴品种将归零，方便您完全从零开始自定义专属鱼池。\n（如需重新使用系统预设，可随时点击【恢复默认105种】）")) return;
+  try {
+    const res = await getBridge().apiPost("fishing/clear_all", {});
+    if (res && res.code === 0) {
+      toast(res.msg || "已清空全部鱼类品种！", "ok");
+      await loadFishing(true);
+    } else {
+      toast("清空失败: " + (res.error || res.msg || "未知错误"), "bad");
+    }
+  } catch (e) {
+    toast("清空异常: " + e.message, "bad");
+  }
+}
+
 // ==================== 导出与导入 ====================
 async function exportFishingJSON() {
   try {
-    const res = await api("fishing/export");
+    const res = await getBridge().apiGet("fishing/export");
     if (res && res.code === 0) {
       const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -309,7 +324,7 @@ async function doFishingImport() {
   }
 
   try {
-    const res = await api("fishing/import", { method: "POST", body: { fishes: list, mode: mode } });
+    const res = await getBridge().apiPost("fishing/import", { fishes: list, mode: mode });
     if (res && res.code === 0) {
       toast(res.msg || "导入成功！", "ok");
       closeFishingImportModal();
@@ -332,7 +347,7 @@ async function openFishingRuntimeMonitor() {
   if (box) box.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">正在实时拉取全群鱼塘与水族馆挂机状态…</div>';
 
   try {
-    const res = await api("fishing/runtime_list");
+    const res = await getBridge().apiGet("fishing/runtime_list");
     if (res && res.code === 0) {
       const list = res.data || [];
       if (list.length === 0) {
@@ -423,6 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnFishExport")?.addEventListener("click", exportFishingJSON);
   document.getElementById("btnFishImport")?.addEventListener("click", openFishingImportModal);
   document.getElementById("btnFishResetDefault")?.addEventListener("click", restoreDefaultFishes);
+  document.getElementById("btnFishClearAll")?.addEventListener("click", clearAllFishes);
   document.getElementById("btnFishRuntime")?.addEventListener("click", openFishingRuntimeMonitor);
 
   // 弹窗关闭与保存
@@ -449,3 +465,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+window.loadFishing = loadFishing;
+window.openFishEditModal = openFishEditModal;
+window.closeFishEditModal = closeFishEditModal;
+window.deleteFishItem = deleteFishItem;
+window.restoreDefaultFishes = restoreDefaultFishes;
+window.clearAllFishes = clearAllFishes;
+window.exportFishingJSON = exportFishingJSON;
+window.openFishingImportModal = openFishingImportModal;
+window.closeFishingImportModal = closeFishingImportModal;
+window.openFishingRuntimeMonitor = openFishingRuntimeMonitor;
+window.closeFishingRuntimeMonitor = closeFishingRuntimeMonitor;

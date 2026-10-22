@@ -220,6 +220,15 @@ async def handle_fishing_reset(req=None):
         return _err(f"重置异常: {e}", 500)
 
 
+async def handle_fishing_clear_all(req=None):
+    """清空全部鱼类品种，方便用户从零自定义自建专属鱼池"""
+    try:
+        save_all_fishes([])
+        return json_response({"code": 0, "msg": "已清空全部鱼类品种，您可以自由从零自制全新鱼类！", "count": 0})
+    except Exception as e:
+        return _err(f"清空失败: {e}", 500)
+
+
 async def handle_fishing_import(req=None):
     """批量导入鱼类品种 JSON"""
     try:

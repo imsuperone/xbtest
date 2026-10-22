@@ -23,11 +23,57 @@ MAX_AQUARIUM_CAP = 30
 
 WATER_CLEAN_COST = 200  # 换水恢复 100 点水质所需金币
 BASE_INTEREST_RATE = 0.012  # 水族馆满水质时基准每小时利息 1.2%
-MAX_DAILY_INTEREST = 30000  # 每日水族馆利息上限
+MAX_DAILY_INTEREST = 100000  # 每日水族馆利息硬上限 10w 金币
+
+def _calc_diminishing_interest(current_daily, raw_gain, cap=100000):
+    """方案 3：软着陆平滑衰减模式 (死上限 10w)
+    • 0 ~ 50,000: 100% 全额产生
+    • 50,000 ~ 100,000: 50% 折半平滑软衰减
+    • 达到 100,000: 硬封顶，当日不再增加
+    """
+    if current_daily >= cap or raw_gain <= 0:
+        return 0
+    gain = 0
+    remain_raw = raw_gain
+    cur = current_daily
+
+    # 阶段 1: 0 ~ 50,000 (100% 全额)
+    if cur < 50000:
+        span1 = min(remain_raw, 50000 - cur)
+        gain += span1
+        cur += span1
+        remain_raw -= span1
+
+    # 阶段 2: 50,000 ~ 100,000 (50% 软衰减)
+    if remain_raw > 0 and cur < cap:
+        avail_room = cap - cur
+        span2_raw = min(remain_raw, avail_room * 2)
+        span2_gain = int(span2_raw * 0.5)
+        gain += span2_gain
+        cur += span2_gain
+        remain_raw -= span2_raw
+
+    if current_daily + gain > cap:
+        gain = max(0, cap - current_daily)
+    return gain
 
 def _get_st():
-    from core import storage as ST
-    return ST
+    try:
+        from ...core import storage as ST
+        return ST
+    except (ImportError, ValueError):
+        pass
+    try:
+        from ..core import storage as ST
+        return ST
+    except (ImportError, ValueError):
+        pass
+    try:
+        from core import storage as ST
+        return ST
+    except ImportError:
+        import storage as ST
+        return ST
 
 def _get_data(gid, qq):
     ST = _get_st()
@@ -136,9 +182,8 @@ def _settle_aquarium(data):
         else:
             eff = 0.0  # 暂停产出
 
-        h_gold = int(total_val * BASE_INTEREST_RATE * eff)
-        if aq.get("daily_earned", 0) + h_gold > MAX_DAILY_INTEREST:
-            h_gold = max(0, MAX_DAILY_INTEREST - aq.get("daily_earned", 0))
+        raw_gold = int(total_val * BASE_INTEREST_RATE * eff)
+        h_gold = _calc_diminishing_interest(aq.get("daily_earned", 0), raw_gold, MAX_DAILY_INTEREST)
 
         earned_gold += h_gold
         aq["daily_earned"] = aq.get("daily_earned", 0) + h_gold
@@ -156,7 +201,7 @@ def cmd_bait(gid, qq, bait_name):
         lines = ["【🎣 可用鱼饵与打窝配方清单】"]
         for k, v in BAITS.items():
             lines.append(f"• 【{k}】 售价: {v['price']}金币 | 发酵: {v['mature_min']}分钟 | 保护: {v['protect_min']}分钟 | 渔获: {v['casts']}次\n  └ {v['desc']}")
-        lines.append("─────────────────────\n💡 发送【打窝 <鱼饵名称>】即可在专属窝点播撒鱼饵！")
+        lines.append("━━━━━━━━━━━━\n💡 发送【打窝 <鱼饵名称>】即可在专属窝点播撒鱼饵！")
         return "\n".join(lines)
 
     if b_name not in BAITS:
@@ -201,12 +246,12 @@ def cmd_bait(gid, qq, bait_name):
 
     return (
         f"🌾【打窝培育成功】\n"
-        f"─────────────────────\n"
+        f"━━━━━━━━━━━━\n"
         f"投入窝料：【{b_name}】（花费 {cost}{ST.coin_name()}）\n"
         f"培育发酵：{spec['mature_min']} 分钟（预计 {time.strftime('%H:%M', time.localtime(now + mature_sec))} 成熟）\n"
         f"塘主保护：{spec['protect_min']} 分钟（成熟后专享，防偷鱼）\n"
         f"预估渔获：可供垂钓 {spec['casts']} 次\n"
-        f"─────────────────────\n"
+        f"━━━━━━━━━━━━\n"
         f"💡 鱼群正在深水区发酵聚集，成熟时将自动发光！期间可发送【鱼塘】随时查看进度。"
     )
 
@@ -238,11 +283,11 @@ def cmd_pond(gid, qq):
 
     return (
         f"🏞️【您的专属鱼塘状态】\n"
-        f"─────────────────────\n"
+        f"━━━━━━━━━━━━\n"
         f"窝料种类：【{b_name}】\n"
         f"鱼塘阶段：{status_txt}\n"
         f"剩余次数：{rem} / {tot} 次可抛竿\n"
-        f"─────────────────────\n"
+        f"━━━━━━━━━━━━\n"
         f"💡 提示：成熟后请及时发送【钓鱼】挥竿起鱼！"
     )
 
@@ -259,7 +304,7 @@ def cmd_fish(gid, qq):
         return (
             f"⚠️ 您的水桶已经装满啦（{len(bucket)}/{bucket_cap} 条）！\n"
             f"已经装不下更多的大鱼了哦~ 竿梢已被阻断！\n"
-            f"─────────────────────\n"
+            f"━━━━━━━━━━━━\n"
             f"💡 请先发送【出售】清空卖出渔获换取金币，\n"
             f"   或发送【存鱼 <序号>】放入水族馆展出腾出空间后再来垂钓吧！"
         )
@@ -314,12 +359,12 @@ def cmd_fish(gid, qq):
     crown_tag = " 👑【双S金冠】" if caught.get("is_gold_crown") else ""
     return (
         f"🎣 嗖——竿梢剧烈下弯！用力提竿，水花四溅！\n"
-        f"─────────────────────\n"
+        f"━━━━━━━━━━━━\n"
         f"{caught.get('icon', '🐟')} 捕获渔获：[{caught.get('quality_label')}] 【{caught.get('name')}】{crown_tag}\n"
         f"📏 体型规格：{caught.get('size')} | ⚖️ 重量：{caught.get('weight')} kg ({caught.get('grade')})\n"
         f"💰 预估身价：{caught.get('price')} {ST.coin_name()}\n"
         f"📦 已放入水桶：{len(bucket)} / {bucket_cap} 条（鱼塘尚余 {pond.get('remain_casts')} 次）\n"
-        f"─────────────────────\n"
+        f"━━━━━━━━━━━━\n"
         f"💡 简介：{caught.get('desc')}\n"
         f"👉 发送【水桶】查看全部渔获，发送【出售】变现金币，或【存鱼】入住水族馆！"
     )
@@ -335,11 +380,11 @@ def cmd_bucket(gid, qq):
         return f"🪣 您的水桶空空如也（0/{bucket_cap}）！快去专属鱼塘【钓鱼】吧~"
 
     total_val = sum(int(f.get("price", 0)) for f in bucket)
-    lines = [f"🪣【您的渔获水桶】 (容量: {len(bucket)}/{bucket_cap} · 总估值: {total_val}{ST.coin_name()})", "─────────────────────"]
+    lines = [f"🪣【您的渔获水桶】 (容量: {len(bucket)}/{bucket_cap} · 总估值: {total_val}{ST.coin_name()})", "━━━━━━━━━━━━"]
     for idx, f in enumerate(bucket, 1):
         crown = "👑" if f.get("is_gold_crown") else ""
         lines.append(f"{idx}. [{f.get('quality_label')}] {f.get('name')} {crown} | {f.get('weight')}kg({f.get('grade')}) | 💰{f.get('price')}")
-    lines.append("─────────────────────")
+    lines.append("━━━━━━━━━━━━")
     lines.append("💡 发送【出售】一键全卖换金币，或【存鱼 <序号>】转移至水族馆赚取每小时利息！")
     return "\n".join(lines)
 
@@ -395,11 +440,11 @@ def cmd_aquarium(gid, qq):
 
     lines = [
         f"🏛️【{name}】 (展位: {len(fishes)}/{cap}){settle_tip}",
-        f"─────────────────────",
+        f"━━━━━━━━━━━━",
         f"💧 生态水质健康度：{cur_water} / 100 ({water_tip})",
         f"💎 馆藏总身价估值：{total_val} {ST.coin_name()}",
         f"📈 预计门票时息：约 {expected_interest} {ST.coin_name()}/小时 (今日已产: {aq.get('daily_earned', 0)}/{MAX_DAILY_INTEREST})",
-        f"─────────────────────",
+        f"━━━━━━━━━━━━",
     ]
     if not fishes:
         lines.append("🪹 展厅内目前空空如也~ 快将水桶中的珍稀大鱼通过【存鱼 <序号>】放入展出吧！")
@@ -408,7 +453,7 @@ def cmd_aquarium(gid, qq):
             crown = "👑" if f.get("is_gold_crown") else ""
             h_int = max(1, int(int(f.get("price", 0)) * BASE_INTEREST_RATE * eff))
             lines.append(f"{idx}. [{f.get('quality_label')}] {f.get('name')} {crown} | ⚖️{f.get('weight')}kg | 💰时息+{h_int}")
-    lines.append("─────────────────────")
+    lines.append("━━━━━━━━━━━━")
     lines.append("💡 发送【水族馆换水】可回满水质，发送【水族馆改名 <名字>】可定制响亮招牌！")
     return "\n".join(lines)
 
@@ -526,7 +571,10 @@ def cmd_steal_fish(gid, qq, target_qq):
 
     # 塘主防护坐骑判定 (30%~50% 概率防盗抓贼)
     try:
-        from games import ride as _ride_mod
+        try:
+            from .. import ride as _ride_mod
+        except (ImportError, ValueError):
+            from games import ride as _ride_mod
         t_ride_info = _ride_mod._rides(gid, t_qq) if hasattr(_ride_mod, "_rides") else {}
         active_mount = t_ride_info.get("active", "")
         if active_mount:
@@ -584,29 +632,36 @@ def cmd_atlas(gid, qq):
 
     return (
         f"📖【全水域鱼类收集图鉴】\n"
-        f"─────────────────────\n"
+        f"━━━━━━━━━━━━\n"
         f"收集进度：{unlocked} / {total_sp} 种 ({pct}%)\n"
         f"👑 金冠收集：已捕获 {crown_count} 种双S金冠鱼\n"
         f"🔮 图鉴增益：{buff}\n"
-        f"─────────────────────\n"
+        f"━━━━━━━━━━━━\n"
         f"💡 解锁更多图鉴即可永久提升垂钓极品大鱼概率！"
     )
 
 def cmd_menu():
     return (
-        f"🎣【元梦之星风格钓鱼与水族馆】\n"
-        f"─────────────────────\n"
-        f"🌾【打窝 <鱼饵>】购买鱼饵在鱼塘发酵（输入【打窝】看配方）\n"
-        f"🏞️【鱼塘】查看发酵倒计时、保护期与剩余次数\n"
-        f"🎣【钓鱼】在成熟鱼塘挥竿起鱼（水桶满前置拦截）\n"
-        f"🪣【水桶】查看当前水桶渔获、重量与总估值\n"
-        f"💰【出售】/【出售 <序号>】将渔获变现换取金币\n"
-        f"🏛️【水族馆】查看展馆鱼类、水质健康度与每小时利息\n"
-        f"📥【存鱼 <序号>】/【取鱼 <序号>】在水桶与水族馆间转移\n"
-        f"💧【水族馆换水】保洁回满水质，享利息全额+5%小费\n"
-        f"🏷️【水族馆改名 <名字>】定制专属展馆大招牌\n"
-        f"🥷【偷鱼 @某人】在目标保护期结束后偷取鱼塘\n"
-        f"📖【钓鱼图鉴】查看全水域105种鱼类解锁进度与概率加成\n"
-        f"─────────────────────\n"
-        f"💡 发送【钓鱼系统】或【钓鱼菜单】可唤醒本菜单！"
+        "🎣 钓鱼与水族馆系统\n"
+        "━━━━━━━━━━━━\n"
+        "🌾【生态培育】\n"
+        "• 打窝 [鱼饵]　投放窝料聚鱼（发送【打窝】查配方）\n"
+        "• 鱼塘　　　　查看发酵进度、保护期与剩余次数\n"
+        "• 钓鱼 / 抛竿　挥竿起鱼（水桶满仓前置智能拦截）\n"
+        "\n"
+        "🪣【渔获交易】\n"
+        "• 水桶　　　　查看持有渔获、规格重量与总估值\n"
+        "• 出售 [序号]　单条变现（不填序号一键全桶变现）\n"
+        "\n"
+        "🏛️【水族展馆】\n"
+        "• 水族馆　　　查看展馆名鱼、水质健康度与时息收益\n"
+        "• 存鱼/取鱼 　在水桶与水族展馆之间调配名鱼\n"
+        "• 水族馆换水　生态保洁满水质，享利息全额+5%加成\n"
+        "• 水族馆改名　定制专属水族馆响亮大招牌\n"
+        "\n"
+        "🥷【互动与图鉴】\n"
+        "• 偷鱼 @群友　过保护期后偷取目标鱼塘剩余渔获\n"
+        "• 钓鱼图鉴　　查看全水域鱼类收集进度与概率加成\n"
+        "━━━━━━━━━━━━\n"
+        "💡 发送【钓鱼系统】或【钓鱼菜单】可唤醒本菜单"
     )

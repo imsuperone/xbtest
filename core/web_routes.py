@@ -102,6 +102,7 @@ _XB_API_ROUTES = [
     ("fishing/fish/save", "POST", "page_fishing_fish_save", "保存鱼类品种", ("core.api.fishing_api", "handle_fishing_fish_save", "fishing fish save", {"mode": "req"})),
     ("fishing/fish/delete", "POST", "page_fishing_fish_delete", "删除鱼类品种", ("core.api.fishing_api", "handle_fishing_fish_delete", "fishing fish delete", {"mode": "req"})),
     ("fishing/reset", "POST", "page_fishing_reset", "恢复默认鱼类图鉴", ("core.api.fishing_api", "handle_fishing_reset", "fishing reset", {"mode": "req"})),
+    ("fishing/clear_all", "POST", "page_fishing_clear_all", "清空全部鱼类图鉴", ("core.api.fishing_api", "handle_fishing_clear_all", "fishing clear all", {"mode": "req"})),
     ("fishing/import", "POST", "page_fishing_import", "导入鱼类品种JSON", ("core.api.fishing_api", "handle_fishing_import", "fishing import", {"mode": "req"})),
     ("fishing/export", "GET,POST", "page_fishing_export", "导出鱼类品种JSON", ("core.api.fishing_api", "handle_fishing_export", "fishing export", {"mode": "req"})),
     ("fishing/runtime_list", "GET", "page_fishing_runtime_list", "实时鱼塘与水族馆监控", ("core.api.fishing_api", "handle_fishing_runtime_list", "fishing runtime list", {"mode": "req"})),
@@ -138,7 +139,7 @@ _XB_MUTATING_HANDLERS = frozenset({
     "handle_persistence_test",
     "handle_questions_save", "handle_questions_import", "handle_questions_reset",
     "handle_align_defaults",
-    "handle_fishing_fish_save", "handle_fishing_fish_delete", "handle_fishing_reset", "handle_fishing_import",
+    "handle_fishing_fish_save", "handle_fishing_fish_delete", "handle_fishing_reset", "handle_fishing_clear_all", "handle_fishing_import",
 })
 
 

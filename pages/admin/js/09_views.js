@@ -92,7 +92,7 @@ function renderSpiritUsersTable() {
     spHint.innerHTML = `共 <strong>${RAW_SPIRIT_USERS.length}</strong> 名训练师（当前匹配 <strong>${rows.length}</strong> 名） · 统计出战精灵与综合战力`;
   }
   let html = "";
-  if (!rows.length) html = `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">暂无精灵数据</td></tr>`;
+  if (!rows.length) html = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">暂无精灵数据</td></tr>`;
   else html = rows.map(r => `<tr>
     <td><span class="badge badge-primary">${esc(r.gid)}</span></td>
     <td><strong>${esc(r.qq)}</strong></td>
@@ -102,7 +102,6 @@ function renderSpiritUsersTable() {
     <td>${r.best ? `<span class="badge badge-purple">${esc(r.best)}</span>` : '<span style="color:var(--muted)">-</span>'}</td>
     <td><span class="badge badge-warn">Lv.${r.max_level || 0}</span></td>
     <td><span style="font-weight:700;color:var(--text)">${(r.total_power || 0).toLocaleString()}</span></td>
-    <td><span class="badge badge-primary" style="cursor:pointer;white-space:nowrap" onclick="showTrainerBagModal('${esc(r.gid)}','${esc(r.qq)}')" title="点击查看背包道具明细">${r.bag_count || 0} 件 🔍</span></td>
   </tr>`).join("");
   body.innerHTML = html;
 }

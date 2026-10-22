@@ -180,7 +180,7 @@ class TestFishingSystem(unittest.TestCase):
         self.assertIn("水桶", COMMANDS)
 
         res_menu = handle(self.gid, self.qq, "钓鱼菜单")
-        self.assertIn("元梦之星风格钓鱼与水族馆", res_menu)
+        self.assertIn("钓鱼与水族馆系统", res_menu)
 
         res_pond = handle(self.gid, self.qq, "鱼塘")
         self.assertTrue(len(res_pond) > 0)
@@ -197,9 +197,17 @@ class TestFishingSystem(unittest.TestCase):
         self.assertEqual(fl.get("code"), 0)
         self.assertTrue(any("鲲" in f.get("name", "") for f in fl.get("data", [])))
 
+        # 清空测试与恢复默认
+        clr = asyncio.run(fishing_api.handle_fishing_clear_all())
+        self.assertEqual(clr.get("code"), 0)
+        fl_empty = asyncio.run(fishing_api.handle_fishing_fishes())
+        self.assertEqual(len(fl_empty.get("data", [])), 0)
+
         # 恢复默认
         rst = asyncio.run(fishing_api.handle_fishing_reset())
         self.assertEqual(rst.get("code"), 0)
+        fl_restored = asyncio.run(fishing_api.handle_fishing_fishes())
+        self.assertGreaterEqual(len(fl_restored.get("data", [])), 105)
 
 
 if __name__ == "__main__":
