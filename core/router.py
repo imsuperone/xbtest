@@ -20,7 +20,7 @@ _CUSTOM_SEC = "自定义指令配置"
 _DISABLE_SEC = "指令启用配置"
 _PERM_SEC = "指令权限配置"
 _ADMIN_ONLY = "超管"
-_SYS_ENG = {'slave': '奴隶', 'sign': '签到', 'bank': '银行', 'ent': '娱乐', 'spirit': '精灵', 'ride': '坐骑', 'guild': '帮派', 'superadmin': '超管', 'adventure': '冒险'}
+_SYS_ENG = {'slave': '奴隶', 'sign': '签到', 'bank': '银行', 'ent': '娱乐', 'spirit': '精灵', 'ride': '坐骑', 'guild': '帮派', 'superadmin': '超管', 'adventure': '冒险', 'fishing': '钓鱼'}
 _MAIN_MENU = (
     "★ 小白测试版主菜单 ★\r\n"
     "----------------\r\n"
@@ -28,8 +28,9 @@ _MAIN_MENU = (
     "| 🎮 娱乐系统 | 🏦 银行系统 |\r\n"
     "| ⛓️ 奴隶系统 | 🏍️ 坐骑系统 |\r\n"
     "| ⚔️ 帮派系统 | 🗺️ 冒险系统 |\r\n"
+    "| 🎣 钓鱼系统 |              |\r\n"
     "----------------\r\n"
-    "发送系统关键词打开菜单，如【签到系统】【精灵系统】"
+    "发送系统关键词打开菜单，如【签到系统】【精灵系统】【钓鱼系统】"
 )
 _SHOP_GUIDE = (
     "🛒 小白系统商城指南\r\n"
@@ -221,7 +222,7 @@ def _batch_guard_map(gid, is_admin, store):
     except Exception:
         hit = None
     res = {}
-    for eng in ("slave", "sign", "bank", "ent", "spirit", "ride", "guild", "adventure", "superadmin"):
+    for eng in ("slave", "sign", "bank", "ent", "spirit", "ride", "guild", "adventure", "fishing", "superadmin"):
         msg = _guard(gid, eng, is_admin, "", store)
         res[eng] = msg  # None表示放行
     try:
@@ -770,7 +771,7 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
     # 依次分发 9 引擎（批量守卫预计算，单消息18次读→0次）
     _batch_map = _batch_guard_map(gid, is_admin, store) if store else {}
     if engines:
-        for _eng in ("slave", "sign", "bank", "ent", "spirit", "ride", "guild", "adventure"):
+        for _eng in ("slave", "sign", "bank", "ent", "spirit", "ride", "guild", "adventure", "fishing"):
             fn = engines.get(_eng)
             if not fn:
                 continue

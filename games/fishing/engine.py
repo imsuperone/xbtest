@@ -1,0 +1,612 @@
+# -*- coding: utf-8 -*-
+"""games/fishing/engine.py — 钓鱼与迷你世界水族馆核心业务引擎。
+涵盖打窝发酵、水桶满额前置拦截、垂钓演出、鱼类回收、水族馆放置生息、
+生态水质衰减防通胀、群友偷鱼博弈与奴隶造反偷鱼深度联动。
+"""
+import time
+import math
+import random
+from .data_fishes import roll_random_fish, load_all_fishes, QUALITY_COLORS
+
+# 鱼饵预设规格：(价格, 发酵培育分钟, 塘主保护分钟, 可钓次数)
+BAITS = {
+    "蚯蚓饵": {"price": 100, "mature_min": 30, "protect_min": 15, "casts": 3, "desc": "廉价亲民的小鱼饵，适合新手练手。"},
+    "复合颗粒窝料": {"price": 500, "mature_min": 60, "protect_min": 30, "casts": 5, "desc": "经典颗粒窝料，发酵聚鱼效果稳定。"},
+    "秘制红虫香精": {"price": 1500, "mature_min": 90, "protect_min": 45, "casts": 8, "desc": "香气扑鼻的高档香精，诱聚高品质稀有鱼群。"},
+    "梦幻龙涎诱饵": {"price": 5000, "mature_min": 120, "protect_min": 60, "casts": 12, "desc": "秘境顶级诱饵，极大提升史诗/传说/神话大鱼概率！"},
+}
+
+DEFAULT_BUCKET_CAP = 10
+MAX_BUCKET_CAP = 30
+DEFAULT_AQUARIUM_CAP = 10
+MAX_AQUARIUM_CAP = 30
+
+WATER_CLEAN_COST = 200  # 换水恢复 100 点水质所需金币
+BASE_INTEREST_RATE = 0.012  # 水族馆满水质时基准每小时利息 1.2%
+MAX_DAILY_INTEREST = 30000  # 每日水族馆利息上限
+
+def _get_st():
+    from core import storage as ST
+    return ST
+
+def _get_data(gid, qq):
+    ST = _get_st()
+    a = ST.acct(gid, qq)
+    raw = a.get("fishing", "{}")
+    d = {}
+    try:
+        import json as _j
+        if raw and raw not in ("0", "None"):
+            parsed = _j.loads(raw)
+            if isinstance(parsed, dict):
+                d = parsed
+    except Exception:
+        d = {}
+
+    # 补齐默认结构
+    d.setdefault("bucket", [])
+    d.setdefault("bucket_cap", DEFAULT_BUCKET_CAP)
+    d.setdefault("aquarium", {
+        "name": "迷你世界水族馆",
+        "capacity": DEFAULT_AQUARIUM_CAP,
+        "water_quality": 100,
+        "fishes": [],
+        "last_settle_ts": int(time.time()),
+        "daily_earned": 0,
+        "daily_date": time.strftime("%Y-%m-%d"),
+        "renamed": False
+    })
+    d.setdefault("pond", None)
+    d.setdefault("atlas", {})
+    return d
+
+def _save_data(gid, qq, data):
+    ST = _get_st()
+    a = ST.acct(gid, qq)
+    import json as _j
+    a.set("fishing", _j.dumps(data, ensure_ascii=False))
+    ST.acct_save(gid, qq)
+
+def _get_coins(gid, qq):
+    ST = _get_st()
+    try:
+        return ST.coins_get(gid, qq)
+    except Exception:
+        return 0
+
+def _add_coins(gid, qq, delta):
+    ST = _get_st()
+    try:
+        return ST.coins_add(gid, qq, delta)
+    except Exception:
+        return None
+
+def _get_stamina(gid, qq):
+    ST = _get_st()
+    try:
+        a = ST.acct(gid, qq)
+        return a.int("stamina")
+    except Exception:
+        return 100
+
+def _sub_stamina(gid, qq, amt=1):
+    ST = _get_st()
+    try:
+        a = ST.acct(gid, qq)
+        cur = a.int("stamina")
+        a.set("stamina", str(max(0, cur - amt)))
+        ST.acct_save(gid, qq)
+    except Exception:
+        pass
+
+# ==================== 水族馆离线利息与水质结算 ====================
+def _settle_aquarium(data):
+    """自动结算水族馆挂机利息与水质健康度衰减"""
+    aq = data.get("aquarium", {})
+    now = int(time.time())
+    last = int(aq.get("last_settle_ts", now))
+    elapsed_hours = (now - last) // 3600
+    if elapsed_hours <= 0:
+        return 0, 0
+
+    today = time.strftime("%Y-%m-%d")
+    if aq.get("daily_date") != today:
+        aq["daily_date"] = today
+        aq["daily_earned"] = 0
+
+    fishes = aq.get("fishes", [])
+    total_val = sum(int(f.get("price", 0)) for f in fishes)
+    cur_water = int(aq.get("water_quality", 100))
+
+    earned_gold = 0
+    decay_per_hour = 2.0
+    # 若有神话/超大鱼，略微加速衰减
+    for f in fishes:
+        if f.get("quality") == "幻彩神话" or f.get("size") == "超大型":
+            decay_per_hour += 0.5
+
+    for _ in range(int(elapsed_hours)):
+        # 水质效率档位
+        if cur_water >= 80:
+            eff = 1.05  # 全额加 5% 小费
+        elif cur_water >= 50:
+            eff = 0.70
+        elif cur_water >= 20:
+            eff = 0.30
+        else:
+            eff = 0.0  # 暂停产出
+
+        h_gold = int(total_val * BASE_INTEREST_RATE * eff)
+        if aq.get("daily_earned", 0) + h_gold > MAX_DAILY_INTEREST:
+            h_gold = max(0, MAX_DAILY_INTEREST - aq.get("daily_earned", 0))
+
+        earned_gold += h_gold
+        aq["daily_earned"] = aq.get("daily_earned", 0) + h_gold
+        cur_water = max(0, int(cur_water - decay_per_hour))
+
+    aq["water_quality"] = cur_water
+    aq["last_settle_ts"] = now
+    return earned_gold, cur_water
+
+# ==================== 指令 1：打窝培育 ====================
+def cmd_bait(gid, qq, bait_name):
+    ST = _get_st()
+    b_name = bait_name.strip()
+    if not b_name:
+        lines = ["【🎣 可用鱼饵与打窝配方清单】"]
+        for k, v in BAITS.items():
+            lines.append(f"• 【{k}】 售价: {v['price']}金币 | 发酵: {v['mature_min']}分钟 | 保护: {v['protect_min']}分钟 | 渔获: {v['casts']}次\n  └ {v['desc']}")
+        lines.append("─────────────────────\n💡 发送【打窝 <鱼饵名称>】即可在专属窝点播撒鱼饵！")
+        return "\n".join(lines)
+
+    if b_name not in BAITS:
+        matched = [k for k in BAITS if b_name in k]
+        if matched:
+            b_name = matched[0]
+        else:
+            return f"❌ 未找到鱼饵【{bait_name}】哦！\n可直接发送【打窝列表】查看当前所有可用鱼饵配方。"
+
+    spec = BAITS[b_name]
+    cost = spec["price"]
+
+    d = _get_data(gid, qq)
+    now = int(time.time())
+    old_pond = d.get("pond")
+    if old_pond and old_pond.get("is_active"):
+        m_ts = old_pond.get("mature_ts", 0)
+        p_ts = old_pond.get("protect_end_ts", 0)
+        rem = old_pond.get("remain_casts", 0)
+        if rem > 0 and now < p_ts + 7200:
+            return f"⚠️ 您当前已有一个正在生效的鱼塘（尚余 {rem} 次垂钓机会）！\n请先发送【钓鱼】将现有鱼塘收完，或等待鱼塘自然干涸后再打新窝哦~"
+
+    coins = _get_coins(gid, qq)
+    if coins < cost:
+        return f"❌ 金币不足！购买【{b_name}】需要 {cost}{ST.coin_name()}，您当前仅有 {coins}{ST.coin_name()}。"
+
+    if _add_coins(gid, qq, -cost) is None:
+        return "❌ 扣除金币失败，请稍后重试。"
+
+    mature_sec = spec["mature_min"] * 60
+    protect_sec = spec["protect_min"] * 60
+    d["pond"] = {
+        "bait": b_name,
+        "start_ts": now,
+        "mature_ts": now + mature_sec,
+        "protect_end_ts": now + mature_sec + protect_sec,
+        "remain_casts": spec["casts"],
+        "total_casts": spec["casts"],
+        "is_active": True,
+    }
+    _save_data(gid, qq, data=d)
+
+    return (
+        f"🌾【打窝培育成功】\n"
+        f"─────────────────────\n"
+        f"投入窝料：【{b_name}】（花费 {cost}{ST.coin_name()}）\n"
+        f"培育发酵：{spec['mature_min']} 分钟（预计 {time.strftime('%H:%M', time.localtime(now + mature_sec))} 成熟）\n"
+        f"塘主保护：{spec['protect_min']} 分钟（成熟后专享，防偷鱼）\n"
+        f"预估渔获：可供垂钓 {spec['casts']} 次\n"
+        f"─────────────────────\n"
+        f"💡 鱼群正在深水区发酵聚集，成熟时将自动发光！期间可发送【鱼塘】随时查看进度。"
+    )
+
+# ==================== 指令 2：查看鱼塘状态 ====================
+def cmd_pond(gid, qq):
+    ST = _get_st()
+    d = _get_data(gid, qq)
+    now = int(time.time())
+    pond = d.get("pond")
+    if not pond or not pond.get("is_active"):
+        return "🌊 您当前还没有打窝建立鱼塘哦~ 发送【打窝】挑选鱼饵开始培育吧！"
+
+    b_name = pond.get("bait", "普通窝料")
+    m_ts = pond.get("mature_ts", 0)
+    p_ts = pond.get("protect_end_ts", 0)
+    rem = pond.get("remain_casts", 0)
+    tot = pond.get("total_casts", 0)
+
+    if now < m_ts:
+        diff_min = max(1, math.ceil((m_ts - now) / 60))
+        status_txt = f"⏳ 深度发酵中（还需约 {diff_min} 分钟成熟，鱼群聚拢中）"
+    elif now < p_ts:
+        diff_min = max(1, math.ceil((p_ts - now) / 60))
+        status_txt = f"🌟 已成熟 · 塘主独享保护期（还剩 {diff_min} 分钟保护，群友无法偷鱼）"
+    elif rem > 0:
+        status_txt = "🔓 公共偷鱼期（保护期已结束，群友可发送【偷鱼】偷取剩余渔获！）"
+    else:
+        status_txt = "🍂 鱼群已完全被钓完，水质清澈干涸"
+
+    return (
+        f"🏞️【您的专属鱼塘状态】\n"
+        f"─────────────────────\n"
+        f"窝料种类：【{b_name}】\n"
+        f"鱼塘阶段：{status_txt}\n"
+        f"剩余次数：{rem} / {tot} 次可抛竿\n"
+        f"─────────────────────\n"
+        f"💡 提示：成熟后请及时发送【钓鱼】挥竿起鱼！"
+    )
+
+# ==================== 指令 3：即时垂钓 (含水桶满仓前置拦截) ====================
+def cmd_fish(gid, qq):
+    ST = _get_st()
+    d = _get_data(gid, qq)
+    now = int(time.time())
+
+    # ★★★ 硬核需求：垂钓前强制检测水桶容量，满仓前置拦截，绝不扣体力与次数 ★★★
+    bucket = d.get("bucket", [])
+    bucket_cap = int(d.get("bucket_cap", DEFAULT_BUCKET_CAP))
+    if len(bucket) >= bucket_cap:
+        return (
+            f"⚠️ 您的水桶已经装满啦（{len(bucket)}/{bucket_cap} 条）！\n"
+            f"已经装不下更多的大鱼了哦~ 竿梢已被阻断！\n"
+            f"─────────────────────\n"
+            f"💡 请先发送【出售】清空卖出渔获换取金币，\n"
+            f"   或发送【存鱼 <序号>】放入水族馆展出腾出空间后再来垂钓吧！"
+        )
+
+    pond = d.get("pond")
+    if not pond or not pond.get("is_active") or pond.get("remain_casts", 0) <= 0:
+        return "🌊 您当前没有已成熟的鱼塘哦！请先发送【打窝】使用鱼饵建立属于您的鱼塘~"
+
+    m_ts = pond.get("mature_ts", 0)
+    if now < m_ts:
+        diff_min = max(1, math.ceil((m_ts - now) / 60))
+        return f"⏳ 鱼塘仍在发酵聚鱼中（还剩约 {diff_min} 分钟）！浮漂纹丝不动，请稍后再来挥竿哦~"
+
+    # 体力判定
+    sta = _get_stamina(gid, qq)
+    if sta < 1:
+        return "😫 您的体力不足啦（需要 1 点体力挥竿）！请稍事休息恢复体力后再来垂钓~"
+
+    _sub_stamina(gid, qq, 1)
+
+    # 消耗一次钓鱼机会
+    pond["remain_casts"] = max(0, pond.get("remain_casts", 1) - 1)
+    if pond["remain_casts"] == 0:
+        pond["is_active"] = False
+
+    # 计算图鉴与幸运加成
+    atlas = d.get("atlas", {})
+    atlas_count = len(atlas)
+    bonus_luck = 0.0
+    if atlas_count >= 60:
+        bonus_luck = 0.35  # 图鉴解锁60种以上大增益
+    elif atlas_count >= 30:
+        bonus_luck = 0.15
+
+    # 抽取渔获
+    caught = roll_random_fish(bonus_luck=bonus_luck)
+    caught["catch_ts"] = now
+    bucket.append(caught)
+
+    # 更新图鉴数据
+    f_id = caught.get("fish_id")
+    rec = atlas.get(f_id, {"count": 0, "max_weight": 0.0, "has_crown": False})
+    rec["count"] = rec.get("count", 0) + 1
+    if caught.get("weight", 0) > rec.get("max_weight", 0):
+        rec["max_weight"] = caught.get("weight", 0)
+    if caught.get("is_gold_crown"):
+        rec["has_crown"] = True
+    atlas[f_id] = rec
+
+    _save_data(gid, qq, d)
+
+    crown_tag = " 👑【双S金冠】" if caught.get("is_gold_crown") else ""
+    return (
+        f"🎣 嗖——竿梢剧烈下弯！用力提竿，水花四溅！\n"
+        f"─────────────────────\n"
+        f"{caught.get('icon', '🐟')} 捕获渔获：[{caught.get('quality_label')}] 【{caught.get('name')}】{crown_tag}\n"
+        f"📏 体型规格：{caught.get('size')} | ⚖️ 重量：{caught.get('weight')} kg ({caught.get('grade')})\n"
+        f"💰 预估身价：{caught.get('price')} {ST.coin_name()}\n"
+        f"📦 已放入水桶：{len(bucket)} / {bucket_cap} 条（鱼塘尚余 {pond.get('remain_casts')} 次）\n"
+        f"─────────────────────\n"
+        f"💡 简介：{caught.get('desc')}\n"
+        f"👉 发送【水桶】查看全部渔获，发送【出售】变现金币，或【存鱼】入住水族馆！"
+    )
+
+# ==================== 指令 4：水桶查看 ====================
+def cmd_bucket(gid, qq):
+    ST = _get_st()
+    d = _get_data(gid, qq)
+    bucket = d.get("bucket", [])
+    bucket_cap = int(d.get("bucket_cap", DEFAULT_BUCKET_CAP))
+
+    if not bucket:
+        return f"🪣 您的水桶空空如也（0/{bucket_cap}）！快去专属鱼塘【钓鱼】吧~"
+
+    total_val = sum(int(f.get("price", 0)) for f in bucket)
+    lines = [f"🪣【您的渔获水桶】 (容量: {len(bucket)}/{bucket_cap} · 总估值: {total_val}{ST.coin_name()})", "─────────────────────"]
+    for idx, f in enumerate(bucket, 1):
+        crown = "👑" if f.get("is_gold_crown") else ""
+        lines.append(f"{idx}. [{f.get('quality_label')}] {f.get('name')} {crown} | {f.get('weight')}kg({f.get('grade')}) | 💰{f.get('price')}")
+    lines.append("─────────────────────")
+    lines.append("💡 发送【出售】一键全卖换金币，或【存鱼 <序号>】转移至水族馆赚取每小时利息！")
+    return "\n".join(lines)
+
+# ==================== 指令 5：出售渔获 ====================
+def cmd_sell(gid, qq, arg=""):
+    ST = _get_st()
+    d = _get_data(gid, qq)
+    bucket = d.get("bucket", [])
+    if not bucket:
+        return "🪣 您的水桶里没有鱼可以出售哦！"
+
+    arg = arg.strip()
+    if arg and arg.isdigit():
+        idx = int(arg) - 1
+        if idx < 0 or idx >= len(bucket):
+            return f"❌ 序号无效！水桶内目前仅有 1 ~ {len(bucket)} 号渔获。"
+        fish = bucket.pop(idx)
+        val = int(fish.get("price", 0))
+        ST.coins_add(gid, qq, val)
+        _save_data(gid, qq, d)
+        return f"💰【单条出售成功】您成功卖出了 [{fish.get('quality_label')}] 【{fish.get('name')}】，获得 {val} {ST.coin_name()}！"
+    else:
+        # 全部一键出售
+        count = len(bucket)
+        total_val = sum(int(f.get("price", 0)) for f in bucket)
+        bucket.clear()
+        ST.coins_add(gid, qq, total_val)
+        _save_data(gid, qq, d)
+        return f"💰【全桶变现成功】成功出售水桶内全部 {count} 条渔获，喜提 {total_val} {ST.coin_name()}入账！水桶已彻底腾空~"
+
+# ==================== 指令 6：水族馆展示与改名 ====================
+def cmd_aquarium(gid, qq):
+    ST = _get_st()
+    d = _get_data(gid, qq)
+    earned, cur_water = _settle_aquarium(d)
+    _save_data(gid, qq, d)
+
+    if earned > 0:
+        ST.coins_add(gid, qq, earned)
+
+    aq = d.get("aquarium", {})
+    name = aq.get("name", "迷你世界水族馆")
+    fishes = aq.get("fishes", [])
+    cap = int(aq.get("capacity", DEFAULT_AQUARIUM_CAP))
+    total_val = sum(int(f.get("price", 0)) for f in fishes)
+
+    # 计算当前每小时预期利息
+    eff = 1.05 if cur_water >= 80 else (0.7 if cur_water >= 50 else (0.3 if cur_water >= 20 else 0.0))
+    expected_interest = int(total_val * BASE_INTEREST_RATE * eff)
+
+    settle_tip = f"\n🎉 刚刚为您结算了离线利息 +{earned} {ST.coin_name()}！" if earned > 0 else ""
+    water_tip = "✨ 水质纯净 (利息加成 +5%)" if cur_water >= 80 else ("⚠️ 水质微浊 (利息 70%)" if cur_water >= 50 else "🚨 水质浑浊长苔 (利息严重下滑)")
+
+    lines = [
+        f"🏛️【{name}】 (展位: {len(fishes)}/{cap}){settle_tip}",
+        f"─────────────────────",
+        f"💧 生态水质健康度：{cur_water} / 100 ({water_tip})",
+        f"💎 馆藏总身价估值：{total_val} {ST.coin_name()}",
+        f"📈 预计门票时息：约 {expected_interest} {ST.coin_name()}/小时 (今日已产: {aq.get('daily_earned', 0)}/{MAX_DAILY_INTEREST})",
+        f"─────────────────────",
+    ]
+    if not fishes:
+        lines.append("🪹 展厅内目前空空如也~ 快将水桶中的珍稀大鱼通过【存鱼 <序号>】放入展出吧！")
+    else:
+        for idx, f in enumerate(fishes, 1):
+            crown = "👑" if f.get("is_gold_crown") else ""
+            h_int = max(1, int(int(f.get("price", 0)) * BASE_INTEREST_RATE * eff))
+            lines.append(f"{idx}. [{f.get('quality_label')}] {f.get('name')} {crown} | ⚖️{f.get('weight')}kg | 💰时息+{h_int}")
+    lines.append("─────────────────────")
+    lines.append("💡 发送【水族馆换水】可回满水质，发送【水族馆改名 <名字>】可定制响亮招牌！")
+    return "\n".join(lines)
+
+def cmd_rename_aquarium(gid, qq, new_name):
+    ST = _get_st()
+    n = new_name.strip()
+    if not n or len(n) < 2 or len(n) > 12:
+        return "❌ 水族馆名字长度必须在 2 ~ 12 个字之间哦！"
+
+    d = _get_data(gid, qq)
+    aq = d.get("aquarium", {})
+    is_renamed = aq.get("renamed", False)
+
+    if is_renamed:
+        cost = 5000
+        coins = _get_coins(gid, qq)
+        if coins < cost:
+            return f"❌ 再次改名需要花费 {cost} {ST.coin_name()}，您当前仅有 {coins} {ST.coin_name()}。"
+        _add_coins(gid, qq, -cost)
+
+    aq["name"] = n
+    aq["renamed"] = True
+    _save_data(gid, qq, d)
+    return f"✨【水族馆改名成功】您的水族馆专属名称已更新为：【{n}】！"
+
+def cmd_store_fish(gid, qq, arg):
+    d = _get_data(gid, qq)
+    bucket = d.get("bucket", [])
+    aq = d.get("aquarium", {})
+    fishes = aq.get("fishes", [])
+    cap = int(aq.get("capacity", DEFAULT_AQUARIUM_CAP))
+
+    if not arg or not arg.strip().isdigit():
+        return "❌ 请输入要存放的水桶鱼序号，例如：【存鱼 1】。"
+
+    idx = int(arg.strip()) - 1
+    if idx < 0 or idx >= len(bucket):
+        return f"❌ 序号无效！水桶内目前仅有 1 ~ {len(bucket)} 号渔获。"
+
+    if len(fishes) >= cap:
+        return f"⚠️ 水族馆展位已满（{len(fishes)}/{cap}）！放不下更多展鱼啦。"
+
+    fish = bucket.pop(idx)
+    fishes.append(fish)
+    _save_data(gid, qq, d)
+    return f"🏛️ 成功将 [{fish.get('quality_label')}] 【{fish.get('name')}】转移至水族馆展出！每小时都将为您产生门票利息~"
+
+def cmd_take_fish(gid, qq, arg):
+    d = _get_data(gid, qq)
+    bucket = d.get("bucket", [])
+    bucket_cap = int(d.get("bucket_cap", DEFAULT_BUCKET_CAP))
+    aq = d.get("aquarium", {})
+    fishes = aq.get("fishes", [])
+
+    if not arg or not arg.strip().isdigit():
+        return "❌ 请输入要取出的水族馆展鱼序号，例如：【取鱼 1】。"
+
+    idx = int(arg.strip()) - 1
+    if idx < 0 or idx >= len(fishes):
+        return f"❌ 序号无效！水族馆内目前仅有 1 ~ {len(fishes)} 号展鱼。"
+
+    if len(bucket) >= bucket_cap:
+        return f"⚠️ 您的水桶已满（{len(bucket)}/{bucket_cap}）！请先【出售】腾出水桶空位后再取出。"
+
+    fish = fishes.pop(idx)
+    bucket.append(fish)
+    _save_data(gid, qq, d)
+    return f"🪣 已将 [{fish.get('quality_label')}] 【{fish.get('name')}】从水族馆取出并放回水桶，现在可以发送【出售】变现啦！"
+
+def cmd_clean_water(gid, qq):
+    ST = _get_st()
+    d = _get_data(gid, qq)
+    aq = d.get("aquarium", {})
+    cur_water = int(aq.get("water_quality", 100))
+    if cur_water >= 100:
+        return "💧 您的水族馆水质清澈纯净（100/100），暂时无需换水哦！"
+
+    coins = _get_coins(gid, qq)
+    if coins < WATER_CLEAN_COST:
+        return f"❌ 金币不足！清洁换水需要 {WATER_CLEAN_COST} {ST.coin_name()}，您当前仅有 {coins}。"
+
+    if _add_coins(gid, qq, -WATER_CLEAN_COST) is None:
+        return "❌ 扣费失败，请稍后重试。"
+
+    aq["water_quality"] = 100
+    _save_data(gid, qq, d)
+    return f"✨【换水保洁完成】花费 {WATER_CLEAN_COST} {ST.coin_name()}，水质恢复至 100 点纯净状态！享受全额门票利息 +5% 小费加成~"
+
+# ==================== 指令 7：社交偷鱼与奴隶造反 ====================
+def cmd_steal_fish(gid, qq, target_qq):
+    ST = _get_st()
+    t_qq = str(target_qq).strip().strip("@").strip()
+    if not t_qq or not t_qq.isdigit():
+        return "❌ 请指定要偷取的群友，例如：【偷鱼 @张三】。"
+
+    if t_qq == str(qq):
+        return "😅 不能偷自己的鱼塘哦！"
+
+    t_data = _get_data(gid, t_qq)
+    t_pond = t_data.get("pond")
+    now = int(time.time())
+
+    if not t_pond or not t_pond.get("is_active") or t_pond.get("remain_casts", 0) <= 0:
+        return "🍂 对方当前没有可用或有剩余渔获的鱼塘哦~"
+
+    m_ts = t_pond.get("mature_ts", 0)
+    p_ts = t_pond.get("protect_end_ts", 0)
+
+    if now < m_ts:
+        return "⏳ 对方的鱼塘还在发酵培育中，连鱼影都没有呢，偷不到！"
+
+    if now < p_ts:
+        diff_min = max(1, math.ceil((p_ts - now) / 60))
+        return f"🛡️ 对方鱼塘处于【塘主专属保护期】（还剩 {diff_min} 分钟），戒备森严，无法偷鱼！"
+
+    # 塘主防护坐骑判定 (30%~50% 概率防盗抓贼)
+    try:
+        from games import ride as _ride_mod
+        t_ride_info = _ride_mod._rides(gid, t_qq) if hasattr(_ride_mod, "_rides") else {}
+        active_mount = t_ride_info.get("active", "")
+        if active_mount:
+            # 拥有坐骑有概率触发抓捕
+            if random.random() < 0.40:
+                fine = 200
+                _add_coins(gid, qq, -fine)
+                ST.coins_add(gid, t_qq, fine)
+                return f"🚨【偷鱼被当场逮捕】目标塘主养有神兽【{active_mount}】！您刚踩进鱼塘就被一口咬住，罚款 {fine} {ST.coin_name()}赔偿给塘主！"
+    except Exception:
+        pass
+
+    # 偷鱼成功
+    my_data = _get_data(gid, qq)
+    my_bucket = my_data.get("bucket", [])
+    my_cap = int(my_data.get("bucket_cap", DEFAULT_BUCKET_CAP))
+    if len(my_bucket) >= my_cap:
+        return f"⚠️ 您的水桶已满（{len(my_bucket)}/{my_cap}），偷来的鱼没地方装啦！请先清理水桶。"
+
+    t_pond["remain_casts"] = max(0, t_pond.get("remain_casts", 1) - 1)
+    if t_pond["remain_casts"] == 0:
+        t_pond["is_active"] = False
+    _save_data(gid, t_qq, t_data)
+
+    caught = roll_random_fish(bonus_luck=0.0)
+    caught["catch_ts"] = now
+    my_bucket.append(caught)
+    _save_data(gid, qq, my_data)
+
+    crown = " 👑" if caught.get("is_gold_crown") else ""
+    return (
+        f"🥷【偷鱼成功】趁着保护期结束，您悄悄潜入【@{t_qq}】的鱼塘！\n"
+        f"捞起了一条 [{caught.get('quality_label')}] 【{caught.get('name')}】{crown} (身价 {caught.get('price')}{ST.coin_name()})！\n"
+        f"对方鱼塘剩余渔获已被您消耗 1 次！"
+    )
+
+# ==================== 指令 8：图鉴查看 ====================
+def cmd_atlas(gid, qq):
+    d = _get_data(gid, qq)
+    atlas = d.get("atlas", {})
+    all_fishes = load_all_fishes()
+    total_sp = len(all_fishes)
+    unlocked = len(atlas)
+
+    pct = round(unlocked / max(1, total_sp) * 100, 1)
+    buff = "暂无加成"
+    if pct >= 100:
+        buff = "🌟 钓鱼大宗师：高品质概率 +50%，双S金冠概率翻倍！"
+    elif pct >= 60:
+        buff = "✨ 垂钓大师：高品质鱼概率 +35%，双S金冠概率 +50%！"
+    elif pct >= 30:
+        buff = "🌿 熟练钓手：高品质鱼概率 +15%！"
+
+    crown_count = sum(1 for it in atlas.values() if it.get("has_crown"))
+
+    return (
+        f"📖【全水域鱼类收集图鉴】\n"
+        f"─────────────────────\n"
+        f"收集进度：{unlocked} / {total_sp} 种 ({pct}%)\n"
+        f"👑 金冠收集：已捕获 {crown_count} 种双S金冠鱼\n"
+        f"🔮 图鉴增益：{buff}\n"
+        f"─────────────────────\n"
+        f"💡 解锁更多图鉴即可永久提升垂钓极品大鱼概率！"
+    )
+
+def cmd_menu():
+    return (
+        f"🎣【元梦之星风格钓鱼与迷你世界水族馆】\n"
+        f"─────────────────────\n"
+        f"🌾【打窝 <鱼饵>】购买鱼饵在鱼塘发酵（输入【打窝】看配方）\n"
+        f"🏞️【鱼塘】查看发酵倒计时、保护期与剩余次数\n"
+        f"🎣【钓鱼】在成熟鱼塘挥竿起鱼（水桶满前置拦截）\n"
+        f"🪣【水桶】查看当前水桶渔获、重量与总估值\n"
+        f"💰【出售】/【出售 <序号>】将渔获变现换取金币\n"
+        f"🏛️【水族馆】查看展馆鱼类、水质健康度与每小时利息\n"
+        f"📥【存鱼 <序号>】/【取鱼 <序号>】在水桶与水族馆间转移\n"
+        f"💧【水族馆换水】保洁回满水质，享利息全额+5%小费\n"
+        f"🏷️【水族馆改名 <名字>】定制专属展馆大招牌\n"
+        f"🥷【偷鱼 @某人】在目标保护期结束后偷取鱼塘\n"
+        f"📖【钓鱼图鉴】查看全水域105种鱼类解锁进度与概率加成\n"
+        f"─────────────────────\n"
+        f"✨ 发酵培育·即时挥竿·放置生息·群友博弈！"
+    )

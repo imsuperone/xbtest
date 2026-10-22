@@ -498,6 +498,7 @@ const TAB_LOADERS = {
   rank: async () => { const t = (document.getElementById("rankType") || {}).value || "money"; return loadRank(t); },
   cmds: async () => { return loadCommands(); },
   questions: async () => { return typeof loadQuestions === "function" ? loadQuestions() : Promise.resolve(); },
+  fishing: async () => { return typeof loadFishing === "function" ? loadFishing() : Promise.resolve(); },
   spirits: async () => { let r; try { r = await loadSpirits(); } catch(e) { try { err("tab spirits: " + e.message); } catch(_e){} } try { await loadShops(true); try { if (typeof refreshSpiritViews === "function") refreshSpiritViews(); } catch(_e){} } catch(e){} return r; },
   shops: async () => { return loadShops(); },
   backups: async () => {

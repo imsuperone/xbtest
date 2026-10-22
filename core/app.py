@@ -22,12 +22,12 @@ except ImportError:
 try:
     from . import storage as ST
     from ..games import (sign, bank, slave, ent,
-                          spirit, ride, guild, adventure)
+                          spirit, ride, guild, adventure, fishing)
     from . import superadmin
 except ImportError:
     from core import storage as ST
     from games import (sign, bank, slave, ent,
-                         spirit, ride, guild, adventure)
+                         spirit, ride, guild, adventure, fishing)
     from core import superadmin  # type: ignore
 
 # ========== v0.47 三层架构：core/ 三层（配置层/平台层/路由层） + core/api 薄层 ==========
@@ -140,7 +140,7 @@ def _get_exec():
 
 _ENGINES = None  # 模块级单例：每消息重建10项字典+线程切换约0.2-0.5ms，启动即冻结
 try:
-    _ENGINES = {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "superadmin": superadmin}
+    _ENGINES = {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "fishing": fishing, "superadmin": superadmin}
 except Exception:
     _ENGINES = None
 
@@ -148,7 +148,7 @@ def handle(gid, qq, raw, is_admin=False):
     """薄包装：直接委托 core.router.handle，保持与旧 handle 签名兼容"""
     try:
         if _router_layer and hasattr(_router_layer, "handle"):
-            engines = _ENGINES or {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "superadmin": superadmin}
+            engines = _ENGINES or {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "fishing": fishing, "superadmin": superadmin}
             return _router_layer.handle(gid, qq, raw, is_admin=is_admin, store=ST, engines=engines, superadmin_mod=superadmin)
     except Exception as e:
         import traceback

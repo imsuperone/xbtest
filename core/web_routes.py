@@ -96,6 +96,15 @@ _XB_API_ROUTES = [
     ("version/align", "POST", "page_version_align", "对齐官方最新版本预设", ("core.api.system_align", "handle_align_defaults", "align defaults", {"with_base": True})),
     ("system/align_defaults", "POST", "page_system_align_defaults", "对齐官方最新版本内容", ("core.api.system_align", "handle_align_defaults", "align defaults", {"with_base": True})),
     ("system/align_preview", "GET,POST", "page_system_align_preview", "预览官方最新版本差异", ("core.api.system_align", "handle_align_preview", "align preview", {"with_base": True})),
+    # 钓鱼与水族馆系统 Web API
+    ("fishing/overview", "GET", "page_fishing_overview", "钓鱼与水族馆系统总览", ("core.api.fishing_api", "handle_fishing_overview", "fishing overview", {"mode": "req"})),
+    ("fishing/fishes", "GET", "page_fishing_fishes", "鱼类图鉴列表", ("core.api.fishing_api", "handle_fishing_fishes", "fishing fishes", {"mode": "req"})),
+    ("fishing/fish/save", "POST", "page_fishing_fish_save", "保存鱼类品种", ("core.api.fishing_api", "handle_fishing_fish_save", "fishing fish save", {"mode": "req"})),
+    ("fishing/fish/delete", "POST", "page_fishing_fish_delete", "删除鱼类品种", ("core.api.fishing_api", "handle_fishing_fish_delete", "fishing fish delete", {"mode": "req"})),
+    ("fishing/reset", "POST", "page_fishing_reset", "恢复默认鱼类图鉴", ("core.api.fishing_api", "handle_fishing_reset", "fishing reset", {"mode": "req"})),
+    ("fishing/import", "POST", "page_fishing_import", "导入鱼类品种JSON", ("core.api.fishing_api", "handle_fishing_import", "fishing import", {"mode": "req"})),
+    ("fishing/export", "GET,POST", "page_fishing_export", "导出鱼类品种JSON", ("core.api.fishing_api", "handle_fishing_export", "fishing export", {"mode": "req"})),
+    ("fishing/runtime_list", "GET", "page_fishing_runtime_list", "实时鱼塘与水族馆监控", ("core.api.fishing_api", "handle_fishing_runtime_list", "fishing runtime list", {"mode": "req"})),
 ]
 
 # WebDAV 双前缀别名表（backup/ 与 backups/ 同义，由循环展开注册）
@@ -129,6 +138,7 @@ _XB_MUTATING_HANDLERS = frozenset({
     "handle_persistence_test",
     "handle_questions_save", "handle_questions_import", "handle_questions_reset",
     "handle_align_defaults",
+    "handle_fishing_fish_save", "handle_fishing_fish_delete", "handle_fishing_reset", "handle_fishing_import",
 })
 
 

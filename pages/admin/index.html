@@ -104,6 +104,7 @@
           <button data-tab="config">总开关</button>
           <button data-tab="cmds">玩法设置</button>
           <button data-tab="questions">题库设置</button>
+          <button data-tab="fishing">钓鱼水族馆</button>
         </div>
         <div class="side-group">
           <div class="side-group-title">商城</div>
@@ -583,6 +584,87 @@
         </div>
 
         <div id="qListBox" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- 8.6 钓鱼与迷你世界水族馆 Tab -->
+    <div class="tab" id="tab-fishing">
+      <div class="panel">
+        <div class="m3-page-header">
+          <div class="m3-page-header-info">
+            <h2>🎣 元梦之星风格钓鱼与迷你世界水族馆</h2>
+            <div class="m3-subtitle">打窝培育发酵 · 满桶前置拦截 · 离线水族馆挂机利息 · 群友偷鱼博弈与105种全水域生态图鉴</div>
+          </div>
+          <div class="m3-action-bar">
+            <button class="btn sm" id="btnFishAdd" type="button">＋ 添加鱼种</button>
+            <button class="ghost sm" id="btnFishRefresh" type="button">刷新图鉴</button>
+            <button class="ghost sm" id="btnFishExport" type="button" title="导出全量105种鱼类图鉴JSON">📤 导出图鉴</button>
+            <button class="ghost sm" id="btnFishImport" type="button" title="导入自定义或追加鱼类配置JSON">📥 导入图鉴</button>
+            <button class="ghost sm" id="btnFishResetDefault" type="button" title="一键恢复系统默认105种全水域鱼类品种">↩️ 恢复默认105种</button>
+            <button class="btn sm tonal" id="btnFishRuntime" type="button" title="实时查看各群玩家鱼塘状态、保护期、水族馆展鱼与水质">📊 实时鱼塘大屏</button>
+          </div>
+        </div>
+
+        <!-- 核心统计大屏卡片 -->
+        <div class="m3-overview-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0">
+          <div class="card" style="padding:14px 18px;border-radius:18px;border:1px solid var(--line);background:var(--cardBg)">
+            <div style="font-size:12px;color:var(--muted)">📖 全水域鱼类品种</div>
+            <div style="font-size:24px;font-weight:700;color:var(--pri);margin-top:4px" id="fishingStatSpecies">105</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">涵盖 6 大水域生态 / 6 阶品质</div>
+          </div>
+          <div class="card" style="padding:14px 18px;border-radius:18px;border:1px solid var(--line);background:var(--cardBg)">
+            <div style="font-size:12px;color:var(--muted)">🌾 当前活跃培育鱼塘</div>
+            <div style="font-size:24px;font-weight:700;color:var(--ok);margin-top:4px" id="fishingStatPonds">0</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">正在发酵培育或保护期鱼塘</div>
+          </div>
+          <div class="card" style="padding:14px 18px;border-radius:18px;border:1px solid var(--line);background:var(--cardBg)">
+            <div style="font-size:12px;color:var(--muted)">🏛️ 水族馆展出大鱼</div>
+            <div style="font-size:24px;font-weight:700;color:var(--accent, #9c27b0);margin-top:4px" id="fishingStatAquariumFishes">0</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">每小时根据水质生息理财</div>
+          </div>
+          <div class="card" style="padding:14px 18px;border-radius:18px;border:1px solid var(--line);background:var(--cardBg)">
+            <div style="font-size:12px;color:var(--muted)">🪣 群友水桶待售渔获</div>
+            <div style="font-size:24px;font-weight:700;color:var(--text);margin-top:4px" id="fishingStatBucketFishes">0</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">满桶硬核前置拦截挥竿防损</div>
+          </div>
+        </div>
+
+        <!-- 水域分段标签与过滤器 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:16px 0 12px">
+          <div class="atlas-seg-tabs" id="fishingZoneTabs" style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" class="atlas-seg-btn active" data-fish-zone="all">🌐 全部水域 (<span class="zone-count" id="zoneCount-all">105</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="淡水湖泊与溪流">🏞️ 淡水湖泊 (<span class="zone-count">20</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="浅海珊瑚礁">🪸 浅海珊瑚 (<span class="zone-count">20</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="深海大洋">🌊 深海大洋 (<span class="zone-count">20</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="极地极寒冰海">❄️ 极寒冰海 (<span class="zone-count">15</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="迷你幻想秘境">🌌 迷你秘境 (<span class="zone-count">15</span>)</button>
+            <button type="button" class="atlas-seg-btn" data-fish-zone="趣味杂物池">🧦 趣味彩蛋 (<span class="zone-count">15</span>)</button>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <select id="fishQualityFilter" style="padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:12px">
+              <option value="all">全部品质筛选</option>
+              <option value="白色普通">⚪ 白色普通</option>
+              <option value="绿色优秀">🟢 绿色优秀</option>
+              <option value="蓝色稀有">🔵 蓝色稀有</option>
+              <option value="紫色史诗">🟣 紫色史诗</option>
+              <option value="橙色传说">🟠 橙色传说</option>
+              <option value="幻彩神话">🌈 幻彩神话</option>
+            </select>
+
+            <div class="m3-filter-search" style="min-width:200px;margin:0">
+              <span class="m3-search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 11.99 14 9.5 14z"/></svg></span>
+              <input id="fishSearchInput" placeholder="搜索鱼种名、简介或ID…" />
+            </div>
+
+            <div style="font-size:12px;color:var(--muted)">当前匹配: <span id="fishingFilterResultCount" style="font-weight:700;color:var(--pri)">105</span> 种</div>
+          </div>
+        </div>
+
+        <!-- 鱼类卡片网格 -->
+        <div id="fishingGridBox" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px"></div>
+      </div>
+    </div>
       </div>
     </div>
 
@@ -1382,6 +1464,130 @@
   <script defer src="./js/09_views.js?v=26w1022a"></script>
   <script defer src="./js/10_ops.js?v=26w1022a"></script>
   <script defer src="./js/11_questions.js?v=26w1022a"></script>
+  <script defer src="./js/12_fishing.js?v=26w1022b"></script>
+
+
+  <!-- 鱼类编辑/添加弹窗 -->
+  <div id="modalFishEdit" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+    <div class="m3-modal-box" style="max-width:520px;width:92%;max-height:88vh;overflow-y:auto">
+      <div class="m3-modal-header" style="display:flex;justify-content:space-between;align-items:center">
+        <h2 id="modalFishEditTitle" style="margin:0;font-size:16px;font-weight:700">✏️ 编辑鱼类品种</h2>
+        <button id="modalFishEditClose" class="iconBtn" style="border:none;background:transparent;font-size:18px;cursor:pointer" title="关闭">✕</button>
+      </div>
+      <div class="m3-modal-body" style="padding:16px 20px 24px;display:flex;flex-direction:column;gap:12px">
+        <input type="hidden" id="fishFormId" />
+        <div style="display:flex;gap:12px">
+          <div style="flex:1">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">鱼类名称 *</label>
+            <input id="fishFormName" placeholder="例如：极光冰晶蝶鱼" style="width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)" />
+          </div>
+          <div style="width:100px">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">图标 Emoji</label>
+            <input id="fishFormIcon" placeholder="🐟" style="width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);text-align:center" />
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px">
+          <div style="flex:1">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">生态水域</label>
+            <select id="fishFormZone" style="width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)">
+              <option value="淡水湖泊与溪流">🏞️ 淡水湖泊与溪流</option>
+              <option value="浅海珊瑚礁">🪸 浅海珊瑚礁</option>
+              <option value="深海大洋">🌊 深海大洋</option>
+              <option value="极地极寒冰海">❄️ 极地极寒冰海</option>
+              <option value="迷你幻想秘境">🌌 迷你幻想秘境</option>
+              <option value="趣味杂物池">🧦 趣味杂物池</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">品质阶级</label>
+            <select id="fishFormQuality" style="width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)">
+              <option value="白色普通">⚪ 白色普通</option>
+              <option value="绿色优秀">🟢 绿色优秀</option>
+              <option value="蓝色稀有">🔵 蓝色稀有</option>
+              <option value="紫色史诗">🟣 紫色史诗</option>
+              <option value="橙色传说">🟠 橙色传说</option>
+              <option value="幻彩神话">🌈 幻彩神话</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px">
+          <div style="flex:1">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">体型分类</label>
+            <select id="fishFormSize" style="width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)">
+              <option value="小型">小型 (手掌大小)</option>
+              <option value="中型">中型 (小臂长)</option>
+              <option value="大型">大型 (沉甸甸大鱼)</option>
+              <option value="超大型">超大型 (巨物巨兽)</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">回收基准金币</label>
+            <input type="number" id="fishFormBasePrice" min="1" placeholder="50" style="width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)" />
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px">
+          <div style="flex:1">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">最小重量 (kg)</label>
+            <input type="number" step="0.01" id="fishFormMinWeight" placeholder="0.5" style="width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)" />
+          </div>
+          <div style="flex:1">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">最大重量 (kg)</label>
+            <input type="number" step="0.01" id="fishFormMaxWeight" placeholder="2.0" style="width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)" />
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">生态图鉴故事描述</label>
+          <textarea id="fishFormDesc" rows="3" placeholder="写下一段富有奇幻色彩或真实科普的鱼类故事…" style="width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px"></textarea>
+        </div>
+      </div>
+      <div class="m3-modal-footer" style="padding:12px 20px 16px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--line)">
+        <button id="fishFormCancel" class="ghost" type="button">取消</button>
+        <button id="fishFormSave" class="btn" type="button" style="padding:8px 24px">💾 保存鱼类品种</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 鱼类导入弹窗 -->
+  <div id="modalFishingImport" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+    <div class="m3-modal-box" style="max-width:540px;width:92%">
+      <div class="m3-modal-header" style="display:flex;justify-content:space-between;align-items:center">
+        <h2 style="margin:0;font-size:16px;font-weight:700">📥 导入鱼类配置 JSON</h2>
+        <button id="modalFishingImportClose" class="iconBtn" style="border:none;background:transparent;font-size:18px;cursor:pointer" title="关闭">✕</button>
+      </div>
+      <div class="m3-modal-body" style="padding:16px 20px">
+        <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+          <label style="font-size:12px;font-weight:600">导入模式：</label>
+          <select id="fishingImportMode" style="padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:12px">
+            <option value="replace">覆盖替换（清空原品种替换为导入数据）</option>
+            <option value="append">增量追加（保留现有品种，仅追加不重复项）</option>
+          </select>
+        </div>
+        <textarea id="fishingImportText" rows="10" placeholder="请粘贴 JSON 文本或选择本地 .json 文件…" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-family:monospace;font-size:11.5px"></textarea>
+        <div style="margin-top:8px">
+          <input type="file" id="fishImportFileInput" accept=".json" style="font-size:12px" />
+        </div>
+      </div>
+      <div class="m3-modal-footer" style="padding:12px 20px 16px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--line)">
+        <button id="fishImportCancel" class="ghost" type="button">取消</button>
+        <button id="fishImportDo" class="btn" type="button" style="padding:8px 24px">确认导入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 实时鱼塘大屏监控弹窗 -->
+  <div id="modalFishingRuntime" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+    <div class="m3-modal-box" style="max-width:800px;width:95%;max-height:85vh;overflow-y:auto">
+      <div class="m3-modal-header" style="display:flex;justify-content:space-between;align-items:center">
+        <h2 style="margin:0;font-size:16px;font-weight:700">📊 全群玩家实时鱼塘与水族馆运行监测</h2>
+        <button id="modalFishingRuntimeClose" class="iconBtn" style="border:none;background:transparent;font-size:18px;cursor:pointer" title="关闭">✕</button>
+      </div>
+      <div class="m3-modal-body" id="fishingRuntimeListBox" style="padding:16px 20px 24px;overflow-x:auto"></div>
+    </div>
+  </div>
   <!-- 精灵背包个人详情弹窗 -->
   <div id="modalSpiritBagDetail" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
     <div class="m3-modal-box" style="max-width:560px;width:92%;max-height:85vh;overflow-y:auto">
