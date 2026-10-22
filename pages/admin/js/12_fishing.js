@@ -1,6 +1,6 @@
 /**
  * 12_fishing.js — 钓鱼与水族馆管理后台模块
- * 涵盖 105 种鱼类图鉴展示、增删改查、生态水域/品质筛选、JSON导入导出、恢复默认与群友实时运行大屏
+ * 涵盖 105 种鱼类图鉴展示、增删改查、生态水域/品质筛选、JSON导入导出与恢复默认
  */
 
 function escapeHtml(s) {
@@ -385,78 +385,6 @@ async function doFishingImport() {
   }
 }
 
-// ==================== 实时群友监控大屏 ====================
-async function openFishingRuntimeMonitor() {
-  const modal = document.getElementById("modalFishingRuntime");
-  if (modal) {
-    modal.classList.add("open", "show");
-    modal.style.display = "flex";
-  }
-
-  const box = document.getElementById("fishingRuntimeListBox");
-  if (box) box.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">正在实时拉取全群鱼塘与水族馆挂机状态…</div>';
-
-  try {
-    const res = await getBridge().apiGet("fishing/runtime_list");
-    if (res && res.code === 0) {
-      const list = res.data || [];
-      if (list.length === 0) {
-        box.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted)">当前群聊中暂无玩家建立鱼塘或存放展鱼哦~</div>';
-        return;
-      }
-      let html = `
-        <table class="tbl" style="width:100%;font-size:12px">
-          <thead>
-            <tr>
-              <th>群号 / QQ</th>
-              <th>窝料种类</th>
-              <th>鱼塘状态</th>
-              <th>水桶存量</th>
-              <th>水族馆展馆</th>
-              <th>展出鱼数</th>
-              <th>水质健康度</th>
-              <th>图鉴进度</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-      for (const item of list) {
-        html += `
-          <tr>
-            <td>
-              <span style="font-weight:600">${escapeHtml(item.qq)}</span>
-              <div style="font-size:11px;color:var(--muted)">群: ${escapeHtml(item.gid)}</div>
-            </td>
-            <td>${escapeHtml(item.pond_bait)}</td>
-            <td><span class="m3-badge-counter" style="background:var(--cardBg);border:1px solid var(--line);color:var(--pri)">${escapeHtml(item.pond_status)}</span></td>
-            <td>${item.bucket_count} / ${item.bucket_cap}</td>
-            <td>${escapeHtml(item.aquarium_name)}</td>
-            <td>${item.aquarium_fishes} / ${item.aquarium_cap}</td>
-            <td>
-              <span style="font-weight:600;color:${item.water_quality >= 80 ? 'var(--ok)' : (item.water_quality >= 50 ? 'orange' : 'var(--bad)')}">
-                💧 ${item.water_quality} / 100
-              </span>
-            </td>
-            <td>📖 ${item.atlas_count} 种</td>
-          </tr>
-        `;
-      }
-      html += `</tbody></table>`;
-      box.innerHTML = html;
-    }
-  } catch (e) {
-    if (box) box.innerHTML = `<div style="text-align:center;padding:24px;color:var(--bad)">拉取失败: ${e.message}</div>`;
-  }
-}
-
-function closeFishingRuntimeMonitor() {
-  const modal = document.getElementById("modalFishingRuntime");
-  if (modal) {
-    modal.classList.remove("open", "show");
-    modal.style.display = "none";
-  }
-}
-
 // ==================== 水域与筛选直接触发函数 ====================
 window.selectFishZone = function(zone, btn) {
   _fishingCurrentZone = zone;
@@ -508,8 +436,6 @@ function initFishingEvents() {
   if (btnRes) btnRes.onclick = restoreDefaultFishes;
   const btnClr = document.getElementById("btnFishClearAll");
   if (btnClr) btnClr.onclick = clearAllFishes;
-  const btnRun = document.getElementById("btnFishRuntime");
-  if (btnRun) btnRun.onclick = openFishingRuntimeMonitor;
 
   // 弹窗关闭与保存
   const mEditClose = document.getElementById("modalFishEditClose");
@@ -526,11 +452,8 @@ function initFishingEvents() {
   const fImpDo = document.getElementById("fishImportDo");
   if (fImpDo) fImpDo.onclick = doFishingImport;
 
-  const mRunClose = document.getElementById("modalFishingRuntimeClose");
-  if (mRunClose) mRunClose.onclick = closeFishingRuntimeMonitor;
-
   // 背景点击关闭弹窗
-  ["modalFishEdit", "modalFishingImport", "modalFishingRuntime"].forEach(id => {
+  ["modalFishEdit", "modalFishingImport"].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.onclick = (e) => {
@@ -576,5 +499,3 @@ window.exportFishingJSON = exportFishingJSON;
 window.openFishingImportModal = openFishingImportModal;
 window.closeFishingImportModal = closeFishingImportModal;
 window.doFishingImport = doFishingImport;
-window.openFishingRuntimeMonitor = openFishingRuntimeMonitor;
-window.closeFishingRuntimeMonitor = closeFishingRuntimeMonitor;

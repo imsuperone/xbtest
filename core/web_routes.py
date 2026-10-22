@@ -105,7 +105,6 @@ _XB_API_ROUTES = [
     ("fishing/clear_all", "POST", "page_fishing_clear_all", "清空全部鱼类图鉴", ("core.api.fishing_api", "handle_fishing_clear_all", "fishing clear all", {"mode": "req"})),
     ("fishing/import", "POST", "page_fishing_import", "导入鱼类品种JSON", ("core.api.fishing_api", "handle_fishing_import", "fishing import", {"mode": "req"})),
     ("fishing/export", "GET,POST", "page_fishing_export", "导出鱼类品种JSON", ("core.api.fishing_api", "handle_fishing_export", "fishing export", {"mode": "req"})),
-    ("fishing/runtime_list", "GET", "page_fishing_runtime_list", "实时鱼塘与水族馆监控", ("core.api.fishing_api", "handle_fishing_runtime_list", "fishing runtime list", {"mode": "req"})),
 ]
 
 # WebDAV 双前缀别名表（backup/ 与 backups/ 同义，由循环展开注册）
