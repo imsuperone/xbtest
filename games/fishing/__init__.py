@@ -88,18 +88,8 @@ def handle(gid, qq, raw, is_admin=False):
 
     # 偷鱼
     if text.startswith("偷鱼"):
-        # 优先提取 CQ 码中的目标 QQ
-        cq_m = re.search(r"\[CQ:at,qq=(\d+)\]", raw_s)
-        if cq_m:
-            target_qq = cq_m.group(1)
-        else:
-            # 兼容 @123456 或 纯数字
-            num_m = re.search(r"(\d{5,12})", text[2:])
-            if num_m:
-                target_qq = num_m.group(1)
-            else:
-                target_qq = text[2:].strip().lstrip("@").strip()
-        return cmd_steal_fish(gid, qq, target_qq)
+        target_input = raw_s[raw_s.find("偷鱼") + 2:].strip() if "偷鱼" in raw_s else text[2:].strip()
+        return cmd_steal_fish(gid, qq, target_input)
 
     # 图鉴
     if text in ("钓鱼图鉴", "鱼类图鉴"):

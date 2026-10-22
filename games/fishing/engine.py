@@ -6,6 +6,7 @@
 import time
 import math
 import random
+import re
 from .data_fishes import roll_random_fish, load_all_fishes, QUALITY_COLORS
 
 # 鱼饵预设规格：(价格, 发酵培育分钟, 塘主保护分钟, 可钓次数)
@@ -301,6 +302,8 @@ def cmd_pond(gid, qq):
     p_ts = pond.get("protect_end_ts", 0)
     rem = pond.get("remain_casts", 0)
     tot = pond.get("total_casts", 0)
+    stolen_by = pond.get("stolen_by", [])
+    stolen_tip = f"\n• 遭窃记录：已被群友偷取 {len(stolen_by)} 次" if stolen_by else ""
 
     if now < m_ts:
         diff_min = max(1, math.ceil((m_ts - now) / 60))
@@ -318,7 +321,7 @@ def cmd_pond(gid, qq):
         "━━━━━━━━━━━━\n"
         f"• 投放鱼饵：【{b_name}】\n"
         f"• 鱼塘阶段：{status_txt}\n"
-        f"• 剩余渔获：{rem} / {tot} 次\n"
+        f"• 剩余渔获：{rem} / {tot} 次{stolen_tip}\n"
         "━━━━━━━━━━━━\n"
         "💡 成熟后发送【钓鱼】挥竿起鱼，谨防群友偷鱼"
     )
@@ -592,29 +595,65 @@ def cmd_clean_water(gid, qq):
 # ==================== 指令 7：社交偷鱼与奴隶造反 ====================
 def cmd_steal_fish(gid, qq, target_qq):
     ST = _get_st()
-    t_qq = str(target_qq).strip().strip("@").strip()
-    if not t_qq or not t_qq.isdigit():
-        return "❌ 请指定要偷取的群友，例如：【偷鱼 @张三】。"
+    try:
+        from ..slave.nick import display_name
+        from ..bank.common import _find_qq_by_name
+    except (ImportError, ValueError):
+        from games.slave.nick import display_name
+        from games.bank.common import _find_qq_by_name
 
-    if t_qq == str(qq):
+    raw_t = str(target_qq or "").strip()
+    if not raw_t:
+        return "❌ 请指定要偷取的群友，例如：【偷鱼 @张三】或【偷鱼 123456】。"
+
+    # 1. 尝试从 CQ 码、[At:QQ]、@数字、纯数字或群昵称反查真实 QQ 号
+    t_qq = None
+    cq_m = re.search(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])", raw_t)
+    if cq_m:
+        t_qq = cq_m.group(1) or cq_m.group(2)
+    else:
+        clean = re.sub(r"<%.*?%>", "", raw_t)
+        clean = re.sub(r"<[^>]+>", "", clean).lstrip("@").strip()
+        num_m = re.search(r"(\d{5,12})", clean)
+        if clean.isdigit() and 5 <= len(clean) <= 12:
+            t_qq = clean
+        elif num_m and len(clean) <= 12 and clean.isdigit():
+            t_qq = clean
+        else:
+            t_cand = _find_qq_by_name(gid, raw_t) or _find_qq_by_name(gid, clean)
+            if t_cand:
+                t_qq = t_cand
+            elif num_m:
+                t_qq = num_m.group(1)
+
+    if not t_qq or not str(t_qq).isdigit():
+        return "❌ 未找到该群友或格式有误，请发送【偷鱼 @某人】或【偷鱼 QQ号】。"
+
+    if str(t_qq) == str(qq):
         return "😅 不能偷自己的鱼塘哦！"
 
+    target_name = display_name(gid, t_qq) or str(t_qq)
     t_data = _get_data(gid, t_qq)
     t_pond = t_data.get("pond")
     now = int(time.time())
 
     if not t_pond or not t_pond.get("is_active") or t_pond.get("remain_casts", 0) <= 0:
-        return "🍂 对方当前没有可用或有剩余渔获的鱼塘哦~"
+        return f"🍂 【{target_name}】当前没有可用或有剩余渔获的鱼塘哦~"
 
     m_ts = t_pond.get("mature_ts", 0)
     p_ts = t_pond.get("protect_end_ts", 0)
 
     if now < m_ts:
-        return "⏳ 对方的鱼塘还在发酵培育中，连鱼影都没有呢，偷不到！"
+        return f"⏳ 【{target_name}】的鱼塘还在发酵培育中，连鱼影都没有呢，偷不到！"
 
     if now < p_ts:
         diff_min = max(1, math.ceil((p_ts - now) / 60))
-        return f"🛡️ 对方鱼塘处于【塘主专属保护期】（还剩 {diff_min} 分钟），戒备森严，无法偷鱼！"
+        return f"🛡️ 【{target_name}】的鱼塘处于【塘主专属保护期】（还剩 {diff_min} 分钟），戒备森严，无法偷鱼！"
+
+    # ★★★ 单人单轮打窝限偷 1 次 ★★★
+    stolen_by = t_pond.setdefault("stolen_by", [])
+    if str(qq) in stolen_by:
+        return f"⚠️ 您在【{target_name}】的本轮鱼塘中已经偷过 1 次啦！每次打窝每人限偷 1 次，请给其他群友留点机会吧~"
 
     # 塘主防护坐骑判定 (30%~50% 概率防盗抓贼)
     try:
@@ -630,7 +669,7 @@ def cmd_steal_fish(gid, qq, target_qq):
                 fine = 200
                 _add_coins(gid, qq, -fine)
                 ST.coins_add(gid, t_qq, fine)
-                return f"🚨【偷鱼被当场逮捕】目标塘主养有神兽【{active_mount}】！您刚踩进鱼塘就被一口咬住，罚款 {fine} {ST.coin_name()}赔偿给塘主！"
+                return f"🚨【偷鱼被当场逮捕】目标塘主【{target_name}】养有神兽【{active_mount}】！您刚踩进鱼塘就被一口咬住，罚款 {fine} {ST.coin_name()}赔偿给塘主！"
     except Exception:
         pass
 
@@ -644,6 +683,7 @@ def cmd_steal_fish(gid, qq, target_qq):
     t_pond["remain_casts"] = max(0, t_pond.get("remain_casts", 1) - 1)
     if t_pond["remain_casts"] == 0:
         t_pond["is_active"] = False
+    stolen_by.append(str(qq))
     _save_data(gid, t_qq, t_data)
 
     caught = roll_random_fish(bonus_luck=0.0)
@@ -653,8 +693,8 @@ def cmd_steal_fish(gid, qq, target_qq):
 
     crown = " 👑" if caught.get("is_gold_crown") else ""
     return (
-        f"🥷【偷鱼成功】趁着保护期结束，您悄悄潜入【@{t_qq}】的鱼塘！\n"
-        f"捞起了一条 [{caught.get('quality_label')}] 【{caught.get('name')}】{crown} (身价 {caught.get('price')}{ST.coin_name()})！\n"
+        f"🥷【偷鱼成功】趁着保护期结束，您悄悄潜入【{target_name}】的鱼塘！\n"
+        f"捞起了一条 [{caught.get('quality_label')}] 【{caught.get('name')}】{crown} (身价 {caught.get('price')} {ST.coin_name()})！\n"
         f"对方鱼塘剩余渔获已被您消耗 1 次！"
     )
 
