@@ -250,10 +250,11 @@ async def handle_spirit_users(request):
                         sp = json.loads(sp_raw)
                     except Exception:
                         sp = {}
-                if not isinstance(sp, dict) or not sp.get("list"):
+                if not isinstance(sp, dict):
                     continue
                 lst = sp.get("list") if isinstance(sp.get("list"), list) else []
-                if not lst:
+                bag = sp.get("bag", {}) if isinstance(sp.get("bag"), dict) else {}
+                if not lst and not bag:
                     continue
 
                 def _power(it):
@@ -263,7 +264,6 @@ async def handle_spirit_users(request):
                         return 0
 
                 active = str(sp.get("active", "") or "")
-                bag = sp.get("bag", {}) if isinstance(sp.get("bag"), dict) else {}
                 total_power = sum(_power(it) for it in lst)
                 best = max(lst, key=_power) if lst else {}
                 best_name = best.get("name", "") if isinstance(best, dict) else ""
@@ -278,6 +278,7 @@ async def handle_spirit_users(request):
                     "max_level": max_lv,
                     "total_power": total_power,
                     "bag_count": len(bag),
+                    "bag": bag,
                 })
             out.sort(key=lambda x: -x["total_power"])
             return json_response(out[:300])

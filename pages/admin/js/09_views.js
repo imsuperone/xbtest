@@ -8,6 +8,22 @@ async function loadSlaveUsers(){
   }catch(e){ err("slave users: "+e.message); try { TAB_DONE.slave = false; } catch(_e){} }
 }
 
+function formatWeaponsCell(weaponsStr) {
+  if (!weaponsStr) return '<span style="color:var(--muted)">-</span>';
+  const list = String(weaponsStr).split('|').map(s => s.trim()).filter(Boolean);
+  if (!list.length) return '<span style="color:var(--muted)">-</span>';
+  const maxShow = 2;
+  const show = list.slice(0, maxShow);
+  const badges = show.map(w => `<span class="badge badge-warn" style="white-space:nowrap;font-size:11px;padding:2px 7px;line-height:1.2">${esc(w)}</span>`).join('');
+  const more = list.length > maxShow ? `<span class="badge badge-primary" style="white-space:nowrap;font-size:11px;padding:2px 6px;cursor:pointer;line-height:1.2" title="${esc(list.join('\n'))}">+${list.length - maxShow}</span>` : '';
+  return `<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:160px;max-width:240px">${badges}${more}</div>`;
+}
+
+function formatProtectCell(protectStr) {
+  if (!protectStr) return '<span style="color:var(--muted)">-</span>';
+  return `<span class="badge badge-success" style="white-space:nowrap;font-size:11px;padding:2px 7px;line-height:1.2">${esc(protectStr)}</span>`;
+}
+
 function renderSlaveTable() {
   const body = document.getElementById("slaveBody");
   if (!body) return;
@@ -37,8 +53,8 @@ function renderSlaveTable() {
     <td>${r.owner ? `<span class="badge badge-purple">${esc(r.owner)}</span>` : '<span style="color:var(--muted)">自由身</span>'}</td>
     <td><span style="font-weight:700;color:var(--text)">${(r.price || 0).toLocaleString()}</span></td>
     <td><span class="badge badge-primary">${r.slaves || 0} 人</span></td>
-    <td>${r.protect ? `<span class="badge badge-success">${esc(r.protect)}</span>` : '<span style="color:var(--muted)">-</span>'}</td>
-    <td>${r.weapons ? `<span class="badge badge-warn">${esc((r.weapons||"").slice(0,30))}</span>` : '<span style="color:var(--muted)">-</span>'}</td>
+    <td>${formatProtectCell(r.protect)}</td>
+    <td>${formatWeaponsCell(r.weapons)}</td>
   </tr>`).join("");
   body.innerHTML = html;
 }
@@ -86,7 +102,7 @@ function renderSpiritUsersTable() {
     <td>${r.best ? `<span class="badge badge-purple">${esc(r.best)}</span>` : '<span style="color:var(--muted)">-</span>'}</td>
     <td><span class="badge badge-warn">Lv.${r.max_level || 0}</span></td>
     <td><span style="font-weight:700;color:var(--text)">${(r.total_power || 0).toLocaleString()}</span></td>
-    <td><span class="badge badge-primary">${r.bag_count || 0} 件</span></td>
+    <td><span class="badge badge-primary" style="cursor:pointer;white-space:nowrap" onclick="showTrainerBagModal('${esc(r.gid)}','${esc(r.qq)}')" title="点击查看背包道具明细">${r.bag_count || 0} 件 🔍</span></td>
   </tr>`).join("");
   body.innerHTML = html;
 }
@@ -348,3 +364,145 @@ function formatShanghaiDate(mtimeStr, fileName) {
   return s || "-";
 }
 
+
+
+// ---------- 精灵系统背包独立大表与弹窗视图 ----------
+let RAW_SPIRIT_BAG_ITEMS = [];
+
+function getItemCategory(name) {
+  const n = String(name || "");
+  if (n.includes("球")) return { cat: "ball", label: "精灵球类", cls: "badge-primary" };
+  if (n.includes("果") || n.includes("洗练")) return { cat: "fruit", label: "洗练果实", cls: "badge-success" };
+  if (n.includes("结晶") || n.includes("液") || n.includes("源")) return { cat: "crystal", label: "进化结晶", cls: "badge-purple" };
+  if (n.includes("糖") || n.includes("甜食")) return { cat: "candy", label: "经验糖果", cls: "badge-warn" };
+  return { cat: "other", label: "特殊道具", cls: "badge-secondary" };
+}
+
+async function loadSpiritBag() {
+  try {
+    if (!RAW_SPIRIT_USERS || !RAW_SPIRIT_USERS.length) {
+      RAW_SPIRIT_USERS = await getBridge().apiGet("spirit/users");
+      if (!Array.isArray(RAW_SPIRIT_USERS)) RAW_SPIRIT_USERS = [];
+    }
+    // 扁平化所有训练师的背包项
+    const items = [];
+    for (const u of RAW_SPIRIT_USERS) {
+      const bag = (u && typeof u.bag === "object" && u.bag) ? u.bag : {};
+      for (const [itemName, count] of Object.entries(bag)) {
+        const num = parseInt(count, 10) || 0;
+        if (num <= 0) continue;
+        const catInfo = getItemCategory(itemName);
+        items.push({
+          gid: u.gid,
+          qq: u.qq,
+          userName: u.name || u.qq,
+          itemName: itemName,
+          count: num,
+          category: catInfo.cat,
+          categoryLabel: catInfo.label,
+          categoryCls: catInfo.cls
+        });
+      }
+    }
+    RAW_SPIRIT_BAG_ITEMS = items;
+    renderSpiritBagTable();
+  } catch(e) {
+    err("load spirit bag: " + e.message);
+    try { TAB_DONE.spirit_bag = false; } catch(_e){}
+  }
+}
+
+function renderSpiritBagTable() {
+  const body = document.getElementById("spiritBagBody");
+  if (!body) return;
+  const q = (document.getElementById("spiritBagSearch")?.value || "").trim().toLowerCase();
+  const filterCat = document.getElementById("spiritBagFilter")?.value || "all";
+  const sortMode = document.getElementById("spiritBagSort")?.value || "count_desc";
+
+  let list = [...RAW_SPIRIT_BAG_ITEMS];
+  if (filterCat !== "all") {
+    list = list.filter(it => it.category === filterCat);
+  }
+  if (q) {
+    list = list.filter(it => (String(it.qq) + String(it.gid) + String(it.userName) + String(it.itemName)).toLowerCase().includes(q));
+  }
+
+  if (sortMode === "count_desc") list.sort((a, b) => b.count - a.count);
+  else if (sortMode === "count_asc") list.sort((a, b) => a.count - b.count);
+  else if (sortMode === "qq_asc") list.sort((a, b) => String(a.qq).localeCompare(String(b.qq)));
+  else if (sortMode === "item_asc") list.sort((a, b) => String(a.itemName).localeCompare(String(b.itemName)));
+
+  const hint = document.getElementById("spiritBagHint");
+  if (hint) {
+    hint.innerHTML = `共统计到 <strong>${RAW_SPIRIT_BAG_ITEMS.length}</strong> 条道具记录（当前匹配 <strong>${list.length}</strong> 条） · 涵盖全群训练师背包资产`;
+  }
+
+  if (!list.length) {
+    body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">暂无背包道具数据</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = list.map(it => `<tr>
+    <td><span class="badge badge-primary">${esc(it.gid)}</span></td>
+    <td><strong>${esc(it.qq)}</strong></td>
+    <td>${esc(it.userName)}</td>
+    <td><strong style="color:var(--text)">${esc(it.itemName)}</strong></td>
+    <td><span class="badge badge-warn" style="font-weight:700">×${it.count}</span></td>
+    <td><span class="badge ${it.categoryCls}">${esc(it.categoryLabel)}</span></td>
+    <td><button class="ghost sm" onclick="showTrainerBagModal('${esc(it.gid)}','${esc(it.qq)}')">查看全背包</button></td>
+  </tr>`).join("");
+}
+
+function showTrainerBagModal(gid, qq) {
+  const modal = document.getElementById("modalSpiritBagDetail");
+  if (!modal) return;
+  const user = (RAW_SPIRIT_USERS || []).find(u => String(u.gid) === String(gid) && String(u.qq) === String(qq));
+  const title = document.getElementById("modalSpiritBagTitle");
+  const content = document.getElementById("modalSpiritBagContent");
+
+  const userName = user ? (user.name || user.qq) : qq;
+  if (title) title.innerHTML = `🎒 训练师背包明细 · ${esc(userName)} <span style="font-size:12px;color:var(--muted)">(QQ:${esc(qq)} · 群:${esc(gid)})</span>`;
+
+  const bag = (user && typeof user.bag === "object" && user.bag) ? user.bag : {};
+  const entries = Object.entries(bag).filter(([_, n]) => (parseInt(n, 10) || 0) > 0);
+
+  if (!entries.length) {
+    content.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted)">该训练师当前背包空空如也，暂未拥有任何道具物品。</div>`;
+  } else {
+    content.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:12px;padding:8px 0">
+      ${entries.map(([name, count]) => {
+        const cat = getItemCategory(name);
+        return `<div style="background:var(--bg-card,#f9f9f9);border:1px solid var(--border,#e5e5e5);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px">${esc(name)}</div>
+          <div style="font-size:18px;font-weight:800;color:var(--warn,#d97706);margin-bottom:6px">×${count}</div>
+          <span class="badge ${cat.cls}" style="font-size:10px">${cat.label}</span>
+        </div>`;
+      }).join("")}
+    </div>`;
+  }
+  modal.style.display = "flex";
+}
+
+// 绑定搜索与过滤事件
+document.addEventListener("DOMContentLoaded", () => {
+  const bSearch = document.getElementById("spiritBagSearch");
+  const bFilter = document.getElementById("spiritBagFilter");
+  const bSort = document.getElementById("spiritBagSort");
+  const bRefresh = document.getElementById("btnSpiritBagRefresh");
+  const bClose = document.getElementById("modalSpiritBagClose");
+  const bModal = document.getElementById("modalSpiritBagDetail");
+
+  if (bSearch) bSearch.addEventListener("input", renderSpiritBagTable);
+  if (bFilter) bFilter.addEventListener("change", renderSpiritBagTable);
+  if (bSort) bSort.addEventListener("change", renderSpiritBagTable);
+  if (bRefresh) bRefresh.addEventListener("click", () => {
+    RAW_SPIRIT_USERS = [];
+    loadSpiritBag();
+  });
+  if (bClose) bClose.addEventListener("click", () => {
+    if (bModal) bModal.style.display = "none";
+  });
+  if (bModal) bModal.addEventListener("click", (e) => {
+    if (e.target === bModal) bModal.style.display = "none";
+  });
+});

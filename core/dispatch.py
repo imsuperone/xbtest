@@ -7,7 +7,7 @@ import asyncio as _asyncio
 import time as _time
 
 __all__ = ["maybe_sync_card", "SYS_LABELS", "handle_test_menu",
-           "handle_admin_list", "run_business", "send_reply"]
+           "handle_admin_list", "run_business", "send_reply", "send_welcome_async"]
 
 
 # ==================== card_sync（原 dispatch/card_sync.py 并入） ====================

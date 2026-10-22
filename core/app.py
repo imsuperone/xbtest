@@ -872,12 +872,21 @@ class XbBot(Star):
             if reply:
                 is_w = isinstance(reply, tuple) and len(reply) == 2 and reply[0] == "__WELCOME__"
                 actual_reply = reply[1] if is_w else reply
+                if is_w:
+                    # 迎新坐骑专属：独立通道直接投递群聊，绝不占用当前 event.result，绝不调用 stop_event
+                    # 这样 AstrBot 会将用户原消息完整继续传递给后续的大模型 AI 和其他插件，彻底杜绝吞指令与吞聊天
+                    await _dispatch_reply.send_welcome_async(
+                        event, actual_reply, qq, raw, gid, ST, _logger_layer,
+                        _do_platform, _name_prefix, _build_chain, MessageChain,
+                        _HAS_CORE,
+                        _plat_layer._CQ_IMG if _HAS_CORE else None)
+                    return
                 async for r in _dispatch_reply.send_reply(
                         event, actual_reply, qq, raw, gid, ST, _logger_layer,
                         _do_platform, _name_prefix, _build_chain, MessageChain,
                         _HAS_CORE,
                         _plat_layer._CQ_IMG if _HAS_CORE else None,
-                        is_welcome=is_w):
+                        is_welcome=False):
                     yield r
         except Exception as e:
             import traceback

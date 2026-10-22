@@ -493,6 +493,7 @@ const TAB_LOADERS = {
   users: async () => { return loadUsers(); },
   slave: async () => { return typeof loadSlaveUsers === "function" ? loadSlaveUsers() : Promise.resolve(); },
   spirit_users: async () => { return typeof loadSpiritUsers === "function" ? loadSpiritUsers() : Promise.resolve(); },
+  spirit_bag: async () => { return typeof loadSpiritBag === "function" ? loadSpiritBag() : Promise.resolve(); },
   config: async () => { await loadOverviewReq(); return loadConfig(); },
   rank: async () => { const t = (document.getElementById("rankType") || {}).value || "money"; return loadRank(t); },
   cmds: async () => { return loadCommands(); },
