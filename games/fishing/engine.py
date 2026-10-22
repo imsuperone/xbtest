@@ -10,10 +10,17 @@ from .data_fishes import roll_random_fish, load_all_fishes, QUALITY_COLORS
 
 # 鱼饵预设规格：(价格, 发酵培育分钟, 塘主保护分钟, 可钓次数)
 BAITS = {
-    "蚯蚓饵": {"price": 100, "mature_min": 30, "protect_min": 15, "casts": 3, "desc": "廉价亲民的小鱼饵，适合新手练手。"},
-    "复合颗粒窝料": {"price": 500, "mature_min": 60, "protect_min": 30, "casts": 5, "desc": "经典颗粒窝料，发酵聚鱼效果稳定。"},
-    "秘制红虫香精": {"price": 1500, "mature_min": 90, "protect_min": 45, "casts": 8, "desc": "香气扑鼻的高档香精，诱聚高品质稀有鱼群。"},
-    "梦幻龙涎诱饵": {"price": 5000, "mature_min": 120, "protect_min": 60, "casts": 12, "desc": "秘境顶级诱饵，极大提升史诗/传说/神话大鱼概率！"},
+    "蚯蚓": {"id": 1, "price": 100, "mature_min": 30, "protect_min": 15, "casts": 3, "desc": "基础活饵，适合新手起步快速聚鱼。"},
+    "面饵": {"id": 2, "price": 500, "mature_min": 60, "protect_min": 30, "casts": 5, "desc": "谷物清香，发酵聚鱼稳定，性价比出众。"},
+    "红虫": {"id": 3, "price": 1500, "mature_min": 90, "protect_min": 45, "casts": 8, "desc": "浓腥诱鱼，大幅提升高品质稀有鱼概率。"},
+    "虾肉": {"id": 4, "price": 5000, "mature_min": 120, "protect_min": 60, "casts": 12, "desc": "极品生鲜，极大概率吸引珍稀大鱼与双S金冠。"},
+}
+
+BAIT_ALIASES = {
+    "1": "蚯蚓", "一": "蚯蚓", "蚯蚓": "蚯蚓", "蚯蚓饵": "蚯蚓",
+    "2": "面饵", "二": "面饵", "面饵": "面饵", "面团": "面饵", "酒米": "面饵", "颗粒": "面饵", "复合颗粒窝料": "面饵",
+    "3": "红虫", "三": "红虫", "红虫": "红虫", "红虫饵": "红虫", "香精": "红虫", "秘制红虫香精": "红虫",
+    "4": "虾肉", "四": "虾肉", "虾肉": "虾肉", "虾": "虾肉", "虾饵": "虾肉", "梦幻龙涎诱饵": "虾肉", "龙涎": "虾肉",
 }
 
 DEFAULT_BUCKET_CAP = 10
@@ -196,20 +203,44 @@ def _settle_aquarium(data):
 # ==================== 指令 1：打窝培育 ====================
 def cmd_bait(gid, qq, bait_name):
     ST = _get_st()
-    b_name = bait_name.strip()
-    if not b_name:
-        lines = ["【🎣 可用鱼饵与打窝配方清单】"]
-        for k, v in BAITS.items():
-            lines.append(f"• 【{k}】 售价: {v['price']}金币 | 发酵: {v['mature_min']}分钟 | 保护: {v['protect_min']}分钟 | 渔获: {v['casts']}次\n  └ {v['desc']}")
-        lines.append("━━━━━━━━━━━━\n💡 发送【打窝 <鱼饵名称>】即可在专属窝点播撒鱼饵！")
+    b_raw = str(bait_name or "").strip()
+    if not b_raw:
+        lines = [
+            "🌾 鱼饵与打窝配方清单",
+            "━━━━━━━━━━━━",
+        ]
+        num_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣"]
+        for idx, (k, v) in enumerate(BAITS.items()):
+            emoji = num_emojis[idx] if idx < len(num_emojis) else f"{idx+1}."
+            lines.append(
+                f"{emoji}【{k}】 售价: {v['price']} {ST.coin_name()}\n"
+                f"• 培育: {v['mature_min']}分钟 | 保护: {v['protect_min']}分钟 | 垂钓: {v['casts']}次\n"
+                f"• 简介: {v['desc']}"
+            )
+            if idx < len(BAITS) - 1:
+                lines.append("")
+        lines.append("━━━━━━━━━━━━")
+        lines.append("💡 发送数字或名称快捷打窝：")
+        lines.append("👉 发送【打窝 1】或【打窝 蚯蚓】")
+        lines.append("👉 发送【打窝 2】或【打窝 面饵】")
+        lines.append("👉 发送【打窝 3】或【打窝 红虫】")
+        lines.append("👉 发送【打窝 4】或【打窝 虾肉】")
         return "\n".join(lines)
 
-    if b_name not in BAITS:
-        matched = [k for k in BAITS if b_name in k]
-        if matched:
-            b_name = matched[0]
-        else:
-            return f"❌ 未找到鱼饵【{bait_name}】哦！\n可直接发送【打窝列表】查看当前所有可用鱼饵配方。"
+    # 规范化名称与数字别名映射
+    b_name = BAIT_ALIASES.get(b_raw)
+    if not b_name:
+        for ak, av in BAIT_ALIASES.items():
+            if b_raw in ak:
+                b_name = av
+                break
+    if not b_name or b_name not in BAITS:
+        return (
+            f"❌ 未找到鱼饵【{bait_name}】哦！\n"
+            "━━━━━━━━━━━━\n"
+            "💡 可用鱼饵：1.蚯蚓 / 2.面饵 / 3.红虫 / 4.虾肉\n"
+            "👉 请直接发送【打窝 1】至【打窝 4】挑选打窝！"
+        )
 
     spec = BAITS[b_name]
     cost = spec["price"]
@@ -226,7 +257,7 @@ def cmd_bait(gid, qq, bait_name):
 
     coins = _get_coins(gid, qq)
     if coins < cost:
-        return f"❌ 金币不足！购买【{b_name}】需要 {cost}{ST.coin_name()}，您当前仅有 {coins}{ST.coin_name()}。"
+        return f"❌ 金币不足！购买【{b_name}】需要 {cost} {ST.coin_name()}，您当前仅有 {coins} {ST.coin_name()}。"
 
     if _add_coins(gid, qq, -cost) is None:
         return "❌ 扣除金币失败，请稍后重试。"
@@ -247,12 +278,12 @@ def cmd_bait(gid, qq, bait_name):
     return (
         f"🌾【打窝培育成功】\n"
         f"━━━━━━━━━━━━\n"
-        f"投入窝料：【{b_name}】（花费 {cost}{ST.coin_name()}）\n"
-        f"培育发酵：{spec['mature_min']} 分钟（预计 {time.strftime('%H:%M', time.localtime(now + mature_sec))} 成熟）\n"
-        f"塘主保护：{spec['protect_min']} 分钟（成熟后专享，防偷鱼）\n"
-        f"预估渔获：可供垂钓 {spec['casts']} 次\n"
+        f"• 投放鱼饵：【{b_name}】（花费 {cost} {ST.coin_name()}）\n"
+        f"• 培育发酵：{spec['mature_min']} 分钟（预计 {time.strftime('%H:%M', time.localtime(now + mature_sec))} 成熟）\n"
+        f"• 塘主保护：{spec['protect_min']} 分钟（成熟后专享独占）\n"
+        f"• 预估渔获：可供垂钓 {spec['casts']} 次\n"
         f"━━━━━━━━━━━━\n"
-        f"💡 鱼群正在深水区发酵聚集，成熟时将自动发光！期间可发送【鱼塘】随时查看进度。"
+        f"💡 发送【鱼塘】可随时查看水域成熟与保护期倒计时"
     )
 
 # ==================== 指令 2：查看鱼塘状态 ====================
@@ -282,13 +313,13 @@ def cmd_pond(gid, qq):
         status_txt = "🍂 鱼群已完全被钓完，水质清澈干涸"
 
     return (
-        f"🏞️【您的专属鱼塘状态】\n"
-        f"━━━━━━━━━━━━\n"
-        f"窝料种类：【{b_name}】\n"
-        f"鱼塘阶段：{status_txt}\n"
-        f"剩余次数：{rem} / {tot} 次可抛竿\n"
-        f"━━━━━━━━━━━━\n"
-        f"💡 提示：成熟后请及时发送【钓鱼】挥竿起鱼！"
+        "🏞️ 专属鱼塘实时状态\n"
+        "━━━━━━━━━━━━\n"
+        f"• 投放鱼饵：【{b_name}】\n"
+        f"• 鱼塘阶段：{status_txt}\n"
+        f"• 剩余渔获：{rem} / {tot} 次\n"
+        "━━━━━━━━━━━━\n"
+        "💡 成熟后发送【钓鱼】挥竿起鱼，谨防群友偷鱼"
     )
 
 # ==================== 指令 3：即时垂钓 (含水桶满仓前置拦截) ====================
@@ -380,12 +411,15 @@ def cmd_bucket(gid, qq):
         return f"🪣 您的水桶空空如也（0/{bucket_cap}）！快去专属鱼塘【钓鱼】吧~"
 
     total_val = sum(int(f.get("price", 0)) for f in bucket)
-    lines = [f"🪣【您的渔获水桶】 (容量: {len(bucket)}/{bucket_cap} · 总估值: {total_val}{ST.coin_name()})", "━━━━━━━━━━━━"]
+    lines = [
+        f"🪣 渔获水桶 (存量: {len(bucket)}/{bucket_cap} · 总估值: {total_val:,} {ST.coin_name()})",
+        "━━━━━━━━━━━━",
+    ]
     for idx, f in enumerate(bucket, 1):
-        crown = "👑" if f.get("is_gold_crown") else ""
-        lines.append(f"{idx}. [{f.get('quality_label')}] {f.get('name')} {crown} | {f.get('weight')}kg({f.get('grade')}) | 💰{f.get('price')}")
+        crown = " 👑" if f.get("is_gold_crown") else ""
+        lines.append(f"{idx}. [{f.get('quality_label')}] {f.get('name')}{crown} ({f.get('weight')}kg · {f.get('price')}金币)")
     lines.append("━━━━━━━━━━━━")
-    lines.append("💡 发送【出售】一键全卖换金币，或【存鱼 <序号>】转移至水族馆赚取每小时利息！")
+    lines.append("💡 发送【出售】全卖换金币，或【存鱼 <序号>】放入水族馆赚取利息！")
     return "\n".join(lines)
 
 # ==================== 指令 5：出售渔获 ====================
@@ -435,26 +469,26 @@ def cmd_aquarium(gid, qq):
     eff = 1.05 if cur_water >= 80 else (0.7 if cur_water >= 50 else (0.3 if cur_water >= 20 else 0.0))
     expected_interest = int(total_val * BASE_INTEREST_RATE * eff)
 
-    settle_tip = f"\n🎉 刚刚为您结算了离线利息 +{earned} {ST.coin_name()}！" if earned > 0 else ""
-    water_tip = "✨ 水质纯净 (利息加成 +5%)" if cur_water >= 80 else ("⚠️ 水质微浊 (利息 70%)" if cur_water >= 50 else "🚨 水质浑浊长苔 (利息严重下滑)")
+    settle_tip = f"\n🎉 刚刚为您结算了离线利息 +{earned:,} {ST.coin_name()}！" if earned > 0 else ""
+    water_tip = "✨ 纯净(+5%加成)" if cur_water >= 80 else ("⚠️ 微浊(70%产出)" if cur_water >= 50 else "🚨 浑浊(产出低下)")
 
     lines = [
-        f"🏛️【{name}】 (展位: {len(fishes)}/{cap}){settle_tip}",
-        f"━━━━━━━━━━━━",
-        f"💧 生态水质健康度：{cur_water} / 100 ({water_tip})",
-        f"💎 馆藏总身价估值：{total_val} {ST.coin_name()}",
-        f"📈 预计门票时息：约 {expected_interest} {ST.coin_name()}/小时 (今日已产: {aq.get('daily_earned', 0)}/{MAX_DAILY_INTEREST})",
-        f"━━━━━━━━━━━━",
+        f"🏛️ 展馆：【{name}】 (展出: {len(fishes)}/{cap}){settle_tip}",
+        "━━━━━━━━━━━━",
+        f"• 水质健康：{cur_water}/100 ({water_tip})",
+        f"• 馆藏估值：{total_val:,} {ST.coin_name()}",
+        f"• 门票时息：+{expected_interest:,} {ST.coin_name()}/时 (今日: {aq.get('daily_earned', 0):,}/{MAX_DAILY_INTEREST:,})",
+        "━━━━━━━━━━━━",
     ]
     if not fishes:
-        lines.append("🪹 展厅内目前空空如也~ 快将水桶中的珍稀大鱼通过【存鱼 <序号>】放入展出吧！")
+        lines.append("🪹 展馆内暂无名鱼展出~ 发送【存鱼 <序号>】可将水桶大鱼转移放入！")
     else:
         for idx, f in enumerate(fishes, 1):
-            crown = "👑" if f.get("is_gold_crown") else ""
+            crown = " 👑" if f.get("is_gold_crown") else ""
             h_int = max(1, int(int(f.get("price", 0)) * BASE_INTEREST_RATE * eff))
-            lines.append(f"{idx}. [{f.get('quality_label')}] {f.get('name')} {crown} | ⚖️{f.get('weight')}kg | 💰时息+{h_int}")
+            lines.append(f"{idx}. [{f.get('quality_label')}] {f.get('name')}{crown} (时息 +{h_int})")
     lines.append("━━━━━━━━━━━━")
-    lines.append("💡 发送【水族馆换水】可回满水质，发送【水族馆改名 <名字>】可定制响亮招牌！")
+    lines.append("💡 发送【水族馆换水】满水质，发送【水族馆改名 <名称>】自定义招牌！")
     return "\n".join(lines)
 
 def cmd_rename_aquarium(gid, qq, new_name):
@@ -645,7 +679,7 @@ def cmd_menu():
         "🎣 钓鱼与水族馆系统\n"
         "━━━━━━━━━━━━\n"
         "🌾【生态培育】\n"
-        "• 打窝 [鱼饵]　投放窝料聚鱼（发送【打窝】查配方）\n"
+        "• 打窝 [1-4/饵名] 投放鱼饵聚鱼（发送【打窝】查配方）\n"
         "• 鱼塘　　　　查看发酵进度、保护期与剩余次数\n"
         "• 钓鱼 / 抛竿　挥竿起鱼（水桶满仓前置智能拦截）\n"
         "\n"
