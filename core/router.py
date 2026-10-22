@@ -28,9 +28,10 @@ _MAIN_MENU = (
     "| 🎮 娱乐系统 | 🏦 银行系统 |\r\n"
     "| ⛓️ 奴隶系统 | 🏍️ 坐骑系统 |\r\n"
     "| ⚔️ 帮派系统 | 🗺️ 冒险系统 |\r\n"
-    "| 🎣 钓鱼系统 |              |\r\n"
+    "| 🎣 钓鱼系统 | 🔧 超管系统 |\r\n"
     "----------------\r\n"
-    "发送系统关键词打开菜单，如【签到系统】【精灵系统】【钓鱼系统】"
+    "💡 发送【xx系统】或【xx菜单】均可打开对应功能菜单！\r\n"
+    "例如：【签到系统】/【签到菜单】、【钓鱼系统】/【钓鱼菜单】"
 )
 _SHOP_GUIDE = (
     "🛒 小白系统商城指南\r\n"
@@ -717,7 +718,7 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
     except Exception:
         pass
     raw_s = raw.strip()
-    if raw_s in ("主菜单", "菜单", "系统菜单"):
+    if raw_s in ("主菜单", "菜单", "系统菜单", "小白菜单", "小白测试版菜单", "功能菜单"):
         return _MAIN_MENU
     if raw_s in ("商城", "商店", "系统商城", "系统商店", "所有商城", "所有商店"):
         return _SHOP_GUIDE
@@ -785,10 +786,19 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
                     return None  # 系统已关：命中也不运行、不回复
                 continue
             try:
+                _call_raw = raw
+                try:
+                    import re as _re_cmd
+                    _rt_clean = _re_cmd.sub(r"^(?:\[CQ:at,qq=\d+[^\]]*\]|@\s*\S+\s*)+", "", str(raw or "")).strip()
+                    _sysname = _SYS_ENG.get(_eng, _eng)
+                    if _rt_clean in (_sysname + "菜单", _sysname + "系统"):
+                        _call_raw = _sysname + "系统"
+                except Exception:
+                    pass
                 if _eng == "ent":
-                    r = fn.handle(gid, qq, raw, is_admin=is_admin) if hasattr(fn, "handle") else fn(gid, qq, raw, is_admin=is_admin)
+                    r = fn.handle(gid, qq, _call_raw, is_admin=is_admin) if hasattr(fn, "handle") else fn(gid, qq, _call_raw, is_admin=is_admin)
                 else:
-                    r = fn.handle(gid, qq, raw) if hasattr(fn, "handle") else fn(gid, qq, raw)
+                    r = fn.handle(gid, qq, _call_raw) if hasattr(fn, "handle") else fn(gid, qq, _call_raw)
             except Exception as e:
                 import traceback
                 err_tb = traceback.format_exc()
@@ -825,7 +835,15 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
             except Exception:
                 _fn = None
             if _fn is not None:
-                _r = _call_superadmin(_fn, gid, qq, raw, is_admin, matched_admin, store)
+                _call_raw = raw
+                try:
+                    import re as _re_cmd
+                    _rt_clean = _re_cmd.sub(r"^(?:\[CQ:at,qq=\d+[^\]]*\]|@\s*\S+\s*)+", "", str(raw or "")).strip()
+                    if _rt_clean in ("超管菜单", "超管系统"):
+                        _call_raw = "超管系统"
+                except Exception:
+                    pass
+                _r = _call_superadmin(_fn, gid, qq, _call_raw, is_admin, matched_admin, store)
                 if _r:
                     return _r
     return None

@@ -323,7 +323,7 @@ async def handle_fishing_runtime_list(req=None):
                         "pond_status": pond_desc,
                         "bucket_count": len(bucket),
                         "bucket_cap": f_data.get("bucket_cap", DEFAULT_BUCKET_CAP),
-                        "aquarium_name": aq.get("name", "迷你世界水族馆"),
+                        "aquarium_name": aq.get("name", "水族馆"),
                         "aquarium_fishes": len(aq.get("fishes", [])),
                         "aquarium_cap": aq.get("capacity", DEFAULT_AQUARIUM_CAP),
                         "water_quality": aq.get("water_quality", 100),

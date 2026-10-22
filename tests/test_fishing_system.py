@@ -113,7 +113,7 @@ class TestFishingSystem(unittest.TestCase):
         """测试水族馆入住、换水保洁、离线利息与水质动态衰减防通胀"""
         d = engine._get_data(self.gid, self.qq)
         # 默认名称
-        self.assertEqual(d["aquarium"]["name"], "迷你世界水族馆")
+        self.assertEqual(d["aquarium"]["name"], "水族馆")
 
         # 放入一条高身价鱼
         d["aquarium"]["fishes"].append({
@@ -131,7 +131,7 @@ class TestFishingSystem(unittest.TestCase):
 
         # 触发水族馆利息结算
         res_aq = engine.cmd_aquarium(self.gid, self.qq)
-        self.assertIn("迷你世界水族馆", res_aq)
+        self.assertIn("水族馆", res_aq)
         self.assertIn("结算了离线利息", res_aq)
 
         # 验证水质发生了衰减
@@ -179,8 +179,8 @@ class TestFishingSystem(unittest.TestCase):
         self.assertIn("水族馆", COMMANDS)
         self.assertIn("水桶", COMMANDS)
 
-        res_menu = handle(self.gid, self.qq, "钓鱼帮助")
-        self.assertIn("元梦之星风格钓鱼与迷你世界水族馆", res_menu)
+        res_menu = handle(self.gid, self.qq, "钓鱼菜单")
+        self.assertIn("元梦之星风格钓鱼与水族馆", res_menu)
 
         res_pond = handle(self.gid, self.qq, "鱼塘")
         self.assertTrue(len(res_pond) > 0)

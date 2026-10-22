@@ -47,7 +47,7 @@ def _get_data(gid, qq):
     d.setdefault("bucket", [])
     d.setdefault("bucket_cap", DEFAULT_BUCKET_CAP)
     d.setdefault("aquarium", {
-        "name": "迷你世界水族馆",
+        "name": "水族馆",
         "capacity": DEFAULT_AQUARIUM_CAP,
         "water_quality": 100,
         "fishes": [],
@@ -381,7 +381,7 @@ def cmd_aquarium(gid, qq):
         ST.coins_add(gid, qq, earned)
 
     aq = d.get("aquarium", {})
-    name = aq.get("name", "迷你世界水族馆")
+    name = aq.get("name", "水族馆")
     fishes = aq.get("fishes", [])
     cap = int(aq.get("capacity", DEFAULT_AQUARIUM_CAP))
     total_val = sum(int(f.get("price", 0)) for f in fishes)
@@ -594,7 +594,7 @@ def cmd_atlas(gid, qq):
 
 def cmd_menu():
     return (
-        f"🎣【元梦之星风格钓鱼与迷你世界水族馆】\n"
+        f"🎣【元梦之星风格钓鱼与水族馆】\n"
         f"─────────────────────\n"
         f"🌾【打窝 <鱼饵>】购买鱼饵在鱼塘发酵（输入【打窝】看配方）\n"
         f"🏞️【鱼塘】查看发酵倒计时、保护期与剩余次数\n"
@@ -608,5 +608,5 @@ def cmd_menu():
         f"🥷【偷鱼 @某人】在目标保护期结束后偷取鱼塘\n"
         f"📖【钓鱼图鉴】查看全水域105种鱼类解锁进度与概率加成\n"
         f"─────────────────────\n"
-        f"✨ 发酵培育·即时挥竿·放置生息·群友博弈！"
+        f"💡 发送【钓鱼系统】或【钓鱼菜单】可唤醒本菜单！"
     )
