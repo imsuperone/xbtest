@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light dark">
   <title>小白测试版 - 小白机器人</title>
-  <link rel="stylesheet" href="./admin.css?v=26w1022h">
+  <link rel="stylesheet" href="./admin.css?v=26w1026a">
   <!-- 主题色/深浅色优先读取本地缓存实现首帧零阻塞渲染，未缓存时最多挂起 150ms -->
   <style>
     html[data-boot] { visibility: hidden; background: #f4f6f8; }
@@ -40,7 +40,7 @@
           <span class="island-trigger-text">导航</span>
         </button>
         <div class="brand-text">
-          <h1>小白测试版 <span class="version-tag" data-ver="26w1022h">v26w1022h</span></h1>
+          <h1>小白测试版 <span class="version-tag" data-ver="26w1026a">v26w1026a</span></h1>
         </div>
       </div>
       <div class="top-bar-actions" style="position:relative">
@@ -938,8 +938,8 @@
             <div>插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
             <div>仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
             <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-              <div>后端版本：<b id="aboutVersion">v26w1022h</b></div>
-              <div>前端版本：<b id="aboutFrontendVer">v26w1022h</b></div>
+              <div>后端版本：<b id="aboutVersion">v26w1026a</b></div>
+              <div>前端版本：<b id="aboutFrontendVer">v26w1026a</b></div>
             </div>
             <!-- 持久化与升级保障状态徽章 -->
             <div style="margin-top:4px;padding:10px 14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:12.5px;color:var(--text);display:flex;align-items:flex-start;gap:8px">
@@ -954,16 +954,16 @@
           </div>
         </div>
 
-        <!-- 数据持久化状态与在线自检卡片 -->
+        <!-- 数据持久化状态与全系统资产保护清单 -->
         <div class="panel" style="margin-top:16px;background:var(--cardBg, var(--panel));border:1px solid var(--line);border-radius:16px;padding:22px">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
             <div>
               <h3 style="margin:0;font-size:16.5px;font-weight:700;display:flex;align-items:center;gap:8px">
-                <span>💾</span> 数据持久化状态与在线自检
+                <span>💾</span> 数据持久化架构与资产保护清单
                 <span id="persStatusBadge" class="align-badge align-badge-safe" style="font-size:11.5px">状态检测中...</span>
               </h3>
               <div style="color:var(--muted);font-size:12.5px;margin-top:4px">
-                直观展示当前哪些数据已持久化、哪些遵循官方默认，并支持一键真实写盘与读回探针自检。
+                所有核心资产与用户自建数据均独立存放于外部持久化目录，插件热更新或重新拉取代码 <b>100% 隔离保护，绝不丢失</b>。
               </div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
@@ -976,55 +976,150 @@
             </div>
           </div>
 
-          <!-- 持久化物理路径提示栏 -->
+          <!-- 宿主持久化物理路径提示栏 -->
           <div style="padding:10px 14px;background:rgba(0,0,0,0.03);border:1px solid var(--line);border-radius:10px;font-size:12.5px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
             <div style="display:flex;align-items:center;gap:8px">
-              <span style="color:var(--muted)">📁 宿主持久化物理目录:</span>
+              <span style="color:var(--muted)">📁 宿主持久化物理根目录:</span>
               <code id="persDirPath" style="font-size:12px;user-select:all;word-break:break-all">加载中...</code>
             </div>
             <span id="persWritableTag" class="align-badge align-badge-info" style="font-size:11px">可写状态检测中</span>
           </div>
 
-          <!-- 持久化模块自检指标卡片网格 -->
-          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-top:14px">
-            <div style="padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px">
-              <div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between">
-                <span>🛡️ 已持久化自定义配置</span>
-                <b id="persCustomKeysCount" style="color:var(--accent, #3b82f6)">0 项</b>
-              </div>
-              <div style="font-size:11.5px;color:var(--text);margin-top:6px;line-height:1.4" id="persConfigStatusText">双向镜像自愈中</div>
-            </div>
-            <div style="padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px">
-              <div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between">
-                <span>🗄️ SQLite 核心数据库</span>
-                <b id="persDbSize" style="color:var(--ok)">0 KB</b>
-              </div>
-              <div style="font-size:11.5px;color:var(--text);margin-top:6px;line-height:1.4" id="persDbStatusText">sys_config_json 镜像活动</div>
-            </div>
-            <div style="padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px">
-              <div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between">
-                <span>🐎 自建坐骑与图片</span>
-                <b id="persMountsCount" style="color:var(--accent, #3b82f6)">0 个</b>
-              </div>
-              <div style="font-size:11.5px;color:var(--text);margin-top:6px;line-height:1.4" id="persMountsStatusText">自建坐骑与图片（双重持久化镜像保护）</div>
-            </div>
-            <div style="padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px">
-              <div style="font-size:12px;color:var(--muted);display:flex;justify-content:space-between">
-                <span>📝 自建题库与备份</span>
-                <b id="persQuestionsCount" style="color:var(--accent, #3b82f6)">0 条</b>
-              </div>
-              <div style="font-size:11.5px;color:var(--text);margin-top:6px;line-height:1.4" id="persQuestionsStatusText">自增题目与安全备份</div>
-            </div>
+          <!-- 全系统持久化资产清单全景表 -->
+          <div style="margin-top:14px;overflow-x:auto">
+            <table class="m3-table" style="width:100%;font-size:12.5px;border-collapse:collapse">
+              <thead>
+                <tr style="border-bottom:2px solid var(--line);text-align:left;color:var(--muted)">
+                  <th style="padding:10px 12px;width:24%">系统模块</th>
+                  <th style="padding:10px 12px;width:22%">持久化物理文件</th>
+                  <th style="padding:10px 12px;width:20%">持久化状态 / 规模</th>
+                  <th style="padding:10px 12px;width:34%">升级与重装保护机制</th>
+                </tr>
+              </thead>
+              <tbody id="persAssetsTableBody">
+                <!-- 1. 钓鱼与水族馆系统 -->
+                <tr style="border-bottom:1px solid var(--line)">
+                  <td style="padding:11px 12px">
+                    <b style="font-size:13px;display:flex;align-items:center;gap:6px"><span>🎣</span> 钓鱼与水族馆</b>
+                    <span style="font-size:11px;color:var(--muted)">105种鱼类图鉴、自建鱼、玩家渔获水桶水族馆</span>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <code style="font-size:11.5px">fishing_fishes.json</code><br>
+                    <code style="font-size:11.5px">xb.db (accounts表)</code>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <span class="align-badge align-badge-safe">🟢 双重镜像持久化</span>
+                    <div style="margin-top:4px;font-size:11.5px;color:var(--text)" id="persFishInfoText">载入中...</div>
+                  </td>
+                  <td style="padding:11px 12px;color:var(--muted);font-size:12px;line-height:1.5">
+                    外部持久化目录独立存放，插件包内自动备份双写；升级 <b>100% 保留自建鱼种与修改</b>，玩家捕捞资产永不丢失。
+                  </td>
+                </tr>
+
+                <!-- 2. 玩家账户与核心经济 -->
+                <tr style="border-bottom:1px solid var(--line)">
+                  <td style="padding:11px 12px">
+                    <b style="font-size:13px;display:flex;align-items:center;gap:6px"><span>💰</span> 玩家核心账户与资产</b>
+                    <span style="font-size:11px;color:var(--muted)">金币、银行存款、背包道具、奴隶身契、签到</span>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <code style="font-size:11.5px">xb.db (SQLite)</code>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <span class="align-badge align-badge-safe">🟢 SQLite 独立持久化</span>
+                    <div style="margin-top:4px;font-size:11.5px;color:var(--text)" id="persDbInfoText">数据库载入中...</div>
+                  </td>
+                  <td style="padding:11px 12px;color:var(--muted);font-size:12px;line-height:1.5">
+                    SQLite 数据库物理文件独立落地，脱离插件源码目录；无论如何升级插件，<b>玩家所有资产绝不触碰</b>。
+                  </td>
+                </tr>
+
+                <!-- 3. 系统与经济平衡配置 -->
+                <tr style="border-bottom:1px solid var(--line)">
+                  <td style="padding:11px 12px">
+                    <b style="font-size:13px;display:flex;align-items:center;gap:6px"><span>⚙️</span> 运行配置与经济平衡</b>
+                    <span style="font-size:11px;color:var(--muted)">利息上限、软着陆模式、银行利率、开关预设</span>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <code style="font-size:11.5px">config.json</code>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <span class="align-badge align-badge-safe">🟢 _custom_keys 锁保护</span>
+                    <div style="margin-top:4px;font-size:11.5px;color:var(--text)" id="persConfigInfoText">载入中...</div>
+                  </td>
+                  <td style="padding:11px 12px;color:var(--muted);font-size:12px;line-height:1.5">
+                    升级时仅增量合并官方新功能键，<b>用户手动调优的自定义数值享受持久化锁保护</b>，绝不覆盖回退。
+                  </td>
+                </tr>
+
+                <!-- 4. 坐骑系统与图库资产 -->
+                <tr style="border-bottom:1px solid var(--line)">
+                  <td style="padding:11px 12px">
+                    <b style="font-size:13px;display:flex;align-items:center;gap:6px"><span>🐎</span> 坐骑系统与图库资产</b>
+                    <span style="font-size:11px;color:var(--muted)">10款官方坐骑、自建坐骑、用户上传的高清图片</span>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <code style="font-size:11.5px">config.json</code><br>
+                    <code style="font-size:11.5px">data/img/rides/</code>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <span class="align-badge align-badge-safe">🟢 图片双向镜像保护</span>
+                    <div style="margin-top:4px;font-size:11.5px;color:var(--text)" id="persMountsInfoText">载入中...</div>
+                  </td>
+                  <td style="padding:11px 12px;color:var(--muted);font-size:12px;line-height:1.5">
+                    用户绑定的坐骑图片在持久化目录建立独立镜像，升级插件后自动自愈同步，<b>绝不掉图、绝不抹除自建坐骑</b>。
+                  </td>
+                </tr>
+
+                <!-- 5. 抽卡武器池与商城 -->
+                <tr style="border-bottom:1px solid var(--line)">
+                  <td style="padding:11px 12px">
+                    <b style="font-size:13px;display:flex;align-items:center;gap:6px"><span>⚔️</span> 武器池与商城配置</b>
+                    <span style="font-size:11px;color:var(--muted)">42款内置武器标准、自建武器、属性加成与卡池</span>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <code style="font-size:11.5px">shop.json</code><br>
+                    <code style="font-size:11.5px">config.json</code>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <span class="align-badge align-badge-safe">🟢 独立配置持久化</span>
+                    <div style="margin-top:4px;font-size:11.5px;color:var(--text)" id="persWeaponsInfoText">载入中...</div>
+                  </td>
+                  <td style="padding:11px 12px;color:var(--muted);font-size:12px;line-height:1.5">
+                    商城与自建武器数据受独立保护，官方升级只增量追加新标准，<b>保留自建武器与自定义属性</b>。
+                  </td>
+                </tr>
+
+                <!-- 6. 娱乐题库与安全快照 -->
+                <tr>
+                  <td style="padding:11px 12px">
+                    <b style="font-size:13px;display:flex;align-items:center;gap:6px"><span>🧩</span> 娱乐题库与安全快照</b>
+                    <span style="font-size:11px;color:var(--muted)">脑筋急转弯、字谜、问答、成语接龙题库与备份</span>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <code style="font-size:11.5px">data/questions/*.json</code><br>
+                    <code style="font-size:11.5px">backups/</code>
+                  </td>
+                  <td style="padding:11px 12px">
+                    <span class="align-badge align-badge-safe">🟢 增量自愈保护</span>
+                    <div style="margin-top:4px;font-size:11.5px;color:var(--text)" id="persQuestionsInfoText">载入中...</div>
+                  </td>
+                  <td style="padding:11px 12px;color:var(--muted);font-size:12px;line-height:1.5">
+                    题库纠错与官方题目合并采用增量模式，<b>100% 完整保留用户自建与导入的所有题目及备份</b>。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           <!-- 展开查看已持久化的自定义项明细 -->
           <div style="margin-top:14px">
             <details style="border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--panel)">
               <summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text)">
-                🔍 查看已持久化保护的自定义参数清单（_custom_keys）
+                🔍 查看当前受锁保护的自定义参数明细（_custom_keys）
               </summary>
               <div id="persCustomKeysDetail" style="margin-top:8px;font-size:12px;color:var(--muted);line-height:1.6;max-height:180px;overflow-y:auto">
-                暂无自定义项（所有配置项遵循官方默认值）
+                暂无自定义项（所有配置项遵循官方推荐默认值）
               </div>
             </details>
           </div>
@@ -1033,7 +1128,7 @@
           <div id="persTestResultBox" style="display:none;margin-top:14px;padding:12px 16px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.3);border-radius:12px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
               <b style="font-size:13px;color:var(--ok);display:flex;align-items:center;gap:6px">
-                <span>✅</span> 探针自检测试报告
+                <span>✅</span> 物理持久化读写自检报告
               </b>
               <span id="persTestLatency" style="font-size:12px;color:var(--muted)">耗时：0ms</span>
             </div>
@@ -1455,19 +1550,19 @@
       </div>
     </div>
   </div>
-    <script defer src="./js/00_core.js?v=26w1022h"></script>
-  <script defer src="./js/01_theme.js?v=26w1022h"></script>
-  <script defer src="./js/02_export.js?v=26w1022h"></script>
-  <script defer src="./js/03_import.js?v=26w1022h"></script>
-  <script defer src="./js/04_media.js?v=26w1022h"></script>
-  <script defer src="./js/05_config.js?v=26w1022h"></script>
-  <script defer src="./js/06_users.js?v=26w1022h"></script>
-  <script defer src="./js/07_spirit.js?v=26w1022h"></script>
-  <script defer src="./js/08_shop.js?v=26w1022h"></script>
-  <script defer src="./js/09_views.js?v=26w1022h"></script>
-  <script defer src="./js/10_ops.js?v=26w1022h"></script>
-  <script defer src="./js/11_questions.js?v=26w1022h"></script>
-  <script defer src="./js/12_fishing.js?v=26w1022h"></script>
+    <script defer src="./js/00_core.js?v=26w1026a"></script>
+  <script defer src="./js/01_theme.js?v=26w1026a"></script>
+  <script defer src="./js/02_export.js?v=26w1026a"></script>
+  <script defer src="./js/03_import.js?v=26w1026a"></script>
+  <script defer src="./js/04_media.js?v=26w1026a"></script>
+  <script defer src="./js/05_config.js?v=26w1026a"></script>
+  <script defer src="./js/06_users.js?v=26w1026a"></script>
+  <script defer src="./js/07_spirit.js?v=26w1026a"></script>
+  <script defer src="./js/08_shop.js?v=26w1026a"></script>
+  <script defer src="./js/09_views.js?v=26w1026a"></script>
+  <script defer src="./js/10_ops.js?v=26w1026a"></script>
+  <script defer src="./js/11_questions.js?v=26w1026a"></script>
+  <script defer src="./js/12_fishing.js?v=26w1026a"></script>
 
 
   <!-- 鱼类编辑/添加弹窗 -->

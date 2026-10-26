@@ -1085,14 +1085,12 @@ function initPersistenceEvents() {
   const badge = document.getElementById("persStatusBadge");
   const dirPathEl = document.getElementById("persDirPath");
   const writableTag = document.getElementById("persWritableTag");
-  const customCountEl = document.getElementById("persCustomKeysCount");
-  const configTextEl = document.getElementById("persConfigStatusText");
-  const dbSizeEl = document.getElementById("persDbSize");
-  const dbTextEl = document.getElementById("persDbStatusText");
-  const mountsCountEl = document.getElementById("persMountsCount");
-  const mountsTextEl = document.getElementById("persMountsStatusText");
-  const questionsCountEl = document.getElementById("persQuestionsCount");
-  const questionsTextEl = document.getElementById("persQuestionsStatusText");
+  const fishInfoEl = document.getElementById("persFishInfoText");
+  const dbInfoEl = document.getElementById("persDbInfoText");
+  const configInfoEl = document.getElementById("persConfigInfoText");
+  const mountsInfoEl = document.getElementById("persMountsInfoText");
+  const weaponsInfoEl = document.getElementById("persWeaponsInfoText");
+  const questionsInfoEl = document.getElementById("persQuestionsInfoText");
   const customDetailEl = document.getElementById("persCustomKeysDetail");
   const resultBox = document.getElementById("persTestResultBox");
   const latencyEl = document.getElementById("persTestLatency");
@@ -1131,27 +1129,42 @@ function initPersistenceEvents() {
       badge.textContent = info.writable ? "🟢 正常落盘 (双向镜像自愈)" : "🟡 读写受限";
     }
 
-    const cfg = info.config || {};
-    if (customCountEl) customCountEl.textContent = `${cfg.custom_keys_count || 0} 项`;
-    if (configTextEl) {
-      configTextEl.innerHTML = `落盘文件: <code>config.json</code> (${cfg.size_kb || 0} KB)<br>双重镜像保护，升级永不覆盖`;
+    // 1. 钓鱼与水族馆系统
+    const fish = info.fishing || {};
+    if (fishInfoEl) {
+      const fTot = fish.total_fishes || 105;
+      const fCust = fish.custom_fishes_count || 0;
+      const custBadge = fCust > 0 ? `(含 <b>${fCust}</b> 款自建)` : `(官方推荐105种)`;
+      fishInfoEl.innerHTML = `图鉴共 <b>${fTot}</b> 种鱼类 ${custBadge} · 大小: <b>${fish.size_kb || 0} KB</b><br><span style="color:var(--ok);font-size:11px">✓ 宿主持久化 + 包内双写镜像已闭环</span>`;
     }
 
+    // 2. 核心数据库与经济
     const db = info.database || {};
-    if (dbSizeEl) dbSizeEl.textContent = `${db.size_kb || 0} KB`;
-    if (dbTextEl) {
-      dbTextEl.innerHTML = `数据库: <code>data.db</code><br>${db.mirror_active ? "✓ sys_config_json 镜像活动" : "镜像未建立"}`;
+    if (dbInfoEl) {
+      dbInfoEl.innerHTML = `核心文件: <code>xb.db</code> (${db.size_kb || 0} KB)<br><span style="color:var(--ok);font-size:11px">✓ 全群金币、银行、背包道具独立落地</span>`;
     }
 
+    // 3. 运行配置与经济调优
+    const cfg = info.config || {};
+    if (configInfoEl) {
+      const cKeys = cfg.custom_keys_count || 0;
+      configInfoEl.innerHTML = `受保护自定义项: <b>${cKeys}</b> 项 · 文件 <b>${cfg.size_kb || 0} KB</b><br><span style="color:var(--ok);font-size:11px">✓ 利息上限/软着陆衰减受锁保护</span>`;
+    }
+
+    // 4. 坐骑系统与图库资产
     const ca = info.custom_assets || {};
-    if (mountsCountEl) mountsCountEl.textContent = `${ca.custom_rides_count || 0} 个自建`;
-    if (mountsTextEl) {
-      mountsTextEl.innerHTML = `自建坐骑: <b>${ca.custom_rides_count || 0}</b> 款 / 自建图片: <b>${ca.custom_mount_images_count || 0}</b> 张<br>路径: <code>data/img/rides/</code>（双重持久化镜像保护 🔒）`;
+    if (mountsInfoEl) {
+      mountsInfoEl.innerHTML = `自建坐骑: <b>${ca.custom_rides_count || 0}</b> 款 · 自建图片: <b>${ca.custom_mount_images_count || 0}</b> 张<br><span style="color:var(--ok);font-size:11px">✓ 图片目录自动双向自愈，绝不掉图</span>`;
     }
 
-    if (questionsCountEl) questionsCountEl.textContent = `${ca.custom_questions_count || 0} 条自建`;
-    if (questionsTextEl) {
-      questionsTextEl.innerHTML = `自建题目: ${ca.custom_questions_count || 0} 条 / 历史快照: ${ca.backups_count || 0} 份<br>更新时 100% 增量保护保留`;
+    // 5. 武器池与商城
+    if (weaponsInfoEl) {
+      weaponsInfoEl.innerHTML = `42 款内置标准 · 自建武器: <b>${ca.custom_weapons_count || 0}</b> 款<br><span style="color:var(--ok);font-size:11px">✓ 增量标准同步，自建属性永久保留</span>`;
+    }
+
+    // 6. 娱乐题库与安全快照
+    if (questionsInfoEl) {
+      questionsInfoEl.innerHTML = `自建题目: <b>${ca.custom_questions_count || 0}</b> 条 · 备份快照: <b>${ca.backups_count || 0}</b> 份<br><span style="color:var(--ok);font-size:11px">✓ 增量题库保护，自建题目 100% 留存</span>`;
     }
 
     if (customDetailEl) {

@@ -180,12 +180,18 @@ def _auto_migrate_and_heal(cand, base, force=False):
                 except Exception:
                     pass
         # 插件根目录下旧数据自愈迁移到持久化目录（绝不反向覆盖已存在的有效用户数据）
-        for f in ("xb.db", "nuli_slave.db", "xbbot.db", "config.json", "events.json", "shop.json", "atlas.json"):
+        for f in ("xb.db", "nuli_slave.db", "xbbot.db", "config.json", "events.json", "shop.json", "atlas.json", "fishing_fishes.json"):
             src_f = os.path.join(base, "data", f)
             dst_f = os.path.join(cand, "xb.db" if f.endswith(".db") else f)
             if os.path.isfile(src_f) and not os.path.isfile(dst_f):
                 try:
                     shutil.copy2(src_f, dst_f)
+                except Exception:
+                    pass
+            elif os.path.isfile(dst_f) and not os.path.isfile(src_f):
+                # 升级/重装插件时，外部持久化目录中的自定义数据（如 fishing_fishes.json、config.json）自动镜像恢复回包内
+                try:
+                    shutil.copy2(dst_f, src_f)
                 except Exception:
                     pass
 

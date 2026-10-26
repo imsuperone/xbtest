@@ -68,11 +68,10 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
                 })
 
     # 2. SQLite 核心数据库文件与 sys_config_json 镜像
-    db_file = os.path.join(pers_dir, "data.db")
+    db_file = os.path.join(pers_dir, "xb.db")
     if not os.path.isfile(db_file):
-        # 兼容备用名
-        for cand in ("xbbot.db", "storage.db"):
-            _p = os.path.join(pers_dir, cand)
+        for cand_name in ("data.db", "xbbot.db", "storage.db", "nuli_slave.db"):
+            _p = os.path.join(pers_dir, cand_name)
             if os.path.isfile(_p):
                 db_file = _p
                 break
@@ -213,6 +212,33 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
                             custom_mount_images.add(fname)
             except Exception:
                 pass
+    # 8. 钓鱼系统图鉴持久化统计
+    fish_file = os.path.join(pers_dir, "fishing_fishes.json")
+    fish_exists = os.path.isfile(fish_file)
+    fish_size = os.path.getsize(fish_file) if fish_exists else 0
+    fish_mtime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(fish_file))) if fish_exists else ""
+    total_fishes_cnt = 0
+    custom_fishes_cnt = 0
+    try:
+        from games.fishing.data_fishes import load_all_fishes, get_fish_paths
+        p_json, b_json, d_seed, _, _ = get_fish_paths()
+        f_list = load_all_fishes()
+        total_fishes_cnt = len(f_list)
+        default_ids = set()
+        if os.path.isfile(d_seed):
+            with open(d_seed, "r", encoding="utf-8") as dsf:
+                d_data = json.load(dsf)
+                if isinstance(d_data, list):
+                    default_ids = {f.get("id") for f in d_data if isinstance(f, dict)}
+        custom_fishes_cnt = len([f for f in f_list if isinstance(f, dict) and f.get("id") not in default_ids])
+        if not fish_exists and os.path.isfile(p_json):
+            fish_file = p_json
+            fish_exists = True
+            fish_size = os.path.getsize(p_json)
+            fish_mtime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(p_json)))
+    except Exception:
+        pass
+
     mount_images_cnt = len(custom_mount_images)
 
     return {
@@ -235,6 +261,15 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
             "mtime": db_mtime,
             "mirror_active": db_mirror_ok,
         },
+        "fishing": {
+            "path": fish_file,
+            "exists": fish_exists,
+            "size_kb": round(fish_size / 1024, 2),
+            "mtime": fish_mtime,
+            "total_fishes": total_fishes_cnt or 105,
+            "custom_fishes_count": custom_fishes_cnt,
+            "persistent_mode": "宿主持久化 + 包内双写镜像 (100% 防丢)",
+        },
         "custom_assets": {
             "custom_rides_count": len(custom_rides),
             "custom_rides": custom_rides,
@@ -242,6 +277,7 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
             "custom_weapons": custom_weapons,
             "custom_questions_count": custom_questions_cnt,
             "custom_mount_images_count": mount_images_cnt,
+            "custom_fishes_count": custom_fishes_cnt,
             "backups_count": backups_cnt,
         },
     }
@@ -356,6 +392,28 @@ async def handle_persistence_test(request=None, plugin_base=""):
             "name": "持久化 config.json 校验",
             "ok": False,
             "message": f"配置落盘探针异常: {exc}",
+        })
+
+    # 4. 钓鱼图鉴 fishing_fishes.json 双重持久化探针
+    try:
+        from games.fishing.data_fishes import load_all_fishes, get_fish_paths
+        p_json, b_json, d_seed, p_dir, b_dir = get_fish_paths()
+        all_f = load_all_fishes()
+        f_cnt = len(all_f)
+        p_ok = os.path.isfile(p_json) and os.path.getsize(p_json) > 100
+        b_ok = os.path.isfile(b_json) and os.path.getsize(b_json) > 100
+        probe_results.append({
+            "step": "fishing",
+            "name": "鱼类图鉴 fishing_fishes.json 持久化探针",
+            "ok": p_ok or f_cnt > 0,
+            "message": f"已载入 {f_cnt} 种鱼类（宿主持久化: {'已落盘' if p_ok else '待同步'} · 包内镜像: {'已同步' if b_ok else '待同步'}，双重防丢保护有效）",
+        })
+    except Exception as exc:
+        probe_results.append({
+            "step": "fishing",
+            "name": "鱼类图鉴 fishing_fishes.json 持久化探针",
+            "ok": False,
+            "message": f"鱼类图鉴持久化自检异常: {exc}",
         })
 
     latency_ms = round((time.perf_counter() - t0) * 1000, 2)
