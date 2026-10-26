@@ -76,7 +76,7 @@ def load_all_fishes():
         try:
             with open(pers_json_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                if isinstance(data, list) and len(data) > 0:
+                if isinstance(data, list):
                     _CACHED_FISHES = data
                     # 同步镜像到包内备份，维持双向自愈
                     if pers_json_path != base_json_path and (not os.path.isfile(base_json_path) or os.path.getsize(base_json_path) == 0):
@@ -95,7 +95,7 @@ def load_all_fishes():
         try:
             with open(base_json_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                if isinstance(data, list) and len(data) > 0:
+                if isinstance(data, list):
                     _CACHED_FISHES = data
                     save_all_fishes(data)  # 沉淀落盘至持久化目录
                     return _CACHED_FISHES

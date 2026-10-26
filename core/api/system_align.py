@@ -6,6 +6,10 @@ import json
 import os
 import shutil
 import time
+import sys
+_PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _PLUGIN_ROOT not in sys.path:
+    sys.path.insert(0, _PLUGIN_ROOT)
 
 try:
     from ..adapters import json_response

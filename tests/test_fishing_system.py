@@ -105,8 +105,8 @@ class TestFishingSystem(unittest.TestCase):
         self.assertEqual(ST.coins_get(self.gid, self.qq), coins_before + 100)
 
         # 一键全卖
-        res_sell_all = engine.cmd_sell(self.gid, self.qq, "")
-        self.assertIn("全桶变现成功", res_sell_all)
+        res_sell_all = engine.cmd_sell(self.gid, self.qq, "一键出售")
+        self.assertIn("一键出售成功", res_sell_all)
         self.assertEqual(ST.coins_get(self.gid, self.qq), coins_before + 100 + 6000)
 
     def test_04_aquarium_life_cycle_and_decay(self):

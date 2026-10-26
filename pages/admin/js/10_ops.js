@@ -794,47 +794,40 @@ function initLogsEvents() {
 
 initLogsEvents();
 
-// ---------- 对齐官方最新版本内容事件绑定 ----------
+// ---------- 官方预设全自动守护与基准增量自愈事件绑定 ----------
 function initAlignLatestEvents() {
-  const btn = document.getElementById("btnAlignLatest");
-  const btnPreview = document.getElementById("btnAlignPreview");
+  const btnAutoHeal = document.getElementById("btnAutoHealAlign") || document.getElementById("btnAlignLatest");
+  const btnBackup = document.getElementById("btnCreateAlignBackup");
+  const detailsFold = document.getElementById("alignDetailsFold");
   const diffBox = document.getElementById("alignDiffBox");
   const diffContent = document.getElementById("alignDiffContent");
   const pillsBox = document.getElementById("alignDiffSummaryPills");
   const verBadge = document.getElementById("alignOffVerBadge");
-
-  // 绑定多选卡片选中高亮状态
-  const cards = document.querySelectorAll(".align-opt-card");
-  cards.forEach(card => {
-    const cb = card.querySelector('input[type="checkbox"]');
-    if (!cb) return;
-    card.classList.toggle("checked", cb.checked);
-    cb.addEventListener("change", () => {
-      card.classList.toggle("checked", cb.checked);
-    });
-  });
+  const spinner = document.getElementById("alignSpinner");
+  const resBox = document.getElementById("alignResultBox");
 
   let _previewCache = null;
 
   async function loadAlignPreview(silent = false) {
     try {
-      if (!silent) toast("正在获取版本差异明细…", "ok");
+      if (!silent) toast("正在获取官方版本基准明细…", "ok");
       const res = await getBridge().apiGet("system/align_preview", {});
-      if (!res || !res.ok) throw new Error(res?.error || "获取差异失败");
+      if (!res || !res.ok) throw new Error(res?.error || "获取基准失败");
       _previewCache = res;
 
       if (verBadge) {
-        verBadge.textContent = `官方基准：${res.official_version || "最新"} (${res.official_updated_at || "2026-10-21"})`;
+        verBadge.className = "align-badge align-badge-safe";
+        verBadge.textContent = `基准已对齐：${res.official_version || "最新"} (${res.official_updated_at || "2026-10-26"})`;
       }
 
       const presetsBadge = document.getElementById("alignPresetsBadge");
       if (presetsBadge) {
         if ((res.preset_summary?.custom_locked || 0) > 0) {
           presetsBadge.className = "align-badge align-badge-protect";
-          presetsBadge.textContent = `${res.preset_summary.custom_locked} 项自定义项受锁保护 🔒`;
+          presetsBadge.textContent = `${res.preset_summary.custom_locked} 项自定义锁 🔒`;
         } else {
           presetsBadge.className = "align-badge align-badge-safe";
-          presetsBadge.textContent = "官方推荐基准";
+          presetsBadge.textContent = "推荐基准守护中";
         }
       }
 
@@ -847,13 +840,13 @@ function initAlignLatestEvents() {
 
         if (pillsBox) {
           const ctrlModeLabel = ps.control_type === "realtime" ? "实时调控模式（自适应）" : "固定预设模式";
-          const upDate = res.official_updated_at || "2026-10-21";
+          const upDate = res.official_updated_at || "2026-10-26";
           pillsBox.innerHTML = `
             <span class="align-badge align-badge-info" style="font-weight:700">官方基准发布: ${esc(upDate)}</span>
             <span class="align-badge" style="background:rgba(99,102,241,0.12);color:var(--acc,#3b82f6);border:1px solid rgba(99,102,241,0.25);font-weight:600">⚙️ ${esc(ctrlModeLabel)}</span>
-            <span class="align-badge align-badge-info">待对齐: ${ps.will_update || 0}</span>
+            <span class="align-badge align-badge-info">待对齐项: ${ps.will_update || 0}</span>
             <span class="align-badge align-badge-safe">已一致: ${ps.unchanged || 0}</span>
-            <span class="align-badge align-badge-protect">${ps.control_type === "realtime" ? "自适应/自定义保护" : "自定义保护"}: ${ps.custom_locked || 0}</span>
+            <span class="align-badge align-badge-protect">自定义锁保护: ${ps.custom_locked || 0}</span>
           `;
         }
 
@@ -861,7 +854,7 @@ function initAlignLatestEvents() {
         html += `<div style="margin-bottom:12px;padding:10px 12px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);border-radius:8px">
           <div style="font-weight:600;color:var(--ok);margin-bottom:4px">🧩 娱乐题库（官方标准 ${rd.official_total || 0} 道 / 本地活跃 ${rd.active_total || 0} 道）</div>
           <div style="color:var(--muted);font-size:12px">
-            自建题目保留: <b>${rd.custom_total || 0}</b> 道 | 官方修正/增量题: <b>${rd.to_fix_total || 0}</b> 道（对齐后将自动纠错官方题干与答案）
+            自建题目保留: <b>${rd.custom_total || 0}</b> 道 | 官方修正/增量题: <b>${rd.to_fix_total || 0}</b> 道（对齐后自动纠错官方题干与答案）
           </div>
         </div>`;
 
@@ -869,20 +862,16 @@ function initAlignLatestEvents() {
         html += `<div style="margin-bottom:12px;display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:8px">
           <div style="padding:8px 12px;background:var(--cardBg, var(--panel));border:1px solid var(--line);border-radius:8px">
             <div style="font-weight:600">🐎 官方默认坐骑（${rs.official_count || 10} 款）</div>
-            <div style="color:var(--muted);font-size:12px;margin-top:2px">本地共有 ${rs.active_count || 0} 款（含自建 ${rs.custom_count || 0} 款 🔒 保留）</div>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px">本地共有 ${rs.active_count || 0} 款（含自建 ${rs.custom_count || 0} 款 🔒 永久保留）</div>
           </div>
           <div style="padding:8px 12px;background:var(--cardBg, var(--panel));border:1px solid var(--line);border-radius:8px">
             <div style="font-weight:600">⚔️ 内置武器属性（${ws.official_count || 42} 款）</div>
-            <div style="color:var(--muted);font-size:12px;margin-top:2px">本地共有 ${ws.active_count || 0} 款（含自建 ${ws.custom_count || 0} 款 🔒 保留）</div>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px">本地共有 ${ws.active_count || 0} 款（含自建 ${ws.custom_count || 0} 款 🔒 永久保留）</div>
           </div>
         </div>`;
 
-        // 数值预设对比
+        // 数值预设对比明细
         const diffs = res.diff_details || [];
-        const isPresetsChecked = document.getElementById("alignOptPresets")?.checked;
-        if (!isPresetsChecked) {
-          html += `<div style="margin-bottom:10px;padding:8px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:8px;font-size:12px;color:var(--text)">💡 <b>当前未勾选「基础数值预设」</b>：本地所有运行中的经济数值与调控规则将 <b>100% 保持当前值不变</b>；仅在勾选上方对应选项时才会对齐基准数值。</div>`;
-        }
         html += `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
           <div style="font-weight:600">⚖️ 规则对比明细：</div>
           <div id="alignDiffFilterBar" style="display:flex;gap:6px;flex-wrap:wrap">
@@ -894,89 +883,75 @@ function initAlignLatestEvents() {
         </div>`;
 
         if (diffs.length === 0) {
-          html += `<div style="color:var(--muted);padding:8px">暂无数值差异</div>`;
+          html += `<div style="color:var(--muted);padding:8px">暂无数值差异（已 100% 对齐官方推荐基准）</div>`;
         } else {
           html += `<div id="alignDiffItemsList" style="border:1px solid var(--line);border-radius:8px;overflow:hidden">`;
           diffs.forEach(it => {
-            const filterTag = it.status === "custom_locked" ? "custom" : (it.status === "unchanged" ? "same" : "update");
-            const hideClass = (filterTag !== "update" && ps.will_update > 0) ? " style=\"display:none\"" : "";
+            let tagHtml = "";
+            let tagType = "";
             if (it.status === "custom_locked") {
-              html += `<div class="align-diff-item custom-locked" data-filter-tag="${filterTag}"${hideClass}>
-                <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
-                <div class="align-diff-vals">
-                  <span class="align-val-locked">${esc(it.current)}</span>
-                  <span class="align-badge align-badge-protect" style="font-size:10.5px">${esc(it.lock_reason || "用户自定义 🔒 保留")}</span>
-                </div>
-              </div>`;
-            } else if (it.status === "unchanged") {
-              html += `<div class="align-diff-item" data-filter-tag="${filterTag}"${hideClass}>
-                <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
-                <div class="align-diff-vals">
-                  <span style="color:var(--muted);font-weight:500">${esc(it.current)}</span>
-                  <span class="align-badge align-badge-safe" style="font-size:11px;font-weight:700">✓ 官方一致</span>
-                </div>
-              </div>`;
+              tagHtml = `<span class="align-badge align-badge-protect">🔒 自定义锁</span>`;
+              tagType = "custom";
+            } else if (it.status === "will_update") {
+              tagHtml = `<span class="align-badge align-badge-info">待更新</span>`;
+              tagType = "update";
             } else {
-              html += `<div class="align-diff-item will-update" data-filter-tag="${filterTag}"${hideClass}>
-                <span class="align-diff-key">[${esc(it.section)}] ${esc(it.key)}</span>
-                <div class="align-diff-vals">
-                  <span class="align-val-old" style="color:var(--bad,#ef4444);font-weight:600;padding:1px 6px;background:rgba(239,68,68,0.1);border-radius:4px">${esc(it.current)}</span>
-                  <span class="align-val-arrow" style="font-weight:800;color:var(--acc,#3b82f6)">→</span>
-                  <span class="align-val-new" style="color:var(--ok,#16a34a);font-weight:700;padding:1px 6px;background:rgba(22,163,74,0.1);border-radius:4px">${esc(it.official)}</span>
-                </div>
-              </div>`;
+              tagHtml = `<span class="align-badge align-badge-safe">✓ 已一致</span>`;
+              tagType = "same";
             }
+            html += `<div class="align-diff-row" data-tag="${tagType}" style="padding:8px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px">
+              <div style="flex:1">
+                <b>[${esc(it.section)}]</b> <code>${esc(it.key)}</code>
+                <div style="color:var(--muted);font-size:11px">${esc(it.desc || "")}</div>
+              </div>
+              <div style="text-align:right">
+                <span style="color:var(--muted)">当前: ${esc(String(it.cur_val))}</span>
+                ${it.status === 'will_update' ? `<span style="color:var(--ok);margin-left:6px">→ 基准: ${esc(String(it.off_val))}</span>` : ''}
+              </div>
+              <div>${tagHtml}</div>
+            </div>`;
           });
           html += `</div>`;
         }
 
         diffContent.innerHTML = html;
+        bindAlignFilterEvents();
       }
-      return true;
-    } catch (err) {
-      if (!silent) toast("拉取差异预览失败: " + err.message, "bad");
+    } catch (e) {
+      if (!silent) toast("获取基准预览失败: " + e.message, "bad");
       if (diffContent) {
-        diffContent.innerHTML = `<div style="color:var(--bad)">拉取差异失败: ${esc(err.message)}</div>`;
+        diffContent.innerHTML = `<div style="color:var(--bad)">获取差异失败: ${esc(e.message)}</div>`;
       }
-      return false;
     }
   }
 
-  // 差异明细分类过滤按钮点击事件委托
-  if (diffContent) {
-    diffContent.addEventListener("click", (e) => {
-      const chip = e.target.closest(".align-filter-chip");
-      if (!chip) return;
-      const fbar = document.getElementById("alignDiffFilterBar");
-      if (fbar) {
-        fbar.querySelectorAll(".align-filter-chip").forEach(c => c.classList.remove("active"));
+  function bindAlignFilterEvents() {
+    const chips = document.querySelectorAll(".align-filter-chip");
+    const list = document.getElementById("alignDiffItemsList");
+    if (!list) return;
+    const items = list.querySelectorAll(".align-diff-row");
+    chips.forEach(chip => {
+      chip.addEventListener("click", () => {
+        chips.forEach(c => c.classList.remove("active"));
         chip.classList.add("active");
-      }
-      const filter = chip.getAttribute("data-filter");
-      const list = document.getElementById("alignDiffItemsList");
-      if (!list) return;
-      list.querySelectorAll(".align-diff-item").forEach(item => {
-        const tag = item.getAttribute("data-filter-tag");
-        if (filter === "all" || tag === filter) {
-          item.style.display = "flex";
-        } else {
-          item.style.display = "none";
-        }
+        const filter = chip.getAttribute("data-filter");
+        items.forEach(item => {
+          const tag = item.getAttribute("data-tag");
+          if (filter === "all" || tag === filter) {
+            item.style.display = "flex";
+          } else {
+            item.style.display = "none";
+          }
+        });
       });
     });
   }
 
-  // 展开 / 折叠差异对比抽屉
-  if (btnPreview) {
-    btnPreview.addEventListener("click", async () => {
-      if (!diffBox) return;
-      if (diffBox.style.display === "none" || !diffBox.style.display) {
-        diffBox.style.display = "block";
-        btnPreview.innerHTML = `<span>🔼</span> 收起变更差异`;
-        await loadAlignPreview(false);
-      } else {
-        diffBox.style.display = "none";
-        btnPreview.innerHTML = `<span>🔍</span> 查看变更差异 (Diff)`;
+  // 展开折叠进阶审计时动态载入差异
+  if (detailsFold) {
+    detailsFold.addEventListener("toggle", () => {
+      if (detailsFold.open && !_previewCache) {
+        loadAlignPreview(false);
       }
     });
   }
@@ -984,99 +959,113 @@ function initAlignLatestEvents() {
   // 页面就绪后静默获取一次版本号
   setTimeout(() => { loadAlignPreview(true); }, 800);
 
-  if (!btn) return;
-  btn.addEventListener("click", async () => {
-    const targets = [];
-    if (document.getElementById("alignOptRiddles")?.checked) targets.push("riddles");
-    if (document.getElementById("alignOptRides")?.checked) targets.push("rides");
-    if (document.getElementById("alignOptPresets")?.checked) targets.push("presets");
-    if (document.getElementById("alignOptWeapons")?.checked) targets.push("weapons");
+  // 一键执行全量增量自愈
+  if (btnAutoHeal) {
+    btnAutoHeal.addEventListener("click", async () => {
+      const ok = await uiConfirm(
+        `确定要执行全模块增量自愈吗？\n\n` +
+        `• 系统将自动合并最新官方题库纠错与内置武器/坐骑基准\n` +
+        `• 自动创建安全备份还原点，存入持久化 backups/ 目录\n` +
+        `• 100% 严格保护您的所有自定义数值（88项配置锁）与自建数据\n` +
+        `• 绝不覆盖您已调控的经济平衡规则与自建题目、坐骑、鱼种`,
+        "确认执行全量增量自愈"
+      );
+      if (!ok) return;
 
-    if (targets.length === 0) {
-      toast("请至少勾选一项需要对齐的内容", "bad");
-      return;
-    }
+      if (spinner) spinner.style.display = "inline";
+      btnAutoHeal.disabled = true;
+      if (resBox) resBox.style.display = "none";
 
-    const doBackup = document.getElementById("alignOptBackup")?.checked ?? true;
-    const ok = await uiConfirm(
-      `确定要对齐选中的 ${targets.length} 项官方最新内容吗？\n\n` +
-      `• 系统将自动合并最新官方数据并修复错漏题目（如急转弯英文字母等）\n` +
-      `• 100% 完整保留您的所有自定义坐骑、自建题目与上传图片\n` +
-      `• 用户手动调整过的数值配置已受自定义锁保护，不会被官方覆盖\n` +
-      (doBackup ? `• 执行前将自动创建备份快照，可随时在备份管理中一键回滚` : ``),
-      "确认对齐最新版本"
-    );
-    if (!ok) return;
+      try {
+        toast("正在执行全系统增量自愈…", "ok");
+        const res = await getBridge().apiPost("system/align_defaults", {
+          targets: ["riddles", "rides", "presets", "weapons"],
+          backup: true,
+          force_custom: false
+        });
 
-    const spinner = document.getElementById("alignSpinner");
-    const resBox = document.getElementById("alignResultBox");
-    if (spinner) spinner.style.display = "inline";
-    if (btn) btn.disabled = true;
-    if (resBox) resBox.style.display = "none";
+        if (!res || !res.ok) {
+          throw new Error(res?.error || res?.msg || "接口响应异常");
+        }
 
-    try {
-      toast("正在对齐官方最新版本内容…", "ok");
-      const res = await getBridge().apiPost("system/align_defaults", {
-        targets: targets,
-        backup: doBackup,
-        force_custom: false
-      });
-
-      if (!res || !res.ok) {
-        throw new Error(res?.error || res?.msg || "接口响应异常");
-      }
-
-      toast("对齐完成！", "ok");
-      if (resBox) {
-        let detailsHtml = "";
-        const d = res.details || {};
-        if (d.riddles) {
-          const rStats = d.riddles.stats || {};
-          let lines = [];
-          for (const [k, v] of Object.entries(rStats)) {
-            lines.push(`<b>${esc(k)}</b>: 共 ${v.total} 题 (对齐/更新 ${v.official_aligned} 题，保留自建 ${v.custom_preserved} 题)`);
+        toast("增量自愈完成！所有自建资产与配置锁完好无损", "ok");
+        if (resBox) {
+          let detailsHtml = "";
+          const d = res.details || {};
+          if (d.riddles) {
+            const rStats = d.riddles.stats || {};
+            let lines = [];
+            for (const [k, v] of Object.entries(rStats)) {
+              lines.push(`<b>${esc(k)}</b>: 共 ${v.total} 题 (对齐/更新 ${v.official_aligned} 题，保留自建 ${v.custom_preserved} 题)`);
+            }
+            detailsHtml += `<div style="margin-bottom:8px">🧩 <b>娱乐题库增量合并</b>：<br>${lines.join("<br>")}</div>`;
           }
-          detailsHtml += `<div style="margin-bottom:8px">🧩 <b>娱乐题库对齐</b>：<br>${lines.join("<br>")}</div>`;
-        }
-        if (d.rides) {
-          detailsHtml += `<div style="margin-bottom:8px">🐎 <b>坐骑系统对齐</b>：${esc(d.rides.msg || "已对齐官方默认坐骑")}</div>`;
-        }
-        if (d.presets) {
-          detailsHtml += `<div style="margin-bottom:8px">⚖️ <b>经济平衡对齐</b>：${esc(d.presets.msg || "已对齐推荐预设")}</div>`;
-        }
-        if (d.weapons) {
-          detailsHtml += `<div style="margin-bottom:8px">⚔️ <b>武器属性对齐</b>：${esc(d.weapons.msg || "已对齐武器预设")}</div>`;
+          if (d.rides) {
+            detailsHtml += `<div style="margin-bottom:8px">🐎 <b>坐骑图库与基准</b>：${esc(d.rides.msg || "已对齐官方默认坐骑基准")}</div>`;
+          }
+          if (d.presets) {
+            detailsHtml += `<div style="margin-bottom:8px">⚖️ <b>经济平衡基准</b>：${esc(d.presets.msg || "已对齐推荐预设，自定义项受锁保护")}</div>`;
+          }
+          if (d.weapons) {
+            detailsHtml += `<div style="margin-bottom:8px">⚔️ <b>武器内置属性</b>：${esc(d.weapons.msg || "已对齐武器预设")}</div>`;
+          }
+
+          const bText = res.backup_snapshot ? `<div style="color:var(--muted);font-size:11.5px;margin-top:6px">🛡️ 已自动创建安全快照：<code>${esc(res.backup_snapshot)}</code>（可随时在备份管理一键回滚）</div>` : "";
+
+          resBox.innerHTML = `
+            <div style="font-weight:600;color:var(--ok);font-size:13.5px;margin-bottom:8px">✅ 全系统增量自愈成功！</div>
+            <div style="display:flex;flex-direction:column;gap:4px">${detailsHtml}</div>
+            ${bText}
+          `;
+          resBox.style.display = "block";
         }
 
-        const bText = res.backup_snapshot ? `<div style="color:var(--muted);font-size:11.5px;margin-top:6px">🛡️ 已生成安全快照：<code>${esc(res.backup_snapshot)}</code></div>` : "";
-
-        resBox.innerHTML = `
-          <div style="font-weight:600;color:var(--ok);font-size:13.5px;margin-bottom:8px">✅ 官方最新内容对齐成功！</div>
-          <div style="display:flex;flex-direction:column;gap:4px">${detailsHtml}</div>
-          ${bText}
-        `;
-        resBox.style.display = "block";
-      }
-
-      // 对齐成功后刷新差异面板
-      if (diffBox && diffBox.style.display !== "none") {
+        // 刷新持久化状态与基准预览
         await loadAlignPreview(true);
+        if (typeof loadPersistenceStatus === "function") {
+          loadPersistenceStatus(true);
+        }
+      } catch (e) {
+        toast("自愈失败: " + e.message, "bad");
+        if (resBox) {
+          resBox.innerHTML = `<div style="color:var(--bad);font-weight:600">❌ 自愈失败: ${esc(e.message)}</div>`;
+          resBox.style.display = "block";
+        }
+      } finally {
+        if (spinner) spinner.style.display = "none";
+        btnAutoHeal.disabled = false;
       }
-    } catch (e) {
-      toast("对齐失败: " + e.message, "bad");
-      if (resBox) {
-        resBox.innerHTML = `<div style="color:var(--bad);font-weight:600">❌ 对齐失败: ${esc(e.message)}</div>`;
-        resBox.style.display = "block";
+    });
+  }
+
+  // 一键创建快照备份
+  if (btnBackup) {
+    btnBackup.addEventListener("click", async () => {
+      btnBackup.disabled = true;
+      try {
+        toast("正在生成配置还原点快照…", "ok");
+        const res = await getBridge().apiPost("system/align_defaults", {
+          targets: [],
+          backup: true,
+          force_custom: false
+        });
+        if (!res || !res.ok) throw new Error(res?.error || "备份生成失败");
+        const snapName = res.backup_snapshot || "snapshot_auto";
+        toast(`配置快照已成功创建: ${snapName}`, "ok");
+        if (resBox) {
+          resBox.innerHTML = `<div style="color:var(--ok);font-weight:600">🛡️ 还原点快照创建成功：<code>${esc(snapName)}</code>，已持久化落盘至 backups/ 目录。</div>`;
+          resBox.style.display = "block";
+        }
+      } catch (e) {
+        toast("快照创建失败: " + e.message, "bad");
+      } finally {
+        btnBackup.disabled = false;
       }
-    } finally {
-      if (spinner) spinner.style.display = "none";
-      if (btn) btn.disabled = false;
-    }
-  });
+    });
+  }
 }
 
 initAlignLatestEvents();
-
 
 // ---------- 数据持久化状态检测与在线读写探针 ----------
 function initPersistenceEvents() {

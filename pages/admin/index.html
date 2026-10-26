@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light dark">
   <title>小白测试版 - 小白机器人</title>
-  <link rel="stylesheet" href="./admin.css?v=26w1026a">
+  <link rel="stylesheet" href="./admin.css?v=26w1026b">
   <!-- 主题色/深浅色优先读取本地缓存实现首帧零阻塞渲染，未缓存时最多挂起 150ms -->
   <style>
     html[data-boot] { visibility: hidden; background: #f4f6f8; }
@@ -40,7 +40,7 @@
           <span class="island-trigger-text">导航</span>
         </button>
         <div class="brand-text">
-          <h1>小白测试版 <span class="version-tag" data-ver="26w1026a">v26w1026a</span></h1>
+          <h1>小白测试版 <span class="version-tag" data-ver="26w1026b">v26w1026b</span></h1>
         </div>
       </div>
       <div class="top-bar-actions" style="position:relative">
@@ -938,16 +938,81 @@
             <div>插件：<code>astrbot_plugin_xbbot_beta</code>（小白测试版统一模块）</div>
             <div>仓库：<a href="https://github.com/imsuperone/xbtest" target="_blank" rel="noopener">https://github.com/imsuperone/xbtest</a>（测试版跟踪仓）</div>
             <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-              <div>后端版本：<b id="aboutVersion">v26w1026a</b></div>
-              <div>前端版本：<b id="aboutFrontendVer">v26w1026a</b></div>
+              <div>后端版本：<b id="aboutVersion">v26w1026b</b></div>
+              <div>前端版本：<b id="aboutFrontendVer">v26w1026b</b></div>
             </div>
             <!-- 持久化与升级保障状态徽章 -->
             <div style="margin-top:4px;padding:10px 14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:12.5px;color:var(--text);display:flex;align-items:flex-start;gap:8px">
               <span style="font-size:16px;line-height:1">🛡️</span>
               <div>
-                <b style="color:var(--ok)">自定义资源多重持久化保障已生效</b>
+                <b style="color:var(--ok)">全系统多重持久化与自愈隔离保障已生效</b>
                 <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
-                  所有用户上传的坐骑图片、自定义坐骑与自建题库均已接入 AstrBot 规范持久化隔离层（<code>data/plugin_data/astrbot_plugin_xbbot_beta/</code>），插件热更新或重装绝不掉图、绝不丢失数据。
+                  所有用户上传的坐骑图片、钓鱼图鉴、自定义坐骑与自建题库均已接入 AstrBot 规范持久化隔离层（<code>data/plugin_data/astrbot_plugin_xbbot_beta/</code>），插件热更新或重装绝不掉图、绝不丢失数据。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 数据持久化边界与目录结构全景卡片 -->
+        <div class="panel" style="margin-top:16px;background:var(--cardBg, var(--panel));border:1px solid var(--line);border-radius:16px;padding:22px">
+          <div style="margin-bottom:14px">
+            <h3 style="margin:0;font-size:16.5px;font-weight:700;display:flex;align-items:center;gap:8px">
+              <span>🗂️</span> 数据持久化边界与物理目录架构
+              <span class="align-badge align-badge-safe" style="font-size:11.5px">升级防丢闭环</span>
+            </h3>
+            <div style="color:var(--muted);font-size:12.5px;margin-top:4px">
+              严格分离「用户持久化数据」与「插件代码预设」，杜绝更新代码时被误抹或覆盖。
+            </div>
+          </div>
+
+          <!-- 双栏拓扑对照：持久化区 vs 非持久化区 -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:14px;margin-bottom:16px">
+            <!-- 栏 1: 外部宿主持久化区 -->
+            <div style="padding:14px 16px;background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.25);border-radius:12px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <b style="font-size:13.5px;color:var(--ok);display:flex;align-items:center;gap:6px">
+                  <span>🟢</span> 外部宿主持久化存储（永久保存）
+                </b>
+                <span class="align-badge align-badge-safe" style="font-size:11px">升级 100% 免疫</span>
+              </div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px">
+                物理根目录: <code>/AstrBot/data/plugin_data/astrbot_plugin_xbbot_beta/</code><br>
+                脱离插件源码生命周期，无论通过 git pull、商店重装还是容器重启，<b>数据始终安全留存</b>。
+              </div>
+              <div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:Consolas, monospace;font-size:11.5px;line-height:1.7;color:var(--text)">
+                <div><b>📁 持久化文件结构清单：</b></div>
+                <div>├── <b>xb.db</b> <span style="color:var(--muted)">SQLite 玩家金币/银行/奴隶/背包核心库</span></div>
+                <div>├── <b>config.json</b> <span style="color:var(--muted)">全局配置 (88项调控数值加锁保护)</span></div>
+                <div>├── <b>fishing_fishes.json</b> <span style="color:var(--muted)">105种鱼类图鉴+自建鱼种(双写镜像)</span></div>
+                <div>├── <b>events.json</b> <span style="color:var(--muted)">每日奇遇与随机突发事件自定义数据</span></div>
+                <div>├── <b>backups/</b> <span style="color:var(--muted)">配置还原点快照与定时备份目录</span></div>
+                <div>└── <b>data/</b></div>
+                <div>&nbsp;&nbsp;&nbsp;&nbsp;├── <b>img/rides/</b> <span style="color:var(--muted)">用户自建坐骑与上传的高清图片(自动双向镜像)</span></div>
+                <div>&nbsp;&nbsp;&nbsp;&nbsp;└── <b>questions/</b> <span style="color:var(--muted)">脑筋急转弯/猜字谜/问答/成语接龙题库</span></div>
+              </div>
+            </div>
+
+            <!-- 栏 2: 插件包内预设/代码区 -->
+            <div style="padding:14px 16px;background:rgba(59,130,246,0.04);border:1px solid rgba(59,130,246,0.22);border-radius:12px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <b style="font-size:13.5px;color:var(--acc, #3b82f6);display:flex;align-items:center;gap:6px">
+                  <span>📦</span> 插件包内部代码与预设区（随版本迭代）
+                </b>
+                <span class="align-badge align-badge-info" style="font-size:11px">随更新覆盖</span>
+              </div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px">
+                安装目录: <code>data/plugins/astrbot_plugin_xbbot_beta/</code><br>
+                更新插件时此目录被完整替换。系统启动时<b>自动自愈将持久化区的自建资产回灌</b>，绝不发生抹除。
+              </div>
+              <div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:Consolas, monospace;font-size:11.5px;line-height:1.7;color:var(--text)">
+                <div><b>📦 系统包内非持久化资产：</b></div>
+                <div>├── <b>main.py / core / games</b> <span style="color:var(--muted)">核心逻辑与指令响应引擎 (更新覆盖)</span></div>
+                <div>├── <b>pages/</b> <span style="color:var(--muted)">管理后台 WebUI 静态前端资源 (更新覆盖)</span></div>
+                <div>├── <b>data/seeds/questions/</b> <span style="color:var(--muted)">官方初始出厂题库种子 (增量合并源)</span></div>
+                <div>└── <b>data/img/rides/*.jpg</b> <span style="color:var(--muted)">官方内置10款初始坐骑默认图 (自愈底包)</span></div>
+                <div style="margin-top:6px;color:var(--ok);font-size:11px">
+                  💡 保护原则：所有自建坐骑与图片只增不减；配置项用户改动加锁；图鉴双向自愈。
                 </div>
               </div>
             </div>
@@ -959,7 +1024,7 @@
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
             <div>
               <h3 style="margin:0;font-size:16.5px;font-weight:700;display:flex;align-items:center;gap:8px">
-                <span>💾</span> 数据持久化架构与资产保护清单
+                <span>💾</span> 数据持久化运行状态与探针自检
                 <span id="persStatusBadge" class="align-badge align-badge-safe" style="font-size:11.5px">状态检测中...</span>
               </h3>
               <div style="color:var(--muted);font-size:12.5px;margin-top:4px">
@@ -1136,120 +1201,78 @@
           </div>
         </div>
 
-        <!-- 对齐官方最新版本内容卡片 -->
+        <!-- 官方预设全自动守护与基准同步卡片 -->
         <div class="panel" style="margin-top:16px;background:var(--cardBg, var(--panel));border:1px solid var(--line);border-radius:16px;padding:22px">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
             <div>
               <h3 style="margin:0;font-size:16.5px;font-weight:700;display:flex;align-items:center;gap:8px">
-                <span>🔄</span> 最新预设数据补全与同步
-                <span id="alignOffVerBadge" class="align-badge align-badge-info" style="font-size:11.5px">版本基准：加载中...</span>
+                <span>🛡️</span> 官方预设全自动守护与基准同步
+                <span id="alignOffVerBadge" class="align-badge align-badge-safe" style="font-size:11.5px">基准已对齐 · 自动守护中</span>
               </h3>
               <div style="color:var(--muted);font-size:12.5px;margin-top:4px">
-                插件升级后，可自主选择将系统内置的最新题库纠错、坐骑图鉴与推荐数值合并同步至当前环境；采用增量合并，<b>100% 保护您的所有自定义内容与自建数据</b>。
+                每次插件升级与启动时，内核已<b>全自动在后台增量合并官方最新修复与新预设</b>；所有自定义数值与自建数据 100% 锁保护，无需手动挑选勾选。
               </div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <button id="btnAlignPreview" type="button" class="btn" style="padding:7px 14px;font-size:12.5px;background:var(--panel);border:1px solid var(--line);color:var(--text);display:inline-flex;align-items:center;gap:6px;cursor:pointer">
-                <span>🔍</span> 查看更新差异 (Diff)
+              <button id="btnAutoHealAlign" type="button" class="btn primary" style="padding:7px 16px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+                <span>🔄</span> 立即执行全量增量自愈
               </button>
+              <button id="btnCreateAlignBackup" type="button" class="btn" style="padding:7px 14px;font-size:12.5px;background:var(--panel);border:1px solid var(--line);color:var(--text);display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+                <span>📦</span> 创建快照备份
+              </button>
+              <span id="alignSpinner" style="display:none;font-size:12.5px;color:var(--muted)">⏳ 正在安全合并中...</span>
             </div>
           </div>
 
-          <!-- 差异对比可折叠面板 (Diff Drawer) -->
-          <div id="alignDiffBox" style="display:none;margin-bottom:16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden">
-            <div style="padding:10px 14px;background:rgba(0,0,0,0.03);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-              <div style="font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px">
-                <span>📊</span> 最新预设与当前运行环境差异清单
+          <!-- 3 个维度的保护说明卡片 -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:10px;margin-bottom:16px">
+            <div style="padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <span style="font-weight:600;font-size:13px">🧩 娱乐题库纠错与新题补齐</span>
+                <span class="align-badge align-badge-safe" style="font-size:10.5px">增量合并</span>
               </div>
-              <div id="alignDiffSummaryPills" style="display:flex;gap:6px;font-size:11.5px;flex-wrap:wrap"></div>
+              <div style="font-size:11.5px;color:var(--muted);line-height:1.5">
+                官方纠错与新增题目自动并入，<b>用户自建与导入题目 100% 独立保留</b>，绝不覆盖。
+              </div>
             </div>
-            <div id="alignDiffContent" style="padding:12px 14px;max-height:360px;overflow-y:auto;font-size:12.5px;line-height:1.6">
-              正在加载版本差异预览...
+
+            <div style="padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <span style="font-weight:600;font-size:13px">🐎 坐骑与武器内置基准补齐</span>
+                <span class="align-badge align-badge-safe" style="font-size:10.5px">双向保护</span>
+              </div>
+              <div style="font-size:11.5px;color:var(--muted);line-height:1.5">
+                补齐 10 款官方坐骑与 42 款内置武器标准基准，<b>自建坐骑、绑定图片与自定义武器完好无损</b>。
+              </div>
+            </div>
+
+            <div style="padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <span style="font-weight:600;font-size:13px">⚖️ 88项数值调控防覆盖保护</span>
+                <span id="alignPresetsBadge" class="align-badge align-badge-protect" style="font-size:10.5px">自定义锁 🔒</span>
+              </div>
+              <div style="font-size:11.5px;color:var(--muted);line-height:1.5">
+                银行利率、日结上限、抽卡概率等，<b>凡管理员手动调控过的配置项已加锁，绝不被默认值回滚</b>。
+              </div>
             </div>
           </div>
 
-          <div style="display:flex;flex-direction:column;gap:12px">
-            <!-- 勾选项 1: 题库 -->
-            <label class="align-opt-card checked" for="alignOptRiddles">
-              <input type="checkbox" id="alignOptRiddles" checked>
-              <div style="flex:1">
-                <div class="align-opt-title-row">
-                  <span style="font-weight:600;font-size:14px">🧩 娱乐题库（急转弯、猜字谜、知识问答、成语接龙）</span>
-                  <span class="align-badge align-badge-safe">增量修复 · 保留自建题目</span>
-                </div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px">
-                  纠错内置题干与答案，增量合并新版题目；<b>完整保留用户自建与导入的所有题目</b>。
-                </div>
-              </div>
-            </label>
-
-            <!-- 勾选项 2: 坐骑 -->
-            <label class="align-opt-card checked" for="alignOptRides">
-              <input type="checkbox" id="alignOptRides" checked>
-              <div style="flex:1">
-                <div class="align-opt-title-row">
-                  <span style="font-weight:600;font-size:14px">🐎 坐骑数据与预设图片补全</span>
-                  <span class="align-badge align-badge-safe">图片双重持久化 · 自建坐骑保留</span>
-                </div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px">
-                  补齐 10 款官方默认坐骑的基础售价、定位与预设图片；<b>保留所有自定义新增坐骑与用户绑定的图片</b>。
-                </div>
-              </div>
-            </label>
-
-            <!-- 勾选项 3: 平衡预设 -->
-            <label class="align-opt-card" for="alignOptPresets">
-              <input type="checkbox" id="alignOptPresets">
-              <div style="flex:1">
-                <div class="align-opt-title-row">
-                  <span style="font-weight:600;font-size:14px">⚖️ 基础数值与经济平衡预设</span>
-                  <span id="alignPresetsBadge" class="align-badge align-badge-safe">推荐基准</span>
-                </div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px">
-                  对齐官方推荐基准（银行默认利率1%、每日利息结算上限3次、SSR抽卡概率~1%等）；<b>已调控的自定义配置受保护，绝不强制覆盖</b>。
-                </div>
-              </div>
-            </label>
-
-            <!-- 勾选项 4: 武器池默认属性 -->
-            <label class="align-opt-card" for="alignOptWeapons">
-              <input type="checkbox" id="alignOptWeapons">
-              <div style="flex:1">
-                <div class="align-opt-title-row">
-                  <span style="font-weight:600;font-size:14px">⚔️ 武器池内置默认属性</span>
-                  <span class="align-badge align-badge-info">42款内置标准</span>
-                </div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px">
-                  将 42 款内置武器（SSR/SR/R）默认攻击力与描述同步为标准基准；<b>保留用户自定义的所有武器与新增属性</b>。
-                </div>
-              </div>
-            </label>
-          </div>
-
-          <!-- 安全备份机制 -->
-          <label class="align-backup-row" for="alignOptBackup">
-            <input type="checkbox" id="alignOptBackup" checked>
-            <div style="flex:1">
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-weight:600;font-size:13.5px">🛡️ 同步前自动创建配置快照备份</span>
-                <span class="align-badge align-badge-safe" style="font-size:11px">推荐勾选 · 双重保险</span>
-              </div>
-              <div style="font-size:12px;color:var(--muted);margin-top:3px">
-                同步前自动保存一份当前完整配置还原点；若后续想恢复，可随时在【运维 · 备份管理】一键还原。
+          <!-- 进阶审计对比抽屉 (默认折叠) -->
+          <details id="alignDetailsFold" style="border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--panel)">
+            <summary id="btnAlignPreviewSummary" style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px">
+              <span>🔍</span> 查看官方基准差异对比明细（进阶审计）
+            </summary>
+            <div id="alignDiffBox" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
+              <div id="alignDiffSummaryPills" style="display:flex;gap:6px;font-size:11.5px;flex-wrap:wrap;margin-bottom:10px"></div>
+              <div id="alignDiffContent" style="padding:10px 12px;max-height:300px;overflow-y:auto;font-size:12px;line-height:1.6;background:rgba(0,0,0,0.02);border-radius:8px">
+                正在加载版本差异明细...
               </div>
             </div>
-          </label>
-
-          <!-- 执行按钮与反馈 -->
-          <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <button id="btnAlignLatest" class="btn" style="padding:10px 24px;font-size:13.5px">🚀 开始同步选中的预设内容</button>
-            <span id="alignSpinner" style="display:none;font-size:12.5px;color:var(--muted)">⏳ 正在同步并安全合并，请稍候...</span>
-          </div>
+          </details>
 
           <!-- 结果展示框 -->
-          <div id="alignResultBox" style="display:none;margin-top:16px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:12.5px;line-height:1.7"></div>
+          <div id="alignResultBox" style="display:none;margin-top:14px;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:12.5px;line-height:1.7"></div>
         </div>
-
       </div>
     </div>
 
@@ -1550,19 +1573,19 @@
       </div>
     </div>
   </div>
-    <script defer src="./js/00_core.js?v=26w1026a"></script>
-  <script defer src="./js/01_theme.js?v=26w1026a"></script>
-  <script defer src="./js/02_export.js?v=26w1026a"></script>
-  <script defer src="./js/03_import.js?v=26w1026a"></script>
-  <script defer src="./js/04_media.js?v=26w1026a"></script>
-  <script defer src="./js/05_config.js?v=26w1026a"></script>
-  <script defer src="./js/06_users.js?v=26w1026a"></script>
-  <script defer src="./js/07_spirit.js?v=26w1026a"></script>
-  <script defer src="./js/08_shop.js?v=26w1026a"></script>
-  <script defer src="./js/09_views.js?v=26w1026a"></script>
-  <script defer src="./js/10_ops.js?v=26w1026a"></script>
-  <script defer src="./js/11_questions.js?v=26w1026a"></script>
-  <script defer src="./js/12_fishing.js?v=26w1026a"></script>
+    <script defer src="./js/00_core.js?v=26w1026b"></script>
+  <script defer src="./js/01_theme.js?v=26w1026b"></script>
+  <script defer src="./js/02_export.js?v=26w1026b"></script>
+  <script defer src="./js/03_import.js?v=26w1026b"></script>
+  <script defer src="./js/04_media.js?v=26w1026b"></script>
+  <script defer src="./js/05_config.js?v=26w1026b"></script>
+  <script defer src="./js/06_users.js?v=26w1026b"></script>
+  <script defer src="./js/07_spirit.js?v=26w1026b"></script>
+  <script defer src="./js/08_shop.js?v=26w1026b"></script>
+  <script defer src="./js/09_views.js?v=26w1026b"></script>
+  <script defer src="./js/10_ops.js?v=26w1026b"></script>
+  <script defer src="./js/11_questions.js?v=26w1026b"></script>
+  <script defer src="./js/12_fishing.js?v=26w1026b"></script>
 
 
   <!-- 鱼类编辑/添加弹窗 -->

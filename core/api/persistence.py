@@ -2,6 +2,7 @@
 """core/api/persistence.py - 数据持久化诊断、状态汇总与在线读写自检探针 API"""
 import json
 import os
+import sys
 import time
 from typing import Any, Dict
 
@@ -24,6 +25,62 @@ def _get_pers_dir(plugin_base: str = "") -> str:
     if hasattr(ST, "get_persistent_data_dir"):
         return ST.get_persistent_data_dir(base)
     return os.path.join(base, "data")
+
+
+def _safe_import_fishing(plugin_base: str = ""):
+    """安全导入 games.fishing.data_fishes 模块，自动处理跨环境相对路径与 sys.path 降级"""
+    try:
+        from ...games.fishing import data_fishes
+        return data_fishes
+    except (ImportError, ValueError):
+        pass
+    try:
+        from games.fishing import data_fishes
+        return data_fishes
+    except (ImportError, ValueError):
+        pass
+    try:
+        from astrbot_plugin_xbbot_beta.games.fishing import data_fishes
+        return data_fishes
+    except (ImportError, ValueError):
+        pass
+    base = plugin_base or plugin_root(__file__)
+    if base and base not in sys.path:
+        sys.path.insert(0, base)
+    try:
+        from games.fishing import data_fishes
+        return data_fishes
+    except Exception:
+        pass
+    return None
+
+
+def _safe_import_shop(plugin_base: str = ""):
+    """安全导入 games.config.shop 模块，自动处理跨环境相对路径与 sys.path 降级"""
+    try:
+        from ...games.config import shop
+        return shop
+    except (ImportError, ValueError):
+        pass
+    try:
+        from games.config import shop
+        return shop
+    except (ImportError, ValueError):
+        pass
+    try:
+        from astrbot_plugin_xbbot_beta.games.config import shop
+        return shop
+    except (ImportError, ValueError):
+        pass
+    base = plugin_base or plugin_root(__file__)
+    if base and base not in sys.path:
+        sys.path.insert(0, base)
+    try:
+        from games.config import shop
+        return shop
+    except Exception:
+        pass
+    return None
 
 
 def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
@@ -89,10 +146,8 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
         db_mirror_ok = False
 
     # 3. 自定义坐骑持久化统计
-    try:
-        from games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP
-    except Exception:
-        OFF_RIDE_SHOP = {}
+    shop_mod = _safe_import_shop(plugin_base)
+    OFF_RIDE_SHOP = getattr(shop_mod, "RIDE_SHOP", {}) if shop_mod else {}
 
     cur_rides = {}
     for cand in (
@@ -117,10 +172,7 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
     custom_rides = [k for k in cur_rides if k not in OFF_RIDE_SHOP]
 
     # 4. 自定义抽卡武器持久化统计
-    try:
-        from games.config.shop import DEFAULT_WEAPON_ATTRS
-    except Exception:
-        DEFAULT_WEAPON_ATTRS = {}
+    DEFAULT_WEAPON_ATTRS = getattr(shop_mod, "DEFAULT_WEAPON_ATTRS", {}) if shop_mod else {}
 
     cur_w = {}
     for cand in (
@@ -220,22 +272,23 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
     total_fishes_cnt = 0
     custom_fishes_cnt = 0
     try:
-        from games.fishing.data_fishes import load_all_fishes, get_fish_paths
-        p_json, b_json, d_seed, _, _ = get_fish_paths()
-        f_list = load_all_fishes()
-        total_fishes_cnt = len(f_list)
-        default_ids = set()
-        if os.path.isfile(d_seed):
-            with open(d_seed, "r", encoding="utf-8") as dsf:
-                d_data = json.load(dsf)
-                if isinstance(d_data, list):
-                    default_ids = {f.get("id") for f in d_data if isinstance(f, dict)}
-        custom_fishes_cnt = len([f for f in f_list if isinstance(f, dict) and f.get("id") not in default_ids])
-        if not fish_exists and os.path.isfile(p_json):
-            fish_file = p_json
-            fish_exists = True
-            fish_size = os.path.getsize(p_json)
-            fish_mtime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(p_json)))
+        fishes_mod = _safe_import_fishing(plugin_base)
+        if fishes_mod:
+            p_json, b_json, d_seed, _, _ = fishes_mod.get_fish_paths()
+            f_list = fishes_mod.load_all_fishes()
+            total_fishes_cnt = len(f_list)
+            default_ids = set()
+            if os.path.isfile(d_seed):
+                with open(d_seed, "r", encoding="utf-8") as dsf:
+                    d_data = json.load(dsf)
+                    if isinstance(d_data, list):
+                        default_ids = {f.get("id") for f in d_data if isinstance(f, dict)}
+            custom_fishes_cnt = len([f for f in f_list if isinstance(f, dict) and f.get("id") not in default_ids])
+            if not fish_exists and os.path.isfile(p_json):
+                fish_file = p_json
+                fish_exists = True
+                fish_size = os.path.getsize(p_json)
+                fish_mtime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(p_json)))
     except Exception:
         pass
 
@@ -396,9 +449,11 @@ async def handle_persistence_test(request=None, plugin_base=""):
 
     # 4. 钓鱼图鉴 fishing_fishes.json 双重持久化探针
     try:
-        from games.fishing.data_fishes import load_all_fishes, get_fish_paths
-        p_json, b_json, d_seed, p_dir, b_dir = get_fish_paths()
-        all_f = load_all_fishes()
+        fishes_mod = _safe_import_fishing(base)
+        if not fishes_mod:
+            raise RuntimeError("无法导入 games.fishing.data_fishes 模块 (请检查插件根目录)")
+        p_json, b_json, d_seed, p_dir, b_dir = fishes_mod.get_fish_paths()
+        all_f = fishes_mod.load_all_fishes()
         f_cnt = len(all_f)
         p_ok = os.path.isfile(p_json) and os.path.getsize(p_json) > 100
         b_ok = os.path.isfile(b_json) and os.path.getsize(b_json) > 100
