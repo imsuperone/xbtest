@@ -147,6 +147,65 @@ def set_persistent_data_dir(path):
 _MIGRATED_DIRS = set()  # 进程内 once：同目录重复解析不再重跑迁移探测（热切换新目录仍跑）
 
 
+def _clean_stale_persistent_artifacts(cand):
+    """自动清理外部持久化目录中的历史遗留碎片与孤立文件，保持持久化目录整洁标准化"""
+    if not cand or not os.path.isdir(cand):
+        return
+    cand_db = os.path.join(cand, "xb.db")
+    has_valid_db = os.path.isfile(cand_db) and os.path.getsize(cand_db) > 10240
+
+    # 1. 历史遗留重名数据库平滑合并至 xb.db 后清理旧副本
+    for old_db_name in ("nuli_slave.db", "xbbot.db"):
+        old_p = os.path.join(cand, old_db_name)
+        if os.path.isfile(old_p):
+            try:
+                if has_valid_db:
+                    merge_from(old_p)
+                os.remove(old_p)
+            except Exception:
+                pass
+
+    # 2. 清理意外递归嵌套的 data/data 目录
+    cand_nested = os.path.join(cand, "data", "data")
+    if os.path.isdir(cand_nested):
+        try:
+            import shutil
+            shutil.rmtree(cand_nested, ignore_errors=True)
+        except Exception:
+            pass
+
+    # 3. 清理已废弃的空文件夹
+    for empty_sub in ("groups", "wallet"):
+        sub_p = os.path.join(cand, empty_sub)
+        if os.path.isdir(sub_p):
+            try:
+                if not os.listdir(sub_p):
+                    os.rmdir(sub_p)
+            except Exception:
+                pass
+
+    # 4. 清理残留探针测试临时文件与测试临时数据库
+    try:
+        for fname in os.listdir(cand):
+            if fname.startswith(".probe_test_") and fname.endswith(".tmp"):
+                try:
+                    os.remove(os.path.join(cand, fname))
+                except Exception:
+                    pass
+            elif fname.startswith("test_") and fname.endswith(".db"):
+                try:
+                    os.remove(os.path.join(cand, fname))
+                except Exception:
+                    pass
+            elif fname == "fishing_fishes_default.json" and os.path.isfile(os.path.join(cand, "fishing_fishes.json")):
+                try:
+                    os.remove(os.path.join(cand, fname))
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
 def _auto_migrate_and_heal(cand, base, force=False):
     """自动双向自愈与迁移：把旧数据/图库无损同步迁移到持久化目录"""
     if not cand or not os.path.isdir(cand):
@@ -180,9 +239,9 @@ def _auto_migrate_and_heal(cand, base, force=False):
                 except Exception:
                     pass
         # 插件根目录下旧数据自愈迁移到持久化目录（绝不反向覆盖已存在的有效用户数据）
-        for f in ("xb.db", "nuli_slave.db", "xbbot.db", "config.json", "events.json", "shop.json", "atlas.json", "fishing_fishes.json"):
+        for f in ("xb.db", "config.json", "events.json", "shop.json", "atlas.json", "fishing_fishes.json"):
             src_f = os.path.join(base, "data", f)
-            dst_f = os.path.join(cand, "xb.db" if f.endswith(".db") else f)
+            dst_f = os.path.join(cand, f)
             if os.path.isfile(src_f) and not os.path.isfile(dst_f):
                 try:
                     shutil.copy2(src_f, dst_f)
@@ -272,15 +331,8 @@ def _auto_migrate_and_heal(cand, base, force=False):
                     shutil.copytree(_src, _dst_new, dirs_exist_ok=True)
         except Exception:
             pass
-        # 兼容旧 groups/wallet 目录自愈
-        for sub in ("groups", "wallet"):
-            src_sub = os.path.join(base, "data", sub)
-            dst_sub = os.path.join(cand, sub)
-            if os.path.isdir(src_sub):
-                try:
-                    shutil.copytree(src_sub, dst_sub, dirs_exist_ok=True)
-                except Exception:
-                    pass
+        # 自动精简外部持久化目录中的历史碎片，维护整洁文件树
+        _clean_stale_persistent_artifacts(cand)
         try:
             if _key:
                 _MIGRATED_DIRS.add(_key)
