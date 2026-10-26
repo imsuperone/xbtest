@@ -482,7 +482,7 @@ PRESETS = {
             "存取款消耗体力": "2", "存款期限": "1",
             "转账消耗体力": "2", "转账最小金额": "100", "转账接收额度": "500000", "跨群转账手续费": "25",
             "赌博成功概率": "38", "赌博消耗体力": "15", "赌博魅力减少": "15",
-            "赌博限定次数": "10", "赌博关押时间": "12", "赌博最大金额": "5000",
+            "赌博限定次数": "10", "赌博关押时间": "12", "赌博最大金额": "100000",
             "打劫失败罚金": "1000", "打劫成功概率": "50", "打劫消耗体力": "15",
             "打劫魅力减少": "4", "打劫金钱下限": "500", "打劫金钱上限": "3500",
             "打劫关押时间": "8",
@@ -1062,6 +1062,14 @@ def build_realtime_preset(base_mode="casual", metrics=None):
             except Exception:
                 pass
 
+    # 4. 赌博单笔上限底线保护（绝不因任何动态调控低于 10w）
+    if "银行配置" in preset and "赌博最大金额" in preset["银行配置"]:
+        try:
+            if int(float(preset["银行配置"]["赌博最大金额"])) < 100000:
+                preset["银行配置"]["赌博最大金额"] = "100000"
+        except Exception:
+            preset["银行配置"]["赌博最大金额"] = "100000"
+
     # 4. 构建同步坐骑价格字典（阶梯调控：入门坐骑通胀不加价，豪车阶梯跳高）
     rides_base = copy.deepcopy(_BUILTIN_RIDES_BASE.get(base_mode, _BUILTIN_RIDES_BASE["standard"]))
     _STARTER_RIDES = {"老八", "企鹅", "伞兵"}
@@ -1213,9 +1221,23 @@ def apply_balance_config(control_type="realtime", mode="casual"):
                 # 用户自定义锁定的值（如手动调控的利息/费率/倍率等），绝对跳过，保护不受覆盖
                 skipped_custom_keys.append(full_k)
                 continue
+            if full_k == "银行配置.赌博最大金额":
+                try:
+                    if int(float(v)) < 100000:
+                        v = "100000"
+                except Exception:
+                    v = "100000"
             sec_dict[k] = str(v)
             updated_keys += 1
         updated_sections += 1
+
+    # 强制底线保护：银行赌博最大金额绝不低于 100,000 (10w)
+    try:
+        _b_sec = ST._CONFIG.setdefault("银行配置", {})
+        if int(float(_b_sec.get("赌博最大金额", "0") or 0)) < 100000:
+            _b_sec["赌博最大金额"] = "100000"
+    except Exception:
+        pass
 
     # 同步 10 大内置坐骑到商城图鉴（不破坏用户自定义图片与新增坐骑）
     _sync_ride_shop_dict(rides_map)
@@ -1293,6 +1315,14 @@ def maybe_realtime_tick(force=False):
             or float(prev_meta.get("sink_mult", -1)) != float(metrics.get("sink_mult", 1.0))
         ):
             return apply_balance_config(control_type="realtime", mode=base_mode)
+        # 稳态巡检守护：强制保证赌博最大金额不低于 10w
+        try:
+            _b_sec = ST._CONFIG.setdefault("银行配置", {})
+            if int(float(_b_sec.get("赌博最大金额", "0") or 0)) < 100000:
+                _b_sec["赌博最大金额"] = "100000"
+                ST.save_config()
+        except Exception:
+            pass
         ST._CONFIG["_realtime_balance_meta"] = metrics
         return {"ok": True, "control_type": "realtime", "mode": base_mode, "realtime_metrics": metrics}
     except Exception:
@@ -1350,6 +1380,12 @@ def get_balance_state_snapshot():
             actual = str(ST.cfg(sec, k, ""))
             if actual == "":
                 actual = str(_GAME_DEFAULTS.get((sec, k), _GAME_DEFAULTS.get(sec, {}).get(k, "") if isinstance(_GAME_DEFAULTS.get(sec), dict) else def_v))
+            if sec == "银行配置" and k == "赌博最大金额":
+                try:
+                    if int(float(actual or 0)) < 100000:
+                        actual = "100000"
+                except Exception:
+                    actual = "100000"
             sec_cur[k] = actual if actual != "" else str(def_v)
         current_values[sec] = sec_cur
 

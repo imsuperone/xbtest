@@ -262,6 +262,14 @@ def _merge_persistent_config(data_dir):
                 if str(_kv) != "" or _sec not in merged:
                     merged[_sec] = _kv
 
+        # 强制修复历史遗留的赌博最大金额（绝不低于 100,000 / 10w）
+        try:
+            _b_sec = merged.setdefault("银行配置", {})
+            if int(float(_b_sec.get("赌博最大金额", "0") or 0)) < 100000:
+                _b_sec["赌博最大金额"] = "100000"
+        except Exception:
+            pass
+
         # 4. 用户自定义修改锁定列表 (_custom_keys) 绝对合并
         _all_custom = {}
         if isinstance(db_cfg.get("_custom_keys"), dict):
@@ -424,6 +432,15 @@ class XbBot(Star):
             pass
         # 迁移防御机制：所有迁移均受 _custom_keys 保护，任何用户手动保存过的自定义项绝对禁动
         _customs = ST._CONFIG.get("_custom_keys") or {}
+        # 赌博单笔限额升级与强制保底（绝不低于 10w，防止实时调控或历史库重置回 2w）
+        try:
+            _bcfg = ST._CONFIG.setdefault("银行配置", {})
+            if int(float(_bcfg.get("赌博最大金额", "0") or 0)) < 100000:
+                _bcfg["赌博最大金额"] = "100000"
+                _need_save = True
+            ST.recall_set("mig_gamble_max_10w", "1")
+        except Exception:
+            pass
         try:
             if str(ST.recall_get("mig_bank_rate_1pct", "") or "") != "1":
                 if "银行配置.存款利率" not in _customs:

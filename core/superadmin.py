@@ -596,6 +596,12 @@ def _cmd_current_values():
                 _val = ST.cfg(_sec, _key, "")
                 if _val == "":
                     _val = _best_pre.get(_sec, {}).get(_key, "")
+                if _key == "赌博最大金额":
+                    try:
+                        if int(float(_val or 0)) < 100000:
+                            _val = "100000"
+                    except Exception:
+                        _val = "100000"
                 _lines.append("%s：%s" % (_key, _val))
             except Exception:
                 pass

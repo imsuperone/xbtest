@@ -146,6 +146,22 @@ class TestPersistenceAndAlign(unittest.TestCase):
         self.assertEqual(summary.get("will_update"), 0)
         self.assertGreater(summary.get("unchanged"), 200)
 
+    def test_gamble_max_amount_clamp_and_preservation(self):
+        from core.api.balance import PRESETS, build_realtime_preset, apply_balance_config
+        # 1. Verify all presets default to 100000
+        for m in ("standard", "casual", "hardcore"):
+            self.assertEqual(int(PRESETS[m]["银行配置"]["赌博最大金额"]), 100000)
+            rt_p, _, _ = build_realtime_preset(m)
+            self.assertGreaterEqual(int(rt_p["银行配置"]["赌博最大金额"]), 100000)
+
+        # 2. Verify apply_balance_config preserves / clamps gamble max amount to >= 100000
+        ST.set_config({"银行配置": {"赌博最大金额": "20000"}})
+        res = apply_balance_config(control_type="realtime", mode="casual")
+        self.assertTrue(res.get("ok"))
+        curr_val = int(ST.cfg("银行配置", "赌博最大金额", 0))
+        self.assertGreaterEqual(curr_val, 100000)
+
+
 
 if __name__ == "__main__":
     unittest.main()

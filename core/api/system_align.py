@@ -133,6 +133,10 @@ async def handle_align_preview(request=None, plugin_base=""):
                 status = "unchanged"
                 lock_reason = ""
                 preset_summary["unchanged"] += 1
+            elif full_k == "银行配置.赌博最大金额" and int(float(cur_val or 0)) < 100000:
+                status = "will_update"
+                lock_reason = ""
+                preset_summary["will_update"] += 1
             elif ctrl_type == "realtime" and cur_val is not None:
                 # 实时调控模式下，本地活跃运行值/自适应值绝不被标为待更新，100% 保持自适应状态
                 status = "custom_locked"
@@ -583,11 +587,13 @@ async def handle_align_defaults(request=None, plugin_base=""):
                     ST.set_ini(sec, k, off_val)
                     aligned_keys += 1
 
-            # 清理历史废弃键
+            # 清理历史废弃键并强制保底赌博最大金额
             b_sec = (getattr(ST, "_CONFIG", {}) or {}).get("银行配置", {})
             if isinstance(b_sec, dict):
                 b_sec.pop("利率上限", None)
                 b_sec.pop("日结算上限", None)
+                if int(float(b_sec.get("赌博最大金额", "0") or 0)) < 100000:
+                    b_sec["赌博最大金额"] = "100000"
 
             # 同步更新调控状态标记，确保与实时调控引擎无缝融合
             if ctrl_type == "realtime":
