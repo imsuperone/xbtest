@@ -75,6 +75,17 @@ aidocs/
 *.zip
 
 # 隐私与运行时文件（绝不进仓库）
+.env
+.env.*
+*.key
+*.pem
+*.cert
+*.crt
+*.token
+*.secret
+credentials.json
+auth.json
+secrets.json
 webdav_secret.json
 **/webdav_secret.json
 .xb_last_backup.json
