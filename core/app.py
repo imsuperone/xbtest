@@ -464,6 +464,16 @@ class XbBot(Star):
                 ST.recall_set("mig_gamble_rebalance_v26b", "1")
         except Exception:
             pass
+        # 赌博获胜倍率升级为 1.8x
+        try:
+            if str(ST.recall_get("mig_gamble_mult_18", "") or "") != "1":
+                _bcfg = ST._CONFIG.setdefault("银行配置", {})
+                if "银行配置.赌博倍率" not in _customs:
+                    _bcfg["赌博倍率"] = "1.8"
+                    _need_save = True
+                ST.recall_set("mig_gamble_mult_18", "1")
+        except Exception:
+            pass
         try:
             if str(ST.recall_get("mig_bank_rate_1pct", "") or "") != "1":
                 if "银行配置.存款利率" not in _customs:

@@ -315,7 +315,14 @@ def cmd_gamble(gid, qq, amount):
         prob = min(40.0, _luck_eff(prob, gid, qq))
     except Exception:
         prob = min(40.0, float(prob))
-    gain = int(amount * GAMBLE_MULT)
+    try:
+        raw_m = ST.cfg("银行配置", "赌博倍率", None)
+        mult = float(raw_m) if raw_m is not None else GAMBLE_MULT
+    except Exception:
+        mult = GAMBLE_MULT
+    if mult <= 0:
+        mult = 1.8
+    gain = int(amount * mult)
     # 原子化：钱包+体力+魅力+日计数 统归事务处理，避免半成功/脏读
     try:
         with ST._LOCK:
