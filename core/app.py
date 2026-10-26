@@ -441,6 +441,29 @@ class XbBot(Star):
             ST.recall_set("mig_gamble_max_10w", "1")
         except Exception:
             pass
+        # 赌博限定次数调高至 30~50 次，概率调低至 32~35%（受 _customs 保护）
+        try:
+            if str(ST.recall_get("mig_gamble_rebalance_v26b", "") or "") != "1":
+                _bcfg = ST._CONFIG.setdefault("银行配置", {})
+                if "银行配置.赌博限定次数" not in _customs:
+                    try:
+                        if int(float(_bcfg.get("赌博限定次数", "0") or 0)) < 30:
+                            _bcfg["赌博限定次数"] = "50"
+                            _need_save = True
+                    except Exception:
+                        _bcfg["赌博限定次数"] = "50"
+                        _need_save = True
+                if "银行配置.赌博成功概率" not in _customs:
+                    try:
+                        if int(float(_bcfg.get("赌博成功概率", "0") or 0)) > 35:
+                            _bcfg["赌博成功概率"] = "35"
+                            _need_save = True
+                    except Exception:
+                        _bcfg["赌博成功概率"] = "35"
+                        _need_save = True
+                ST.recall_set("mig_gamble_rebalance_v26b", "1")
+        except Exception:
+            pass
         try:
             if str(ST.recall_get("mig_bank_rate_1pct", "") or "") != "1":
                 if "银行配置.存款利率" not in _customs:

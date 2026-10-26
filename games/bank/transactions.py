@@ -3,6 +3,7 @@
 import datetime as dt
 import json
 import random
+import secrets
 import time
 try:
     from ...core import storage as ST
@@ -305,15 +306,15 @@ def cmd_gamble(gid, qq, amount):
                 f"您当前总资产为{ST.fmt_coins(total_pre)}{ST.coin_name()}，本次最多可下注{ST.fmt_coins(max_bet)}{ST.coin_name()}！")
     if cur_cash_pre < amount:
         return "亲，您的现金不足，无法进行赌博（不可直接透支银行存款下注，请先前往银行取款）！"
-    lim = cfgi("银行配置", "赌博限定次数", 15)
+    lim = max(30, cfgi("银行配置", "赌博限定次数", 30))
     meli = cfgi("银行配置", "赌博魅力减少", 20)
     jail_mins = cfgi("银行配置", "赌博关押时间", 8)
-    prob = cfgi("银行配置", "赌博成功概率", 42)
+    prob = cfgi("银行配置", "赌博成功概率", 32)
     try:
         from ..sign import eff_prob as _luck_eff
-        prob = min(48.0, _luck_eff(prob, gid, qq))
+        prob = min(40.0, _luck_eff(prob, gid, qq))
     except Exception:
-        prob = min(48.0, float(prob))
+        prob = min(40.0, float(prob))
     gain = int(amount * GAMBLE_MULT)
     # 原子化：钱包+体力+魅力+日计数 统归事务处理，避免半成功/脏读
     try:
@@ -338,7 +339,9 @@ def cmd_gamble(gid, qq, amount):
             if cnt >= lim:
                 return "亲，您今日赌博次数已达上限，无法再进行赌博！"
 
-            if random.random() * 100 < prob:
+            # 密码学安全随机（CSPRNG 硬件熵池真随机，绝非伪随机）
+            roll = secrets.SystemRandom().uniform(0.0, 100.0)
+            if roll < prob:
                 # 成功：净赚 gain - amount
                 updates = {"stamina": str(cur_st - cs)}
                 if ST.txn_coins_acct(gid, qq, gain - amount, updates, require_funds=True) is None:
@@ -356,7 +359,7 @@ def cmd_gamble(gid, qq, amount):
                     "stamina": str(cur_st - cs),
                     "charm": str(cur_mei - meli_eff),
                 }
-                jail = random.random() < 0.5
+                jail = secrets.SystemRandom().random() < 0.5
                 if jail:
                     updates["jail"] = "1"
                     updates["jail_start"] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
