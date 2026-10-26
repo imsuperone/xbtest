@@ -1,3 +1,18 @@
+## v26w1026c
+- **全仓文件结构深度重构、冗余清理与目录标准化精简**：
+  - **🗂️ 工厂初始种子单源化收口（统一汇聚至 data/seeds/）**：
+    - 将以往散落在数据根目录且与活跃图鉴重复的 data/fishing_fishes_default.json 规范收敛至 data/seeds/fishing_fishes.json；
+    - 所有系统出厂默认种子（娱乐题库、鱼类图鉴）集中于 data/seeds/ 管理，活跃配置文件驻留 data/，结构层次分明，彻底消灭重名混淆。
+  - **🧹 全面清理孤立目录、测试碎片与冗余数据库**：
+    - 清理意外递归产生的嵌套 data/data/ 目录；
+    - 清理废弃的根级空目录 dev_xbbot_beta/ 及 data/groups/、data/wallet/；
+    - 修复测试套件 	est_fishing_system.py 在 Windows 下句柄未释放导致 	est_fishing_tmp.db 残留的问题，测试后 100% 自动清理；
+    - 清理本地未纳管的历史遗留库 
+uli_slave.db、xbbot.db 与抽卡武器图库重复目录 data/img/gacha/，统一规范为 data/img/nuli/ 与 data/xb.db。
+  - **🛡️ 存储自愈双向路径兼容性加固**：
+    - 优化 core/storage/db.py 自愈模块，智能兼容多种宿主持久化子目录格式，绝不再发生自我递归写入。
+  - **✅ 质量验收**：全仓 99 个 Python 模块 0 编译错误，13 个 WebUI 前端脚本语法校验 100% 通过，11 项单元测试全绿。
+
 ## v26w1026b
 - **持久化探针跨环境隔离修复、物理目录结构全景卡片与全自动基准增量守护重构**：
   - **🛠️ 持久化探针跨环境模块导入修复（彻底根除 No module named 'games'）**：

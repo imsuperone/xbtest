@@ -20,7 +20,11 @@ def get_fish_paths():
     base_pkg_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     base_data_dir = os.path.join(base_pkg_dir, "data")
     base_json_path = os.path.join(base_data_dir, "fishing_fishes.json")
-    default_seed_path = os.path.join(base_data_dir, "fishing_fishes_default.json")
+    default_seed_path = os.path.join(base_data_dir, "seeds", "fishing_fishes.json")
+    if not os.path.isfile(default_seed_path):
+        default_seed_path = os.path.join(base_data_dir, "fishing_fishes_default.json")
+    if not os.path.isfile(default_seed_path):
+        default_seed_path = base_json_path
 
     pers_dir = None
     if get_persistent_data_dir is not None:

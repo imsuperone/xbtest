@@ -230,19 +230,29 @@ def _auto_migrate_and_heal(cand, base, force=False):
                                 pass
 
         # 娱乐题库自愈双向同步：
-        cand_q_dir = os.path.join(cand, "data", "questions")
+        cand_q_dirs = [
+            os.path.join(cand, "data", "questions"),
+            os.path.join(cand, "questions"),
+        ]
         base_q_dir = os.path.join(base, "data", "questions")
-        os.makedirs(cand_q_dir, exist_ok=True)
-        if os.path.isdir(cand_q_dir):
+        os.makedirs(base_q_dir, exist_ok=True)
+        target_cand_q = os.path.join(cand, "data", "questions")
+        os.makedirs(target_cand_q, exist_ok=True)
+        for cqd in cand_q_dirs:
+            if os.path.isdir(cqd):
+                for q_name in ("trick.json", "miri.json", "quiz.json", "chain.json"):
+                    c_q = os.path.join(cqd, q_name)
+                    b_q = os.path.join(base_q_dir, q_name)
+                    if os.path.isfile(c_q) and not os.path.isfile(b_q):
+                        try:
+                            shutil.copy2(c_q, b_q)
+                        except Exception:
+                            pass
+        if os.path.isdir(base_q_dir):
             for q_name in ("trick.json", "miri.json", "quiz.json", "chain.json"):
-                c_q = os.path.join(cand_q_dir, q_name)
                 b_q = os.path.join(base_q_dir, q_name)
-                if os.path.isfile(c_q) and not os.path.isfile(b_q):
-                    try:
-                        shutil.copy2(c_q, b_q)
-                    except Exception:
-                        pass
-                elif os.path.isfile(b_q) and not os.path.isfile(c_q):
+                c_q = os.path.join(target_cand_q, q_name)
+                if os.path.isfile(b_q) and not os.path.isfile(c_q):
                     try:
                         shutil.copy2(b_q, c_q)
                     except Exception:

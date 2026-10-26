@@ -25,6 +25,19 @@ class TestFishingSystem(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        try:
+            if hasattr(ST, 'flush_all'):
+                ST.flush_all()
+            if hasattr(ST, '_S') and getattr(ST._S, '_DB', None) is not None:
+                try:
+                    ST._S._DB.close()
+                except Exception:
+                    pass
+                ST._S._DB = None
+            if hasattr(ST, 'close_read_conn'):
+                ST.close_read_conn()
+        except Exception:
+            pass
         if os.path.isfile(cls.test_db):
             try:
                 os.remove(cls.test_db)
