@@ -93,7 +93,7 @@ _XB_API_ROUTES = [
     ("questions/export", "GET,POST", "page_questions_export", "题库导出", ("core.api.questions", "handle_questions_export", "questions export", {})),
     ("questions/import", "POST", "page_questions_import", "题库导入", ("core.api.questions", "handle_questions_import", "questions import", {})),
     ("questions/reset", "POST", "page_questions_reset", "恢复默认题库", ("core.api.questions", "handle_questions_reset", "questions reset", {})),
-    ("version/align", "POST", "page_version_align", "对齐官方最新版本预设", ("core.api.system_align", "handle_align_defaults", "align defaults", {"with_base": True})),
+    ("version/align", "POST", "page_version_align", "对齐官方最新版本预设 (兼容别名)", ("core.api.system_align", "handle_align_defaults", "align defaults", {"with_base": True})),
     ("system/align_defaults", "POST", "page_system_align_defaults", "对齐官方最新版本内容", ("core.api.system_align", "handle_align_defaults", "align defaults", {"with_base": True})),
     ("system/align_preview", "GET,POST", "page_system_align_preview", "预览官方最新版本差异", ("core.api.system_align", "handle_align_preview", "align preview", {"with_base": True})),
     # 钓鱼与水族馆系统 Web API

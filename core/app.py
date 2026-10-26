@@ -650,9 +650,10 @@ class XbBot(Star):
         # Web API — 9Tab 懒加载（路由+分发单源 core/web_routes 五元组，注册期直接绑定路由闭包）
         for _suffix, _methods, _page, _desc, (_pm, _pf, _pl, _pk) in _XB_API_ROUTES:
             context.register_web_api(f"/{PLUGIN_ID}/{_suffix}", self._route_handler(_page, _pm, _pf, _pl, **_pk), _methods.split(","), _desc)
-        for _prefix in ("backup", "backups"):
-            for _suffix, _methods, _page, _desc, (_pm, _pf, _pl, _pk) in _XB_WEBDAV_ROUTES:
-                context.register_web_api(f"/{PLUGIN_ID}/{_prefix}/{_suffix}", self._route_handler(_page, _pm, _pf, _pl, **_pk), _methods.split(","), _desc)
+        for _suffix, _methods, _page, _desc, (_pm, _pf, _pl, _pk) in _XB_WEBDAV_ROUTES:
+            _h = self._route_handler(_page, _pm, _pf, _pl, **_pk)
+            context.register_web_api(f"/{PLUGIN_ID}/backup/{_suffix}", _h, _methods.split(","), _desc)
+            context.register_web_api(f"/{PLUGIN_ID}/backups/{_suffix}", _h, _methods.split(","), f"{_desc} (兼容别名)")
 
         # 后台独立守护线程执行自动备份与超期清理，绝不阻塞主消息循环与事件分发
         # 单例 guard：按线程名去重，插件热重载后旧线程仍在跑则不再起新线程，
