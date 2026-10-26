@@ -51,7 +51,7 @@ except ImportError:
             return "unknown"
 
 
-OFFICIAL_UPDATE_DATE = "2026-10-21"
+OFFICIAL_UPDATE_DATE = "2026-10-26"
 
 
 async def handle_align_preview(request=None, plugin_base=""):

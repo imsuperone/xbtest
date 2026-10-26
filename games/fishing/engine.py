@@ -579,6 +579,8 @@ def cmd_clean_water(gid, qq):
     aq = d.get("aquarium", {})
     cur_water = int(aq.get("water_quality", 100))
     if cur_water >= 100:
+        if earned > 0:
+            _save_data(gid, qq, d)
         return "💧 您的水族馆水质清澈纯净（100/100），暂时无需换水哦！"
 
     coins = _get_coins(gid, qq)

@@ -45,13 +45,26 @@ def _safe_import_fishing(plugin_base: str = ""):
     except (ImportError, ValueError):
         pass
     base = plugin_base or plugin_root(__file__)
-    if base and base not in sys.path:
-        sys.path.insert(0, base)
-    try:
-        from games.fishing import data_fishes
-        return data_fishes
-    except Exception:
-        pass
+    if base:
+        if base not in sys.path:
+            sys.path.insert(0, base)
+        try:
+            from games.fishing import data_fishes
+            return data_fishes
+        except Exception:
+            pass
+        # 终极保底：通过 importlib 文件绝对路径加载
+        f_path = os.path.join(base, "games", "fishing", "data_fishes.py")
+        if os.path.isfile(f_path):
+            try:
+                import importlib.util
+                spec = importlib.util.spec_from_file_location("games_fishing_data_fishes_probe", f_path)
+                if spec and spec.loader:
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
+                    return mod
+            except Exception:
+                pass
     return None
 
 
@@ -456,6 +469,12 @@ async def handle_persistence_test(request=None, plugin_base=""):
         all_f = fishes_mod.load_all_fishes()
         f_cnt = len(all_f)
         p_ok = os.path.isfile(p_json) and os.path.getsize(p_json) > 100
+        if not p_ok and f_cnt > 0:
+            try:
+                fishes_mod.save_all_fishes(all_f)
+                p_ok = os.path.isfile(p_json) and os.path.getsize(p_json) > 100
+            except Exception:
+                pass
         b_ok = os.path.isfile(b_json) and os.path.getsize(b_json) > 100
         probe_results.append({
             "step": "fishing",
