@@ -591,6 +591,7 @@ def cmd_set_welcome(gid, qq, name):
         return "亲，您没有该坐骑，发送【我的坐骑】看看吧！"
     r["welcome"] = name
     _save(gid, qq, r)
+    _welcome_add(gid)
     return f"恭喜您将欢迎坐骑设置为「{name}」！\r\n发送【查看欢迎坐骑】查看当前欢迎坐骑！"
 
 
@@ -623,6 +624,7 @@ def cmd_recycle_welcome(gid, qq, name):
         return f"亲，该坐骑不是当前的欢迎坐骑，无法回收！当前欢迎坐骑为：【{r['welcome']}】"
     r["welcome"] = ""
     _save(gid, qq, r)
+    _welcome_remove(gid, qq)
     ST.recall_set(f"ride_welcome_{gid}_{qq}", "")
     return "已回收欢迎坐骑！后续将不再触发进群欢迎，如需重新启用，请发送【设置欢迎坐骑 名称】重新设置！"
 
@@ -642,7 +644,7 @@ def check_welcome(gid, qq):
         # 快速过滤：该群从未设置过欢迎，直接返回，避免每消息一次 acct DB 读（千群千人关键）
         try:
             _ensure_welcome_init()
-            if _WELCOME_GIDS is not None and str(gid) not in _WELCOME_GIDS:
+            if _WELCOME_GIDS and str(gid) not in _WELCOME_GIDS:
                 return None
         except Exception:
             pass
@@ -650,6 +652,7 @@ def check_welcome(gid, qq):
         w = r.get("welcome")
         if not w:
             return None
+        _welcome_add(gid)
         key = f"ride_welcome_{gid}_{qq}"
         try:
             last = ST.recall_get(key, "")

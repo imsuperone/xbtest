@@ -378,3 +378,93 @@ async def send_reply(event, reply, qq, raw, gid, ST, logger, do_platform,
             yield event.plain_result(cleaned_txt)
         except Exception:
             pass
+
+
+async def send_welcome_async(event, reply, qq, raw, gid, ST, logger, do_platform,
+                             name_prefix, build_chain, message_chain_cls, has_core, cq_img_re):
+    """迎新坐骑专属异步直投发送器：独立通道直接投递群聊，绝不占用当前 event.result，绝不调用 stop_event。
+    发送成功返回 True，失败或通道不可用返回 False（以便调用方优雅回退普通 yield 发送）。"""
+    if logger:
+        try:
+            summary = str(reply)[:60].replace("\r", " ").replace("\n", " ")
+            logger.info(f"[群 {gid}] [迎新坐骑] [{qq}] -> 欢迎入场: {summary}")
+        except Exception:
+            pass
+    try:
+        reply = name_prefix(qq, reply, None, gid)
+    except TypeError:
+        try:
+            reply = name_prefix(qq, reply)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    comp = build_chain(reply)
+    if not comp:
+        return False
+
+    chain = message_chain_cls(comp) if message_chain_cls else None
+    sent = False
+
+    # 1. 优先尝试 event.send(chain)
+    if hasattr(event, "send") and callable(event.send) and chain:
+        try:
+            await event.send(chain)
+            sent = True
+        except Exception as e:
+            if logger:
+                try:
+                    logger.debug(f"[迎新坐骑] event.send 失败: {e}")
+                except Exception:
+                    pass
+
+    # 2. 尝试 context.send_message(unified_msg_origin, chain)
+    if not sent and hasattr(event, "context") and hasattr(event.context, "send_message") and hasattr(event, "unified_msg_origin") and chain:
+        try:
+            await event.context.send_message(event.unified_msg_origin, chain)
+            sent = True
+        except Exception as e:
+            if logger:
+                try:
+                    logger.debug(f"[迎新坐骑] context.send_message 失败: {e}")
+                except Exception:
+                    pass
+
+    # 3. 尝试 OneBot call_action("send_group_msg", group_id=int(gid), message=...)
+    if not sent:
+        bot = getattr(event, "bot", None)
+        if not bot:
+            try:
+                from . import messaging
+                bot = getattr(messaging, "_LATEST_BOT", None)
+            except Exception:
+                bot = None
+        if bot:
+            try:
+                call = getattr(bot, "call_action", None) or getattr(bot, "call_api", None) or getattr(bot, "send_group_msg", None)
+                if callable(call):
+                    raw_txt = reply[0] if isinstance(reply, tuple) else str(reply)
+                    imgs = reply[1] if isinstance(reply, tuple) and len(reply) > 1 else []
+                    msg_payload = raw_txt
+                    if imgs:
+                        if isinstance(imgs, str):
+                            imgs = [imgs]
+                        import os as _os
+                        for img_p in imgs:
+                            if img_p and _os.path.isfile(str(img_p)):
+                                p_clean = str(img_p).replace("\\", "/")
+                                msg_payload += f"[CQ:image,file=file:///{p_clean}]"
+                    if getattr(call, "__name__", "") == "send_group_msg":
+                        await call(group_id=int(gid), message=msg_payload)
+                    else:
+                        await call("send_group_msg", group_id=int(gid), message=msg_payload)
+                    sent = True
+            except Exception as e:
+                if logger:
+                    try:
+                        logger.debug(f"[迎新坐骑] OneBot send_group_msg 失败: {e}")
+                    except Exception:
+                        pass
+
+    return sent
