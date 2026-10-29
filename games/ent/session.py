@@ -2,10 +2,7 @@
 """games/ent·session（原 ent.py 切分，语义不变）。"""
 import random
 import time
-try:
-    from ...core import storage as ST
-except ImportError:
-    from core import storage as ST
+from ...core import storage as ST
 from .content import *  # noqa
 def _active_game(gid):
     try:
@@ -83,13 +80,7 @@ async def _async_timeout_monitor(gid, kind, label, ans_text):
         if not cur_owner:
             return
 
-        try:
-            from ...core.messaging import send_proactive_group_msg
-        except ImportError:
-            try:
-                from core.messaging import send_proactive_group_msg
-            except ImportError:
-                send_proactive_group_msg = None
+        from ...core.messaging import send_proactive_group_msg
 
         if send_proactive_group_msg:
             await send_proactive_group_msg(

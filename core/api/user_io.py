@@ -4,31 +4,14 @@ import asyncio
 import base64
 import json
 import time
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json
 
-try:
-    from .. import storage as ST
-    from ...games import slave
-except ImportError:
-    from core import storage as ST
-    try:
-        from games import slave
-    except ImportError:
-        import slave  # type: ignore
+from .. import storage as ST
+from ...games import slave
 
-try:
-    from ..version import get_version as _get_version
-except ImportError:
-    try:
-        from core.version import get_version as _get_version  # type: ignore
-    except Exception:
-        def _get_version(*a, **k):  # type: ignore
-            return "unknown"
+from ..version import get_version as _get_version
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:

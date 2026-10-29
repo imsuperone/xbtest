@@ -357,8 +357,8 @@ def get_persistent_data_dir(plugin_base=""):
 
     # 1. 官方最高优先级：AstrBot 官方 StarTools.get_data_dir()
     try:
-        from astrbot.api.star import StarTools
-        official_p = StarTools.get_data_dir()
+        from ..adapters import StarTools
+        official_p = StarTools.get_data_dir() if StarTools else None
         if official_p:
             cand = str(official_p)
             os.makedirs(cand, exist_ok=True)
@@ -408,10 +408,7 @@ def get_persistent_data_dir(plugin_base=""):
 
 
 def init(db_path, config=None):
-    try:
-        from .app_config import set_config as _apply_cfg  # 延迟导入：破 app_config↔db 循环
-    except ImportError:
-        _apply_cfg = None
+    from .app_config import set_config as _apply_cfg
     with _S._LOCK:
         if _S._DB is not None and _S._DB_PATH == db_path:
             if isinstance(config, dict):

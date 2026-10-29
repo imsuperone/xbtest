@@ -26,13 +26,7 @@ def get_log_dir():
     global _LOG_DIR
     if _LOG_DIR and os.path.isdir(_LOG_DIR):
         return _LOG_DIR
-    try:
-        from . import storage as ST
-    except ImportError:
-        try:
-            from core import storage as ST
-        except ImportError:
-            ST = None
+    from . import storage as ST
 
     if ST and hasattr(ST, "get_persistent_data_dir"):
         pdir = ST.get_persistent_data_dir(_get_base_dir())

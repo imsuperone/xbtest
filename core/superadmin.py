@@ -7,10 +7,7 @@
 import os
 import re
 
-try:
-    from . import storage as ST
-except ImportError:
-    from core import storage as ST
+from . import storage as ST
 
 MENU = (
     "🔧 超管系统\r\n"
@@ -485,7 +482,7 @@ def cmd_backup_xb():
                     extra = "，WebDAV 云备份任务已触发"
             except Exception:
                 try:
-                    from core import webdav as _wd
+                    from . import webdav as _wd
                     if _wd.is_enabled():
                         extra = "，WebDAV 云备份任务已触发"
                 except Exception:
@@ -542,10 +539,7 @@ def _maint_msg(msg):
 
 def _version():
     """本地版本：读 version.py 单源（get_version 恒有值，无兜底链）。"""
-    try:
-        from .version import get_version
-    except ImportError:
-        from core.version import get_version  # type: ignore
+    from .version import get_version
     return f"小白测试版版本：{get_version()}"
 
 
@@ -559,10 +553,7 @@ _ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重�
 def _cmd_current_values():
     """超管精确指令「当前数值」：输出当前生效的调控模式（固定/实时）＋12 项核心数值。"""
     try:
-        try:
-            from .api.balance import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG, get_balance_state_snapshot as _snap
-        except ImportError:
-            from core.api.balance import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG, get_balance_state_snapshot as _snap  # type: ignore
+        from .api.balance import PRESETS as _PRE, _BALANCE_SIG_KEYS as _SIG, get_balance_state_snapshot as _snap
     except Exception:
         return "数值引擎未就绪，请稍后重试"
     try:
@@ -613,10 +604,7 @@ def _cmd_current_values():
 def _cmd_balance_control(arg):
     """超管指令「数值调控」：支持切换【固定模式（标准/休闲/硬核）】与【实时调整模式】。"""
     try:
-        try:
-            from .api.balance import apply_balance_config as _apply_bal
-        except ImportError:
-            from core.api.balance import apply_balance_config as _apply_bal  # type: ignore
+        from .api.balance import apply_balance_config as _apply_bal
     except Exception:
         return "数值引擎未就绪，请稍后重试"
     a = (arg or "").strip()
@@ -690,7 +678,7 @@ def _cmd_imgtest():
         _bound = getattr(_plat, "_Image", None) is not None
     except Exception:
         try:
-            from core import messaging as _plat
+            from . import messaging as _plat
             _bound = getattr(_plat, "_Image", None) is not None
         except Exception:
             _bound = False
@@ -757,20 +745,9 @@ def handle(gid, qq, raw, is_admin=False):
                 else:
                     raise ValueError("cache-miss")
             except ValueError:
-                try:
-                    from .api import version_check as updater
-                    # 测试版查 BETA 通道（xbtest 快照仓）；空 repo 默认查官方仓，对 beta 是误导
-                    info = updater.check_latest_version("", getattr(updater, "GITHUB_REPO_XBTEST", "imsuperone/xbtest"))
-                except Exception:
-                    try:
-                        from core.api import version_check as updater
-                        info = updater.check_latest_version("", getattr(updater, "GITHUB_REPO_XBTEST", "imsuperone/xbtest"))
-                    except Exception:
-                        try:
-                            from .api import stats as _up_compat
-                            info = _up_compat.check_latest_version("", getattr(_up_compat, "GITHUB_REPO_XBTEST", "imsuperone/xbtest"))
-                        except Exception:
-                            pass
+                from .api import version_check as updater
+                # 测试版查 BETA 通道（xbtest 快照仓）；空 repo 默认查官方仓，对 beta 是误导
+                info = updater.check_latest_version("", updater.GITHUB_REPO_XBTEST)
                 try:
                     import time as _t_ver2
                     _VER_CACHE["t"] = _t_ver2.time()
@@ -822,7 +799,7 @@ def handle(gid, qq, raw, is_admin=False):
             return f"【WebDAV测试】{'✅ 成功' if ok else '❌ 失败'}\r\n{msg}"
         except Exception:
             try:
-                from core import webdav as _wd
+                from . import webdav as _wd
                 ok, msg = _wd.test_connection()
                 return f"【WebDAV测试】{'✅ 成功' if ok else '❌ 失败'}\r\n{msg}"
             except Exception as e:

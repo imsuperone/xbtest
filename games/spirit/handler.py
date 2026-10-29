@@ -7,22 +7,10 @@ import json
 import random
 import time
 
-try:
-    from ...core import storage as ST
-except ImportError:
-    from core import storage as ST
+from ...core import storage as ST
 
 SD = ST.dual_attr(__package__, "data_spirit", ".", "games.spirit")
-try:
-    from ..config.spirit import (POWER_DIV, EXP_FLOOR, CATCH_MIN, CATCH_MAX,
-                                 CATCH_LV_STEP, CATCH_MASTER_EFF, CATCH_MASTER_RATE,
-                                 PVP_STAKE_CAP, PVP_STAKE_DIV, SHINY_RATE, SHINY_MULT,
-                                 SPIRIT_TRAITS, TRAVEL_EVENTS, STAT_GROWTH_RATES)
-except ImportError:
-    from games.config.spirit import (POWER_DIV, EXP_FLOOR, CATCH_MIN, CATCH_MAX,  # type: ignore
-                                     CATCH_LV_STEP, CATCH_MASTER_EFF, CATCH_MASTER_RATE,
-                                     PVP_STAKE_CAP, PVP_STAKE_DIV, SHINY_RATE, SHINY_MULT,
-                                     SPIRIT_TRAITS, TRAVEL_EVENTS, STAT_GROWTH_RATES)
+from ..config.spirit import POWER_DIV, EXP_FLOOR, CATCH_MIN, CATCH_MAX, CATCH_LV_STEP, CATCH_MASTER_EFF, CATCH_MASTER_RATE, PVP_STAKE_CAP, PVP_STAKE_DIV, SHINY_RATE, SHINY_MULT, SPIRIT_TRAITS, TRAVEL_EVENTS, STAT_GROWTH_RATES
 
 MENU = (
     "✨ 精灵系统\r\n"
@@ -46,13 +34,7 @@ MENU = (
 
 
 _cfg, _cfgi0 = ST.cfg_scope("精灵配置")
-try:
-    from ..config.spirit import DEFAULTS as _SP_DEFAULTS
-except ImportError:
-    try:
-        from games.config.spirit import DEFAULTS as _SP_DEFAULTS  # type: ignore
-    except Exception:
-        _SP_DEFAULTS = {}
+from ..config.spirit import DEFAULTS as _SP_DEFAULTS
 
 
 def _cfgi(key, default=0):
@@ -1470,10 +1452,7 @@ def cmd_travel(gid, qq, arg=""):
         t_hi = max(t_lo, _cfgi("旅行金币上限", 450))
         gold_gain = random.randint(t_lo, t_hi)
         try:
-            try:
-                from ..ride import active_ride_info
-            except ImportError:
-                from games.ride import active_ride_info  # type: ignore
+            from ..ride import active_ride_info
             _, _r_pct = active_ride_info(gid, qq)
             if _r_pct > 0:
                 gold_gain += gold_gain * int(_r_pct) // 100
@@ -1584,10 +1563,7 @@ def cmd_expedition(gid, qq, arg=""):
         e_hi = max(e_lo, _cfgi("远征单只金币上限", 360))
         gold_gain = random.randint(e_lo * cnt, e_hi * cnt) + min(500, total_p // 40)
         try:
-            try:
-                from ..ride import active_ride_info
-            except ImportError:
-                from games.ride import active_ride_info  # type: ignore
+            from ..ride import active_ride_info
             _, _r_pct2 = active_ride_info(gid, qq, aspect="travel")
             if _r_pct2 > 0:
                 gold_gain += gold_gain * int(_r_pct2) // 100
@@ -1812,10 +1788,7 @@ def cmd_rank(gid, kind):
 
 def lstr(q, gid=None):
     try:
-        try:
-            from .. import slave as S
-        except ImportError:
-            from games import slave as S
+        from .. import slave as S
         return S.display_name(gid, q, q)
     except Exception:
         return q
@@ -1850,7 +1823,7 @@ def _handle_inner(gid, qq, raw):
 
     bot_uin = ""
     try:
-        from games import slave as _slv
+        from .. import slave as _slv
         bot_uin = str(getattr(_slv, "BOT_UIN", "") or "")
     except Exception:
         try:

@@ -1,26 +1,13 @@
 # -*- coding: utf-8 -*-
 """全员空投 API — 批量福利空投（由 users.py 独立拆出，端点不变）。"""
 import asyncio
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 
 from .web_utils import _err, get_req_json
 
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST
+from .. import storage as ST
 
-try:
-    from ..version import get_version as _get_version
-except ImportError:
-    try:
-        from core.version import get_version as _get_version  # type: ignore
-    except Exception:
-        def _get_version(*a, **k):  # type: ignore
-            return "unknown"
+from ..version import get_version as _get_version
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:

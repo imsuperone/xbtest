@@ -55,15 +55,8 @@ def format_shanghai_time(dt_str, filename=""):
 
     return s or "-"
 
-try:
-    from . import storage as ST
-    from . import logger as _logger
-except ImportError:
-    from core import storage as ST
-    try:
-        from core import logger as _logger
-    except ImportError:
-        _logger = None
+from . import storage as ST
+from . import logger as _logger
 
 
 def is_enabled():

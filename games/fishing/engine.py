@@ -8,6 +8,7 @@ import math
 import random
 import re
 from .data_fishes import roll_random_fish, load_all_fishes, QUALITY_COLORS
+from ...core import storage as ST
 
 # 鱼饵预设规格：(价格, 发酵培育分钟, 塘主保护分钟, 可钓次数)
 BAITS = {
@@ -65,26 +66,8 @@ def _calc_diminishing_interest(current_daily, raw_gain, cap=100000):
         gain = max(0, cap - current_daily)
     return gain
 
-def _get_st():
-    try:
-        from ...core import storage as ST
-        return ST
-    except (ImportError, ValueError):
-        pass
-    try:
-        from ..core import storage as ST
-        return ST
-    except (ImportError, ValueError):
-        pass
-    try:
-        from core import storage as ST
-        return ST
-    except ImportError:
-        import storage as ST
-        return ST
 
 def _get_data(gid, qq):
-    ST = _get_st()
     a = ST.acct(gid, qq)
     raw = a.get("fishing", "{}")
     d = {}
@@ -115,28 +98,24 @@ def _get_data(gid, qq):
     return d
 
 def _save_data(gid, qq, data):
-    ST = _get_st()
     a = ST.acct(gid, qq)
     import json as _j
     a.set("fishing", _j.dumps(data, ensure_ascii=False))
     ST.acct_save(gid, qq)
 
 def _get_coins(gid, qq):
-    ST = _get_st()
     try:
         return ST.coins_get(gid, qq)
     except Exception:
         return 0
 
 def _add_coins(gid, qq, delta):
-    ST = _get_st()
     try:
         return ST.coins_add(gid, qq, delta)
     except Exception:
         return None
 
 def _get_stamina(gid, qq):
-    ST = _get_st()
     try:
         a = ST.acct(gid, qq)
         return a.int("stamina")
@@ -144,7 +123,6 @@ def _get_stamina(gid, qq):
         return 100
 
 def _sub_stamina(gid, qq, amt=1):
-    ST = _get_st()
     try:
         a = ST.acct(gid, qq)
         cur = a.int("stamina")
@@ -204,7 +182,6 @@ def _settle_aquarium(data):
 
 # ==================== 指令 1：打窝培育 ====================
 def cmd_bait(gid, qq, bait_name):
-    ST = _get_st()
     b_raw = str(bait_name or "").strip()
     if not b_raw:
         lines = [
@@ -290,7 +267,6 @@ def cmd_bait(gid, qq, bait_name):
 
 # ==================== 指令 2：查看鱼塘状态 ====================
 def cmd_pond(gid, qq):
-    ST = _get_st()
     d = _get_data(gid, qq)
     now = int(time.time())
     pond = d.get("pond")
@@ -328,7 +304,6 @@ def cmd_pond(gid, qq):
 
 # ==================== 指令 3：即时垂钓 (含水桶满仓前置拦截) ====================
 def cmd_fish(gid, qq):
-    ST = _get_st()
     d = _get_data(gid, qq)
     now = int(time.time())
 
@@ -406,7 +381,6 @@ def cmd_fish(gid, qq):
 
 # ==================== 指令 4：水桶查看 ====================
 def cmd_bucket(gid, qq):
-    ST = _get_st()
     d = _get_data(gid, qq)
     bucket = d.get("bucket", [])
     bucket_cap = int(d.get("bucket_cap", DEFAULT_BUCKET_CAP))
@@ -430,7 +404,6 @@ def cmd_bucket(gid, qq):
 
 # ==================== 指令 5：出售渔获 ====================
 def cmd_sell(gid, qq, arg=""):
-    ST = _get_st()
     d = _get_data(gid, qq)
     bucket = d.get("bucket", [])
     if not bucket:
@@ -462,7 +435,6 @@ def cmd_sell(gid, qq, arg=""):
 
 # ==================== 指令 6：水族馆展示与改名 ====================
 def cmd_aquarium(gid, qq):
-    ST = _get_st()
     d = _get_data(gid, qq)
     earned, cur_water = _settle_aquarium(d)
     _save_data(gid, qq, d)
@@ -505,7 +477,6 @@ def cmd_aquarium(gid, qq):
     return "\n".join(lines)
 
 def cmd_rename_aquarium(gid, qq, new_name):
-    ST = _get_st()
     n = new_name.strip()
     if not n or len(n) < 2 or len(n) > 12:
         return "❌ 水族馆名字长度必须在 2 ~ 12 个字之间哦！"
@@ -571,7 +542,6 @@ def cmd_take_fish(gid, qq, arg):
     return f"🪣 已将 [{fish.get('quality_label')}] 【{fish.get('name')}】从水族馆取出并放回水桶，现在可以发送【出售】变现啦！"
 
 def cmd_clean_water(gid, qq):
-    ST = _get_st()
     d = _get_data(gid, qq)
     earned, cur_water = _settle_aquarium(d)
     if earned > 0:
@@ -596,13 +566,12 @@ def cmd_clean_water(gid, qq):
 
 # ==================== 指令 7：社交偷鱼与奴隶造反 ====================
 def cmd_steal_fish(gid, qq, target_qq):
-    ST = _get_st()
     try:
         from ..slave.nick import display_name
         from ..bank.common import _find_qq_by_name
     except (ImportError, ValueError):
-        from games.slave.nick import display_name
-        from games.bank.common import _find_qq_by_name
+        from ..slave.nick import display_name
+        from ..bank.common import _find_qq_by_name
 
     raw_t = str(target_qq or "").strip()
     if not raw_t:
@@ -662,7 +631,7 @@ def cmd_steal_fish(gid, qq, target_qq):
         try:
             from .. import ride as _ride_mod
         except (ImportError, ValueError):
-            from games import ride as _ride_mod
+            from .. import ride as _ride_mod
         t_ride_info = _ride_mod._rides(gid, t_qq) if hasattr(_ride_mod, "_rides") else {}
         active_mount = t_ride_info.get("active", "")
         if active_mount:

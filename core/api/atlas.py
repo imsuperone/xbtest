@@ -5,22 +5,12 @@
 import asyncio
 import json
 import re
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 from .web_utils import _err, get_req_json
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST
+from .. import storage as ST
 def _raw_spirit_cfg(key):
     """读精灵图鉴原始配置（未配置/非法返回 {}，不回退内置；回退由引擎 _SPIRITS/_MAPS/_SHOP 负责）"""
     try:
-        try:
-            from ...games import spirit  # noqa
-        except ImportError:
-            pass
         v = ST.cfg("精灵图鉴", key, "")
     except Exception:
         return {}
@@ -94,10 +84,7 @@ def _coerce_atlas_section(key, val):
     return val if isinstance(val, dict) else {}
 def _load_spirit_data():
     try:
-        try:
-            from ...games import spirit
-        except ImportError:
-            from games import spirit  # type: ignore
+        from ...games import spirit
         sp = dict(spirit._SPIRITS() or {})  # type: ignore
         mp = dict(spirit._MAPS() or {})
         sh = dict(spirit._SHOP() or {})
@@ -106,10 +93,7 @@ def _load_spirit_data():
                 "shop": _coerce_atlas_section("shop", sh)}
     except Exception:
         try:
-            try:
-                from ...games.spirit import data_spirit as SD  # type: ignore
-            except ImportError:
-                from games.spirit import data_spirit as SD  # type: ignore
+            from ...games.spirit import data_spirit as SD
             return {"spirits": dict(getattr(SD, "SPIRITS", {})), "maps": dict(getattr(SD, "MAPS", {})), "shop": dict(getattr(SD, "SHOP", {}))}
         except Exception:
             return {"spirits": {}, "maps": {}, "shop": {}}
@@ -122,10 +106,7 @@ async def handle_spirits_get(request):
             data = dict(data)
             data["_raw"] = raw
             try:
-                try:
-                    from ...games.spirit import data_spirit as _SDB  # type: ignore
-                except ImportError:
-                    from games.spirit import data_spirit as _SDB  # type: ignore
+                from ...games.spirit import data_spirit as _SDB
                 data["_builtin"] = {
                     "spirits": dict(getattr(_SDB, "SPIRITS", {}) or {}),
                     "maps": dict(getattr(_SDB, "MAPS", {}) or {}),

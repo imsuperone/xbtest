@@ -2,17 +2,11 @@
 """配置快照 API — 快照列表/保存/恢复（由 backup.py 独立拆出，端点不变）。"""
 import json as _json
 import time
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json
 
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST
+from .. import storage as ST
 
 
 # ---------- 全量配置快照（一键恢复）：存 kv/DB，独立于 AstrBot 配置体系 ----------
@@ -137,24 +131,6 @@ def auto_snapshot_if_changed():
         pass
 
 
-async def handle_cfg_snapshots(request, plugin_base=""):
-    """列出配置快照"""
-    try:
-        idx = _snap_index()
-        out = []
-        for name in idx:
-            try:
-                raw = ST.recall_get("cfgsnap__" + name, "")
-                d = _json.loads(raw) if raw else {}
-                secs = sorted((d.get("config") or {}).keys()) if isinstance(d, dict) else []
-            except Exception:
-                secs = []
-            out.append({"name": name, "sections": secs})
-        return json_response({"ok": True, "snapshots": out})
-    except Exception as e:
-        return _err(f"snapshots failed: {e}", 500)
-
-
 async def handle_cfg_snapshot_save(request, plugin_base=""):
     """立即快照当前全量配置（含必要配置与用户全部自定义）——用户手动触发，标记为手动快照"""
     try:
@@ -186,51 +162,4 @@ async def handle_cfg_snapshot_save(request, plugin_base=""):
         return _err(f"snapshot save failed: {e}", 500)
 
 
-async def handle_cfg_snapshot_restore(request, plugin_base=""):
-    """一键恢复指定（或最新）配置快照"""
-    try:
-        p = await get_req_json(request, default={})
-        name = str((p.get("name") or "") if isinstance(p, dict) else "").strip()
-        if not name:
-            name = get_req_query(request, "name", "").strip()
-        if not name:
-            name = str(ST.recall_get("cfgsnap__latest", "") or "").strip()
-        if not name:
-            return _err("no snapshot (name required)", 404)
-        raw = ST.recall_get("cfgsnap__" + name, "")
-        if not raw:
-            return _err("snapshot not found", 404)
-        d = _json.loads(raw)
-        cfg = d.get("config") if isinstance(d, dict) else None
-        if not isinstance(cfg, dict):
-            return _err("snapshot broken", 500)
-        if hasattr(ST, "_CONFIG"):
-            ST._CONFIG.clear()
-            for sec, kv in cfg.items():
-                if isinstance(kv, dict):
-                    if sec in getattr(ST, "_COLL_FILES", {}):
-                        # 旧快照可能含商城/图鉴：收编进 sidecar，不进内存
-                        try:
-                            ST.coll_merge(sec, kv)
-                        except Exception:
-                            pass
-                        continue
-                    ST._CONFIG[str(sec)] = {str(k): v for k, v in kv.items()}
-        try:
-            if hasattr(ST, "_bump_config_ver"):
-                ST._bump_config_ver()
-        except Exception:
-            pass
-        try:
-            ST.save_config()
-        except Exception:
-            pass
-        try:
-            if hasattr(ST, "wd_cfg_backup"):
-                ST.wd_cfg_backup((ST._CONFIG.get("备份配置") or {}) if isinstance(ST._CONFIG.get("备份配置"), dict) else None)
-        except Exception:
-            pass
-        return json_response({"ok": True, "name": name})
-    except Exception as e:
-        return _err(f"snapshot restore failed: {e}", 500)
 

@@ -2,21 +2,12 @@
 """配置 API — schema / commands / get / save / auto_balance (覆盖28大系统全套平衡预设)"""
 import math
 import os
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 from .web_utils import _err, get_req_json, no_cache_response
 
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST  # type: ignore
+from .. import storage as ST
 
-try:
-    from .. import config as _cfg_layer
-except ImportError:
-    import config as _cfg_layer  # type: ignore
+from .. import config as _cfg_layer
 
 
 def _validate_config(norm, plugin_base=""):
@@ -204,7 +195,7 @@ async def handle_cfg_save(request, plugin_base=""):
                 _auto_snap()
             except Exception:
                 try:
-                    from core.api.snapshots import auto_snapshot_if_changed as _auto_snap2
+                    from ..api.snapshots import auto_snapshot_if_changed as _auto_snap2
                     _auto_snap2()
                 except Exception:
                     pass
@@ -227,7 +218,4 @@ async def handle_cfg_save(request, plugin_base=""):
 
 
 # ==================== 拆分门面（balance 已独立，老路径兼容） ====================
-try:
-    from .balance import PRESETS, _BALANCE_SIG_KEYS  # type: ignore
-except ImportError:
-    pass
+from .balance import PRESETS, _BALANCE_SIG_KEYS

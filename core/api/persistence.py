@@ -6,17 +6,13 @@ import sys
 import time
 from typing import Any, Dict
 
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response  # type: ignore
+from ..adapters import json_response
 
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST  # type: ignore
+from .. import storage as ST
 
 from .web_utils import _err, plugin_root
+from ...games.fishing import data_fishes
+from ...games.config import shop
 
 
 def _get_pers_dir(plugin_base: str = "") -> str:
@@ -27,73 +23,6 @@ def _get_pers_dir(plugin_base: str = "") -> str:
     return os.path.join(base, "data")
 
 
-def _safe_import_fishing(plugin_base: str = ""):
-    """安全导入 games.fishing.data_fishes 模块，自动处理跨环境相对路径与 sys.path 降级"""
-    try:
-        from ...games.fishing import data_fishes
-        return data_fishes
-    except (ImportError, ValueError):
-        pass
-    try:
-        from games.fishing import data_fishes
-        return data_fishes
-    except (ImportError, ValueError):
-        pass
-    try:
-        from astrbot_plugin_xbbot_beta.games.fishing import data_fishes
-        return data_fishes
-    except (ImportError, ValueError):
-        pass
-    base = plugin_base or plugin_root(__file__)
-    if base:
-        if base not in sys.path:
-            sys.path.insert(0, base)
-        try:
-            from games.fishing import data_fishes
-            return data_fishes
-        except Exception:
-            pass
-        # 终极保底：通过 importlib 文件绝对路径加载
-        f_path = os.path.join(base, "games", "fishing", "data_fishes.py")
-        if os.path.isfile(f_path):
-            try:
-                import importlib.util
-                spec = importlib.util.spec_from_file_location("games_fishing_data_fishes_probe", f_path)
-                if spec and spec.loader:
-                    mod = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(mod)
-                    return mod
-            except Exception:
-                pass
-    return None
-
-
-def _safe_import_shop(plugin_base: str = ""):
-    """安全导入 games.config.shop 模块，自动处理跨环境相对路径与 sys.path 降级"""
-    try:
-        from ...games.config import shop
-        return shop
-    except (ImportError, ValueError):
-        pass
-    try:
-        from games.config import shop
-        return shop
-    except (ImportError, ValueError):
-        pass
-    try:
-        from astrbot_plugin_xbbot_beta.games.config import shop
-        return shop
-    except (ImportError, ValueError):
-        pass
-    base = plugin_base or plugin_root(__file__)
-    if base and base not in sys.path:
-        sys.path.insert(0, base)
-    try:
-        from games.config import shop
-        return shop
-    except Exception:
-        pass
-    return None
 
 
 def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
@@ -159,7 +88,7 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
         db_mirror_ok = False
 
     # 3. 自定义坐骑持久化统计
-    shop_mod = _safe_import_shop(plugin_base)
+    shop_mod = shop
     OFF_RIDE_SHOP = getattr(shop_mod, "RIDE_SHOP", {}) if shop_mod else {}
 
     cur_rides = {}
@@ -212,7 +141,7 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
     # 5. 自建题库持久化统计
     custom_questions_cnt = 0
     try:
-        from core.api.questions import _BANK_MAP, _get_q_dir
+        from ..api.questions import _BANK_MAP, _get_q_dir
         q_dir = _get_q_dir(plugin_base)
         for cat_id, cat_cfg in _BANK_MAP.items():
             f_name = cat_cfg.get("file")
@@ -285,7 +214,7 @@ def _gather_persistence_info(plugin_base: str = "") -> Dict[str, Any]:
     total_fishes_cnt = 0
     custom_fishes_cnt = 0
     try:
-        fishes_mod = _safe_import_fishing(plugin_base)
+        fishes_mod = data_fishes
         if fishes_mod:
             p_json, b_json, d_seed, _, _ = fishes_mod.get_fish_paths()
             f_list = fishes_mod.load_all_fishes()
@@ -462,7 +391,7 @@ async def handle_persistence_test(request=None, plugin_base=""):
 
     # 4. 钓鱼图鉴 fishing_fishes.json 双重持久化探针
     try:
-        fishes_mod = _safe_import_fishing(base)
+        fishes_mod = data_fishes
         if not fishes_mod:
             raise RuntimeError("无法导入 games.fishing.data_fishes 模块 (请检查插件根目录)")
         p_json, b_json, d_seed, p_dir, b_dir = fishes_mod.get_fish_paths()

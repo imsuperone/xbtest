@@ -2,17 +2,13 @@
 """云备份 API — WebDAV 测试/备份/文件/恢复/删除（由 backup.py 独立拆出，端点不变）。"""
 import os
 import time
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json
 
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST
+from .. import webdav as _wd
+
+from .. import storage as ST
 
 
 from .backup import _backup_base, _safe_backup
@@ -21,13 +17,6 @@ from .backup import _backup_base, _safe_backup
 async def handle_webdav_test(request):
     """测试 WebDAV 连接（完全异步化，绝不阻塞主事件循环，支持动态参数与回退读取配置）"""
     import asyncio
-    try:
-        from .. import webdav as _wd
-    except ImportError:
-        try:
-            from core import webdav as _wd
-        except ImportError:
-            return _err("WebDAV 模块未加载", 500)
     try:
         p = await get_req_json(request, default={})
         url = (p.get("url") if isinstance(p, dict) else None) or get_req_query(request, "url", None)
@@ -59,10 +48,7 @@ async def handle_webdav_backup_now(request, plugin_base=""):
             dst = ST.backup_user_data(force=True, auto_upload=False)
         if not dst or not os.path.isfile(dst):
             return False, "本地备份生成或定位失败", None
-        try:
-            from .. import webdav as _wd
-        except ImportError:
-            from core import webdav as _wd
+        from .. import webdav as _wd
         ok, msg = _wd.upload_backup(dst)
         return ok, msg, os.path.basename(dst)
     try:
@@ -77,13 +63,6 @@ async def handle_webdav_backup_now(request, plugin_base=""):
 async def handle_webdav_files(request):
     """获取 WebDAV 远端目录中的备份文件列表（完全异步化，绝不阻塞主事件循环）"""
     import asyncio
-    try:
-        from .. import webdav as _wd
-    except ImportError:
-        try:
-            from core import webdav as _wd
-        except ImportError:
-            return _err("WebDAV 模块未加载", 500)
     try:
         p = await get_req_json(request, default={})
         url = (p.get("url") if isinstance(p, dict) else None) or get_req_query(request, "url", None)
@@ -102,13 +81,6 @@ async def handle_webdav_files(request):
 async def handle_webdav_restore(request, plugin_base=""):
     """从 WebDAV 远端备份快捷热恢复（完全异步下载，主锁内原子无损热加载）"""
     import asyncio
-    try:
-        from .. import webdav as _wd
-    except ImportError:
-        try:
-            from core import webdav as _wd
-        except ImportError:
-            return _err("WebDAV 模块未加载", 500)
 
     p = await get_req_json(request, default={})
     file_name = str((p.get("file") if isinstance(p, dict) else "") or (p.get("name") if isinstance(p, dict) else "") or get_req_query(request, "file", "")).strip()
@@ -156,13 +128,6 @@ async def handle_webdav_restore(request, plugin_base=""):
 async def handle_webdav_delete(request, plugin_base=""):
     """删除 WebDAV 远端指定备份文件（完全异步化，绝不阻塞主事件循环）"""
     import asyncio
-    try:
-        from .. import webdav as _wd
-    except ImportError:
-        try:
-            from core import webdav as _wd
-        except ImportError:
-            return _err("WebDAV 模块未加载", 500)
 
     p = await get_req_json(request, default={})
     file_name = str((p.get("file") if isinstance(p, dict) else "") or (p.get("name") if isinstance(p, dict) else "") or get_req_query(request, "file", "")).strip()

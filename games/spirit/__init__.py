@@ -1,15 +1,9 @@
 # -*- coding: utf-8 -*-
 """games/spirit/ — 精灵包门面（handler 玩法入口 / data_spirit 内置数据）。对外与旧单文件一致。"""
-try:
-    from .handler import *
-    from .handler import _SPIRITS, _MAPS, _SHOP
-    from . import handler as handler
-    from . import data_spirit as data_spirit
-except ImportError:
-    from handler import *
-    from handler import _SPIRITS, _MAPS, _SHOP
-    import handler as handler
-    import data_spirit as data_spirit
+from .handler import *
+from .handler import _SPIRITS, _MAPS, _SHOP
+from . import handler as handler
+from . import data_spirit as data_spirit
 
 __all__ = ["MENU", "handle", "cmd_adopt", "cmd_gift", "cmd_my", "cmd_view",
            "cmd_shop", "cmd_buy", "cmd_map", "cmd_map_detail", "cmd_backpack",

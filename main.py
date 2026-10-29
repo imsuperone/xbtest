@@ -5,18 +5,7 @@
 旧版扫描只认类名以 Plugin 结尾 / 命名为 Main 的类。逻辑全在 core/app.py 的 XbBot，
 此处 Main 仅做入口声明 + 消息入口装饰（装饰器决定 handler 归属模块，必须在 main.py）。
 """
-import os
-import sys
-
-# 注入插件根目录至 sys.path，确保宿主加载时各子模块解析 games/core 绝不发生 ModuleNotFoundError
-_PLUGIN_ROOT = os.path.dirname(os.path.abspath(__file__))
-if _PLUGIN_ROOT not in sys.path:
-    sys.path.insert(0, _PLUGIN_ROOT)
-
-try:
-    from .core.app import XbBot, handle, PLUGIN_ID, PLUGIN_VERSION, PLUGIN_DESC
-except ImportError:
-    from core.app import XbBot, handle, PLUGIN_ID, PLUGIN_VERSION, PLUGIN_DESC  # type: ignore
+from .core.app import XbBot, handle, PLUGIN_ID, PLUGIN_VERSION, PLUGIN_DESC
 
 try:
     from astrbot.api.event import AstrMessageEvent

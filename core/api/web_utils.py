@@ -5,10 +5,7 @@ import json
 import os
 # json_response / error_response 单源 core.adapters（SDK 收口，astrbot 缺失时自带降级替身）：
 # 相对优先、顶层绝对回退，与全仓既有范式一致，不再叠第三、四级兜底
-try:
-    from ..adapters import json_response, _orig_error_response
-except ImportError:
-    from core.adapters import json_response, _orig_error_response  # type: ignore
+from ..adapters import json_response, _orig_error_response
 
 
 def _err(msg, code=500):
@@ -38,7 +35,7 @@ def get_req_query(request, key, default=""):
     req = request
     if req is None:
         try:
-            from astrbot.api.web import request as _web_req
+            from ..adapters import request as _web_req
             req = _web_req
         except Exception:
             try:
@@ -82,7 +79,7 @@ async def get_req_json(request, default=None):
     req = request
     if req is None:
         try:
-            from astrbot.api.web import request as _web_req
+            from ..adapters import request as _web_req
             req = _web_req
         except Exception:
             try:

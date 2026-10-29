@@ -4,17 +4,11 @@ import asyncio
 import json as _json
 import os
 import time
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json, no_cache_response
 
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST
+from .. import storage as ST
 
 
 def _backup_base(plugin_base=""):
@@ -320,10 +314,7 @@ async def handle_db_doctor(request, plugin_base=""):
         def _vacuum_work(path):
             import sqlite3 as _sql
             try:
-                try:
-                    from .. import storage as _ST
-                except ImportError:
-                    from core import storage as _ST  # type: ignore
+                from .. import storage as _ST
                 c = _sql.connect(path, timeout=getattr(_ST, "DB_TIMEOUT", 30.0))
                 try:
                     c.execute("PRAGMA wal_checkpoint(TRUNCATE)")
@@ -397,13 +388,7 @@ async def handle_backups_prune(request, plugin_base=""):
         local_deleted = 0
     remote_deleted = 0
     remote_msg = "未配置 WebDAV，跳过云端修剪"
-    try:
-        from .. import webdav as _wd
-    except ImportError:
-        try:
-            from core import webdav as _wd
-        except ImportError:
-            _wd = None
+    from .. import webdav as _wd
     if _wd is not None:
         try:
             if _wd.is_enabled():

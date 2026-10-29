@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 """games/bank·route（原 bank.py 切分，语义不变）。"""
 import re
-try:
-    from ...core import storage as ST
-except ImportError:
-    from core import storage as ST
+from ...core import storage as ST
 from .common import *  # noqa
 from .jail import *  # noqa
 from .redpack import *  # noqa

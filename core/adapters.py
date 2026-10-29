@@ -11,7 +11,7 @@
   try:
       from .adapters import Image, Plain, json_response          # core/ 内模块用
   except ImportError:
-      from core.adapters import Image, Plain, json_response     # 顶层直跑用
+      from .adapters import Image, Plain, json_response     # 顶层直跑用
 
 行为保证：astrbot 缺失时不抛异常，返回降级替身（Plain 回显文本，
 json_response 回显 dict），与重构前各文件内联 try/except 完全一致。

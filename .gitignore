@@ -18,6 +18,8 @@ data/*.db-shm
 data/config.json
 data/shop.json
 data/backups/
+data/cmd_config.json
+data/t2i_templates/
 # data/img/ 下除内置图库 nuli|rides 外的运行时目录（武器池 gacha、上传等）不入库
 data/img/*
 !data/img/nuli/
@@ -70,6 +72,9 @@ data/temp/
 
 # AI 交接文档（随代码但永不上 GitHub，见 aidocs/）
 aidocs/
+
+# 测试脚本不上发布仓（本地保留跑测试；文档真本在仓库外 aihelp/）
+tests/
 
 # 发行包（本地三端同步，不进 GitHub）
 *.zip

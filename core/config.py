@@ -223,13 +223,7 @@ def _collect_commands(base_dir="", store=None):
                             except Exception:
                                 pass
             if seen and not cmds:
-                try:
-                    from .logger import error as _log_err_cmds
-                except ImportError:
-                    try:
-                        from core.logger import error as _log_err_cmds  # type: ignore
-                    except Exception:
-                        _log_err_cmds = None
+                from .logger import error as _log_err_cmds
                 try:
                     if _log_err_cmds:
                         _log_err_cmds(f"_collect_commands: {name}.COMMANDS 静态求值失败（仅支持字面量/常量名/加法拼接）")
@@ -264,13 +258,7 @@ def _collect_commands(base_dir="", store=None):
                         out[eng_name].insert(0, w)
         except Exception as _e_wake:
             # 唤醒词扩展失败记日志（曾 except:pass 吞错，语义不变：失败即无扩展词）
-            try:
-                from .logger import error as _log_err_wake
-            except ImportError:
-                try:
-                    from core.logger import error as _log_err_wake  # type: ignore
-                except Exception:
-                    _log_err_wake = None
+            from .logger import error as _log_err_wake
             try:
                 if _log_err_wake:
                     _log_err_wake(f"_collect_commands 唤醒词扩展失败: {_e_wake}")
@@ -278,13 +266,7 @@ def _collect_commands(base_dir="", store=None):
                 pass
     except Exception as _e_coll:
         # 采集整体失败记日志（曾吞错致指令索引静默为空）
-        try:
-            from .logger import error as _log_err_coll
-        except ImportError:
-            try:
-                from core.logger import error as _log_err_coll  # type: ignore
-            except Exception:
-                _log_err_coll = None
+        from .logger import error as _log_err_coll
         try:
             if _log_err_coll:
                 _log_err_coll(f"_collect_commands 采集失败: {_e_coll}")

@@ -2,15 +2,9 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import time
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 from .web_utils import _err, get_req_json, get_req_query
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST  # type: ignore
+from .. import storage as ST
 
 
 _BOT_GROUPS_CACHE = {}
@@ -24,10 +18,7 @@ async def _refresh_bot_groups(context=None, timeout=2.5):
         return _BOT_GROUPS_CACHE
     _BOT_GROUPS_REFRESHING = True
     try:
-        try:
-            from .. import messaging as _msg_mod
-        except ImportError:
-            from core import messaging as _msg_mod  # type: ignore
+        from .. import messaging as _msg_mod
         fetched = await asyncio.wait_for(_msg_mod.fetch_bot_groups(context=context), timeout=timeout)
         if isinstance(fetched, dict) and fetched:
             _BOT_GROUPS_CACHE = dict(fetched)
@@ -176,23 +167,3 @@ async def handle_groups_toggle(request):
 
     return await asyncio.to_thread(_work)
 
-async def handle_groups_delete(request):
-    data = await get_req_json(request, default={})
-    gid = str(data.get("gid", "") or data.get("group_id", "") or "").strip()
-    if not gid or not gid.isdigit():
-        return json_response({"ok": False, "msg": "群号必填且需为纯数字"})
-
-    def _work():
-        try:
-            sec = ST._CONFIG.get("群组开关配置") if hasattr(ST, "_CONFIG") and isinstance(ST._CONFIG, dict) else {}
-            if isinstance(sec, dict) and gid in sec:
-                sec.pop(gid, None)
-            try: ST.save_config()
-            except Exception: pass
-            try: ST.recall_set(f"group_switch_{gid}", "1")
-            except Exception: pass
-            return json_response({"ok": True, "gid": gid, "deleted": True})
-        except Exception as e:
-            return _err(str(e), 500)
-
-    return await asyncio.to_thread(_work)

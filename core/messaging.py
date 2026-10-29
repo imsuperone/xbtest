@@ -26,18 +26,7 @@ def bind(image_cls=None, slave_mod=None):
 
 
 import urllib.parse
-try:
-    from .adapters import Plain
-except ImportError:
-    try:
-        from core.adapters import Plain  # type: ignore
-    except ImportError:
-        try:
-            from astrbot.api.message_components import Plain
-        except Exception:
-            class Plain:
-                def __init__(self, text):
-                    self.text = text
+from .adapters import Plain
 
 
 def _build_chain(reply):
@@ -90,10 +79,7 @@ def _build_chain(reply):
 
     comp = [Plain(tt)] if tt else []
     if imgs:
-        try:
-            from astrbot.api.message_components import Image as _Img
-        except Exception:
-            _Img = _Image
+        _Img = _Image
         for p in imgs:
             try:
                 p_clean = str(p).strip()
@@ -201,7 +187,7 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
                             except Exception:
                                 pass
                             try:
-                                from core import storage as _st_reg
+                                from . import storage as _st_reg
                                 _st_reg.register_name(_tq, _tn)
                             except Exception:
                                 pass

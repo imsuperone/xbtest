@@ -4,16 +4,7 @@ shared（常量/缓存/渲染，原 template 已并入）/ guards（开关守卫
 rules（自定义/禁用/权限）/ pipeline（11 层 handle）。对外名与包门面一致。"""
 import random
 import time as _t_guard
-try:
-    from .protocol import (  # type: ignore
-        SILENT as _PROTO_SILENT, maintenance_active as _proto_active,
-        is_mentioned as _proto_mentioned, engine_commands as _proto_cmds,
-    )
-except ImportError:
-    from core.protocol import (  # type: ignore
-        SILENT as _PROTO_SILENT, maintenance_active as _proto_active,
-        is_mentioned as _proto_mentioned, engine_commands as _proto_cmds,
-    )
+from .protocol import SILENT as _PROTO_SILENT, maintenance_active as _proto_active, is_mentioned as _proto_mentioned, engine_commands as _proto_cmds
 _REPLY_OVERRIDE_SEC = "指令回复配置"
 _DEFAULT_MARKERS = ("{回复}", "{默认}", "默认", "默认回复")
 _CUSTOM_SEC = "自定义指令配置"
@@ -76,17 +67,8 @@ def _render_vars(tpl, gid, qq, store):
         name = qq
         try:
             # 显示名解析单源（L4）：与 messaging._name_prefix 同一条链，此处不再自己解析
-            try:
-                from .messaging import resolve_display_name as _rdn  # type: ignore
-            except ImportError:
-                from core.messaging import resolve_display_name as _rdn  # type: ignore
-            try:
-                from ..games import slave as _sl  # type: ignore
-            except Exception:
-                try:
-                    import slave as _sl  # type: ignore
-                except Exception:
-                    _sl = None
+            from .messaging import resolve_display_name as _rdn
+            from ..games import slave as _sl
             name = _rdn(qq, gid=gid, slave_mod=_sl)
         except Exception:
             name = str(qq)
@@ -687,7 +669,7 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
         _rt_tick(False)
     except Exception:
         try:
-            from core.api.balance import maybe_realtime_tick as _rt_tick  # type: ignore
+            from .api.balance import maybe_realtime_tick as _rt_tick  # type: ignore
             _rt_tick(False)
         except Exception:
             pass
@@ -724,10 +706,7 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
         if not is_admin:
             return "亲亲，你没有相关权限哦~该指令仅限机器人管理员使用！"
         try:
-            try:
-                from . import selftest as _selftest_mod
-            except ImportError:
-                import core.selftest as _selftest_mod
+            from . import selftest as _selftest_mod
             norm_c = raw.strip().lower().replace(" ", "").replace("_", "")
             if norm_c in ("测试xbtestall", "测试testxball", "xbtestall", "测试全部"):
                 res = _selftest_mod.run_all_probe_suites()

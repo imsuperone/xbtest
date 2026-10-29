@@ -3,12 +3,8 @@
 import os as _os
 import re as _re
 import threading as _threading
-try:
-    from ...core import storage as ST
-    store = ST
-except ImportError:
-    from core import storage as ST
-    store = ST
+from ...core import storage as ST
+store = ST
 from . import slave_state as _S
 from .base import U, _cmd_lock, cfg, load_events, log, save, star_of, state, uget, weapons_of
 from .combat import (

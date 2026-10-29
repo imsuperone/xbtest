@@ -3,10 +3,7 @@
 import random
 import re
 import time
-try:
-    from ...core import storage as ST
-except ImportError:
-    from core import storage as ST
+from ...core import storage as ST
 from .content import *  # noqa
 from .session import *  # noqa
 
@@ -361,10 +358,7 @@ def _match_answer(user_input: str, standard_answer: str) -> bool:
 
 
 def _play(gid, qq, text):
-    try:
-        from ...core import storage as S
-    except Exception:
-        from core import storage as S
+    from ...core import storage as S
     # 奖励 helper：返回是否全部到账；失败调用方必须如实告知（禁冒领成功）
     def _reward(gid, qq, coin=0, meili=0):
         _ok = True

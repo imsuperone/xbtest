@@ -3,23 +3,11 @@
 import datetime as dt
 import re
 import time
-try:
-    from ...core import storage as ST
-except ImportError:
-    from core import storage as ST
-try:
-    from ..config.bank import DEFAULTS as _BANK_DEFAULTS
-except ImportError:
-    try:
-        from games.config.bank import DEFAULTS as _BANK_DEFAULTS  # type: ignore
-    except Exception:
-        _BANK_DEFAULTS = {}
+from ...core import storage as ST
+from ..config.bank import DEFAULTS as _BANK_DEFAULTS
 
 
-try:
-    from ..config.bank import (GAMBLE_MULT, REDPACK_MIN_DIV, REDPACK_MAX_DIV)
-except ImportError:
-    from games.config.bank import (GAMBLE_MULT, REDPACK_MIN_DIV, REDPACK_MAX_DIV)  # type: ignore
+from ..config.bank import GAMBLE_MULT, REDPACK_MIN_DIV, REDPACK_MAX_DIV
 
 
 def cfgi(sec, key, default=0):

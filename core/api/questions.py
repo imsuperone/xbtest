@@ -4,10 +4,7 @@ import os
 import json
 import re
 import time
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response  # type: ignore
+from ..adapters import json_response
 from .web_utils import _err, get_req_json, get_req_query, no_cache_response
 
 _BANK_MAP = {
@@ -115,7 +112,7 @@ def _write_bank_file(fpath, items):
 
     # 同步镜像写入持久化目录
     try:
-        from core import storage as ST
+        from .. import storage as ST
         pers = ST.get_persistent_data_dir() if hasattr(ST, "get_persistent_data_dir") else ""
         if pers:
             pq_dir = os.path.join(pers, "data", "questions")
@@ -139,7 +136,7 @@ def _clear_runtime_cache():
         try:
             from ...games.ent import content as _ent_content
         except (ImportError, ValueError):
-            from games.ent import content as _ent_content  # type: ignore
+            from ...ent import content as _ent_content  # type: ignore
         if hasattr(_ent_content, "_FILE_BANKS_CACHE") and isinstance(_ent_content._FILE_BANKS_CACHE, dict):
             _ent_content._FILE_BANKS_CACHE.clear()
         if hasattr(_ent_content, "_CHAIN_WORDS_CACHE"):

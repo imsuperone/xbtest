@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """core/web_routes - Web API 注册表单源（路由+分发四元组；原 app.py 数据段并入，page_* 合成层已退役）。
-改路由只改此表；app.py 以兼容导入取表，老 `from core.app import _XB_API_ROUTES` 仍可用。
+改路由只改此表；app.py 以兼容导入取表，老 `from .app import _XB_API_ROUTES` 仍可用。
 #
 # 五元组 (路径后缀, 方法, page 名, 说明, 分发 (模块, 函数, 错误标签, 参数))：
 # page 名仅作路由身份/文档用，运行时闭包见 app._route_handler；改路由只改此表。
@@ -13,8 +13,8 @@ try:
     from .config import _load_schema, _collect_commands
 except Exception:
     try:
-        from core.adapters import json_response  # type: ignore
-        from core.config import _load_schema, _collect_commands  # type: ignore
+        from .adapters import json_response  # type: ignore
+        from .config import _load_schema, _collect_commands  # type: ignore
     except Exception:
         json_response = _load_schema = _collect_commands = None  # type: ignore
 
@@ -23,7 +23,6 @@ except Exception:
 # page 名仅作路由身份/文档用；运行时闭包由分发四元组经 app._route_handler 注册期生成，改路由只改此表。
 # 兼容检测关键字注释（_raw_file_response/is_raw/total_power）保留在对应行，禁删。
 _XB_API_ROUTES = [
-    ("stats", "GET", "page_stats", "游戏数据总览", ("core.api.stats", "handle_stats", "stats", {"mode": "none"})),
     ("rank", "GET", "page_rank", "排行榜", ("core.api.stats", "handle_rank", "rank", {"mode": "req"})),
     ("config/get", "GET", "page_cfg_get", "读取运行配置", ("core.api.settings", "handle_cfg_get", "get", {"mode": "get_req"})),
     ("config/save", "POST", "page_cfg_save", "保存运行配置", ("core.api.settings", "handle_cfg_save", "save", {"mode": "get_req", "with_base": True})),
@@ -57,7 +56,6 @@ _XB_API_ROUTES = [
     ("export", "GET,POST", "page_export", "导出统一入口(?kind=images|backup|logs)", ("core.api.exporters", "handle_export", "export", {"with_base": True})),
     ("spirits", "GET", "page_spirits_get", "精灵图鉴读取", ("core.api.atlas", "handle_spirits_get", "spirits get", {})),
     ("spirits/save", "POST", "page_spirits_save", "精灵图鉴保存", ("core.api.atlas", "handle_spirits_save", "spirits save", {})),
-    ("gacha/weapons", "GET", "page_gacha_weapons", "抽奖武器池", ("core.api.weapon_pool", "handle_gacha_weapons", "gacha weapons", {})),
     ("weapons/pool", "GET", "page_pool_list", "抽奖武器池文件列表", ("core.api.weapon_pool", "handle_pool_list", "pool list", {"mode": "req"})),
     ("weapons/pool/rename", "POST", "page_pool_rename", "抽奖武器改名", ("core.api.weapon_pool", "handle_pool_rename", "pool rename", {"mode": "req"})),
     ("weapons/pool/move", "POST", "page_pool_move", "抽奖武器改稀有度", ("core.api.weapon_pool", "handle_pool_move", "pool move", {"mode": "req"})),
@@ -69,9 +67,7 @@ _XB_API_ROUTES = [
     ("backups/create", "POST", "page_backups_create", "立即生成备份", ("core.api.backup", "handle_backups_create", "create", {"with_base": True})),
     ("backups/restore", "POST", "page_backups_restore", "恢复备份", ("core.api.backup", "handle_backups_restore", "restore", {"with_base": True})),
     ("backups/delete", "POST", "page_backups_delete", "删除备份", ("core.api.backup", "handle_backups_delete", "delete", {"with_base": True})),
-    ("backups/config/snapshots", "GET", "page_cfg_snapshots", "配置快照列表", ("core.api.snapshots", "handle_cfg_snapshots", "snapshots", {"with_base": True})),
     ("backups/config/snapshot/save", "POST", "page_cfg_snapshot_save", "保存配置快照", ("core.api.snapshots", "handle_cfg_snapshot_save", "snapshot save", {"with_base": True})),
-    ("backups/config/snapshot/restore", "POST", "page_cfg_snapshot_restore", "恢复配置快照", ("core.api.snapshots", "handle_cfg_snapshot_restore", "snapshot restore", {"with_base": True})),
     ("backups/doctor", "POST", "page_db_doctor", "数据库健康体检与碎片整理", ("core.api.backup", "handle_db_doctor", "db doctor", {"with_base": True})),
     ("backups/prune", "POST", "page_backups_prune", "按保留数量修剪本地与云端旧备份", ("core.api.backup", "handle_backups_prune", "prune", {"with_base": True})),
     ("import/legacy", "POST", "page_import_legacy", "旧库导入（兼容新旧格式）", ("core.api.migration", "handle_import_legacy", "legacy import", {"with_base": True})),
@@ -81,11 +77,8 @@ _XB_API_ROUTES = [
     ("spirit/users", "GET", "page_spirit_users", "精灵用户列表", ("core.api.profiles", "handle_spirit_users", "spirit users", {})),
     ("groups/list", "GET", "page_groups_list", "群聊列表", ("core.api.groups", "handle_groups_list", "groups list", {"use_context": True})),
     ("groups/toggle", "POST", "page_groups_toggle", "切换群聊/总开关", ("core.api.groups", "handle_groups_toggle", "groups toggle", {})),
-    ("groups/delete", "POST", "page_groups_delete", "删除群聊配置", ("core.api.groups", "handle_groups_delete", "groups delete", {})),
     ("admin/clear", "POST", "page_clear_all", "清空所有数据（三重确认）", ("core.api.backup", "handle_clear_all", "clear", {"with_base": True})),
     ("version", "GET", "page_version_get", "获取插件版本号(单源于metadata.yaml)", ("core.api.version_check", "handle_version_get", "version get", {})),
-    ("version/check", "GET,POST", "page_version_check", "在线检查版本更新", ("core.api.version_check", "handle_version_check", "version check", {"mode": "req", "with_base": True})),
-    ("version/channel", "GET,POST", "page_version_channel", "更新通道查询与切换", ("core.api.version_check", "handle_version_channel", "version channel", {"mode": "req"})),
     ("logs", "GET,POST", "page_logs_get", "获取插件运行日志", ("core.api.logs", "handle_logs_get", "logs get", {"mode": "req"})),
     ("logs/clear", "POST", "page_logs_clear", "清空插件运行日志", ("core.api.logs", "handle_logs_clear", "logs clear", {"mode": "req"})),
     ("questions/list", "GET", "page_questions_list", "读取题库列表", ("core.api.questions", "handle_questions_list", "questions list", {})),
@@ -93,7 +86,6 @@ _XB_API_ROUTES = [
     ("questions/export", "GET,POST", "page_questions_export", "题库导出", ("core.api.questions", "handle_questions_export", "questions export", {})),
     ("questions/import", "POST", "page_questions_import", "题库导入", ("core.api.questions", "handle_questions_import", "questions import", {})),
     ("questions/reset", "POST", "page_questions_reset", "恢复默认题库", ("core.api.questions", "handle_questions_reset", "questions reset", {})),
-    ("version/align", "POST", "page_version_align", "对齐官方最新版本预设 (兼容别名)", ("core.api.system_align", "handle_align_defaults", "align defaults", {"with_base": True})),
     ("system/align_defaults", "POST", "page_system_align_defaults", "对齐官方最新版本内容", ("core.api.system_align", "handle_align_defaults", "align defaults", {"with_base": True})),
     ("system/align_preview", "GET,POST", "page_system_align_preview", "预览官方最新版本差异", ("core.api.system_align", "handle_align_preview", "align preview", {"with_base": True})),
     # 钓鱼与水族馆系统 Web API
@@ -127,7 +119,6 @@ _XB_MUTATING_HANDLERS = frozenset({
     "handle_pool_rename", "handle_pool_move", "handle_pool_delete",
     "handle_pool_upload", "handle_pool_attrs", "handle_pool_replace_path",
     "handle_backups_create", "handle_backups_restore", "handle_backups_delete",
-    "handle_cfg_snapshot_save", "handle_cfg_snapshot_restore",
     "handle_backups_prune", "handle_db_doctor", "handle_clear_all",
     "handle_images_upload", "handle_images_delete", "handle_images_rename",
     "handle_images_mkdir", "handle_images_copy", "handle_images_text_save",

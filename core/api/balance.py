@@ -7,17 +7,11 @@ import copy
 import json
 import time
 
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 
 from .web_utils import _err, get_req_json
 
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST
+from .. import storage as ST
 
 
 # 旧版错误注入的虚构坐骑键（自动清理残留）
@@ -1110,14 +1104,14 @@ def _sync_ride_shop_dict(rides_override):
                     existing["img"] = rmeta.get("img", f"data/img/rides/{rname}.jpg")
                 if "buff" not in existing:
                     try:
-                        from games.config.shop import RIDE_SHOP as _DEF_RS
+                        from ...games.config.shop import RIDE_SHOP as _DEF_RS
                         if rname in _DEF_RS and "buff" in _DEF_RS[rname]:
                             existing["buff"] = _DEF_RS[rname]["buff"]
                     except Exception:
                         pass
                 if "buff_type" not in existing:
                     try:
-                        from games.config.shop import RIDE_SHOP as _DEF_RS
+                        from ...games.config.shop import RIDE_SHOP as _DEF_RS
                         if rname in _DEF_RS and "buff_type" in _DEF_RS[rname]:
                             existing["buff_type"] = _DEF_RS[rname]["buff_type"]
                     except Exception:
@@ -1335,7 +1329,7 @@ def get_balance_state_snapshot():
         from ...games.config import DEFAULTS as _GAME_DEFAULTS
     except Exception:
         try:
-            from games.config import DEFAULTS as _GAME_DEFAULTS  # type: ignore
+            from ...games.config import DEFAULTS as _GAME_DEFAULTS  # type: ignore
         except Exception:
             _GAME_DEFAULTS = {}
 

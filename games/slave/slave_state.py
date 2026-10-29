@@ -1,13 +1,7 @@
 # -*- coding: utf-8 -*-
 """games/slave/slave_state.py — 奴隶包共享态唯一家（原 slave.py 顶层数据）。
 可重绑态（BOT_UIN/EVENTS）经 _S. 访问；门面 __getattr__ 实时委托。"""
-try:
-    from ..text.text_slave import *  # noqa: F401,F403
-except ImportError:
-    try:
-        from games.text.text_slave import *  # type: ignore  # noqa: F401,F403
-    except Exception:
-        pass
+from ..text.text_slave import *  # noqa: F401,F403
 BOT_UIN = ""   # engine overwrites at runtime
 
 def set_bot_uin(uin):
@@ -59,16 +53,8 @@ MAX_PRICE = 1000000  # 奴隶身价上限（trade/combat 涨价钳位，坐骑/�
 PRICE_UP = 1.25  # 买入身价上涨默认倍率（与“费用配置.买入身价上涨”缺省一致）
 _CMD_LOCKS = {}
 _CMD_LOCKS_GUARD = _threading.Lock()
-try:
-    from ...core import storage as ST
-    store = ST
-except ImportError:
-    try:
-        from .. import storage as ST
-        store = ST
-    except ImportError:
-        from core import storage as ST
-        store = ST
+from ...core import storage as ST
+store = ST
 def _resolve_persistent_data_dir():
     if hasattr(store, "get_persistent_data_dir"):
         return store.get_persistent_data_dir(_BASE)

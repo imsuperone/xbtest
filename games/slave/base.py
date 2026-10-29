@@ -6,26 +6,10 @@ import random as _random
 import datetime as _dt
 import threading as _threading
 import json as _json
-try:
-    from ...core import storage as ST
-    store = ST
-except ImportError:
-    from core import storage as ST
-    store = ST
-try:
-    from ...core.keymap import cn_to_en as _cn2en
-except ImportError:
-    try:
-        from core.keymap import cn_to_en as _cn2en  # type: ignore
-    except Exception:
-        def _cn2en(k): return k
-try:
-    from ..config.slave import DEFAULTS as _SLAVE_DEFAULTS
-except ImportError:
-    try:
-        from games.config.slave import DEFAULTS as _SLAVE_DEFAULTS  # type: ignore
-    except Exception:
-        _SLAVE_DEFAULTS = {}
+from ...core import storage as ST
+store = ST
+from ...core.keymap import cn_to_en as _cn2en
+from ..config.slave import DEFAULTS as _SLAVE_DEFAULTS
 from . import slave_state as _S
 
 def _cmd_lock(gid):

@@ -7,13 +7,7 @@ import json
 import re
 import time
 
-try:
-    from ..core import storage as ST
-except ImportError:
-    try:
-        from . import storage as ST
-    except ImportError:
-        from core import storage as ST
+from ..core import storage as ST
 
 # 缓存：gid -> {gname -> [ (qq,g) ] }  15秒 TTL，避免每次全表扫
 # （成员变更经 _save_member 主动失效；精灵战力本就按 TTL 快照，15 秒 stale 可接受）
@@ -31,10 +25,7 @@ def _invalidate_guild_cache(gid):
 
 
 _cfg, _cfgi0 = ST.cfg_scope("帮派配置")
-try:
-    from .config.guild import DEFAULTS as _GUILD_DEFAULTS, CONTRIBUTE_DIV, WELFARE_PER_GONG
-except ImportError:
-    from games.config.guild import DEFAULTS as _GUILD_DEFAULTS, CONTRIBUTE_DIV, WELFARE_PER_GONG  # type: ignore
+from .config.guild import DEFAULTS as _GUILD_DEFAULTS, CONTRIBUTE_DIV, WELFARE_PER_GONG
 _SPIRIT_POWER_DIV = ST.dual_attr(__package__, "POWER_DIV", ".config.spirit", "games.config.spirit")
 
 
@@ -90,10 +81,7 @@ def _gname(gid, qq):
         except Exception:
             pass
         try:
-            try:
-                from ..core import messaging as _msg
-            except ImportError:
-                from core import messaging as _msg
+            from ..core import messaging as _msg
             card = _msg.sync_fetch_member_name(gid, str(qq))
             if card and card != str(qq):
                 SL.set_note_name(gid, qq, card)

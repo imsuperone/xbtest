@@ -3,14 +3,7 @@
 子模块一律经 `state` 访问可重绑态（门面 __getattr__ 实时委托）。"""
 import re
 import threading
-try:
-    from ..keymap import cn_to_en, translate_dict
-except ImportError:
-    try:
-        from core.keymap import cn_to_en, translate_dict
-    except Exception:
-        def cn_to_en(k): return k
-        def translate_dict(d): return d
+from ..keymap import cn_to_en, translate_dict
 _AT_CQ = re.compile(r"(?:\[CQ:at,qq=(\d+)[^\]]*\]|\[At:\s*(\d+)\])")
 _AT_QQ = re.compile(r"@\s*(\d{5,12})")
 _AT_NAME = re.compile(r"@\s*([^@\s，,]+)")
@@ -82,7 +75,7 @@ def _bump_config_ver():
         _cgc()
     except Exception:
         try:
-            from core.router import clear_guard_cache as _cgc2
+            from ..router import clear_guard_cache as _cgc2
             _cgc2()
         except Exception:
             pass

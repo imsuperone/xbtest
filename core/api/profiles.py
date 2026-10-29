@@ -1,20 +1,10 @@
 """游戏画像 API — 奴隶 / 精灵 用户画像 + 身价校准（图鉴已独立至 core/api/atlas.py，端点不变）"""
 import asyncio
 import json
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 from .web_utils import _err, get_req_query, get_req_json
-try:
-    from .. import storage as ST
-    from ...games import slave
-except ImportError:
-    from core import storage as ST
-    try:
-        from games import slave
-    except ImportError:
-        import slave  # type: ignore
+from .. import storage as ST
+from ...games import slave
 def _to_int(v, default=0):
     """脏数据安全 int：一条脏 price 禁掀翻整表（画像页 500 根因）"""
     try:

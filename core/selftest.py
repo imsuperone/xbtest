@@ -11,15 +11,8 @@ import os
 import sys
 import time
 
-try:
-    from . import storage as ST
-except ImportError:
-    import core.storage as ST
-
-try:
-    from ..games import sign, spirit, ent, bank, slave, ride, guild, adventure
-except (ImportError, ValueError):
-    from games import sign, spirit, ent, bank, slave, ride, guild, adventure
+from . import storage as ST
+from ..games import sign, spirit, ent, bank, slave, ride, guild, adventure
 
 SYS_ORDER = [
     ("sign", "签到系统", "测试xbtest 2"),

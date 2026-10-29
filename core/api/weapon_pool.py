@@ -5,57 +5,9 @@ import json
 import os as _os
 import re
 import shutil as _shutil
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 from .web_utils import _err, get_req_query, get_req_json, plugin_root, read_thumb_uri, read_upload_b64
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST
-
-
-async def handle_gacha_weapons(request):
-    """抽奖武器池（img/gacha SSR/SR/R 文件名去扩展名；附精确图片路径供自动匹配预览）"""
-    def _work():
-        try:
-            try:
-                from ...games import slave as _sl
-            except (ImportError, ValueError):
-                try:
-                    from games import slave as _sl
-                except (ImportError, ValueError):
-                    import slave as _sl  # type: ignore
-            try:
-                _base = _pool_base()
-            except Exception:
-                _base = ""
-            out, img = {}, {}
-            for rar in ("SSR", "SR", "R"):
-                try:
-                    names = []
-                    for p in (_sl._gacha_pool(rar) or []):
-                        try:
-                            nm = _os.path.splitext(_os.path.basename(p))[0]
-                            names.append(nm)
-                            try:
-                                rp = _os.path.relpath(p, _base).replace(_os.sep, "/") if _base else ""
-                                if rp and not rp.startswith(".."):
-                                    img.setdefault(nm, rp)
-                            except Exception:
-                                pass
-                        except Exception:
-                            pass
-                    out[rar] = sorted(set(names))
-                except Exception:
-                    out[rar] = []
-            return json_response({"ok": True, "pool": out, "img": img})
-        except Exception as e:
-            return _err(f"gacha weapons failed: {e}", 500)
-    return await asyncio.to_thread(_work)
-
-
+from .. import storage as ST
 
 
 try:
@@ -66,7 +18,7 @@ try:
         RARITY_DEFAULT_ATK as _RARITY_DEFAULT_ATK,
     )
 except (ImportError, ValueError):
-    from games.config.shop import (  # type: ignore
+    from ...config.shop import (  # type: ignore
         POOL_RARS as _POOL_RARS,
         POOL_IMG_EXTS as _POOL_IMG_EXTS,
         DEFAULT_WEAPON_ATTRS as _DEFAULT_WEAPON_ATTRS,
@@ -75,21 +27,17 @@ except (ImportError, ValueError):
 _POOL_THUMB_MAX = 200 * 1024
 
 
-
-
 def _pool_slave():
     try:
         from ...games import slave as _sl
         return _sl
     except (ImportError, ValueError):
         try:
-            from games import slave as _sl
+            from ...games import slave as _sl
             return _sl
         except (ImportError, ValueError):
             import slave as _sl  # type: ignore
             return _sl
-
-
 
 
 def _pool_base():
@@ -97,8 +45,6 @@ def _pool_base():
         return plugin_root(__file__)
     except Exception:
         return ""
-
-
 
 
 def _pool_dir(rar):
@@ -128,8 +74,6 @@ def _pool_dir(rar):
     return d
 
 
-
-
 def _pool_bust(rar=""):
     try:
         _sl = _pool_slave()
@@ -150,8 +94,6 @@ def _pool_bust(rar=""):
         pass
 
 
-
-
 def _pool_clean_stem(s):
     s = str(s or "").strip()
     if not s or len(s) > 64 or s in (".", ".."):
@@ -159,8 +101,6 @@ def _pool_clean_stem(s):
     if re.search(r'[\/\\:*?"<>|\x00-\x1f]', s):
         return ""
     return s
-
-
 
 
 def _pool_find(stem):
@@ -180,8 +120,6 @@ def _pool_find(stem):
     return None, None
 
 
-
-
 def _pool_thumb(p):
     # 与 images 缩略同语义（200KB 上限＋空/错回空串），实现收口 web_utils.read_thumb_uri
     try:
@@ -189,8 +127,6 @@ def _pool_thumb(p):
         return uri if st == "ok" else ""
     except Exception:
         return ""
-
-
 
 
 def _pool_item(rar, p, base):
@@ -210,8 +146,6 @@ def _pool_item(rar, p, base):
         return {"name": nm, "file": fn, "rar": rar, "img": rp, "size": sz}
     except Exception:
         return None
-
-
 
 
 def _pool_write_file(rar, stem, data, ext):
@@ -238,8 +172,6 @@ def _pool_write_file(rar, stem, data, ext):
     _os.replace(_tmp, dst)
     _pool_bust(rar)
     return dst
-
-
 
 
 async def handle_pool_list(request):
@@ -307,8 +239,6 @@ async def handle_pool_list(request):
     return await asyncio.to_thread(_work)
 
 
-
-
 async def handle_pool_attrs(request):
     """抽奖武器属性保存（{attrs: {名: {atk, desc}}, full: 0/1}，只写 weapon_attrs，不碰文件；
     默认合并：只更新 payload 出现的名；full=1 时全量替换（恢复默认用））"""
@@ -363,15 +293,10 @@ async def handle_pool_attrs(request):
     return await asyncio.to_thread(_work)
 
 
-
-
 async def handle_pool_replace_path(request):
     """内置选图：用服务器已有图片文件覆盖池武器图（{name, src}，src 须在插件/数据目录内）"""
     try:
-        try:
-            from .images import _safe_path as _img_safe
-        except ImportError:
-            from images import _safe_path as _img_safe  # type: ignore
+        from .images import _safe_path as _img_safe
         data = await get_req_json(request, default={})
     except Exception as e:
         return _err(f"pool replace failed: {e}", 500)
@@ -399,10 +324,7 @@ async def handle_pool_replace_path(request):
             fp = _img_safe(src, _pool_base())
             if not fp or not _os.path.isfile(fp):
                 return _err("源文件不存在或越界", 400)
-            try:
-                from .images import _is_blocked as _img_blocked
-            except ImportError:
-                from images import _is_blocked as _img_blocked  # type: ignore
+            from .images import _is_blocked as _img_blocked
             if _img_blocked(fp):
                 return _err("源文件越界", 400)
             ext = _os.path.splitext(fp)[1].lower()
@@ -420,8 +342,6 @@ async def handle_pool_replace_path(request):
             return _err(f"pool replace failed: {e}", 500)
 
     return await asyncio.to_thread(_work)
-
-
 
 
 async def handle_pool_rename(request):
@@ -454,8 +374,6 @@ async def handle_pool_rename(request):
             return _err(f"pool rename failed: {e}", 500)
 
     return await asyncio.to_thread(_work)
-
-
 
 
 async def handle_pool_move(request):
@@ -492,8 +410,6 @@ async def handle_pool_move(request):
     return await asyncio.to_thread(_work)
 
 
-
-
 async def handle_pool_delete(request):
     """抽奖武器删除（删文件，需前端二次确认）"""
     try:
@@ -520,8 +436,6 @@ async def handle_pool_delete(request):
     return await asyncio.to_thread(_work)
 
 
-
-
 def pool_preview(name):
     """抽奖武器单图预览核心（原 handle_pool_img 的 _work 抽出，供 images.handle_image_preview 统一入口复用）。
     同步实现，调用方自行 asyncio.to_thread；异常上抛由调用方归一 500。
@@ -533,8 +447,6 @@ def pool_preview(name):
     if not thumb:
         return "too large or unreadable", ""
     return "ok", thumb
-
-
 
 
 async def handle_pool_upload(request):

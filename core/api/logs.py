@@ -4,15 +4,9 @@ import asyncio
 import datetime
 import functools
 import os
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 from .web_utils import _err, get_req_query
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST  # type: ignore
+from .. import storage as ST
 logger = ST.dual_attr(__package__, "logger", "..", "core")
 
 

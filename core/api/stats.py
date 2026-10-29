@@ -3,86 +3,14 @@
 import asyncio
 import json
 import time
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 from .web_utils import _err
 
-try:
-    from .. import storage as ST
-    from ...games import slave
-except ImportError:
-    from core import storage as ST
-    try:
-        from games import slave
-    except ImportError:
-        import slave  # type: ignore
+from .. import storage as ST
+from ...games import slave
 
 
 # ==================== stats/rank/logs/overview（原 stats.py） ====================
-async def handle_stats(request=None):
-    def _one(cur, sql, default=0):
-        try:
-            row = cur.execute(sql).fetchone()
-            return row[0] if row and row[0] is not None else default
-        except Exception:
-            return default
-
-    def _work():
-        # 锁内只做 cursor 快照取数，json 解析放锁外，防大库 massive 解析卡住全局写锁
-        _lock = getattr(ST, "_LOCK", None)
-        if _lock is not None:
-            _lock.acquire()
-        try:
-            if ST._DB is None:
-                return {"players": {"wallet": 0, "accounts": 0, "groups": 0}, "total_money": 0, "total_deposit": 0, "total_sign": 0}
-            cur = ST._DB.cursor()
-            n_wallet = _one(cur, "SELECT COUNT(*) FROM wallet")
-            n_acct = _one(cur, "SELECT COUNT(*) FROM accounts")
-            n_group = _one(cur, "SELECT COUNT(DISTINCT gid) FROM wallet")
-            total = _one(cur, "SELECT COALESCE(SUM(money),0) FROM wallet")
-            total_dep = _one(cur, "SELECT COALESCE(SUM(CAST(COALESCE(json_extract(data,'$.deposit'), json_extract(data,'$.cunkuan'), json_extract(data,'$.\"存款总数\"'), '0') AS INTEGER)),0) FROM accounts WHERE json_valid(data)")
-            acct_rows = None
-            if not total_dep and (n_acct or 0) < 100000:
-                # 兜底全表仅小库执行，大库跳过防秒级阻塞
-                try:
-                    acct_rows = cur.execute("SELECT data FROM accounts").fetchall()
-                except Exception:
-                    acct_rows = None
-            n_sign = _one(cur, "SELECT COALESCE(SUM(CAST(COALESCE(json_extract(data,'$.sign_count'), json_extract(data,'$.签到次数'), '0') AS INTEGER)),0) FROM accounts WHERE json_valid(data)")
-            try:
-                cur.close()
-            except Exception:
-                pass
-        finally:
-            if _lock is not None:
-                try:
-                    _lock.release()
-                except Exception:
-                    pass
-        if acct_rows:
-            try:
-                s = 0
-                for (d,) in acct_rows:
-                    try:
-                        j = json.loads(d or "{}")
-                        v = j.get("deposit") or j.get("cunkuan") or j.get("存款总数") or "0"
-                        s += int(float(v or 0))
-                    except Exception:
-                        pass
-                if s:
-                    total_dep = s
-            except Exception:
-                pass
-        return {
-            "players": {"wallet": n_wallet, "accounts": n_acct, "groups": n_group},
-            "total_money": total,
-            "total_deposit": int(total_dep or 0),
-            "total_sign": n_sign,
-        }
-    data = await asyncio.to_thread(_work)
-    return json_response(data)
 
 
 async def handle_rank(request=None):

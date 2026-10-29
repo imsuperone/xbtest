@@ -4,24 +4,9 @@ import configparser
 import json
 import os
 import re
-try:
-    from .. import storage as ST
-    from ...core.keymap import cn_to_en as _cn2en
-except ImportError:
-    from core import storage as ST
-    try:
-        from core.keymap import cn_to_en as _cn2en
-    except Exception:
-        def _cn2en(k): return k
-try:
-    from ...games.config.shop import RIDE_SHOP as _RIDE_SHOP_BUILTIN, RIDE_PRICES as _RIDE_PRICES_BUILTIN, TREASURES as _TREASURES_BUILTIN
-except ImportError:
-    try:
-        from games.config.shop import RIDE_SHOP as _RIDE_SHOP_BUILTIN, RIDE_PRICES as _RIDE_PRICES_BUILTIN, TREASURES as _TREASURES_BUILTIN  # type: ignore
-    except Exception:
-        _RIDE_SHOP_BUILTIN = {}
-        _RIDE_PRICES_BUILTIN = {}
-        _TREASURES_BUILTIN = {}
+from .. import storage as ST
+from ...core.keymap import cn_to_en as _cn2en
+from ...games.config.shop import RIDE_SHOP as _RIDE_SHOP_BUILTIN, RIDE_PRICES as _RIDE_PRICES_BUILTIN, TREASURES as _TREASURES_BUILTIN
 
 
 def _handle_ini_content(content, rel_path=""):

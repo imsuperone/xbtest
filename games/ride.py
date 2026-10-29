@@ -7,18 +7,9 @@ import json
 import os
 import time
 
-try:
-    from ..core import storage as ST
-except ImportError:
-    try:
-        from . import storage as ST
-    except ImportError:
-        from core import storage as ST
+from ..core import storage as ST
 
-try:
-    from .config.shop import RIDE_PRICES as RIDES, RIDE_SHOP as DEFAULT_RIDE_SHOP_EXT
-except ImportError:
-    from games.config.shop import RIDE_PRICES as RIDES, RIDE_SHOP as DEFAULT_RIDE_SHOP_EXT  # type: ignore
+from .config.shop import RIDE_PRICES as RIDES, RIDE_SHOP as DEFAULT_RIDE_SHOP_EXT
 RIDE_TYPE = "坐骑"
 RIDE_SHOP = DEFAULT_RIDE_SHOP_EXT
 

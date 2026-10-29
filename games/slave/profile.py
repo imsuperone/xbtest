@@ -2,12 +2,8 @@
 """games/slave/profile.py — 奴隶包·profile（原 base.py 切分，语义不变）。"""
 import time as _time
 import datetime as _dt
-try:
-    from ...core import storage as ST
-    store = ST
-except ImportError:
-    from core import storage as ST
-    store = ST
+from ...core import storage as ST
+store = ST
 from . import slave_state as _S
 from .base import U, _safe_int, cd_check, cfg, cfgi, cn_parse, coins_get, protected_until, slaves_of, star_of, treasures_of, uget, user_slave_slots, uset, weapons_of
 from .nick import uname
@@ -89,16 +85,10 @@ def cmd_myinfo(gid, qq, st):
             f"👥奴隶({len(slaves)}/{cap}): {sl_txt}",
         ]
         try:
-            try:
-                from ..ride import active_ride_info
-            except ImportError:
-                from games.ride import active_ride_info  # type: ignore
+            from ..ride import active_ride_info
             r_name, r_pct = active_ride_info(gid, qq)
             if r_name:
-                try:
-                    from ..ride import _ride_buff_type
-                except ImportError:
-                    from games.ride import _ride_buff_type  # type: ignore
+                from ..ride import _ride_buff_type
                 _bmap = {"all": "综合", "atk": "战力", "work": "打工", "travel": "旅行"}
                 _bt = _bmap.get(_ride_buff_type(r_name), "综合")
                 ride_txt = f"{r_name}({_bt}+{r_pct}%)"

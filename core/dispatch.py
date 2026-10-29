@@ -142,10 +142,7 @@ async def handle_test_menu(event, gid, qq, mods, slave):
             return
         except Exception as e:
             try:
-                try:
-                    from .logger import error as _log_err
-                except ImportError:
-                    from core.logger import error as _log_err  # type: ignore
+                from .logger import error as _log_err
                 _log_err(f"forward failed: {e}")
             except Exception:
                 pass
@@ -289,10 +286,7 @@ def _is_pure_custom(raw, ST):
     try:
         rt = raw.strip()
         try:
-            try:
-                from .router import _custom_idx
-            except ImportError:
-                from core.router import _custom_idx  # type: ignore
+            from .router import _custom_idx
             _idx = _custom_idx(ST)
         except Exception:
             _idx = None

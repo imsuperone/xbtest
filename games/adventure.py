@@ -7,25 +7,12 @@
 import random
 import time
 
-try:
-    from ..core import storage as ST
-except ImportError:
-    try:
-        from . import storage as ST
-    except ImportError:
-        from core import storage as ST
+from ..core import storage as ST
 
 from .text.text_adventure import MAPS, CHOICE_LABELS, RANDOM_EVENTS, MAP_SPECIFIC_EVENTS
 
 _cfg, _cfgi0 = ST.cfg_scope("冒险配置")
-try:
-    from .config.adventure import (DEFAULTS as _ADV_DEFAULTS, ADV_TTL_MINS, BIAS_1, BIAS_2,
-                                   BIAS_3, BIAS_DEFAULT, BONUS_GAP, BONUS_FLIP, TRAP_FLIP,
-                                   EXCLUSIVE_CHANCE, REVIVE_CHANCE, CLEAR_MULT)
-except ImportError:
-    from games.config.adventure import (DEFAULTS as _ADV_DEFAULTS, ADV_TTL_MINS, BIAS_1, BIAS_2,  # type: ignore
-                                        BIAS_3, BIAS_DEFAULT, BONUS_GAP, BONUS_FLIP, TRAP_FLIP,
-                                        EXCLUSIVE_CHANCE, REVIVE_CHANCE, CLEAR_MULT)
+from .config.adventure import DEFAULTS as _ADV_DEFAULTS, ADV_TTL_MINS, BIAS_1, BIAS_2, BIAS_3, BIAS_DEFAULT, BONUS_GAP, BONUS_FLIP, TRAP_FLIP, EXCLUSIVE_CHANCE, REVIVE_CHANCE, CLEAR_MULT
 
 
 def _cfgi(key, default=0):

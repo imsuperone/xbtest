@@ -1,114 +1,45 @@
 # -*- coding: utf-8 -*-
-"""astrbot_plugin_xbbot_beta: 小白测试版统一模块 v2(奴隶/签到/银行/娱乐/群管 + WebUI 管理台 Pages) — v0.53 优化版"""
+"""astrbot_plugin_xbbot_beta: 小白测试版统一模块（8大玩法引擎 + WebUI 管理台）。
+
+导入约定（全仓唯一）：插件按包加载（真机 data.plugins.X / 测试命名包），
+一律使用包内相对导入，绝无 sys.path 回退与双通道兜底。
+"""
 import os
 import threading as _threading_mod
 from importlib import import_module
 from typing import Optional
 
-try:
-    from core.adapters import (  # type: ignore
-        AstrMessageEvent, MessageChain,
-        Image, Context, Star,
-    )
-except ImportError:
-    from astrbot.api.event import AstrMessageEvent, MessageChain
-    try:
-        from astrbot.api.message_components import Image
-    except Exception:
-        Image = None
+from .adapters import AstrMessageEvent, MessageChain, Image, Context, Star
+from . import storage as ST
+from . import config as _cfg_layer
+from . import messaging as _plat_layer
+from . import router as _router_layer
+from . import dispatch as _dispatch_all
+from . import logger as _logger_layer
+from .api.web_utils import _err
+from .version import get_version as _get_version
+from ..games import sign, bank, slave, ent, spirit, ride, guild, adventure, fishing
+from . import superadmin
 
-    from astrbot.api.star import Context, Star
+# 平台层注入 Image 组件与 slave 模块（避免循环导入的注入点）
+_plat_layer.bind(Image, slave)
 
-try:
-    from . import storage as ST
-    from ..games import (sign, bank, slave, ent,
-                          spirit, ride, guild, adventure, fishing)
-    from . import superadmin
-except ImportError:
-    from core import storage as ST
-    from games import (sign, bank, slave, ent,
-                         spirit, ride, guild, adventure, fishing)
-    from core import superadmin  # type: ignore
+# 配置层单源函数（供本文件与下游使用）
+_maybe_dict = _cfg_layer._maybe_dict
+_normalize_cfg = _cfg_layer._normalize_cfg
+_fallback_cfg = _cfg_layer._fallback_cfg
+# 平台层单源函数
+_build_chain = _plat_layer._build_chain
+_append_at_segments = _plat_layer._append_at_segments
+_name_prefix = _plat_layer._name_prefix
+_do_platform = _plat_layer._do_platform
+# 分发流水线单文件（纯逻辑无 astrbot 依赖）
+_dispatch_name_sync = _dispatch_test_menu = _dispatch_admins = _dispatch_reply = _dispatch_all
 
-# ========== v0.47 三层架构：core/ 三层（配置层/平台层/路由层） + core/api 薄层 ==========
-try:
-    from . import config as _cfg_layer
-    from . import messaging as _plat_layer
-    from . import router as _router_layer
-    _HAS_CORE = True
-    try:
-        _plat_layer.bind(Image, slave)
-    except Exception:
-        pass
-except ImportError:
-    try:
-        from core import config as _cfg_layer  # type: ignore
-        from core import messaging as _plat_layer
-        from core import router as _router_layer
-        _HAS_CORE = True
-        try:
-            _plat_layer.bind(Image, slave)
-        except Exception:
-            pass
-    except Exception:
-        _HAS_CORE = False
-        _cfg_layer = _plat_layer = _router_layer = None  # type: ignore
-
-# ---- 去重收口：统一委托 core 层（v0.53+ 单向已稳，移除50行fallback冗余）----
-_maybe_dict = getattr(_cfg_layer, "_maybe_dict", None) if _HAS_CORE else None
-_normalize_cfg = getattr(_cfg_layer, "_normalize_cfg", None) if _HAS_CORE else None
-_fallback_cfg = getattr(_cfg_layer, "_fallback_cfg", None) if _HAS_CORE else None
-_build_chain = getattr(_plat_layer, "_build_chain", None) if _HAS_CORE else None
-_append_at_segments = getattr(_plat_layer, "_append_at_segments", None) if _HAS_CORE else None
-_name_prefix = getattr(_plat_layer, "_name_prefix", None) if _HAS_CORE else None
-_do_platform = getattr(_plat_layer, "_do_platform", None) if _HAS_CORE else None
-if not (_maybe_dict and _normalize_cfg and _build_chain):
-    # import 期不再 assert 崩插件：告警＋降级（下游调用点均判 callable，缺失即走空配置/静默）
-    try:
-        import warnings as _warnings
-        _warnings.warn("core 层未加载，请检查 pages→main→core 单向依赖")
-    except Exception:
-        pass
-# core.dispatch 导入（分发流水线单文件，纯逻辑无 astrbot 依赖）
-try:
-    from . import dispatch as _dispatch_all
-    _dispatch_name_sync = _dispatch_test_menu = _dispatch_admins = _dispatch_reply = _dispatch_all
-except ImportError:
-    from core import dispatch as _dispatch_all  # type: ignore
-    _dispatch_name_sync = _dispatch_test_menu = _dispatch_admins = _dispatch_reply = _dispatch_all
-
-
-try:
-    from . import logger as _logger_layer
-except ImportError:
-    try:
-        from core import logger as _logger_layer  # type: ignore
-    except Exception:
-        _logger_layer = None
-
-if _logger_layer:
-    try:
-        slave.log = lambda msg: _logger_layer.info(str(msg))
-    except Exception:
-        pass
-
-# _err 单源 core/api/web_utils（V6 收敛：本地 _err 副本与零调用的 _raw_file_response
-# 死副本已删，文件响应统一出口只留 web_utils 一份）
-try:
-    from .api.web_utils import _err
-except ImportError:
-    from core.api.web_utils import _err  # type: ignore
+slave.log = lambda msg: _logger_layer.info(str(msg))
 
 PLUGIN_ID = "astrbot_plugin_xbbot_beta"
 PLUGIN_DESC = "小白测试版(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
-try:
-    from .version import get_version as _get_version
-except ImportError:
-    try:
-        from core.version import get_version as _get_version  # type: ignore
-    except Exception:
-        def _get_version(*a, **k):  # type: ignore
-            return "unknown"
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
@@ -332,13 +263,7 @@ def _apply_fresh_casual(data_dir):
             return False
         if not _empty:
             return False
-        try:
-            from .api.settings import PRESETS as _PRE
-        except ImportError:
-            try:
-                from core.api.settings import PRESETS as _PRE  # type: ignore
-            except Exception:
-                return False
+        from .api.settings import PRESETS as _PRE
         _cas = (_PRE or {}).get("casual") or {}
         for _sec, _kv in _cas.items():
             if _sec in getattr(ST, "_COLL_FILES", {}):
@@ -367,14 +292,8 @@ def _apply_fresh_casual(data_dir):
         return False
 
 
-# 路由表单源已迁 core/web_routes（老路径兼容重导出）
-try:
-    from .web_routes import _XB_API_ROUTES, _XB_WEBDAV_ROUTES, _XB_MUTATING_HANDLERS, _web_admin_explicit_deny  # type: ignore
-except ImportError:
-    try:
-        from core.web_routes import _XB_API_ROUTES, _XB_WEBDAV_ROUTES, _XB_MUTATING_HANDLERS, _web_admin_explicit_deny  # type: ignore
-    except Exception:
-        pass
+# Web API 路由表单源 core/web_routes
+from .web_routes import _XB_API_ROUTES, _XB_WEBDAV_ROUTES, _XB_MUTATING_HANDLERS, _web_admin_explicit_deny
 
 
 class XbBot(Star):
@@ -391,8 +310,8 @@ class XbBot(Star):
             cfg = {}
         _BASE = _PLUGIN_BASE
         try:
-            from astrbot.api.star import StarTools
-            official_dir = str(StarTools.get_data_dir())
+            from .adapters import StarTools
+            official_dir = str(StarTools.get_data_dir()) if StarTools else ""
             if official_dir:
                 ST.set_persistent_data_dir(official_dir)
         except Exception:
@@ -964,7 +883,7 @@ class XbBot(Star):
         if args and len(args) > 0:
             return args[0]
         try:
-            from astrbot.api.web import request as _web_req
+            from .adapters import request as _web_req
             return _web_req
         except Exception:
             return None
@@ -981,7 +900,7 @@ class XbBot(Star):
                 _deny_req = request if request is not None else (args[0] if args else None)
                 if _deny_req is None:
                     try:
-                        from astrbot.api.web import request as _proxy_req
+                        from .adapters import request as _proxy_req
                         getattr(_proxy_req, "method")  # 绑定探测：未绑定代理访问属性即抛
                         _deny_req = _proxy_req
                     except Exception:

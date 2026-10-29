@@ -2,31 +2,12 @@
 """games/slave/combat.py — 奴隶包·combat（原 slave.py 切分，语义不变）。"""
 import time as _time
 import random as _random
-try:
-    from ...core import storage as ST
-    store = ST
-except ImportError:
-    from core import storage as ST
-    store = ST
+from ...core import storage as ST
+store = ST
 from . import slave_state as _S
-try:
-    from ..config.slave import (FIGHT_REFUSE_POWER, FIGHT_STAKE_PCT, FIGHT_STAKE_CAP,
-                                FIGHT_POOR_LIMIT, FIGHT_CRIT_PER_STAR, FIGHT_CRIT_MULT,
-                                SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS,
-                                WORTH_PCT_CAP)
-except ImportError:
-    from games.config.slave import (FIGHT_REFUSE_POWER, FIGHT_STAKE_PCT, FIGHT_STAKE_CAP,  # type: ignore
-                                    FIGHT_POOR_LIMIT, FIGHT_CRIT_PER_STAR, FIGHT_CRIT_MULT,
-                                    SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS,
-                                    WORTH_PCT_CAP)
+from ..config.slave import FIGHT_REFUSE_POWER, FIGHT_STAKE_PCT, FIGHT_STAKE_CAP, FIGHT_POOR_LIMIT, FIGHT_CRIT_PER_STAR, FIGHT_CRIT_MULT, SHIELD_TREASURE, TREASURE_GOURD_KEY, TREASURE_CHARM_KEYS, WORTH_PCT_CAP
 from .base import U, _fmt, _safe_int, cd_check, cd_commit, cfg, cfgf, cfgi, cn_fmt, cn_parse, protected_until, slaves_of, star_of, total_assets, transfer_cash_or_deposit, treasures_of, uget, user_slave_slots, uset, weapons_of
-try:
-    from ..config.shop import TREASURES as _TREASURES_BUILTIN
-except ImportError:
-    try:
-        from games.config.shop import TREASURES as _TREASURES_BUILTIN  # type: ignore
-    except Exception:
-        _TREASURES_BUILTIN = {}
+from ..config.shop import TREASURES as _TREASURES_BUILTIN
 from .nick import uname
 
 
@@ -440,10 +421,7 @@ def battle_power(st, qq):
     try:
         gid = getattr(st, "_gid", "")
         if gid:
-            try:
-                from ..ride import active_ride_info
-            except ImportError:
-                from games.ride import active_ride_info  # type: ignore
+            from ..ride import active_ride_info
             _, r_pct = active_ride_info(gid, qq, aspect="atk")
             if r_pct > 0:
                 base_bp += base_bp * r_pct // 100

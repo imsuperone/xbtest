@@ -5,17 +5,11 @@ import base64
 import os
 import tempfile
 import time
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json, plugin_root, read_thumb_uri, read_upload_b64
 
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST
+from .. import storage as ST
 
 def _img_base(plugin_base=""):
     if plugin_base:
@@ -329,7 +323,7 @@ async def handle_images_upload(request, plugin_base=""):
                     _g_ride._refresh_img_bases()
             except Exception:
                 try:
-                    from games import ride as _g_ride
+                    from ...games import ride as _g_ride
                     if hasattr(_g_ride, "_refresh_img_bases"):
                         _g_ride._refresh_img_bases()
                 except Exception:
@@ -390,7 +384,7 @@ async def handle_images_delete(request, plugin_base=""):
                     _g_ride._refresh_img_bases()
             except Exception:
                 try:
-                    from games import ride as _g_ride
+                    from ...games import ride as _g_ride
                     if hasattr(_g_ride, "_refresh_img_bases"):
                         _g_ride._refresh_img_bases()
                 except Exception:
@@ -453,7 +447,7 @@ async def handle_images_rename(request, plugin_base=""):
                     _g_ride._refresh_img_bases()
             except Exception:
                 try:
-                    from games import ride as _g_ride
+                    from ...games import ride as _g_ride
                     if hasattr(_g_ride, "_refresh_img_bases"):
                         _g_ride._refresh_img_bases()
                 except Exception:

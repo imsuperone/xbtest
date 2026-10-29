@@ -3,25 +3,8 @@
 import datetime as dt
 import random
 
-try:
-    from ..core import storage as ST
-except ImportError:
-    try:
-        from . import storage as ST
-    except ImportError:
-        from core import storage as ST
-try:
-    from .config.sign import (
-        DEFAULTS as _SIGN_DEFAULTS, CHAIN_CAP,
-        STAMINA_SOFT_CAP, STAMINA_HARD_CAP, STAMINA_OVERFLOW_COIN, STAMINA_BUY_DAILY_CAP,
-        CHARM_SOFT_CAP, CHARM_HARD_CAP, CHARM_OVERFLOW_COIN, CHARM_DECAY_PCT, CHARM_BUY_DAILY_CAP,
-    )
-except ImportError:
-    from games.config.sign import (  # type: ignore
-        DEFAULTS as _SIGN_DEFAULTS, CHAIN_CAP,
-        STAMINA_SOFT_CAP, STAMINA_HARD_CAP, STAMINA_OVERFLOW_COIN, STAMINA_BUY_DAILY_CAP,
-        CHARM_SOFT_CAP, CHARM_HARD_CAP, CHARM_OVERFLOW_COIN, CHARM_DECAY_PCT, CHARM_BUY_DAILY_CAP,
-    )
+from ..core import storage as ST
+from .config.sign import DEFAULTS as _SIGN_DEFAULTS, CHAIN_CAP, STAMINA_SOFT_CAP, STAMINA_HARD_CAP, STAMINA_OVERFLOW_COIN, STAMINA_BUY_DAILY_CAP, CHARM_SOFT_CAP, CHARM_HARD_CAP, CHARM_OVERFLOW_COIN, CHARM_DECAY_PCT, CHARM_BUY_DAILY_CAP
 
 
 def cfgi(sec, key, default=0):
@@ -685,13 +668,7 @@ def _rank_name(SL, gid, q):
 
 def _render_rank(lst, name, gid, topn=10):
     """排行渲染单源（快/慢两路径共用）：昵称＋单位 emoji，防 QQ 与数值粘连误读"""
-    try:
-        from . import slave as SL
-    except Exception:
-        try:
-            import slave as SL
-        except Exception:
-            SL = None
+    from . import slave as SL
     out = [f"【{name}排行榜】"]
     for i, (v, q) in enumerate(lst[:topn], 1):
         nm = _rank_name(SL, gid, q)

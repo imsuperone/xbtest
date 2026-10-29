@@ -9,10 +9,7 @@ import sys
 _PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _PLUGIN_ROOT not in sys.path:
     sys.path.insert(0, _PLUGIN_ROOT)
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 from .web_utils import _err, get_req_query, get_req_json
 try:
     from .. import storage as ST
@@ -25,12 +22,12 @@ try:
         WATER_CLEAN_COST, BASE_INTEREST_RATE, MAX_DAILY_INTEREST
     )
 except (ImportError, ValueError):
-    from core import storage as ST
-    from games.fishing.data_fishes import (
+    from .. import storage as ST
+    from ...fishing.data_fishes import (
         load_all_fishes, save_all_fishes, reset_default_fishes,
         get_fish_by_id, QUALITY_WEIGHTS, QUALITY_COLORS, WEIGHT_GRADES
     )
-    from games.fishing.engine import (
+    from ...fishing.engine import (
         BAITS, DEFAULT_BUCKET_CAP, DEFAULT_AQUARIUM_CAP,
         WATER_CLEAN_COST, BASE_INTEREST_RATE, MAX_DAILY_INTEREST
     )

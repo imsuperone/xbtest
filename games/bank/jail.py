@@ -4,10 +4,7 @@ import datetime as dt
 import json
 import random
 import time
-try:
-    from ...core import storage as ST
-except ImportError:
-    from core import storage as ST
+from ...core import storage as ST
 from .common import *  # noqa
 def _jail_stamp(a):
     a.set("jail", "1")

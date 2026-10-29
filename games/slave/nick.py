@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 """games/slave/nick.py — 奴隶包·nick（原 base.py 切分，语义不变）。"""
 import re as _re
-try:
-    from ...core import storage as ST
-    store = ST
-except ImportError:
-    from core import storage as ST
-    store = ST
+from ...core import storage as ST
+store = ST
 from . import slave_state as _S
 from .base import U, save, state, uget, uset
 
@@ -109,10 +105,7 @@ def display_name(gid, qq, default=None):
                 pass
             # 尝试从适配器安全拉取本群名片
             try:
-                try:
-                    from ...core import messaging as _msg
-                except ImportError:
-                    from core import messaging as _msg
+                from ...core import messaging as _msg
                 card = _msg.sync_fetch_member_name(g, q)
                 if card and card != q and _re.sub(r"[\u3000\u3164\u200b\ufeff\u2800-\u28ff\s]", "", card):
                     set_note_name(g, q, card)

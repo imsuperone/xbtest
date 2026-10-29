@@ -5,31 +5,9 @@ import json
 import random
 import secrets
 import time
-try:
-    from ...core import storage as ST
-except ImportError:
-    from core import storage as ST
+from ...core import storage as ST
 from .common import *  # noqa
 from .jail import *  # noqa
-
-
-def _format_countdown(seconds):
-    if seconds <= 0:
-        return "即将结算"
-    h = seconds // 3600
-    m = (seconds % 3600) // 60
-    s = seconds % 60
-    if h > 0:
-        if s > 0:
-            return f"{h}小时{m}分{s}秒"
-        elif m > 0:
-            return f"{h}小时{m}分"
-        return f"{h}小时"
-    if m > 0:
-        if s > 0:
-            return f"{m}分{s}秒"
-        return f"{m}分"
-    return f"{s}秒"
 
 
 def cmd_deposit(gid, qq, amount):
@@ -182,7 +160,7 @@ def cmd_transfer(gid, qq, target, amount):
             # 二次校验（防并发）
             cur_st = ST.acct(gid, qq).int("stamina")
             if cur_st < cs:
-                return "提示：您的体力不足，本次转账需消耗 {cs} 点体力。"
+                return f"提示：您的体力不足，本次转账需消耗 {cs} 点体力。"
             cur_money = ST.coins_get(gid, qq)
             if cur_money < amount:
                 return "提示：账户余额不足，转账失败。"

@@ -3,17 +3,9 @@
 import time as _time
 import random as _random
 import datetime as _dt
-try:
-    from ...core import storage as ST
-except ImportError:
-    from core import storage as ST
+from ...core import storage as ST
 from . import slave_state as _S
-try:
-    from ..config.slave import (TORTURE_VICTIM_CD, TORTURE_FALLBACK_LO, TORTURE_FALLBACK_HI,
-                                TORTURE_FALLBACK_OWNER_DIV, SLOT_GROWTH)
-except ImportError:
-    from games.config.slave import (TORTURE_VICTIM_CD, TORTURE_FALLBACK_LO, TORTURE_FALLBACK_HI,  # type: ignore
-                                    TORTURE_FALLBACK_OWNER_DIV, SLOT_GROWTH)
+from ..config.slave import TORTURE_VICTIM_CD, TORTURE_FALLBACK_LO, TORTURE_FALLBACK_HI, TORTURE_FALLBACK_OWNER_DIV, SLOT_GROWTH
 from .base import U, _event_delta, _fmt, cd_check, cd_commit, cfgf, cfgi, cn_fmt, cn_parse, coins_add, coins_get, deduct_cash_or_deposit, max_slave_slots, protected_until, slaves_of, uget, user_slave_slots, uset
 from .nick import exists_user, uname
 from .profile import coin_name

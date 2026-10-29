@@ -2,31 +2,14 @@
 """用户管理 API — 列表/编辑/单用户清除/退群清理（导入导出已拆至 user_io.py，空投已拆至 airdrop.py，端点不变）"""
 import asyncio
 import json
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json
 
-try:
-    from .. import storage as ST
-    from ...games import slave
-except ImportError:
-    from core import storage as ST
-    try:
-        from games import slave
-    except ImportError:
-        import slave  # type: ignore
+from .. import storage as ST
+from ...games import slave
 
-try:
-    from ..version import get_version as _get_version
-except ImportError:
-    try:
-        from core.version import get_version as _get_version  # type: ignore
-    except Exception:
-        def _get_version(*a, **k):  # type: ignore
-            return "unknown"
+from ..version import get_version as _get_version
 try:
     PLUGIN_VERSION = _get_version()
 except Exception:
@@ -295,7 +278,7 @@ async def handle_users_clean_left(request, context=None):
                 _guild_mod._invalidate_guild_cache(g)
             except Exception:
                 try:
-                    from games import guild as _guild_mod  # type: ignore
+                    from ...games import guild as _guild_mod  # type: ignore
                     _guild_mod._invalidate_guild_cache(g)
                 except Exception:
                     pass
@@ -370,7 +353,7 @@ async def handle_user_clear(request):
             _guild_mod2._invalidate_guild_cache(gid)
         except Exception:
             try:
-                from games import guild as _guild_mod2  # type: ignore
+                from ...games import guild as _guild_mod2  # type: ignore
                 _guild_mod2._invalidate_guild_cache(gid)
             except Exception:
                 pass

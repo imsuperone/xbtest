@@ -11,44 +11,19 @@ _PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 if _PLUGIN_ROOT not in sys.path:
     sys.path.insert(0, _PLUGIN_ROOT)
 
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response  # type: ignore
+from ..adapters import json_response
 
 from .web_utils import _err, get_req_json, plugin_root
 
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST  # type: ignore
+from .. import storage as ST
 
-try:
-    from .questions import _BANK_MAP, _clear_runtime_cache, _get_q_dir, _write_bank_file
-except ImportError:
-    from core.api.questions import _BANK_MAP, _clear_runtime_cache, _get_q_dir, _write_bank_file  # type: ignore
+from .questions import _BANK_MAP, _clear_runtime_cache, _get_q_dir, _write_bank_file
 
-try:
-    from .snapshots import _snap_name, _snap_index, _snap_index_save
-except ImportError:
-    from core.api.snapshots import _snap_name, _snap_index, _snap_index_save  # type: ignore
+from .snapshots import _snap_name, _snap_index, _snap_index_save
 
-try:
-    from .balance import PRESETS
-except ImportError:
-    try:
-        from core.api.balance import PRESETS  # type: ignore
-    except ImportError:
-        PRESETS = {}
+from .balance import PRESETS
 
-try:
-    from ..version import get_version
-except ImportError:
-    try:
-        from core.version import get_version  # type: ignore
-    except ImportError:
-        def get_version(p=""):
-            return "unknown"
+from ..version import get_version
 
 
 OFFICIAL_UPDATE_DATE = "2026-10-26"
@@ -84,7 +59,7 @@ async def handle_align_preview(request=None, plugin_base=""):
 
     if ctrl_type == "realtime":
         try:
-            from core.api.balance import build_realtime_preset
+            from ..api.balance import build_realtime_preset
             std_preset, _, _ = build_realtime_preset(active_mode)
         except Exception:
             std_preset = PRESETS.get(active_mode, PRESETS.get("standard", {}))
@@ -229,13 +204,7 @@ async def handle_align_preview(request=None, plugin_base=""):
         total_q_to_fix += to_fix_cnt
 
     # 3. 官方坐骑对比
-    try:
-        try:
-            from ...games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP
-        except ImportError:
-            from games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP  # type: ignore
-    except Exception:
-        OFF_RIDE_SHOP = {}
+    from ...games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP
 
     cur_rides = {}
     for cand in (
@@ -265,13 +234,7 @@ async def handle_align_preview(request=None, plugin_base=""):
     }
 
     # 4. 武器属性对比
-    try:
-        try:
-            from ...games.config.shop import DEFAULT_WEAPON_ATTRS
-        except ImportError:
-            from games.config.shop import DEFAULT_WEAPON_ATTRS  # type: ignore
-    except Exception:
-        DEFAULT_WEAPON_ATTRS = {}
+    from ...games.config.shop import DEFAULT_WEAPON_ATTRS
 
     raw_w = ST.cfg("商城图鉴", "weapon_attrs", {})
     cur_w = {}
@@ -448,10 +411,7 @@ async def handle_align_defaults(request=None, plugin_base=""):
     # 3. 对齐官方坐骑与图片 (rides)
     if "rides" in targets or "mounts" in targets or "坐骑" in targets:
         try:
-            try:
-                from ...games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP
-            except ImportError:
-                from games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP  # type: ignore
+            from ...games.config.shop import RIDE_SHOP as OFF_RIDE_SHOP
 
             # 当前活跃坐骑配置（合并 sidecar 文件与内存/配置）
             cur_rides = {}
@@ -529,7 +489,7 @@ async def handle_align_defaults(request=None, plugin_base=""):
 
             # 刷新运行时坐骑目录缓存
             try:
-                from games import ride as _g_ride
+                from ...games import ride as _g_ride
                 if hasattr(_g_ride, "_refresh_img_bases"):
                     _g_ride._refresh_img_bases()
             except Exception:
@@ -566,7 +526,7 @@ async def handle_align_defaults(request=None, plugin_base=""):
 
             if ctrl_type == "realtime":
                 try:
-                    from core.api.balance import build_realtime_preset
+                    from ..api.balance import build_realtime_preset
                     std_preset, _, _ = build_realtime_preset(active_mode)
                 except Exception:
                     std_preset = PRESETS.get(active_mode, PRESETS.get("standard", {}))
@@ -598,7 +558,7 @@ async def handle_align_defaults(request=None, plugin_base=""):
             # 同步更新调控状态标记，确保与实时调控引擎无缝融合
             if ctrl_type == "realtime":
                 try:
-                    from core.api.balance import compute_realtime_economy
+                    from ..api.balance import compute_realtime_economy
                     ST._CONFIG["_balance_control_type"] = "realtime"
                     ST._CONFIG["_active_balance_mode"] = active_mode
                     ST._CONFIG["_realtime_balance_meta"] = compute_realtime_economy(active_mode)
@@ -622,10 +582,7 @@ async def handle_align_defaults(request=None, plugin_base=""):
     # 5. 对齐 42 款抽奖武器内置属性 (weapons)
     if "weapons" in targets or "武器" in targets:
         try:
-            try:
-                from ...games.config.shop import DEFAULT_WEAPON_ATTRS
-            except ImportError:
-                from games.config.shop import DEFAULT_WEAPON_ATTRS  # type: ignore
+            from ...games.config.shop import DEFAULT_WEAPON_ATTRS
 
             raw_w = ST.cfg("商城图鉴", "weapon_attrs", {})
             cur_w = {}

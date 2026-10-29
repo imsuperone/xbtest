@@ -424,7 +424,7 @@ def backup_user_data(force=False, auto_upload=True):
                 _wd.async_upload_backup(dst)
             except Exception:
                 try:
-                    from core import webdav as _wd
+                    from .. import webdav as _wd
                     _wd.async_upload_backup(dst)
                 except Exception:
                     pass

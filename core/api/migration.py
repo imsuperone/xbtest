@@ -7,17 +7,11 @@ import shutil
 import tempfile
 import zipfile
 
-try:
-    from ..adapters import json_response
-except ImportError:
-    from core.adapters import json_response
+from ..adapters import json_response
 
 from .web_utils import _err, get_req_query, get_req_json, read_upload_b64
 
-try:
-    from .. import storage as ST
-except ImportError:
-    from core import storage as ST  # type: ignore
+from .. import storage as ST
 
 
 async def _read_file_bytes_async(f):
@@ -89,10 +83,7 @@ def _unwrap_backup_export(data):
 
 
 # _handle_ini_content 已独立至 legacy_ini（老路径兼容）
-try:
-    from .legacy_ini import _handle_ini_content  # type: ignore
-except ImportError:
-    pass
+from .legacy_ini import _handle_ini_content
 
 async def _read_raw_body(req):
     """loop 侧读请求原始体（含 awaitable 兼容），返回 bytes"""

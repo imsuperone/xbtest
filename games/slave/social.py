@@ -3,29 +3,9 @@
 import time as _time
 import random as _random
 import datetime as _dt
-try:
-    from ...core import storage as ST
-except ImportError:
-    from core import storage as ST
+from ...core import storage as ST
 from . import slave_state as _S
-try:
-    from ..config.slave import (STUDY_FEE_LO, STUDY_FEE_HI, STUDY_EXP_LO, STUDY_EXP_HI,
-                                PRAY_LOSE_CHANCE, PRAY_LOSE_LO, PRAY_LOSE_HI, PRAY_NINJA_CHANCE,
-                                WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WORTH_CAP, WORK_WAGE_FLOOR,
-                                WORK_PCT_CAP, WORK_CRIT_CHANCE, WORK_CRIT_LO, WORK_CRIT_HI,
-                                SELF_WORK_LO, SELF_WORK_HI, SELF_WORK_BONUS_CAP, SELF_WORK_CRIT_CHANCE,
-                                REVOLT_LOOT_LO, REVOLT_LOOT_HI,
-                                TREASURE_GOURD_NAME,
-                                CHARM_PROB_STEP, CHARM_PROB_BONUS, CHARM_PROB_CAP)
-except ImportError:
-    from games.config.slave import (STUDY_FEE_LO, STUDY_FEE_HI, STUDY_EXP_LO, STUDY_EXP_HI,  # type: ignore
-                                    PRAY_LOSE_CHANCE, PRAY_LOSE_LO, PRAY_LOSE_HI, PRAY_NINJA_CHANCE,
-                                    WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WORTH_CAP, WORK_WAGE_FLOOR,
-                                    WORK_PCT_CAP, WORK_CRIT_CHANCE, WORK_CRIT_LO, WORK_CRIT_HI,
-                                    SELF_WORK_LO, SELF_WORK_HI, SELF_WORK_BONUS_CAP, SELF_WORK_CRIT_CHANCE,
-                                    REVOLT_LOOT_LO, REVOLT_LOOT_HI,
-                                    TREASURE_GOURD_NAME,
-                                    CHARM_PROB_STEP, CHARM_PROB_BONUS, CHARM_PROB_CAP)
+from ..config.slave import STUDY_FEE_LO, STUDY_FEE_HI, STUDY_EXP_LO, STUDY_EXP_HI, PRAY_LOSE_CHANCE, PRAY_LOSE_LO, PRAY_LOSE_HI, PRAY_NINJA_CHANCE, WORK_BASE_LO, WORK_BASE_HI, WORK_WORTH_DIV, WORK_WORTH_CAP, WORK_WAGE_FLOOR, WORK_PCT_CAP, WORK_CRIT_CHANCE, WORK_CRIT_LO, WORK_CRIT_HI, SELF_WORK_LO, SELF_WORK_HI, SELF_WORK_BONUS_CAP, SELF_WORK_CRIT_CHANCE, REVOLT_LOOT_LO, REVOLT_LOOT_HI, TREASURE_GOURD_NAME, CHARM_PROB_STEP, CHARM_PROB_BONUS, CHARM_PROB_CAP
 from .base import U, _event_delta, _fmt, _safe_int, cd_check, cd_commit, cfgi, cn_fmt, cn_parse, coins_add, coins_get, deduct_cash_or_deposit, slaves_of, total_assets, transfer_cash_or_deposit, treasures_of, uget, uset
 from .combat import _has_treasure_type, _treasure_names, _treasure_pct_total, _treasure_trigger_prob, battle_power
 from .nick import uname
@@ -323,10 +303,7 @@ def cmd_work_collect(gid, qq, st):
     except Exception:
         _work_bonus = 0
     try:
-        try:
-            from ..ride import active_ride_info
-        except ImportError:
-            from games.ride import active_ride_info  # type: ignore
+        from ..ride import active_ride_info
         _, _r_pct = active_ride_info(gid, qq, aspect="work")
         _work_bonus += int(_r_pct or 0)
     except Exception:
@@ -417,10 +394,7 @@ def cmd_self_work(gid, qq, st):
     except Exception:
         _wb = 0
     try:
-        try:
-            from ..ride import active_ride_info
-        except ImportError:
-            from games.ride import active_ride_info  # type: ignore
+        from ..ride import active_ride_info
         _, _r_pct = active_ride_info(gid, qq, aspect="work")
         _wb += int(_r_pct or 0)
     except Exception:

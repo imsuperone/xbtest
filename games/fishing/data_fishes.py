@@ -10,7 +10,7 @@ try:
     from ...core.storage.db import get_persistent_data_dir
 except (ImportError, ValueError):
     try:
-        from core.storage.db import get_persistent_data_dir
+        from ...storage.db import get_persistent_data_dir
     except (ImportError, ValueError):
         get_persistent_data_dir = None
 

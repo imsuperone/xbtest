@@ -9,23 +9,9 @@ except Exception:
     def _lru24(*a, **k):
         def d(f): return f
         return d
-try:
-    from ...core import storage as ST
-except ImportError:
-    from core import storage as ST
-try:
-    from ..config.ent import DEFAULTS as _ENT_DEFAULTS
-except ImportError:
-    try:
-        from games.config.ent import DEFAULTS as _ENT_DEFAULTS  # type: ignore
-    except Exception:
-        _ENT_DEFAULTS = {}
-try:
-    from ..config.ent import (CHOUQIAN_P1, CHOUQIAN_P2, CHOUQIAN_P3,
-                              MORA_DRAW_BAND, JIELONG_MIN, JIELONG_MAX)
-except ImportError:
-    from games.config.ent import (CHOUQIAN_P1, CHOUQIAN_P2, CHOUQIAN_P3,  # type: ignore
-                                  MORA_DRAW_BAND, JIELONG_MIN, JIELONG_MAX)
+from ...core import storage as ST
+from ..config.ent import DEFAULTS as _ENT_DEFAULTS
+from ..config.ent import CHOUQIAN_P1, CHOUQIAN_P2, CHOUQIAN_P3, MORA_DRAW_BAND, JIELONG_MIN, JIELONG_MAX
 
 
 def cfgi(sec, key, default=0):

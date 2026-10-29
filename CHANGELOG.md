@@ -1,3 +1,22 @@
+## v26w1030a (2026-10-30)
+
+- **架构级一次性重构：导入单源化 + 单一模块树保证**：
+  - **176 处 try/except ImportError 兜底链全部退役**：全仓（core/games/main）统一为「包内相对导入」唯一约定，杜绝 sys.path 注入与双通道回退；插件真机按 `data.plugins.X` 包加载、测试按命名包加载，两种场景同构；
+  - **根治跨插件模块串包**：清零全部残留绝对导入（`from core...` / `from games...`），真机多插件共存（如正式版+测试版同装）不再互踩 `core`/`games` 顶层模块树，存储状态从此绝对隔离；
+  - **astrbot 直连收口**：messaging/web_utils/app/db 的 astrbot SDK 导入统一走 `core/adapters.py` 唯一收口（红线恢复执行）；
+  - **persistence 五层导入兜底、fishing 四层 storage 探测链、main.py sys.path 注入全部移除**。
+
+- **死代码与死路由清理（一个接口一个实现）**：
+  - **下线 8 条前端从未调用的死路由**：`stats`、`gacha/weapons`、`backups/config/snapshots`、`backups/config/snapshot/restore`、`groups/delete`、`version/check`、`version/channel`、`version/align`（重复别名），对应死 handler（`handle_stats`/`handle_gacha_weapons`/`handle_cfg_snapshots`/`handle_cfg_snapshot_restore`/`handle_groups_delete`/`handle_version_check`/`handle_version_channel`）与孤儿函数（`_update_channel`/`_channel_repo`/`_parse_version_tuple`/`_format_countdown`）同步删除，WebAPI 从 78 收敛至 70+5；
+  - **superadmin「检查更新」三层导入兜底**（含指向已不存在函数的第三层）收敛为单导入。
+
+- **缺陷修复**：
+  - **修复转账体力不足提示丢失 f 前缀**：用户会看到字面量 `{cs}` 而非实际消耗数值（`games/bank/transactions.py`）；
+  - **修复测试脑裂隐患**：测试文件方法体内残留绝对导入导致双 `_CONFIG` 对象，gamble 上限钳位断言假失败——随导入单源化一并根治；
+  - **修复 `core/api/atlas.py` try 结构损伤与 `handle_align_*` 真机 JSONResponse 形态兼容**（测试套件 12/12 全绿，基线 3 error + 1 fail 清零）。
+
+- **测试基建升级**：测试改造为命名包加载（与真机同构），新增 `_unwrap` 兼容真 SDK 响应对象；新增真机同构加载验证（72 模块单一树、10 引擎、75 路由完整性断言）。
+
 ## v26w1027e (2026-10-27)
 
 - **修复欢迎坐骑不触发严重缺陷与全通道直投补全**：
