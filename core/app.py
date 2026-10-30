@@ -21,6 +21,8 @@ from .version import get_version as _get_version
 from ..games import sign, bank, slave, ent, spirit, ride, guild, adventure, fishing
 from . import superadmin
 
+_HAS_CORE = True
+
 # 平台层注入 Image 组件与 slave 模块（避免循环导入的注入点）
 _plat_layer.bind(Image, slave)
 

@@ -119,6 +119,14 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
                 q = getattr(comp, "target", None)
             q = str(q or "").strip()
             if q.isdigit() and q not in ats:
+                bot_uin = str(getattr(sm, "BOT_UIN", "") or "").strip()
+                if not bot_uin and hasattr(sm, "get_bot_uin"):
+                    try:
+                        bot_uin = str(sm.get_bot_uin() or "").strip()
+                    except Exception:
+                        pass
+                if bot_uin and q == bot_uin:
+                    continue  # 呼叫机器人的@不作为目标参数追加到末尾
                 ats.append(q)
                 if mark_known:
                     try:

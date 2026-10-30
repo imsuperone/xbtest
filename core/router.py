@@ -228,7 +228,7 @@ def _matches_engine(raw, engine, store=None, _mod=None):
     # 兼容前导 @bot、@QQ、[CQ:at,qq=...]，去除前导提及以测试前缀匹配
     try:
         import re as _re_eng
-        rt_clean = _re_eng.sub(r"^(?:\[CQ:at,qq=\d+[^\]]*\]|@\s*\S+\s*)+", "", rt).strip()
+        rt_clean = _re_eng.sub(r"^(?:\[CQ:at,qq=\d+[^\]]*\]|\[At:\s*\d+[^\]]*\]|@\s*\S+\s*)+", "", rt).strip()
         rt_n_clean = _norm_cmd(rt_clean) if rt_clean else rt_n
     except Exception:
         rt_clean = rt
@@ -698,9 +698,16 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
     except Exception:
         pass
     raw_s = raw.strip()
-    if raw_s in ("主菜单", "菜单", "系统菜单", "小白菜单", "小白测试版菜单", "功能菜单"):
+    try:
+        import re as _re_rt
+        _menu_clean = _re_rt.sub(r"^(?:\[CQ:at,qq=\d+[^\]]*\]|\[At:\s*\d+[^\]]*\]|@\s*\S+\s*)+", "", raw_s).strip()
+    except Exception:
+        _menu_clean = raw_s
+    if (raw_s in ("主菜单", "菜单", "系统菜单", "小白菜单", "小白测试版菜单", "功能菜单")
+            or (_menu_clean and _menu_clean in ("主菜单", "菜单", "系统菜单", "小白菜单", "小白测试版菜单", "功能菜单"))):
         return _MAIN_MENU
-    if raw_s in ("商城", "商店", "系统商城", "系统商店", "所有商城", "所有商店"):
+    if (raw_s in ("商城", "商店", "系统商城", "系统商店", "所有商城", "所有商店")
+            or (_menu_clean and _menu_clean in ("商城", "商店", "系统商城", "系统商店", "所有商城", "所有商店"))):
         return _SHOP_GUIDE
     if raw.strip().startswith(("测试xbtest", "测试testxb", "xbtest")):
         if not is_admin:
@@ -766,10 +773,12 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
                 _call_raw = raw
                 try:
                     import re as _re_cmd
-                    _rt_clean = _re_cmd.sub(r"^(?:\[CQ:at,qq=\d+[^\]]*\]|@\s*\S+\s*)+", "", str(raw or "")).strip()
+                    _rt_clean = _re_cmd.sub(r"^(?:\[CQ:at,qq=\d+[^\]]*\]|\[At:\s*\d+[^\]]*\]|@\s*\S+\s*)+", "", str(raw or "")).strip()
                     _sysname = _SYS_ENG.get(_eng, _eng)
                     if _rt_clean in (_sysname + "菜单", _sysname + "系统"):
                         _call_raw = _sysname + "系统"
+                    elif _eng in ("sign", "ride", "guild", "adventure") and _rt_clean:
+                        _call_raw = _rt_clean
                 except Exception:
                     pass
                 if _eng == "ent":
@@ -815,9 +824,11 @@ def handle(gid, qq, raw, is_admin=False, store=None, engines=None, superadmin_mo
                 _call_raw = raw
                 try:
                     import re as _re_cmd
-                    _rt_clean = _re_cmd.sub(r"^(?:\[CQ:at,qq=\d+[^\]]*\]|@\s*\S+\s*)+", "", str(raw or "")).strip()
+                    _rt_clean = _re_cmd.sub(r"^(?:\[CQ:at,qq=\d+[^\]]*\]|\[At:\s*\d+[^\]]*\]|@\s*\S+\s*)+", "", str(raw or "")).strip()
                     if _rt_clean in ("超管菜单", "超管系统"):
                         _call_raw = "超管系统"
+                    elif _rt_clean:
+                        _call_raw = _rt_clean
                 except Exception:
                     pass
                 _r = _call_superadmin(_fn, gid, qq, _call_raw, is_admin, matched_admin, store)
